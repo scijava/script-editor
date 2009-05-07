@@ -1,3 +1,5 @@
 gitte asked me to create a file which I will commit in a moment and now some change after that .I am revising the git commit,add and status commands
 
 May6 09 : I have created a sample java frame with fiji icon(microscope one)  and using Rsyntaxtextarea jar file
+
+May7 09	: added the opening and saving files feature and learnt about the "diff" command , advantage of "git log -p" over "git log" and the creating jar files simply by adding the CLASSPATH in the Fakefile
