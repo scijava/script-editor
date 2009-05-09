@@ -3,3 +3,5 @@ gitte asked me to create a file which I will commit in a moment and now some cha
 May6 09 : I have created a sample java frame with fiji icon(microscope one)  and using Rsyntaxtextarea jar file
 
 May7 09	: added the opening and saving files feature and learnt about the "diff" command , advantage of "git log -p" over "git log" and the creating jar files simply by adding the CLASSPATH in the Fakefile
+
+May9 09	:  improved the file opening and closing i.e. managing replacements and when to save and when to save as added simple features like cut copy paste undo and redo first by my own code but then realized that the RTextEditorKit.java(in package RTextArea of submodule RSyntaxTextArea) has straight forward functions for these functions I spent five hours on learning clipboard and Transferable etc but Rsyntaxtextarea is awesome got to go home otherwise I would have played a lot today with other functions in RTextEditorKit
