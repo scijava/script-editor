@@ -11,11 +11,18 @@ import java.awt.image.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.Document;
+/*for the cell renderer part*/
+import java.net.MalformedURLException;
+import java.net.URL;
+/*cell renderer part ends here*/
 import javax.imageio.*;
 import java.awt.geom.AffineTransform;
 import java.util.Arrays;
+import java.util.List;
+import javax.swing.text.*;
 import org.fife.ui.rtextarea.*;
 import org.fife.ui.rsyntaxtextarea.*;
+import org.fife.ui.autocomplete.*;
 
 public class TextEditorDemo extends JFrame implements ActionListener , ItemListener , ChangeListener ,MouseMotionListener,MouseListener ,CaretListener,InputMethodListener,DocumentListener,WindowListener
 {
@@ -27,20 +34,47 @@ public class TextEditorDemo extends JFrame implements ActionListener , ItemListe
    String title="";
    InputMethodListener l;
    File file;
-   
+   CompletionProvider provider;
    RSyntaxTextArea textArea;
    Document doc;
+   private JEditorPane ep;
+
+
+    public static void main(String[] args) {
+      // Start all Swing applications on the EDT.
+      SwingUtilities.invokeLater(new Runnable() {
+         public void run() {
+            new TextEditorDemo();
+         }
+      });
+   }
 
    public TextEditorDemo() {
 	fcc = new JFileChooser();                                        //For the file opening saving things
 	
       JPanel cp = new JPanel(new BorderLayout());
       title="Text Editor Demo for Fiji";
-
+		ep= new JEditorPane("text/html", null);
+		updateEditorPane();
       textArea = new RSyntaxTextArea();
       textArea.addInputMethodListener(l);
       textArea.addCaretListener(this);
-      textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
+      textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_C);
+	  String words[]={"public","private","protected","println","static","System","Swing","void","main","catch","class"};
+      DefaultCompletionProvider provider1 =new DefaultCompletionProvider(words);
+	  //CCompletionProvider provider =new CCompletionProvider(provider1);
+	  //CompletionProvider prov=provider.getProviderFor(textArea);
+		if(provider==null)
+			provider = createCompletionProvider();
+
+      AutoCompletion autocomp=new AutoCompletion(provider);
+	 
+	  autocomp.setListCellRenderer(new CCellRenderer());
+		autocomp.setShowDescWindow(true);
+		autocomp.setParameterAssistanceEnabled(true);
+      autocomp.install(textArea);
+	  textArea.setToolTipSupplier((ToolTipSupplier)provider);
+		ToolTipManager.sharedInstance().registerComponent(textArea);
       doc=textArea.getDocument();
       doc.addDocumentListener(this);
      // super.fireCaretUpdate(CaretEvent ce);
@@ -127,6 +161,11 @@ public class TextEditorDemo extends JFrame implements ActionListener , ItemListe
         edit.add(paste);
         paste.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_V, ActionEvent.CTRL_MASK));
         paste.addActionListener(this);
+	edit.addSeparator();
+	JMenuItem selectAll = new JMenuItem("Select All...");
+        edit.add(selectAll);
+        selectAll.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A, ActionEvent.CTRL_MASK));
+        selectAll.addActionListener(this);
         
         mbar.add(edit);
         
@@ -138,6 +177,8 @@ public class TextEditorDemo extends JFrame implements ActionListener , ItemListe
       /*********** The menu part ended here    ********************/
 
       pack();
+	  getToolkit().setDynamicLayout(true);            //added to accomodate the autocomplete part
+
       setLocationRelativeTo(null);
 	setVisible(true);
    }
@@ -223,7 +264,12 @@ public class TextEditorDemo extends JFrame implements ActionListener , ItemListe
 		}
 		if(action=="Redo..."){
 				textArea.redoLastAction();
-		}		
+		}
+		if(action=="Select All..."){
+				textArea.setCaretPosition(0);
+				textArea.moveCaretPosition(textArea.getDocument().getLength());
+		}	
+						
 
 	
 	}
@@ -432,17 +478,310 @@ public class TextEditorDemo extends JFrame implements ActionListener , ItemListe
 	public void windowIconified(WindowEvent e){
 	}
 	public void windowOpened(WindowEvent e){
-	}	
+	}
+/*autocomplete addition starts here*/
+	private CompletionProvider createCodeCompletionProvider() {
+
+		// Add completions for the C standard library.
+		DefaultCompletionProvider cp = new DefaultCompletionProvider();
+
+		// First try loading resource (running from demo jar), then try
+		// accessing file (debugging in Eclipse).
+		ClassLoader cl = getClass().getClassLoader();
+		InputStream in = cl.getResourceAsStream("c.xml");
+		try {
+			if (in!=null) {
+				cp.loadFromXML(in);
+				in.close();
+			}
+			else {
+				cp.loadFromXML(new File("c.xml"));
+			}
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		}
+
+		// Add some handy shorthand completions.
+		cp.addCompletion(new ShorthandCompletion(cp, "main",
+							"int main(int argc, char **argv)"));
+
+		return cp;
+
+	}
+
+
+	/**
+	 * Returns the provider to use when in a comment.
+	 *
+	 * @return The provider.
+	 * @see #createCodeCompletionProvider()
+	 * @see #createStringCompletionProvider()
+	 */
+	private CompletionProvider createCommentCompletionProvider() {
+		DefaultCompletionProvider cp = new DefaultCompletionProvider();
+		cp.addCompletion(new BasicCompletion(cp, "TODO:", "A to-do reminder"));
+		cp.addCompletion(new BasicCompletion(cp, "FIXME:", "A bug that needs to be fixed"));
+		return cp;
+	}
+
+
+	/**
+	 * Creates the completion provider for a C editor.  This provider can be
+	 * shared among multiple editors.
+	 *
+	 * @return The provider.
+	 */
+	private CompletionProvider createCompletionProvider() {
+
+		// Create the provider used when typing code.
+		CompletionProvider codeCP = createCodeCompletionProvider();
+
+		// The provider used when typing a string.
+		CompletionProvider stringCP = createStringCompletionProvider();
+
+		// The provider used when typing a comment.
+		CompletionProvider commentCP = createCommentCompletionProvider();
+
+		// Create the "parent" completion provider.
+		CCompletionProvider provider = new CCompletionProvider(codeCP);
+		provider.setStringCompletionProvider(stringCP);
+		provider.setCommentCompletionProvider(commentCP);
+
+		return provider;
+
+	}
+
+
+	/**
+	 * Returns the menu bar for the demo application.
+	 *
+	 * @return The menu bar.
+	 */
+	/*private JMenuBar createMenuBar() {
+
+		JMenuBar mb = new JMenuBar();
+
+		JMenu menu = new JMenu("File");
+		Action newAction = new TextAction("New") {
+			public void actionPerformed(ActionEvent e) {
+				AutoCompleteDemoApp app2 = new AutoCompleteDemoApp(
+												ac.getCompletionProvider());
+				app2.setVisible(true);
+			}
+		};
+		JMenuItem item = new JMenuItem(newAction);
+		menu.add(item);
+		mb.add(menu);
+
+		menu = new JMenu("View");
+		Action renderAction = new FancyCellRenderingAction();
+		cellRenderingItem = new JCheckBoxMenuItem(renderAction);
+		cellRenderingItem.setSelected(true);
+		menu.add(cellRenderingItem);
+		Action descWindowAction = new ShowDescWindowAction();
+		showDescWindowItem = new JCheckBoxMenuItem(descWindowAction);
+		showDescWindowItem.setSelected(true);
+		menu.add(showDescWindowItem);
+		Action paramAssistanceAction = new ParameterAssistanceAction();
+		paramAssistanceItem = new JCheckBoxMenuItem(paramAssistanceAction);
+		paramAssistanceItem.setSelected(true);
+		menu.add(paramAssistanceItem);
+		mb.add(menu);
+
+		ButtonGroup bg = new ButtonGroup();
+		menu = new JMenu("LookAndFeel");
+		Action lafAction = new LafAction("System", UIManager.getSystemLookAndFeelClassName());
+		JRadioButtonMenuItem rbmi = new JRadioButtonMenuItem(lafAction);
+		rbmi.setSelected(true);
+		menu.add(rbmi);
+		bg.add(rbmi);
+		lafAction = new LafAction("Motif", "com.sun.java.swing.plaf.motif.MotifLookAndFeel");
+		rbmi = new JRadioButtonMenuItem(lafAction);
+		menu.add(rbmi);
+		bg.add(rbmi);
+		lafAction = new LafAction("Ocean", "javax.swing.plaf.metal.MetalLookAndFeel");
+		rbmi = new JRadioButtonMenuItem(lafAction);
+		menu.add(rbmi);
+		bg.add(rbmi);
+		lafAction = new LafAction("Nimbus", "com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel");
+		rbmi = new JRadioButtonMenuItem(lafAction);
+		menu.add(rbmi);
+		bg.add(rbmi);
+		mb.add(menu);
+
+		return mb;
+
+	} */
+
+
+	/**
+	 * Returns the completion provider to use when the caret is in a string.
+	 *
+	 * @return The provider.
+	 * @see #createCodeCompletionProvider()
+	 * @see #createCommentCompletionProvider()
+	 */
+	private CompletionProvider createStringCompletionProvider() {
+		DefaultCompletionProvider cp = new DefaultCompletionProvider();
+		cp.addCompletion(new BasicCompletion(cp, "%c", "char", "Prints a character"));
+		cp.addCompletion(new BasicCompletion(cp, "%i", "signed int", "Prints a signed integer"));
+		cp.addCompletion(new BasicCompletion(cp, "%f", "float", "Prints a float"));
+		cp.addCompletion(new BasicCompletion(cp, "%s", "string", "Prints a string"));
+		cp.addCompletion(new BasicCompletion(cp, "%u", "unsigned int", "Prints an unsigned integer"));
+		cp.addCompletion(new BasicCompletion(cp, "\\n", "Newline", "Prints a newline"));
+		return cp;
+	}
+
+
+	/**
+	 * Focuses the text area.
+	 */
+	public void focusEditor() {
+		textArea.requestFocusInWindow();
+	}
+
+
+	/**
+	 * Updates the font used in the HTML, as well as the background color, of
+	 * the "label" editor pane.  The font would always have to be done (since
+	 * HTMLEditorKit doesn't use the editor pane's font by default), but the
+	 * background only has to be modified because Nimbus doesn't clean up the
+	 * colors it installs after itself.
+	 */
+	 
+	 
+	private void updateEditorPane() {
+		Font f = UIManager.getFont("Label.font");
+		String fontTag = "<body style=\"font-family: " + f.getFamily() +
+					"; font-size: " + f.getSize() + "pt; \">";
+		String text = "<html>" + fontTag + "" +
+			"The text area below provides simple code completion for the C " +
+			"programming language as you type. Simply type <b>Ctrl+Space</b> " +
+			"at any time to see a list of completion choices (function names, "+
+			"for example). If there is only one possible completion, it will " +
+			"be automatically inserted.<p>" +
+			"Also, completions are context-sensitive.  If you type Ctrl+Space" +
+			"in a comment or in the middle of a string, you will get " +
+			"different completion choices than if you are in code.";
+		ep.setText(text);
+		ep.setBorder(BorderFactory.createEmptyBorder(5,5,10,5));
+		ep.setEditable(false);
+		ep.setBackground(UIManager.getColor("Panel.background"));
+	}
+
+
+}
+
+
+/*Here comes the cell renderer class for the CCode but can be slightly modified for java etc*/
+	class CCellRenderer extends CompletionCellRenderer {
+
+	private Icon variableIcon;
+	private Icon functionIcon;
+	private Icon emptyIcon;
+
+
+	/**
+	 * Constructor.
+	 */
+	public CCellRenderer() {
+		variableIcon = getIcon("images/var.png");
+		functionIcon = getIcon("images/function.png");
+		emptyIcon = new EmptyIcon(16);
+	}
+
+
+	/**
+	 * Returns an icon.
+	 *
+	 * @param resource The icon to retrieve.  This should either be a file,
+	 *        or a resource loadable by the current ClassLoader.
+	 * @return The icon.
+	 */
+	private Icon getIcon(String resource) {
+		ClassLoader cl = getClass().getClassLoader();
+		URL url = cl.getResource(resource);
+		if (url==null) {
+			File file = new File(resource);
+			try {
+				url = file.toURI().toURL();
+			} catch (MalformedURLException mue) {
+				mue.printStackTrace(); // Never happens
+			}
+		}
+		return url!=null ? new ImageIcon(url) : null;
+	}
+
+
+	/**
+	 * {@inheritDoc}
+	 */
+	protected void prepareForOtherCompletion(JList list,
+			Completion c, int index, boolean selected, boolean hasFocus) {
+		super.prepareForOtherCompletion(list, c, index, selected, hasFocus);
+		setIcon(emptyIcon);
+	}
+
+
+	/**
+	 * {@inheritDoc}
+	 */
+	protected void prepareForVariableCompletion(JList list,
+			VariableCompletion vc, int index, boolean selected,
+			boolean hasFocus) {
+		super.prepareForVariableCompletion(list, vc, index, selected,
+										hasFocus);
+		setIcon(variableIcon);
+	}
+
+
+	/**
+	 * {@inheritDoc}
+	 */
+	protected void prepareForFunctionCompletion(JList list,
+			FunctionCompletion fc, int index, boolean selected,
+			boolean hasFocus) {
+		super.prepareForFunctionCompletion(list, fc, index, selected,
+										hasFocus);
+		setIcon(functionIcon);
+	}
+
+
+	/**
+	 * An standard icon that doesn't paint anything.  This can be used to take
+	 * up an icon's space when no icon is specified.
+	 *
+	 * @author Robert Futrell
+	 * @version 1.0
+	 */
+	private static class EmptyIcon implements Icon, Serializable {
+
+		private int size;
+
+		public EmptyIcon(int size) {
+			this.size = size;
+		}
+
+		public int getIconHeight() {
+			return size;
+		}
+
+		public int getIconWidth() {
+			return size;
+		}
+
+		public void paintIcon(Component c, Graphics g, int x, int y) {
+		}
+		
+	}
+
+
+}
+
+	
 		
 
 
-   public static void main(String[] args) {
-      // Start all Swing applications on the EDT.
-      SwingUtilities.invokeLater(new Runnable() {
-         public void run() {
-            new TextEditorDemo();
-         }
-      });
-   }
+  
 
-}
+//}
