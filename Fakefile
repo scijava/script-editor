@@ -384,7 +384,8 @@ fake.jar <- fake/Fake.java
 # TextEditorDemo
 MAINCLASS(TextEditorDemo.jar)=TextEditorDemo
 JAVAVERSION(TextEditorDemo.jar)=1.4
-CLASSPATH(TextEditorDemo.jar)=jars/rsyntaxtextarea.jar
+CLASSPATH(TextEditorDemo.jar)=jars/rsyntaxtextarea.jar jars/autocomplete.jar
 
 TextEditorDemo.jar <-	TextEditorDemo.java \
-						icon.png[images/icon.png] 
+						icon.png[images/icon.png] \
+						c.xml
