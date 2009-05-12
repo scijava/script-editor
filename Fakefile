@@ -388,4 +388,6 @@ CLASSPATH(TextEditorDemo.jar)=jars/rsyntaxtextarea.jar jars/autocomplete.jar
 
 TextEditorDemo.jar <-	TextEditorDemo.java \
 						icon.png[images/icon.png] \
+						var.png[images/var.png]    \
+						funtion.png[images/function.png]  \
 						c.xml
