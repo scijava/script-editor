@@ -7,3 +7,5 @@ May7 09	: added the opening and saving files feature and learnt about the "diff"
 May9 09	:  improved the file opening and closing i.e. managing replacements and when to save and when to save as added simple features like cut copy paste undo and redo first by my own code but then realized that the RTextEditorKit.java(in package RTextArea of submodule RSyntaxTextArea) has straight forward functions for these functions I spent five hours on learning clipboard and Transferable etc but Rsyntaxtextarea is awesome got to go home otherwise I would have played a lot today with other functions in RTextEditorKit
 
 May11 09: Gitte told me how to make an application a plugin and I went through the autocomplete package especially the CompletionProvider interface and also sorted out a problem regarding creating a jar file as I was stupid enough not to rebuild the Fiji jar file in the misc folder which I was supposed to do as gitte changed some settings for --jar a couple of days ago.
+
+May13 09: Sorted out how to generate the class names for the autocompletion by splitting the classpath 
