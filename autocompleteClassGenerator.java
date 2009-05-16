@@ -1,6 +1,5 @@
 import ij.IJ;
 import ij.Menus;
-
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -25,6 +24,7 @@ import java.awt.List;
 	contains a Tree object with key "java" and one of its childList
 	element as awt which in turn has its childDList having its one childList
 	as Listwhich is infact also a leaf ***********/
+	
 public class autocompleteClassGenerator{
 	
 	
@@ -221,8 +221,8 @@ class ClassNames {
 		else{
 			
 			currentRoot.childList.add(new Tree(partsOfPackage[index]));
-			
 			setLinearBranch((Tree)currentRoot.childList.get(currentRoot.childList.size()-1),partsOfPackage,++index);
+			
 		}
 	}
 
