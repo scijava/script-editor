@@ -216,6 +216,16 @@ plugins/CLI_.jar <- src-plugins/CLI_/CLI/*.java
 
 CLASSPATH(plugins/IO_.jar)=jars/batik.jar
 CLASSPATH(plugins/Sync_Win.jar)=plugins/Image_5D.jar
+MAINCLASS(plugins/Script_Editor.jar)=Editor
+CLASSPATH(plugins/Script_Editor.jar)=jars/rsyntaxtextarea.jar:jars/autocomplete.jar
+plugins/Script_Editor.jar <- src-plugins/Script_Editor/fiji/scripting/Editor.java \
+							src-plugins/Script_Editor/fiji/scripting/TextEditor.java \
+							src-plugins/Script_Editor/fiji/scripting/CCellRenderer.java  \
+							icon.png[images/icon.png] \
+							var.png[images/var.png]    \
+							funtion.png[images/function.png]  \
+							c.xml
+
 plugins/*_*.jar <- src-plugins/*_*/**/*.java
 
 plugins/**/*.class <- src-plugins/**/*.java
