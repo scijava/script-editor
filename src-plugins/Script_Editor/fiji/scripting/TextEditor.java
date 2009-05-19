@@ -54,7 +54,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
    public TextEditor() {
 	fcc = new JFileChooser();                                        //For the file opening saving things
-	
+
       JPanel cp = new JPanel(new BorderLayout());
       title="Text Editor Demo for Fiji";
 		ep= new JEditorPane("text/html", null);
@@ -98,7 +98,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
       setIconImage(image);
 
       
-	
+
             /********setting the icon part ends ********/
 
 
@@ -207,23 +207,23 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			catch(Exception e){}
 			/*condition to check whether there is a change and the 
 			 * user has really opted to open a new file
-			 */	
+			 */
 			 if(fileChange==true&&returnVal==fcc.APPROVE_OPTION){
 			//this.setTitle("Not saved - Text Editor Demo for Fiji");
 				int val= JOptionPane.showConfirmDialog(this, "Do you want to save changes??"); 
 				if(val==JOptionPane.YES_OPTION){
 					fileChange=false;
 					saveaction();
-					
+
 					/*Document listener is removed before opening the file 
 					 * and then added thanx to gitte for telling 
 					 * about DocumentListener
 					 */
-					
+
 					doc.removeDocumentListener(this);
 					openaction(returnVal);
-					doc.addDocumentListener(this);	
-					
+					doc.addDocumentListener(this);
+
 				}
 				if(val==JOptionPane.NO_OPTION){
 					fileChange=false;
@@ -232,23 +232,23 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 					doc.addDocumentListener(this);
 				}
 				if(val==JOptionPane.CANCEL_OPTION){
-				}	
-			 }	
-					
+				}
+			 }
+
 			else{
 				doc.removeDocumentListener(this);
 		       		openaction(returnVal);
-				doc.addDocumentListener(this);	
-			}	
-        				
+				doc.addDocumentListener(this);
+			}
+        
 		}
 		if(action=="Save...") {
-			
+
 				   fileChange=false;
 				   saveaction();
 		}
 		if(action=="Save as..."){
-			
+
 				fileChange=false;
 				int temp= saveasaction();                   //temp for the int return type of the function nothing else
 		}		 
@@ -271,10 +271,10 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		if(action=="Select All..."){
 				textArea.setCaretPosition(0);
 				textArea.moveCaretPosition(textArea.getDocument().getLength());
-		}	
-						
+		}
 
-	
+
+
 	}
 
 	/*
@@ -285,9 +285,9 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		try{
 			title=(String)file.getName()+" - Text Editor Demo for fiji";
 				this.setTitle(title);
-				
+
 				/*changing the title part ends*/
-				
+
 				FileInputStream fin = new FileInputStream(file);
 				//DataInputStream din = new DataInputStream(fin);
 				BufferedReader din = new BufferedReader(new InputStreamReader(fin)); 
@@ -297,7 +297,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 					textArea.setText("");
 					while(true)
 					{
-						
+
 						s = din.readLine();
 						if(s==null)
 							break;
@@ -342,12 +342,12 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 							if(filenames[i].equals(file.getName())){
 								ifReplaceFile=true;
 								break;
-							}	
+							}
 						}
 						if(ifReplaceFile){
 								int val= JOptionPane.showConfirmDialog(this, "Do you want to replace "+file.getName()+"??","Do you want to replace "+file.getName()+"??",JOptionPane.YES_NO_OPTION); 
 								if(val==JOptionPane.YES_OPTION){
-								
+
 									//changing the title again
 					                        	title=(String)file.getName()+" - Text Editor Demo for fiji";
 									this.setTitle(title);
@@ -365,7 +365,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 							outFile.flush( ); // redundant, done by close()
 							outFile.close( );
 						}
-									
+
              
               				//This is where a real application would save the file.
             		  }
@@ -378,7 +378,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	 * file initially
 	 */
 	public void saveaction(){
-		
+
 		 if(title=="Text Editor Demo for Fiji"){
 					  int temp= saveasaction();         //temp has no damn use just because saveasaction has a int return type  
 				   }
@@ -391,8 +391,8 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 					   }
 				   	catch(Exception e){}	   
 				   }
-	}	
-	
+	}
+
 	public void itemStateChanged(ItemEvent ie){}
 
     public void stateChanged(ChangeEvent e) {}
@@ -410,7 +410,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	 
 //	fileChange=true;
 	}
-	
+
 	//next function is for the InputMethodEvent changes
 	public void inputMethodTextChanged(InputMethodEvent event){
 	fileChange=true;
@@ -432,11 +432,11 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	public void windowActivated(WindowEvent e){
 	}
 	public void windowClosing(WindowEvent e){
-		
+
 		if(fileChange){
 			int val= JOptionPane.showConfirmDialog(this, "Do you want to save changes??"); 
 				if(val==JOptionPane.YES_OPTION){
-					
+
 					/*
 					 * This all mess is just to ensure that 
 					 * the window doesnot close on doing foll things stepwise
@@ -454,23 +454,23 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 						fileChange=false;
 						saveaction();
 						this.dispose();
-					}	
-						
-					
+					}
+
+
 				}
 				if(val==JOptionPane.NO_OPTION){
 					fileChange=false;
 					this.dispose();
-				
+
 				}
 				if(val==JOptionPane.CANCEL_OPTION){
 					setVisible(true);
-				}	
+				}
 			 }
 		else {
 			this.dispose();
-		}		
-		
+		}
+
 	}
 	public void windowClosed(WindowEvent e){
 	}
