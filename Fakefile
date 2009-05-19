@@ -216,7 +216,7 @@ plugins/CLI_.jar <- src-plugins/CLI_/CLI/*.java
 
 CLASSPATH(plugins/IO_.jar)=jars/batik.jar
 CLASSPATH(plugins/Sync_Win.jar)=plugins/Image_5D.jar
-MAINCLASS(plugins/Script_Editor.jar)=Editor
+MAINCLASS(plugins/Script_Editor.jar)=fiji.scripting.Editor
 CLASSPATH(plugins/Script_Editor.jar)=jars/rsyntaxtextarea.jar:jars/autocomplete.jar
 plugins/Script_Editor.jar <- src-plugins/Script_Editor/fiji/scripting/Editor.java \
 							src-plugins/Script_Editor/fiji/scripting/TextEditor.java \
