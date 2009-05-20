@@ -221,6 +221,8 @@ CLASSPATH(plugins/Script_Editor.jar)=jars/rsyntaxtextarea.jar:jars/autocomplete.
 plugins/Script_Editor.jar <- src-plugins/Script_Editor/fiji/scripting/Editor.java \
 							src-plugins/Script_Editor/fiji/scripting/TextEditor.java \
 							src-plugins/Script_Editor/fiji/scripting/CCellRenderer.java  \
+							src-plugins/Script_Editor/fiji/scripting/FindDialog.java  \
+							src-plugins/Script_Editor/fiji/scripting/ReplaceDialog.java  \
 							icon.png[images/icon.png] \
 							var.png[images/var.png]    \
 							funtion.png[images/function.png]  \
