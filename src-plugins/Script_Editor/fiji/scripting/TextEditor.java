@@ -27,17 +27,19 @@ import org.fife.ui.autocomplete.*;
 class TextEditor extends JFrame implements ActionListener , ItemListener , ChangeListener ,MouseMotionListener,MouseListener ,CaretListener,InputMethodListener,DocumentListener,WindowListener
 {
 
-   private static final long serialVersionUID = 1L;
-   JFileChooser fcc;                                                   //using filechooser
-   String action="";
-   boolean fileChange=false;
-   String title="";
-   InputMethodListener l;
-   File file;
-   CompletionProvider provider;
-   RSyntaxTextArea textArea;
-   Document doc;
-   private JEditorPane ep;
+	private static final long serialVersionUID = 1L;
+	JFileChooser fcc;                                                   //using filechooser
+	String action="";
+	boolean fileChange=false;
+   	String title="";
+   	InputMethodListener l;
+   	File file;
+   	CompletionProvider provider;
+   	RSyntaxTextArea textArea;
+   	Document doc;
+   	private JEditorPane ep;
+   	FindDialog findDialog;
+   	ReplaceDialog replaceDialog;
 
 
     /*public static void main(String[] args) {
@@ -52,125 +54,130 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
    //public void run(String arg0){
 	   
 
-   public TextEditor() {
-	fcc = new JFileChooser();                                        //For the file opening saving things
-
-      JPanel cp = new JPanel(new BorderLayout());
-      title="Text Editor Demo for Fiji";
+	public TextEditor() {
+		fcc = new JFileChooser();                                        //For the file opening saving things
+		JPanel cp = new JPanel(new BorderLayout());
+      		title="Text Editor for Fiji";
 		ep= new JEditorPane("text/html", null);
 		updateEditorPane();
-      textArea = new RSyntaxTextArea();
-      textArea.addInputMethodListener(l);
-      textArea.addCaretListener(this);
-      textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_C);
-	  String words[]={"public","private","protected","println","static","System","Swing","void","main","catch","class"};
-      DefaultCompletionProvider provider1 =new DefaultCompletionProvider(words);
-	  //CCompletionProvider provider =new CCompletionProvider(provider1);
-	  //CompletionProvider prov=provider.getProviderFor(textArea);
+      		textArea = new RSyntaxTextArea();
+      		textArea.addInputMethodListener(l);
+      		textArea.addCaretListener(this);
+      		textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_C);
+	  	String words[]={"public","private","protected","println","static","System","Swing","void","main","catch","class"};
+      		DefaultCompletionProvider provider1 =new DefaultCompletionProvider(words);
+	  	//CCompletionProvider provider =new CCompletionProvider(provider1);
+	  	//CompletionProvider prov=provider.getProviderFor(textArea);
 		if(provider==null)
 			provider = createCompletionProvider();
 
-      AutoCompletion autocomp=new AutoCompletion(provider);
-	 
-	  autocomp.setListCellRenderer(new CCellRenderer());
+      		AutoCompletion autocomp=new AutoCompletion(provider);
+	  	autocomp.setListCellRenderer(new CCellRenderer());
 		autocomp.setShowDescWindow(true);
 		autocomp.setParameterAssistanceEnabled(true);
-      autocomp.install(textArea);
-	  textArea.setToolTipSupplier((ToolTipSupplier)provider);
+      		autocomp.install(textArea);
+	  	textArea.setToolTipSupplier((ToolTipSupplier)provider);
 		ToolTipManager.sharedInstance().registerComponent(textArea);
-      doc=textArea.getDocument();
-      doc.addDocumentListener(this);
-     // super.fireCaretUpdate(CaretEvent ce);
-      RTextScrollPane sp = new RTextScrollPane(textArea);
-      cp.add(sp);
+      		doc=textArea.getDocument();
+      		doc.addDocumentListener(this);
+		RTextScrollPane sp = new RTextScrollPane(textArea);
+      		cp.add(sp);
 
       	/********* This part is used to change the 
          	   the icon of the 
            	   window of the editor **********/
 
-	BufferedImage image = null;
-        try {
-           // image = ImageIO.read(cp.getClass().getResource("/images/microscope.gif"));
-	   image = ImageIO.read(new java.net.URL("file:images/icon.png"));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-      setIconImage(image);
+		BufferedImage image = null;
+        	try {
+	   		image = ImageIO.read(new java.net.URL("file:images/icon.png"));
+        	} catch (IOException e) {
+            	e.printStackTrace();
+        	}
+      		setIconImage(image);
 
       
 
             /********setting the icon part ends ********/
 
 
-      setContentPane(cp);
-      setTitle(title);
-      addWindowListener(this);
-      setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+      		setContentPane(cp);
+      		setTitle(title);
+      		addWindowListener(this);
+      		setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 
 	/*********** Creating the menu options in the text editor ****************/
 
-	JMenuBar mbar = new JMenuBar();
-        setJMenuBar(mbar);
+		JMenuBar mbar = new JMenuBar();
+        	setJMenuBar(mbar);
 
       /*******  creating the menu for the File option **********/
-	JMenu file = new JMenu("File");
-        file.setMnemonic(KeyEvent.VK_F);
-        JMenuItem open = new JMenuItem("Open...");
-        file.add(open);
-        open.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, ActionEvent.ALT_MASK));
-        open.addActionListener(this);
-        file.addSeparator();
-        JMenuItem save = new JMenuItem("Save...");
-        file.add(save);
-        save.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, ActionEvent.CTRL_MASK));
-        save.addActionListener(this);
-        file.addSeparator();
-       JMenuItem saveas = new JMenuItem("Save as...");
-        file.add(saveas);
-        saveas.addActionListener(this);
-        file.addSeparator();
-        JMenuItem quit = new JMenuItem("Quit");
-        file.add(quit);
-        quit.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, ActionEvent.ALT_MASK));
-        quit.addActionListener(this);
-        mbar.add(file);
+		JMenu file = new JMenu("File");
+        	file.setMnemonic(KeyEvent.VK_F);
+        	JMenuItem open = new JMenuItem("Open...");
+        	file.add(open);
+        	open.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, ActionEvent.ALT_MASK));
+        	open.addActionListener(this);
+        	file.addSeparator();
+        	JMenuItem save = new JMenuItem("Save...");
+        	file.add(save);
+        	save.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, ActionEvent.CTRL_MASK));
+        	save.addActionListener(this);
+        	file.addSeparator();
+       		JMenuItem saveas = new JMenuItem("Save as...");
+        	file.add(saveas);
+        	saveas.addActionListener(this);
+        	file.addSeparator();
+        	JMenuItem quit = new JMenuItem("Quit...");
+        	file.add(quit);
+        	quit.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, ActionEvent.ALT_MASK));
+        	quit.addActionListener(this);
+        	mbar.add(file);
 
         /********The file menu part ended here  ***************/
 
         /*********The Edit menu part starts here ***************/
 
-	JMenu edit = new JMenu("Edit");
-        JMenuItem undo = new JMenuItem("Undo...");
-        edit.add(undo);
-        undo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Z, ActionEvent.CTRL_MASK));
-        undo.addActionListener(this);
-        edit.addSeparator();
-	JMenuItem redo = new JMenuItem("Redo...");
-        edit.add(redo);
-        redo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Y, ActionEvent.CTRL_MASK));
-        redo.addActionListener(this);
-        edit.addSeparator();
-        JMenuItem cut = new JMenuItem("Cut...");
-        edit.add(cut);
-        cut.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, ActionEvent.CTRL_MASK));
-        cut.addActionListener(this);
-        edit.addSeparator();
-	JMenuItem copy = new JMenuItem("Copy...");
-        edit.add(copy);
-        copy.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, ActionEvent.CTRL_MASK));
-        copy.addActionListener(this);
-        edit.addSeparator();
-	JMenuItem paste = new JMenuItem("Paste...");
-        edit.add(paste);
-        paste.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_V, ActionEvent.CTRL_MASK));
-        paste.addActionListener(this);
-	edit.addSeparator();
-	JMenuItem selectAll = new JMenuItem("Select All...");
-        edit.add(selectAll);
-        selectAll.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A, ActionEvent.CTRL_MASK));
-        selectAll.addActionListener(this);
-        
-        mbar.add(edit);
+		JMenu edit = new JMenu("Edit");
+        	JMenuItem undo = new JMenuItem("Undo...");
+        	edit.add(undo);
+        	undo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Z, ActionEvent.CTRL_MASK));
+        	undo.addActionListener(this);
+        	edit.addSeparator();
+		JMenuItem redo = new JMenuItem("Redo...");
+        	edit.add(redo);
+        	redo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Y, ActionEvent.CTRL_MASK));
+        	redo.addActionListener(this);
+        	edit.addSeparator();
+        	JMenuItem cut = new JMenuItem("Cut...");
+        	edit.add(cut);
+        	cut.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, ActionEvent.CTRL_MASK));
+        	cut.addActionListener(this);
+        	edit.addSeparator();
+		JMenuItem copy = new JMenuItem("Copy...");
+        	edit.add(copy);
+        	copy.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, ActionEvent.CTRL_MASK));
+        	copy.addActionListener(this);
+        	edit.addSeparator();
+		JMenuItem paste = new JMenuItem("Paste...");
+        	edit.add(paste);
+        	paste.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_V, ActionEvent.CTRL_MASK));
+        	paste.addActionListener(this);
+		edit.addSeparator();
+		JMenuItem find = new JMenuItem("Find...");
+        	edit.add(find);
+        	find.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F, ActionEvent.CTRL_MASK));
+        	find.addActionListener(this);
+		edit.addSeparator();
+		JMenuItem replace = new JMenuItem("Find and Replace...");
+        	edit.add(replace);
+        	replace.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_H, ActionEvent.CTRL_MASK));
+        	replace.addActionListener(this);
+		edit.addSeparator();
+		JMenuItem selectAll = new JMenuItem("Select All...");
+        	edit.add(selectAll);
+        	selectAll.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A, ActionEvent.CTRL_MASK));
+        	selectAll.addActionListener(this);
+       		mbar.add(edit);
         
         /******** The Edit menu part ends here *****************/
 
@@ -179,12 +186,12 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
       /*********** The menu part ended here    ********************/
 
-      pack();
-	  getToolkit().setDynamicLayout(true);            //added to accomodate the autocomplete part
+      		pack();
+	  	getToolkit().setDynamicLayout(true);            //added to accomodate the autocomplete part
 
-      setLocationRelativeTo(null);
-	setVisible(true);
-   }
+      		setLocationRelativeTo(null);
+		setVisible(true);
+   	}
 
 
 
@@ -244,33 +251,54 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		}
 		if(action=="Save...") {
 
-				   fileChange=false;
-				   saveaction();
+			fileChange=false;
+			saveaction();
 		}
 		if(action=="Save as..."){
 
-				fileChange=false;
-				int temp= saveasaction();                   //temp for the int return type of the function nothing else
-		}		 
+			fileChange=false;
+			int temp= saveasaction();                   //temp for the int return type of the function nothing else
+		}
+		if(action=="Quit..."){
+			processWindowEvent( new WindowEvent(this, WindowEvent.WINDOW_CLOSING) );
+		}
          		     	   
     		if(action=="Cut..."){
-				textArea.cut();
+			textArea.cut();
 		}
 		if(action=="Copy..."){
-				textArea.copy();
+			textArea.copy();
 		}
 		if(action=="Paste..."){
-				textArea.paste();
+			textArea.paste();
 		}
 		if(action=="Undo..."){
-				textArea.undoLastAction();
+			textArea.undoLastAction();
 		}
 		if(action=="Redo..."){
-				textArea.redoLastAction();
+			textArea.redoLastAction();
 		}
+		if(action=="Find..."){
+
+			findDialog=new FindDialog(this,textArea);
+			findDialog.setResizable(true);
+			findDialog.pack();
+			findDialog.setLocationRelativeTo(this);
+			findDialog.show();
+		}
+		if(action=="Find and Replace..."){
+
+			replaceDialog=new ReplaceDialog(this,textArea);
+			replaceDialog.setResizable(true);
+			replaceDialog.pack();
+			replaceDialog.setLocationRelativeTo(this);
+			replaceDialog.show();
+		}
+
+
 		if(action=="Select All..."){
-				textArea.setCaretPosition(0);
-				textArea.moveCaretPosition(textArea.getDocument().getLength());
+			textArea.setCaretPosition(0);
+			textArea.moveCaretPosition(textArea.getDocument().getLength());
 		}
 
 
@@ -395,7 +423,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 	public void itemStateChanged(ItemEvent ie){}
 
-    public void stateChanged(ChangeEvent e) {}
+    	public void stateChanged(ChangeEvent e) {}
 
 	public void mouseMoved(MouseEvent me){}
 	public void mouseClicked(MouseEvent me){}
@@ -555,66 +583,6 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	}
 
 
-	/**
-	 * Returns the menu bar for the demo application.
-	 *
-	 * @return The menu bar.
-	 */
-	/*private JMenuBar createMenuBar() {
-
-		JMenuBar mb = new JMenuBar();
-
-		JMenu menu = new JMenu("File");
-		Action newAction = new TextAction("New") {
-			public void actionPerformed(ActionEvent e) {
-				AutoCompleteDemoApp app2 = new AutoCompleteDemoApp(
-												ac.getCompletionProvider());
-				app2.setVisible(true);
-			}
-		};
-		JMenuItem item = new JMenuItem(newAction);
-		menu.add(item);
-		mb.add(menu);
-
-		menu = new JMenu("View");
-		Action renderAction = new FancyCellRenderingAction();
-		cellRenderingItem = new JCheckBoxMenuItem(renderAction);
-		cellRenderingItem.setSelected(true);
-		menu.add(cellRenderingItem);
-		Action descWindowAction = new ShowDescWindowAction();
-		showDescWindowItem = new JCheckBoxMenuItem(descWindowAction);
-		showDescWindowItem.setSelected(true);
-		menu.add(showDescWindowItem);
-		Action paramAssistanceAction = new ParameterAssistanceAction();
-		paramAssistanceItem = new JCheckBoxMenuItem(paramAssistanceAction);
-		paramAssistanceItem.setSelected(true);
-		menu.add(paramAssistanceItem);
-		mb.add(menu);
-
-		ButtonGroup bg = new ButtonGroup();
-		menu = new JMenu("LookAndFeel");
-		Action lafAction = new LafAction("System", UIManager.getSystemLookAndFeelClassName());
-		JRadioButtonMenuItem rbmi = new JRadioButtonMenuItem(lafAction);
-		rbmi.setSelected(true);
-		menu.add(rbmi);
-		bg.add(rbmi);
-		lafAction = new LafAction("Motif", "com.sun.java.swing.plaf.motif.MotifLookAndFeel");
-		rbmi = new JRadioButtonMenuItem(lafAction);
-		menu.add(rbmi);
-		bg.add(rbmi);
-		lafAction = new LafAction("Ocean", "javax.swing.plaf.metal.MetalLookAndFeel");
-		rbmi = new JRadioButtonMenuItem(lafAction);
-		menu.add(rbmi);
-		bg.add(rbmi);
-		lafAction = new LafAction("Nimbus", "com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel");
-		rbmi = new JRadioButtonMenuItem(lafAction);
-		menu.add(rbmi);
-		bg.add(rbmi);
-		mb.add(menu);
-
-		return mb;
-
-	} */
 
 
 	/**
