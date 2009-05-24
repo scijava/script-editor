@@ -1,0 +1,22 @@
+gitte asked me to create a file which I will commit in a moment and now some change after that .I am revising the git commit,add and status commands
+
+May6 09 : I have created a sample java frame with fiji icon(microscope one)  and using Rsyntaxtextarea jar file
+
+May7 09	: added the opening and saving files feature and learnt about the "diff" command , advantage of "git log -p" over "git log" and the creating jar files simply by adding the CLASSPATH in the Fakefile
+
+May9 09	:  improved the file opening and closing i.e. managing replacements and when to save and when to save as added simple features like cut copy paste undo and redo first by my own code but then realized that the RTextEditorKit.java(in package RTextArea of submodule RSyntaxTextArea) has straight forward functions for these functions I spent five hours on learning clipboard and Transferable etc but Rsyntaxtextarea is awesome got to go home otherwise I would have played a lot today with other functions in RTextEditorKit
+
+May11 09: Gitte told me how to make an application a plugin and I went through the autocomplete package especially the CompletionProvider interface and also sorted out a problem regarding creating a jar file as I was stupid enough not to rebuild the Fiji jar file in the misc folder which I was supposed to do as gitte changed some settings for --jar a couple of days ago.
+
+May13 09: Sorted out how to generate the class names for the autocompletion by splitting the classpath.
+	For the completion part for every path create recursive list at every step with each List having a key which It will fill and the key will be the path till that point like for "j" it will match the first part ie the parent and then and on writing "java.a" it should match with the second step on the List java.awt  
+
+May17 09 Created the class names generator but the structure is not perfect.Also learnt how to learn to remove white spaces and the Fiji Classnames convention etc.
+
+May19 09 Created the FindDialog.java and the ReplaceDialog.java and added it to the texteditor GUI and removed flaws regarding the Quit and some minor functions on opening and closing
+
+May21 09 Changed the design of the autocompleteClassGenerator.java and went through the details of the DefaultCompletionProvider,AbstractCompletionProvider.java and other classes in the autocomplete package.
+
+May23 09 talked to gitte about the design of the autocompleteClassGenerator.java and hence changed the design to a heap(tree with any number of children) and and used TreeSet class as a list of the names which will childList of a given node the design worked fine individually but still giving a lot of errors when added it to the fiji.scripting package the file is now known as Classnames.java and 
+
+May24 09 Created file named the DefaultProvider.java on the lines of the DefaultCompletionProvider.java and also a file named ClassCompletionProvider.java 
