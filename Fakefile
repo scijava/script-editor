@@ -223,6 +223,11 @@ plugins/Script_Editor.jar <- src-plugins/Script_Editor/fiji/scripting/Editor.jav
 							src-plugins/Script_Editor/fiji/scripting/CCellRenderer.java  \
 							src-plugins/Script_Editor/fiji/scripting/FindDialog.java  \
 							src-plugins/Script_Editor/fiji/scripting/ReplaceDialog.java  \
+							src-plugins/Script_Editor/fiji/scripting/ClassCompletionProvider.java \
+							src-plugins/Script_Editor/fiji/scripting/DefaultProvider.java \
+							src-plugins/Script_Editor/fiji/scripting/ClassNames.java \
+							src-plugins/Script_Editor/fiji/scripting/Tree.java \
+							src-plugins/Script_Editor/fiji/scripting/sortedSet.java \
 							icon.png[images/icon.png] \
 							var.png[images/var.png]    \
 							funtion.png[images/function.png]  \
