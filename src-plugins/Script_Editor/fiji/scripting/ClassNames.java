@@ -70,7 +70,7 @@ class ClassNames {
 		return topLevel;
 	}
 
-	public sortedSet lowestLevel() {
+	public sortedSet getLowestLevel() {
 		return lowestLevel;
 	}
 
