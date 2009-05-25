@@ -6,13 +6,15 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.text.JTextComponent;
-
+import java.io.File;
+import java.util.TreeSet;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.RSyntaxUtilities;
 import org.fife.ui.rsyntaxtextarea.Token;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.ToolTipSupplier;
+import org.fife.ui.autocomplete.*;
 
 
 public class ClassCompletionProvider extends CompletionProviderBase
@@ -22,7 +24,7 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	 * The provider to use when no provider is assigned to a particular token
 	 * type.
 	 */
-	private CompletionProvider defaultProvider;
+	private DefaultProvider defaultProvider;
 
 	/**
 	 * The provider to use when completing in a string.
@@ -39,7 +41,7 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	 * The provider to use while in documentation comments.
 	 */
 	private CompletionProvider docCommentCompletionProvider;
-
+	//List listOfCompletions;
 	sortedSet topLevel;
 	sortedSet lowestLevel;
 	/**
@@ -51,7 +53,7 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	public ClassCompletionProvider(CompletionProvider defaultProvider,RSyntaxTextArea textArea) {
 		setDefaultProvider(defaultProvider);
 		this.textArea=textArea;
-		Classnames names=new Classnames();
+		ClassNames names=new ClassNames();
 		names.run(System.getProperty("java.class.path").split(File.pathSeparator));
 		topLevel=names.getTopLevel();
 		lowestLevel=names.getLowestLevel();
@@ -90,9 +92,9 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	 * @return The completion provider to use.
 	 * @see #setCommentCompletionProvider(CompletionProvider)
 	 */
-	/*public CompletionProvider getCommentCompletionProvider() {
+	public CompletionProvider getCommentCompletionProvider() {
 		return commentCompletionProvider;
-	}*/
+	}
 
 
 	/**
@@ -145,15 +147,16 @@ public class ClassCompletionProvider extends CompletionProviderBase
 			sortedSet temp=topLevel;
 			int temp1=index;
 			Object temp2;
+			boolean isPresent=true;
 			while(temp1>1){
-				boolean isPresent=true;
 
-				if(!((Tree)findTailSet(temp,packageParts[index-temp]).first()).key.equals(packageParts[index-temp1])) {//looks if topLevel contains the first part of the package part
+
+				if(!((Tree)findTailSet(temp,packageParts[index-temp1]).first()).key.equals(packageParts[index-temp1])) {//looks if topLevel contains the first part of the package part
 					isPresent=false;
 					break;
 				}
 				else{
-					temp=((Tree)findTailSet(temp,packageParts.first())).childList();
+					temp=((Tree)findTailSet(temp,packageParts[index-temp1]).first()).childList;
 				}
 				temp1--;
 
@@ -167,37 +170,56 @@ public class ClassCompletionProvider extends CompletionProviderBase
 
 
 		}
+		return defaultProvider;
 
 	}
 
 	public sortedSet findTailSet(sortedSet parent,String text) {
 		Object o=(Object)new Tree(text);
-		sortedSet toReturn=parent.tailSet(o);
-		return toReturn;
+		TreeSet toReturn=(TreeSet)parent.tailSet(o);
+		sortedSet tail=new sortedSet();
+		for(Object tree : toReturn) {
+			Tree tree1=(Tree)tree;
+			tail.add(tree1);
+		}
+		return tail;
+	}
+
+	public sortedSet findHeadSet(sortedSet parent,String text) {
+		Object o=(Object)new Tree(text);
+		TreeSet toReturn=(TreeSet)parent.headSet(o);
+		sortedSet tail=new sortedSet();
+		for(Object tree : toReturn) {
+			Tree tree1=(Tree)tree;
+			tail.add(tree1);
+		}
+		return tail;
 	}
 	public sortedSet findSortedSet(sortedSet parent,String text) {
-		Tree tree;
-		//Object tree1;
+		Tree tree=new Tree();
+		Object tree2=new Object();
 		sortedSet toBeUsedInLoop=findTailSet(parent,text);
-		for(Object tree1 : toBeUsedLoop) {
-			Tree tree=(Tree)tree1;
-			if(!(tree.key.startsWith(text)){
+		for(Object tree1 : toBeUsedInLoop) {
+			tree=(Tree)tree1;
+			if(!(tree.key.startsWith(text))){
+				tree2=tree1;
 				break;
 			}
+			tree2=tree1;                                     //just because tree has to be declared  inside the for loop
 		}
-		if(tree1.equals(toBeUsedInLoop.last())) {
+		if(tree2.equals(toBeUsedInLoop.last())) {
 			return(findTailSet(parent,text));
 		}
 		else {
-			return(toBeUsedInLoop.headSet(tree1));
+			return(findHeadSet(toBeUsedInLoop,tree.key));
 		}
 	}
 
-	public List createListCompletions(sortedSet setOfCompletions) {
-		List listOfCompletions;
+	public ArrayList createListCompletions(sortedSet setOfCompletions) {
+		ArrayList listOfCompletions =new ArrayList();
 		for(Object o : setOfCompletions) {
 			Tree tree=(Tree)o;
-			listOfCompletions.add(new BasicCompletion(defaultProvider,tree.getKey());
+			listOfCompletions.add(new BasicCompletion(defaultProvider,tree.getKey()));
 		}
 		return listOfCompletions;
 	}
@@ -210,9 +232,9 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	 * @return The completion provider to use.
 	 * @see #setDocCommentCompletionProvider(CompletionProvider)
 	 */
-	/*public CompletionProvider getDocCommentCompletionProvider() {
+	public CompletionProvider getDocCommentCompletionProvider() {
 		return docCommentCompletionProvider;
-	}*/
+	}
 
 
 	/**
@@ -362,7 +384,7 @@ public class ClassCompletionProvider extends CompletionProviderBase
 		if (provider==null) {
 			throw new IllegalArgumentException("provider cannot be null");
 		}
-		this.defaultProvider = provider;
+		this.defaultProvider = (DefaultProvider)provider;
 	}
 
 
