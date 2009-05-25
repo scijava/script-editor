@@ -16,6 +16,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import org.xml.sax.SAXException;
+import org.fife.ui.autocomplete.*;
 
 
 
@@ -247,7 +248,7 @@ public class DefaultProvider extends AbstractCompletionProvider {
 	 * @return Whether the character is valid.
 	 */
 	protected boolean isValidChar(char ch) {
-		return (Character.isLetterOrDigit(ch) || ch=='_' || ch==".");
+		return (Character.isLetterOrDigit(ch) || ch=='_' || ch=='.');
 	}
 
 
@@ -258,77 +259,5 @@ public class DefaultProvider extends AbstractCompletionProvider {
 	 * @param file An XML file to load from.
 	 * @throws IOException If an IO error occurs.
 	 */
-	public void loadFromXML(File file) throws IOException {
-		BufferedInputStream bin = new BufferedInputStream(
-										new FileInputStream(file));
-		try {
-			loadFromXML(bin);
-		} finally {
-			bin.close();
-		}
-	}
-
-
-	/**
-	 * Loads completions from an XML input stream.  The XML should validate
-	 * against the completion XML schema.
-	 *
-	 * @param in The input stream to read from.
-	 * @throws IOException If an IO error occurs.
-	 */
-	public void loadFromXML(InputStream in) throws IOException {
-
-		//long start = System.currentTimeMillis();
-
-		SAXParserFactory factory = SAXParserFactory.newInstance();
-		CompletionXMLParser handler = new CompletionXMLParser(this);
-		BufferedInputStream bin = new BufferedInputStream(in);
-		try {
-			SAXParser saxParser = factory.newSAXParser();
-			saxParser.parse(bin, handler);
-			List completions =  handler.getCompletions();
-			addCompletions(completions);
-			char startChar = handler.getParamStartChar();
-			if (startChar!=0) {
-				char endChar = handler.getParamEndChar();
-				String sep = handler.getParamSeparator();
-				if (endChar!=0 && sep!=null && sep.length()>0) { // Sanity
-					setParameterizedCompletionParams(startChar, sep, endChar);
-				}
-			}
-		} catch (SAXException se) {
-			throw new IOException(se.toString());
-		} catch (ParserConfigurationException pce) {
-			throw new IOException(pce.toString());
-		} finally {
-			//long time = System.currentTimeMillis() - start;
-			//System.out.println("XML loaded in: " + time + "ms");
-			bin.close();
-		}
-
-	}
-
-
-	/**
-	 * Loads completions from an XML file.  The XML should validate against
-	 * the completion XML schema.
-	 *
-	 * @param resource A resource the current ClassLoader can get to.
-	 * @throws IOException If an IO error occurs.
-	 */
-	public void loadFromXML(String resource) throws IOException {
-		ClassLoader cl = getClass().getClassLoader();
-		InputStream in = cl.getResourceAsStream(resource);
-		if (in==null) {
-			throw new IOException("No such resource: " + resource);
-		}
-		BufferedInputStream bin = new BufferedInputStream(in);
-		try {
-			loadFromXML(bin);
-		} finally {
-			bin.close();
-		}
-	}
-
 
 }
