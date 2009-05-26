@@ -14,6 +14,8 @@ import javax.swing.text.Document;
 /*for the cell renderer part*/
 import java.net.MalformedURLException;
 import java.net.URL;
+import ij.io.*;
+import ij.IJ;
 /*cell renderer part ends here*/
 import javax.imageio.*;
 import java.util.Arrays;
@@ -200,11 +202,31 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		}
 
 		if (ae.getSource()==open) {
-			fcc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+			int returnVal=-1;
+			/*fcc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
 			int returnVal = fcc.showOpenDialog(TextEditor.this);
 			try
 			{
 				file = fcc.getSelectedFile();
+			}
+			catch(Exception e){}*/
+			OpenDialog dialog = new OpenDialog("Open..","");
+			String directory = dialog.getDirectory();
+			String name = dialog.getFileName();
+			String path="";
+			if (name!=null) {
+				returnVal=fcc.APPROVE_OPTION;
+				path = directory+name;
+				boolean fullPath = path.startsWith("/") || path.startsWith("\\") || path.indexOf(":\\")==1 || path.startsWith("http://");
+				if (!fullPath) {
+					String workingDir = OpenDialog.getDefaultDirectory();
+					if (workingDir!=null)
+						path = workingDir + path;
+				}
+			}
+			try
+			{
+				file = new File(path);
 			}
 			catch(Exception e){}
 				/*condition to check whether there is a change and the 
@@ -368,43 +390,54 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	public int saveasaction() {
 			int returnVal=0;		//just to make sure it does not give a not initialized error
 			boolean ifReplaceFile=false;
+			String path="";
+			String directory="";
+
 			try{
+				SaveDialog sd = new SaveDialog("Save as ","new",".java");
+				String name = sd.getFileName();
+				if(name!=null) {
+					directory = sd.getDirectory();
+					path = directory+name;
+					returnVal=JFileChooser.APPROVE_OPTION;
+				}
+
 				   
-         		     	   fcc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
-         			   returnVal = fcc.showDialog(TextEditor.this,"Save");
+         		     	   /*fcc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+         			   returnVal = fcc.showDialog(TextEditor.this,"Save");*/
          			   if (returnVal == JFileChooser.APPROVE_OPTION) {
-          	   				file = fcc.getSelectedFile();
-						String[] filenames;
-         					File f = fcc.getCurrentDirectory();
+          	   				file = new File(path);
+							String[] filenames;
+         					File f = new File(directory);
           					filenames = f.list();
           					for(int i=0; i< filenames.length; i++) {
-							System.out.println(filenames[i]+" "+file.getName());
-							if(filenames[i].equals(file.getName())) {
-								ifReplaceFile=true;
-								break;
-							}
-						}
-						if(ifReplaceFile) {
-								int val= JOptionPane.showConfirmDialog(this, "Do you want to replace "+file.getName()+"??","D										o you want to replace "+file.getName()+"??",JOptionPane.YES_NO_OPTION); 
-								if(val==JOptionPane.YES_OPTION) {
-
-									//changing the title again
-					                        	title=(String)file.getName()+" - Text Editor Demo for fiji";
-									this.setTitle(title);
-									BufferedWriter outFile = new BufferedWriter( new FileWriter( file ) );
-									outFile.write( textArea.getText( ) ); //put in textfile
-									outFile.flush( ); // redundant, done by close()
-									outFile.close( );
+								System.out.println(filenames[i]+" "+file.getName());
+								if(filenames[i].equals(file.getName())) {
+									ifReplaceFile=true;
+									break;
 								}
-						}
-						else {
-							title=(String)file.getName()+" - Text Editor Demo for fiji";
-							this.setTitle(title);
-							BufferedWriter outFile = new BufferedWriter( new FileWriter( file ) );
-							outFile.write( textArea.getText( ) ); //put in textfile
-							outFile.flush( ); // redundant, done by close()
-							outFile.close( );
-						}
+							}
+							if(ifReplaceFile) {
+									int val= JOptionPane.showConfirmDialog(this, "Do you want to replace "+file.getName()+"??","D										o you want to replace "+file.getName()+"??",JOptionPane.YES_NO_OPTION); 
+									if(val==JOptionPane.YES_OPTION) {
+
+										//changing the title again
+													title=(String)file.getName()+" - Text Editor Demo for fiji";
+										this.setTitle(title);
+										BufferedWriter outFile = new BufferedWriter( new FileWriter( file ) );
+										outFile.write( textArea.getText( ) ); //put in textfile
+										outFile.flush( ); // redundant, done by close()
+										outFile.close( );
+									}
+							}
+							else {
+								title=(String)file.getName()+" - Text Editor Demo for fiji";
+								this.setTitle(title);
+								BufferedWriter outFile = new BufferedWriter( new FileWriter( file ) );
+								outFile.write( textArea.getText( ) ); //put in textfile
+								outFile.flush( ); // redundant, done by close()
+								outFile.close( );
+							}
 
              
               				//This is where a real application would save the file.
