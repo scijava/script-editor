@@ -193,14 +193,13 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	}
 
 	public sortedSet findHeadSet(sortedSet parent,String text) {
-		/*Object o=(Object)new Tree(text);
+		Object o=(Object)new Tree(text);
 		TreeSet toReturn=(TreeSet)parent.headSet(o);
 		sortedSet tail=new sortedSet();
 		for(Object tree : toReturn) {
 			Tree tree1=(Tree)tree;
 			tail.add(tree1);
-		}*/
-		SortedSet tail = new SortedSet();
+		}
 		return tail;
 	}
 	public sortedSet findSortedSet(sortedSet parent,String text) {
