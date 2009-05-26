@@ -54,7 +54,7 @@ public class ClassCompletionProvider extends CompletionProviderBase
 		setDefaultProvider(defaultProvider);
 		this.textArea=textArea;
 		ClassNames names=new ClassNames();
-		names.run(System.getProperty("java.class.path").split(File.pathSeparator));
+		names.run((System.getProperty("java.class.path")+File.pathSeparator+System.getProperty("sun.boot.class.path")).split(File.pathSeparator));
 		topLevel=names.getTopLevel();
 		lowestLevel=names.getLowestLevel();
 	}
@@ -131,8 +131,8 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	 */
 	public CompletionProvider getDefaultProvider() {
 		defaultProvider=new DefaultProvider();
-		String text=defaultProvider.getAlreadyEnteredText(textArea);
-		String[] packageParts={};
+		String text=defaultProvider.getEnteredText(textArea);
+		String[] packageParts=new String[10];                             //this has to be improved as this restricts only less than 10 dots in a classfull name
 		int index=text.lastIndexOf(".");
 		if(index<0){
 			sortedSet packagePart=findSortedSet(topLevel,text);
@@ -142,10 +142,11 @@ public class ClassCompletionProvider extends CompletionProviderBase
 		}
 
 		if(index>0) {
-			packageParts=text.split(".");
-			index=packageParts.length;
+			String[] parts=text.split("\\.");
+			index=parts.length;
 			sortedSet temp=topLevel;
 			int temp1=index;
+			packageParts=parts;
 			Object temp2;
 			boolean isPresent=true;
 			while(temp1>1){
@@ -162,6 +163,12 @@ public class ClassCompletionProvider extends CompletionProviderBase
 
 			}
 			if(isPresent){
+
+				for(Object o : temp) {                  //just to check the elements in the sortedSet
+					Tree t=(Tree)o;
+					System.out.println(t.key);
+				}
+
 				temp=findSortedSet(temp,packageParts[index-1]);
 				defaultProvider.addCompletions(createListCompletions(temp));
 			}
@@ -186,29 +193,35 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	}
 
 	public sortedSet findHeadSet(sortedSet parent,String text) {
-		Object o=(Object)new Tree(text);
+		/*Object o=(Object)new Tree(text);
 		TreeSet toReturn=(TreeSet)parent.headSet(o);
 		sortedSet tail=new sortedSet();
 		for(Object tree : toReturn) {
 			Tree tree1=(Tree)tree;
 			tail.add(tree1);
-		}
+		}*/
+		SortedSet tail = new SortedSet();
 		return tail;
 	}
 	public sortedSet findSortedSet(sortedSet parent,String text) {
 		Tree tree=new Tree();
 		Object tree2=new Object();
+		//System.out.println(text);
 		sortedSet toBeUsedInLoop=findTailSet(parent,text);
+		System.out.println("the size of the tailset is"+toBeUsedInLoop.size());
 		for(Object tree1 : toBeUsedInLoop) {
 			tree=(Tree)tree1;
 			if(!(tree.key.startsWith(text))){
 				tree2=tree1;
 				break;
 			}
+			System.out.println(tree.key);
 			tree2=tree1;                                     //just because tree has to be declared  inside the for loop
 		}
 		if(tree2.equals(toBeUsedInLoop.last())) {
-			return(findTailSet(parent,text));
+
+			System.out.println(((Tree)tree2).key);
+			return(toBeUsedInLoop);
 		}
 		else {
 			return(findHeadSet(toBeUsedInLoop,tree.key));
@@ -221,6 +234,7 @@ public class ClassCompletionProvider extends CompletionProviderBase
 			Tree tree=(Tree)o;
 			listOfCompletions.add(new BasicCompletion(defaultProvider,tree.getKey()));
 		}
+		System.out.println("the compltion list has "+listOfCompletions.size());
 		return listOfCompletions;
 	}
 
