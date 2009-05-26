@@ -1,7 +1,7 @@
 package fiji.scripting;
 import java.lang.Comparable;
 import java.lang.Object;
-public class Tree extends Object implements Comparable{
+public class Tree implements Comparable{
 	String key;
 	sortedSet childList;
 	Tree parent;
