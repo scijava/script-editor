@@ -101,6 +101,35 @@ public class DefaultProvider extends AbstractCompletionProvider {
 
 	}
 
+	public String getEnteredText(JTextComponent comp) {                  //this includes the "." in the total returned string
+
+		Document doc = comp.getDocument();
+
+		int dot = comp.getCaretPosition();
+		Element root = doc.getDefaultRootElement();
+		int index = root.getElementIndex(dot);
+		Element elem = root.getElement(index);
+		int start = elem.getStartOffset();
+		int len = dot-start;
+		try {
+			doc.getText(start, len, seg);
+		} catch (BadLocationException ble) {
+			ble.printStackTrace();
+			return EMPTY_STRING;
+		}
+
+		int segEnd = seg.offset + len;
+		start = segEnd - 1;
+		while (start>=seg.offset && isAcceptableChar(seg.array[start])) {
+			start--;
+		}
+		start++;
+
+		len = segEnd - start;
+		return len==0 ? EMPTY_STRING : new String(seg.array, start, len);
+
+	}
+
 
 	/**
 	 * {@inheritDoc}
@@ -248,6 +277,10 @@ public class DefaultProvider extends AbstractCompletionProvider {
 	 * @return Whether the character is valid.
 	 */
 	protected boolean isValidChar(char ch) {
+		return (Character.isLetterOrDigit(ch) || ch=='_');
+	}
+
+	protected boolean isAcceptableChar(char ch) {
 		return (Character.isLetterOrDigit(ch) || ch=='_' || ch=='.');
 	}
 
