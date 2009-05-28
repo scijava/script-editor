@@ -16,6 +16,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import ij.io.*;
 import ij.IJ;
+import ij.Prefs;
 /*cell renderer part ends here*/
 import javax.imageio.*;
 import java.util.Arrays;
@@ -36,10 +37,12 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
    	CompletionProvider provider;
    	RSyntaxTextArea textArea;
    	Document doc;
-	JMenuItem new1,open,save,saveas,quit,undo,redo,cut,copy,paste,find,replace,selectAll;
+	JMenuItem new1,open,save,saveas,quit,undo,redo,cut,copy,paste,find,replace,selectAll,autocomplete,jfcdialog,ijdialog;
+	//JMenu io;
 	FileInputStream fin;
       	FindDialog findDialog;
-   	ReplaceDialog replaceDialog;     
+   	ReplaceDialog replaceDialog;
+	AutoCompletion autocomp;
 
 	public TextEditor() {
 		fcc = new JFileChooser();                                        //For the file opening saving things
@@ -54,7 +57,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		if(provider==null) {
 			provider = createCompletionProvider();
 		}
-      		AutoCompletion autocomp=new AutoCompletion(provider);
+      		autocomp=new AutoCompletion(provider);
 	  	autocomp.setListCellRenderer(new CCellRenderer());
 		autocomp.setShowDescWindow(true);
 		autocomp.setParameterAssistanceEnabled(true);
@@ -139,6 +142,22 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
        		mbar.add(edit);
         
         /******** The Edit menu part ends here *****************/
+		JMenu options = new JMenu("Options");
+		autocomplete = new JMenuItem("Autocomplete");
+		addToMenu(options,autocomplete,KeyEvent.VK_SPACE, ActionEvent.CTRL_MASK);
+		JMenu io = new JMenu("Input/Output");
+		JMenu dialog= new JMenu("Open/Save Dialog");
+		JMenuItem jfcdialog=new JMenuItem("JFileChooser");
+		dialog.add(jfcdialog);
+		jfcdialog.addActionListener(this);
+		JMenuItem ijdialog=new JMenuItem("IJ");
+		dialog.add(ijdialog);
+		ijdialog.addActionListener(this);
+		io.add(dialog);
+
+		options.add(io);
+
+       		mbar.add(options);
 
        
 
@@ -203,32 +222,36 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 		if (ae.getSource()==open) {
 			int returnVal=-1;
-			/*fcc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
-			int returnVal = fcc.showOpenDialog(TextEditor.this);
-			try
-			{
-				file = fcc.getSelectedFile();
-			}
-			catch(Exception e){}*/
-			OpenDialog dialog = new OpenDialog("Open..","");
-			String directory = dialog.getDirectory();
-			String name = dialog.getFileName();
-			String path="";
-			if (name!=null) {
-				returnVal=fcc.APPROVE_OPTION;
-				path = directory+name;
-				boolean fullPath = path.startsWith("/") || path.startsWith("\\") || path.indexOf(":\\")==1 || path.startsWith("http://");
-				if (!fullPath) {
-					String workingDir = OpenDialog.getDefaultDirectory();
-					if (workingDir!=null)
-						path = workingDir + path;
+			if(Prefs.useJFileChooser) {
+				fcc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+				returnVal = fcc.showOpenDialog(TextEditor.this);
+				try
+				{
+					file = fcc.getSelectedFile();
 				}
+				catch(Exception e){}
 			}
-			try
-			{
-				file = new File(path);
+			else {
+				OpenDialog dialog = new OpenDialog("Open..","");
+				String directory = dialog.getDirectory();
+				String name = dialog.getFileName();
+				String path="";
+				if (name!=null) {
+					returnVal=fcc.APPROVE_OPTION;
+					path = directory+name;
+					boolean fullPath = path.startsWith("/") || path.startsWith("\\") || path.indexOf(":\\")==1 || path.startsWith("http://");
+					if (!fullPath) {
+						String workingDir = OpenDialog.getDefaultDirectory();
+						if (workingDir!=null)
+							path = workingDir + path;
+					}
+				}
+				try
+				{
+					file = new File(path);
+				}
+				catch(Exception e){}
 			}
-			catch(Exception e){}
 				/*condition to check whether there is a change and the 
 			 	* user has really opted to open a new file
 			 	*/
@@ -328,7 +351,17 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			textArea.moveCaretPosition(textArea.getDocument().getLength());
 		}
 
-
+		if(ae.getSource()==autocomplete) {
+			try{
+				autocomp.doCompletion();
+			} catch(Exception e){}
+		}
+		if(ae.getSource()==jfcdialog) {
+			Prefs.useJFileChooser=true;
+		}
+		if(ae.getSource()==ijdialog) {
+			Prefs.useJFileChooser=false;
+		}
 
 	}
 
@@ -394,21 +427,30 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			String directory="";
 
 			try{
-				SaveDialog sd = new SaveDialog("Save as ","new",".java");
-				String name = sd.getFileName();
-				if(name!=null) {
-					directory = sd.getDirectory();
-					path = directory+name;
-					returnVal=JFileChooser.APPROVE_OPTION;
+				if(!Prefs.useJFileChooser) {
+					SaveDialog sd = new SaveDialog("Save as ","new",".java");
+					String name = sd.getFileName();
+					if(name!=null) {
+						directory = sd.getDirectory();
+						path = directory+name;
+						returnVal=JFileChooser.APPROVE_OPTION;
+					}
 				}
-
-				   
-         		     	   /*fcc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
-         			   returnVal = fcc.showDialog(TextEditor.this,"Save");*/
+				else {
+						fcc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+						returnVal = fcc.showDialog(TextEditor.this,"Save");
+					}
          			   if (returnVal == JFileChooser.APPROVE_OPTION) {
-          	   				file = new File(path);
+							File f=new File(".");
+							if(!Prefs.useJFileChooser) {
+								file = new File(path);
+								f = new File(directory);
+							}
+							else {
+								file = fcc.getSelectedFile();
+	         					f = fcc.getCurrentDirectory();
+							}
 							String[] filenames;
-         					File f = new File(directory);
           					filenames = f.list();
           					for(int i=0; i< filenames.length; i++) {
 								System.out.println(filenames[i]+" "+file.getName());
@@ -678,6 +720,8 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		textArea.requestFocusInWindow();
 	}
 }
+
+
 
 
 
