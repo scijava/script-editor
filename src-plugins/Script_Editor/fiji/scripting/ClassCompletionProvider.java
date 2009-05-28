@@ -131,46 +131,49 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	 */
 	public CompletionProvider getDefaultProvider() {
 		defaultProvider=new DefaultProvider();
+
 		String text=defaultProvider.getEnteredText(textArea);
-		String[] packageParts=new String[10];                             //this has to be improved as this restricts only less than 10 dots in a classfull name
-		int index=text.lastIndexOf(".");
-		if(index<0){
-			sortedSet packagePart=findSortedSet(topLevel,text);
-			sortedSet classPart=findSortedSet(lowestLevel,text);
-			packagePart.addAll(classPart);
-			defaultProvider.addCompletions(createListCompletions(packagePart));
-		}
-
-		if(index>0) {
-			String[] parts=text.split("\\.");
-			index=parts.length;
-			sortedSet temp=topLevel;
-			int temp1=index;
-			packageParts=parts;
-			Object temp2;
-			boolean isPresent=true;
-			while(temp1>1){
-
-
-				if(!((Tree)findTailSet(temp,packageParts[index-temp1]).first()).key.equals(packageParts[index-temp1])) {//looks if topLevel contains the first part of the package part
-					isPresent=false;
-					break;
-				}
-				else{
-					temp=((Tree)findTailSet(temp,packageParts[index-temp1]).first()).childList;
-				}
-				temp1--;
-
+		if(!(text=="" || text==null)) {
+			String[] packageParts=new String[10];                             //this has to be improved as this restricts only less than 10 dots in a classfull name
+			int index=text.lastIndexOf(".");
+			if(index<0){
+				sortedSet packagePart=findSortedSet(topLevel,text);
+				sortedSet classPart=findSortedSet(lowestLevel,text);
+				packagePart.addAll(classPart);
+				defaultProvider.addCompletions(createListCompletions(packagePart));
 			}
-			if(isPresent){
 
-				for(Object o : temp) {                  //just to check the elements in the sortedSet
-					Tree t=(Tree)o;
-					System.out.println(t.key);
+			if(index>0) {
+				String[] parts=text.split("\\.");
+				index=parts.length;
+				sortedSet temp=topLevel;
+				int temp1=index;
+				packageParts=parts;
+				Object temp2;
+				boolean isPresent=true;
+				while(temp1>1){
+
+
+					if(!((Tree)findTailSet(temp,packageParts[index-temp1]).first()).key.equals(packageParts[index-temp1])) {//looks if topLevel contains the first part of the package part
+						isPresent=false;
+						break;
+					}
+					else{
+						temp=((Tree)findTailSet(temp,packageParts[index-temp1]).first()).childList;
+					}
+					temp1--;
+
 				}
+				if(isPresent){
 
-				temp=findSortedSet(temp,packageParts[index-1]);
-				defaultProvider.addCompletions(createListCompletions(temp));
+					for(Object o : temp) {                  //just to check the elements in the sortedSet
+						Tree t=(Tree)o;
+						System.out.println(t.key);
+					}
+
+					temp=findSortedSet(temp,packageParts[index-1]);
+					defaultProvider.addCompletions(createListCompletions(temp));
+				}
 			}
 
 
@@ -214,7 +217,7 @@ public class ClassCompletionProvider extends CompletionProviderBase
 				tree2=tree1;
 				break;
 			}
-			System.out.println(tree.key);
+			//System.out.println(tree.key);
 			tree2=tree1;                                     //just because tree has to be declared  inside the for loop
 		}
 		if(tree2.equals(toBeUsedInLoop.last())) {
