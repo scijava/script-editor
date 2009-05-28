@@ -33,7 +33,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	boolean fileChange=false;
    	String title="";
 	InputMethodListener l;
-   	File file;
+   	File file,f;
    	CompletionProvider provider;
    	RSyntaxTextArea textArea;
    	Document doc;
@@ -150,6 +150,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		JMenuItem jfcdialog=new JMenuItem("JFileChooser");
 		dialog.add(jfcdialog);
 		jfcdialog.addActionListener(this);
+		dialog.addSeparator();
 		JMenuItem ijdialog=new JMenuItem("IJ");
 		dialog.add(ijdialog);
 		ijdialog.addActionListener(this);
@@ -222,16 +223,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 		if (ae.getSource()==open) {
 			int returnVal=-1;
-			if(Prefs.useJFileChooser) {
-				fcc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
-				returnVal = fcc.showOpenDialog(TextEditor.this);
-				try
-				{
-					file = fcc.getSelectedFile();
-				}
-				catch(Exception e){}
-			}
-			else {
+
 				OpenDialog dialog = new OpenDialog("Open..","");
 				String directory = dialog.getDirectory();
 				String name = dialog.getFileName();
@@ -250,8 +242,8 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 				{
 					file = new File(path);
 				}
-				catch(Exception e){}
-			}
+				catch(Exception e){System.out.println("problem in opening");}
+			//}
 				/*condition to check whether there is a change and the 
 			 	* user has really opted to open a new file
 			 	*/
@@ -357,10 +349,13 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			} catch(Exception e){}
 		}
 		if(ae.getSource()==jfcdialog) {
+			//Prefs.set(Prefs.OPTIONS,32);
 			Prefs.useJFileChooser=true;
+			Prefs.savePreferences();
 		}
 		if(ae.getSource()==ijdialog) {
 			Prefs.useJFileChooser=false;
+			Prefs.savePreferences();
 		}
 
 	}
@@ -427,7 +422,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			String directory="";
 
 			try{
-				if(!Prefs.useJFileChooser) {
+				//if(!Prefs.useJFileChooser) {
 					SaveDialog sd = new SaveDialog("Save as ","new",".java");
 					String name = sd.getFileName();
 					if(name!=null) {
@@ -435,13 +430,13 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 						path = directory+name;
 						returnVal=JFileChooser.APPROVE_OPTION;
 					}
-				}
-				else {
+				//}
+				/*else {
 						fcc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
 						returnVal = fcc.showDialog(TextEditor.this,"Save");
-					}
+					}*/
          			   if (returnVal == JFileChooser.APPROVE_OPTION) {
-							File f=new File(".");
+
 							if(!Prefs.useJFileChooser) {
 								file = new File(path);
 								f = new File(directory);
@@ -555,6 +550,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	public void windowActivated(WindowEvent e) {
 	}
 	public void windowClosing(WindowEvent e) {
+		System.out.println("here window");
 
 		if(fileChange) {
 			int val= JOptionPane.showConfirmDialog(this, "Do you want to save changes??"); 
@@ -596,14 +592,18 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 	}
 	public void windowClosed(WindowEvent e) {
+		System.out.println("here window 1");
 	}
 	public void windowDeactivated(WindowEvent e) {
+		System.out.println("here window 2");
 	}
 	public void windowDeiconified(WindowEvent e) {
+		System.out.println("here window 2");
 	}
 	public void windowIconified(WindowEvent e) {
 	}
 	public void windowOpened(WindowEvent e) {
+		System.out.println("here window 3");
 	}
 /*autocomplete addition starts here*/
 	private CompletionProvider createCodeCompletionProvider() {
@@ -720,7 +720,6 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		textArea.requestFocusInWindow();
 	}
 }
-
 
 
 
