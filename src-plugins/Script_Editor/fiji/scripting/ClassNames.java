@@ -18,6 +18,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.lang.Object;
 import java.awt.List;
+import org.fife.ui.autocomplete.*;
+import org.fife.ui.rsyntaxtextarea.*;
 
 	/****This class generates and prints the 
 	list of trees having each part of the classnames path 
@@ -43,6 +45,7 @@ class ClassNames {
 	static Tree latest=new Tree();
 	static Tree deflatest=new Tree();
 	static sortedSet listtry=new sortedSet();
+	DefaultProvider defaultProvider;
 	//static String names[]={};
 
 
@@ -58,6 +61,9 @@ class ClassNames {
 
 		for (int i = 1; i < args.length; i++){
 			latest=null;
+			//if(args[i].startsWith("java")) {
+				//System.out.println(args[i]);
+			//}
 			getClassNames(args[i]);
 			 			//to nullify the latest pointer of search before every path in the classpath
 		}
@@ -166,7 +172,7 @@ class ClassNames {
 
 												latestIndex = findRightLatest(temp,classname2,1);
 												if(latestIndex==-1){
-													latestIndex=deflatestIndex;
+													latestIndex=deflatestIndex;                      //deflatestIndex is used to keep track of previous latestIndex 
 													latest=deflatest;
 													continue;
 												}
@@ -219,17 +225,127 @@ class ClassNames {
 	}
 
 	public int findRightLatest(Tree tree1,String[] partsOfPackage,int index){
-	try{
-		Tree temp1=(Tree)tree1.childList.last();
-		if(temp1.key.equals(partsOfPackage[index]))
-			return(findRightLatest(temp1,partsOfPackage,++index));
-		else{
-			latest=tree1;
-			return --index;
+		try{
+			Tree temp1=(Tree)tree1.childList.last();
+			if(temp1.key.equals(partsOfPackage[index]))
+				return(findRightLatest(temp1,partsOfPackage,++index));
+			else{
+				latest=tree1;
+				return --index;
+			}
+		}catch(Exception e){
+			return -1;
 		}
-	}catch(Exception e){
-		return -1;
 	}
+
+	public CompletionProvider getDefaultProvider(sortedSet top,sortedSet lowest,RSyntaxTextArea textArea) {
+		defaultProvider=new DefaultProvider();
+
+		String text=defaultProvider.getEnteredText(textArea);
+		if(!(text=="" || text==null)) {
+			String[] packageParts=new String[10];                             //this has to be improved as this restricts only less than 10 dots in a classfull name
+			int index=text.lastIndexOf(".");
+			if(index<0){
+				sortedSet packagePart=findSortedSet(top,text);
+				sortedSet classPart=findSortedSet(lowest,text);
+				packagePart.addAll(classPart);
+				defaultProvider.addCompletions(createListCompletions(packagePart));
+			}
+
+			if(index>0) {
+				String[] parts=text.split("\\.");
+				index=parts.length;
+				sortedSet temp=top;
+				int temp1=index;
+				packageParts=parts;
+				Object temp2;
+				boolean isPresent=true;
+				while(temp1>1){
+
+
+					if(!((Tree)findTailSet(temp,packageParts[index-temp1]).first()).key.equals(packageParts[index-temp1])) {//looks if topLevel contains the first part of the package part
+						isPresent=false;
+						break;
+					}
+					else{
+						temp=((Tree)findTailSet(temp,packageParts[index-temp1]).first()).childList;
+					}
+					temp1--;
+
+				}
+				if(isPresent){
+
+
+
+					temp=findSortedSet(temp,packageParts[index-1]);
+					defaultProvider.addCompletions(createListCompletions(temp));
+				}
+			}
+
+
+
+
+		}
+		return defaultProvider;
+
+	}
+
+	public sortedSet findTailSet(sortedSet parent,String text) {
+		Object o=(Object)new Tree(text);
+		TreeSet toReturn=(TreeSet)parent.tailSet(o);
+		sortedSet tail=new sortedSet();
+		for(Object tree : toReturn) {
+			Tree tree1=(Tree)tree;
+			tail.add(tree1);
+		}
+		return tail;
+	}
+
+	public sortedSet findHeadSet(sortedSet parent,String text) {
+		Object o=(Object)new Tree(text);
+		TreeSet toReturn=(TreeSet)parent.headSet(o);
+		sortedSet tail=new sortedSet();
+		for(Object tree : toReturn) {
+			Tree tree1=(Tree)tree;
+			tail.add(tree1);
+		}
+		return tail;
+	}
+	public sortedSet findSortedSet(sortedSet parent,String text) {
+		Tree tree=new Tree();
+		Object tree2=new Object();
+		//System.out.println(text);
+		sortedSet toBeUsedInLoop=findTailSet(parent,text);
+		System.out.println("the size of the tailset is"+toBeUsedInLoop.size());
+		for(Object tree1 : toBeUsedInLoop) {
+			tree=(Tree)tree1;
+			if(!(tree.key.startsWith(text))){
+				tree2=tree1;
+				break;
+			}
+			//System.out.println(tree.key);
+			tree2=tree1;                                     //just because tree has to be declared  inside the for loop
+		}
+		try {
+			if(tree2.equals(toBeUsedInLoop.last())) {
+
+				System.out.println(((Tree)tree2).key);
+				return(toBeUsedInLoop);
+			}
+			else {
+				return(findHeadSet(toBeUsedInLoop,tree.key));
+			}
+		} catch(Exception e){return toBeUsedInLoop;}
+	}
+
+	public ArrayList createListCompletions(sortedSet setOfCompletions) {
+		ArrayList listOfCompletions =new ArrayList();
+		for(Object o : setOfCompletions) {
+			Tree tree=(Tree)o;
+			listOfCompletions.add(new BasicCompletion(defaultProvider,tree.getKey()));
+		}
+		System.out.println("the compltion list has "+listOfCompletions.size());
+		return listOfCompletions;
 	}
 
 
