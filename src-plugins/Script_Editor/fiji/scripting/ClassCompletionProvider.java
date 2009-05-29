@@ -220,14 +220,16 @@ public class ClassCompletionProvider extends CompletionProviderBase
 			//System.out.println(tree.key);
 			tree2=tree1;                                     //just because tree has to be declared  inside the for loop
 		}
-		if(tree2.equals(toBeUsedInLoop.last())) {
+		try {
+			if(tree2.equals(toBeUsedInLoop.last())) {
 
-			System.out.println(((Tree)tree2).key);
-			return(toBeUsedInLoop);
-		}
-		else {
-			return(findHeadSet(toBeUsedInLoop,tree.key));
-		}
+				System.out.println(((Tree)tree2).key);
+				return(toBeUsedInLoop);
+			}
+			else {
+				return(findHeadSet(toBeUsedInLoop,tree.key));
+			}
+		} catch(Exception e){return toBeUsedInLoop;}
 	}
 
 	public ArrayList createListCompletions(sortedSet setOfCompletions) {
