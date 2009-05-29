@@ -59,7 +59,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		}
       		autocomp=new AutoCompletion(provider);
 	  	autocomp.setListCellRenderer(new CCellRenderer());
-		autocomp.setShowDescWindow(true);
+		autocomp.setShowDescWindow(false);
 		autocomp.setParameterAssistanceEnabled(true);
       		autocomp.install(textArea);
 	  	textArea.setToolTipSupplier((ToolTipSupplier)provider);
