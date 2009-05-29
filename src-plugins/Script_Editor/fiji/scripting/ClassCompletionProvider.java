@@ -44,6 +44,7 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	//List listOfCompletions;
 	sortedSet topLevel;
 	sortedSet lowestLevel;
+	ClassNames names;
 	/**
 	 * Constructor.
 	 *
@@ -53,7 +54,7 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	public ClassCompletionProvider(CompletionProvider defaultProvider,RSyntaxTextArea textArea) {
 		setDefaultProvider(defaultProvider);
 		this.textArea=textArea;
-		ClassNames names=new ClassNames();
+		names =new ClassNames();
 		names.run((System.getProperty("java.class.path")+File.pathSeparator+System.getProperty("sun.boot.class.path")).split(File.pathSeparator));
 		topLevel=names.getTopLevel();
 		lowestLevel=names.getLowestLevel();
@@ -130,117 +131,14 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	 * @see #setDefaultCompletionProvider(CompletionProvider)
 	 */
 	public CompletionProvider getDefaultProvider() {
-		defaultProvider=new DefaultProvider();
-
-		String text=defaultProvider.getEnteredText(textArea);
-		if(!(text=="" || text==null)) {
-			String[] packageParts=new String[10];                             //this has to be improved as this restricts only less than 10 dots in a classfull name
-			int index=text.lastIndexOf(".");
-			if(index<0){
-				sortedSet packagePart=findSortedSet(topLevel,text);
-				sortedSet classPart=findSortedSet(lowestLevel,text);
-				packagePart.addAll(classPart);
-				defaultProvider.addCompletions(createListCompletions(packagePart));
-			}
-
-			if(index>0) {
-				String[] parts=text.split("\\.");
-				index=parts.length;
-				sortedSet temp=topLevel;
-				int temp1=index;
-				packageParts=parts;
-				Object temp2;
-				boolean isPresent=true;
-				while(temp1>1){
-
-
-					if(!((Tree)findTailSet(temp,packageParts[index-temp1]).first()).key.equals(packageParts[index-temp1])) {//looks if topLevel contains the first part of the package part
-						isPresent=false;
-						break;
-					}
-					else{
-						temp=((Tree)findTailSet(temp,packageParts[index-temp1]).first()).childList;
-					}
-					temp1--;
-
-				}
-				if(isPresent){
-
-					for(Object o : temp) {                  //just to check the elements in the sortedSet
-						Tree t=(Tree)o;
-						System.out.println(t.key);
-					}
-
-					temp=findSortedSet(temp,packageParts[index-1]);
-					defaultProvider.addCompletions(createListCompletions(temp));
-				}
-			}
-
-
-
-
-		}
+		//ClassNames names = new ClassNames();
+		//defaultProvider=new DefaultProvider();
+		defaultProvider=(DefaultProvider)names.getDefaultProvider(topLevel,lowestLevel,textArea);
 		return defaultProvider;
 
 	}
 
-	public sortedSet findTailSet(sortedSet parent,String text) {
-		Object o=(Object)new Tree(text);
-		TreeSet toReturn=(TreeSet)parent.tailSet(o);
-		sortedSet tail=new sortedSet();
-		for(Object tree : toReturn) {
-			Tree tree1=(Tree)tree;
-			tail.add(tree1);
-		}
-		return tail;
-	}
 
-	public sortedSet findHeadSet(sortedSet parent,String text) {
-		Object o=(Object)new Tree(text);
-		TreeSet toReturn=(TreeSet)parent.headSet(o);
-		sortedSet tail=new sortedSet();
-		for(Object tree : toReturn) {
-			Tree tree1=(Tree)tree;
-			tail.add(tree1);
-		}
-		return tail;
-	}
-	public sortedSet findSortedSet(sortedSet parent,String text) {
-		Tree tree=new Tree();
-		Object tree2=new Object();
-		//System.out.println(text);
-		sortedSet toBeUsedInLoop=findTailSet(parent,text);
-		System.out.println("the size of the tailset is"+toBeUsedInLoop.size());
-		for(Object tree1 : toBeUsedInLoop) {
-			tree=(Tree)tree1;
-			if(!(tree.key.startsWith(text))){
-				tree2=tree1;
-				break;
-			}
-			//System.out.println(tree.key);
-			tree2=tree1;                                     //just because tree has to be declared  inside the for loop
-		}
-		try {
-			if(tree2.equals(toBeUsedInLoop.last())) {
-
-				System.out.println(((Tree)tree2).key);
-				return(toBeUsedInLoop);
-			}
-			else {
-				return(findHeadSet(toBeUsedInLoop,tree.key));
-			}
-		} catch(Exception e){return toBeUsedInLoop;}
-	}
-
-	public ArrayList createListCompletions(sortedSet setOfCompletions) {
-		ArrayList listOfCompletions =new ArrayList();
-		for(Object o : setOfCompletions) {
-			Tree tree=(Tree)o;
-			listOfCompletions.add(new BasicCompletion(defaultProvider,tree.getKey()));
-		}
-		System.out.println("the compltion list has "+listOfCompletions.size());
-		return listOfCompletions;
-	}
 
 
 
