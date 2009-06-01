@@ -42,9 +42,10 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	 */
 	private CompletionProvider docCommentCompletionProvider;
 	//List listOfCompletions;
-	sortedSet topLevel;
-	sortedSet lowestLevel;
-	ClassNames names;
+	/*sortedSet topLevel;
+	sortedSet lowestLevel;*/
+	Package topLevel;
+	ClassNames1 names;
 	/**
 	 * Constructor.
 	 *
@@ -54,10 +55,10 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	public ClassCompletionProvider(CompletionProvider defaultProvider,RSyntaxTextArea textArea) {
 		setDefaultProvider(defaultProvider);
 		this.textArea=textArea;
-		names =new ClassNames();
+		names =new ClassNames1();
 		names.run((System.getProperty("java.class.path")+File.pathSeparator+System.getProperty("sun.boot.class.path")).split(File.pathSeparator));
-		topLevel=names.getTopLevel();
-		lowestLevel=names.getLowestLevel();
+		topLevel=names.getTopPackage();
+		//lowestLevel=names.getLowestLevel();
 	}
 
 
@@ -131,9 +132,8 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	 * @see #setDefaultCompletionProvider(CompletionProvider)
 	 */
 	public CompletionProvider getDefaultProvider() {
-		//ClassNames names = new ClassNames();
-		//defaultProvider=new DefaultProvider();
-		defaultProvider=(DefaultProvider)names.getDefaultProvider(topLevel,lowestLevel,textArea);
+		//defaultProvider=(DefaultProvider)names.getDefaultProvider(topLevel,lowestLevel,textArea);
+		defaultProvider=(DefaultProvider)names.getDefaultProvider(topLevel,textArea);
 		return defaultProvider;
 
 	}
