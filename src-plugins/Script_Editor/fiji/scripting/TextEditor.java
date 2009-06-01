@@ -592,27 +592,26 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 	}
 	public void windowClosed(WindowEvent e) {
-		System.out.println("here window 1");
+
 	}
 	public void windowDeactivated(WindowEvent e) {
-		System.out.println("here window 2");
+
 	}
 	public void windowDeiconified(WindowEvent e) {
-		System.out.println("here window 2");
+
 	}
 	public void windowIconified(WindowEvent e) {
 	}
 	public void windowOpened(WindowEvent e) {
-		System.out.println("here window 3");
+
 	}
 /*autocomplete addition starts here*/
 	private CompletionProvider createCodeCompletionProvider() {
 
-		// Add completions for the C standard library.
+
 		DefaultCompletionProvider cp = new DefaultCompletionProvider();
 
-		// First try loading resource (running from demo jar), then try
-		// accessing file (debugging in Eclipse).
+
 		ClassLoader cl = getClass().getClassLoader();
 		InputStream in = cl.getResourceAsStream("c.xml");
 		try {
@@ -664,7 +663,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 
 	/**
-	 * Creates the completion provider for a C editor.  This provider can be
+	 * Creates the completion provider for the editor.  This provider can be
 	 * shared among multiple editors.
 	 *
 	 * @return The provider.
