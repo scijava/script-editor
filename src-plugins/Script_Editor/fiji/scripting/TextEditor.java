@@ -427,7 +427,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			String directory="";
 
 			try{
-				//if(!Prefs.useJFileChooser) {
+
 					SaveDialog sd = new SaveDialog("Save as ","new",".java");
 					String name = sd.getFileName();
 					if(name!=null) {
@@ -435,11 +435,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 						path = directory+name;
 						returnVal=JFileChooser.APPROVE_OPTION;
 					}
-				//}
-				/*else {
-						fcc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
-						returnVal = fcc.showDialog(TextEditor.this,"Save");
-					}*/
+
          			   if (returnVal == JFileChooser.APPROVE_OPTION) {
 
 							if(!Prefs.useJFileChooser) {
@@ -611,45 +607,6 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 	}
 /*autocomplete addition starts here*/
-	private CompletionProvider createCodeCompletionProvider() {
-
-
-		DefaultCompletionProvider cp = new DefaultCompletionProvider();
-
-
-		ClassLoader cl = getClass().getClassLoader();
-		InputStream in = cl.getResourceAsStream("c.xml");
-		try {
-			if (in!=null) {
-				cp.loadFromXML(in);
-				in.close();
-			}
-			else {
-				cp.loadFromXML(new File("c.xml"));
-			}
-		} 
-		catch (IOException ioe) {
-			ioe.printStackTrace();
-		}
-		finally {
-    			if (null != in) {
-        			try {
-            				in.close();
-        			} catch (Exception e2) {
-            				e2.printStackTrace();
-        			}
-    			}
-		}
-
-
-
-		// Add some handy shorthand completions.
-		cp.addCompletion(new ShorthandCompletion(cp, "main",
-							"int main(int argc, char **argv)"));
-
-		return cp;
-
-	}
 
 
 	/**
@@ -675,8 +632,6 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	 */
 	private CompletionProvider createCompletionProvider() {
 
-		// Create the provider used when typing code.
-		//CompletionProvider codeCP = createCodeCompletionProvider();
 
 		// The provider used when typing a string.
 		CompletionProvider stringCP = createStringCompletionProvider();
