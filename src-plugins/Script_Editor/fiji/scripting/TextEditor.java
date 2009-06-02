@@ -1,4 +1,5 @@
 package fiji.scripting;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -125,26 +126,28 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
         	addToMenu(edit,undo,KeyEvent.VK_Z, ActionEvent.CTRL_MASK);
 		redo = new JMenuItem("Redo");
         	addToMenu(edit,redo,KeyEvent.VK_Y, ActionEvent.CTRL_MASK);
+			edit.addSeparator();
         	cut = new JMenuItem("Cut");
         	addToMenu(edit,cut,KeyEvent.VK_X, ActionEvent.CTRL_MASK);
 		copy = new JMenuItem("Copy");
         	addToMenu(edit,copy,KeyEvent.VK_C, ActionEvent.CTRL_MASK);
 		paste = new JMenuItem("Paste");
         	addToMenu(edit,paste,KeyEvent.VK_V, ActionEvent.CTRL_MASK);
+			edit.addSeparator();
 		find = new JMenuItem("Find...");
         	addToMenu(edit,find,KeyEvent.VK_F, ActionEvent.CTRL_MASK);
 		replace = new JMenuItem("Find and Replace...");
         	addToMenu(edit,replace,KeyEvent.VK_H, ActionEvent.CTRL_MASK);
+			edit.addSeparator();
 		selectAll = new JMenuItem("Select All");
-        	edit.add(selectAll);
-        	selectAll.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A, ActionEvent.CTRL_MASK));
-        	selectAll.addActionListener(this);
+        	addToMenu(edit,selectAll,KeyEvent.VK_A, ActionEvent.CTRL_MASK);
        		mbar.add(edit);
         
         /******** The Edit menu part ends here *****************/
 		JMenu options = new JMenu("Options");
 		autocomplete = new JMenuItem("Autocomplete");
 		addToMenu(options,autocomplete,KeyEvent.VK_SPACE, ActionEvent.CTRL_MASK);
+		options.addSeparator();
 		JMenu io = new JMenu("Input/Output");
 		JMenu dialog= new JMenu("Open/Save Dialog");
 		JMenuItem jfcdialog=new JMenuItem("JFileChooser");
@@ -176,7 +179,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		menu.add(menuitem);
 		menuitem.setAccelerator(KeyStroke.getKeyStroke(keyevent,actionevent));
 		menuitem.addActionListener(this);
-		menu.addSeparator();
+		//menu.addSeparator();
 	}
 
 
@@ -324,17 +327,19 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			findDialog.toFront();
 		}
 		if(ae.getSource()==replace) {						//here should the code to close all other dialog boxes
-			if(findDialog!=null){
-				findDialog.dispose();
-			}
-			if(replaceDialog==null){
-				replaceDialog=new ReplaceDialog(this,textArea);
-				replaceDialog.setResizable(true);
-				replaceDialog.pack();
-				replaceDialog.setLocationRelativeTo(this);
-			}
-			replaceDialog.show();
-			replaceDialog.toFront();
+			try{
+				if(findDialog!=null){
+					findDialog.dispose();
+				}
+				if(replaceDialog==null){
+					replaceDialog=new ReplaceDialog(this,textArea);
+					replaceDialog.setResizable(true);
+					replaceDialog.pack();
+					replaceDialog.setLocationRelativeTo(this);
+				}
+				replaceDialog.show();
+				replaceDialog.toFront();
+			} catch(Exception e){ e.printStackTrace(); }
 		}
 
 
