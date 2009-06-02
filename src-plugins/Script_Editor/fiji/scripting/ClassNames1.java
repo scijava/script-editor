@@ -11,6 +11,7 @@ import java.util.Enumeration;
 import java.util.ArrayList;
 import java.util.Iterator;
 //import java.util.List;
+import java.lang.reflect.*;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -18,6 +19,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.lang.Object;
 import java.awt.List;
+import java.awt.event.*;
 import org.fife.ui.autocomplete.*;
 import org.fife.ui.rsyntaxtextarea.*;
 
@@ -35,6 +37,7 @@ class ClassNames1 {
 	static Package root=new Package();
 	DefaultProvider defaultProvider;
 	Enumeration list1;
+	Package toReturnClassPart;
 	public void run(String[] args) {
 
 		for (int i = 1; i < args.length; i++){
@@ -96,9 +99,11 @@ class ClassNames1 {
 
 	public void addToTree(String name,Package toAdd,int i) {
 		String[] classname1=name.split("\\\\");
-		String[] classname2=classname1[classname1.length-1].split("/");
+		String justClassName=classname1[classname1.length-1];
+		String[] classname2=justClassName.split("/");
 		if(classname2[i].endsWith(".class")) {
-			Item item = new ClassName(classname2[i].substring(0,classname2[i].length()-6));
+			//Item item = new ClassName(classname2[i]);
+			Item item = new ClassName(classname2[i].substring(0,classname2[i].length()-6),justClassName.substring(0,justClassName.length()-6));
 			toAdd.add(item);
 		}
 		else {
@@ -122,8 +127,9 @@ class ClassNames1 {
 			int index=text.lastIndexOf(".");
 			if(index<0){
 				Package packagePart = findItemSet(root,text);
-				//Package classPart= findClassSet(lowest,text);
-				//packagePart.addAll(classPart);
+				toReturnClassPart = new Package();
+				Package classPart= findClassSet(root,text);
+				packagePart.addAll(classPart);
 				defaultProvider.addCompletions(createListCompletions(packagePart));
 			}
 
@@ -210,16 +216,53 @@ class ClassNames1 {
 		} catch(Exception e){return toBeUsedInLoop;}
 	}
 
+	public Package findClassSet(Package parent,String text) {
+
+		for(Item i : parent) {
+			if(i instanceof ClassName) {
+				if(i.getName().startsWith(text)) {
+					toReturnClassPart.add(i);
+				}
+			}
+			else {
+				findClassSet((Package)i,text);
+			}
+		}
+		return toReturnClassPart;
+	}
+
 	public ArrayList createListCompletions(Package setOfCompletions) {
 		ArrayList listOfCompletions =new ArrayList();
+
 		for(Item i : setOfCompletions) {
 
+			try {
+				if(i instanceof ClassName) {
+					//Class clazz = Class.forName(((ClassName)i).getCompleteName());
+					String fullName = ((ClassName)i).getCompleteName();
+					Class clazz=getClass().getClassLoader().loadClass(fullName);
+					Constructor[] ctor = clazz.getConstructors();
+
+					for(Constructor c : ctor) {
+						System.out.println(c.toString());
+						String cotrCompletion=createCotrCompletion(c.toString());
+						listOfCompletions.add(new BasicCompletion(defaultProvider,cotrCompletion));
+					}
+				}
+			} catch(Exception e){ e.printStackTrace(); }
 			listOfCompletions.add(new BasicCompletion(defaultProvider,i.getName()));
 		}
 		System.out.println("the compltion list has "+listOfCompletions.size());
 		return listOfCompletions;
 	}
 
+	public String createCotrCompletion(String cotr) {
+
+		String[] bracketSeparated = cotr.split("\\(");
+		int lastDotBeforeBracket = bracketSeparated[0].lastIndexOf(".");
+		return(cotr.substring(lastDotBeforeBracket+1));
+
+	}
 
 
 }
