@@ -229,6 +229,10 @@ plugins/Script_Editor.jar <- src-plugins/Script_Editor/fiji/scripting/Script_Edi
 							src-plugins/Script_Editor/fiji/scripting/ClassNames.java \
 							src-plugins/Script_Editor/fiji/scripting/Tree.java \
 							src-plugins/Script_Editor/fiji/scripting/sortedSet.java \
+							src-plugins/Script_Editor/fiji/scripting/Package.java \
+							src-plugins/Script_Editor/fiji/scripting/ClassNames1.java \
+							src-plugins/Script_Editor/fiji/scripting/ClassName.java \
+							src-plugins/Script_Editor/fiji/scripting/Item.java \
 							icon.png[images/icon.png] \
 							var.png[images/var.png]    \
 							funtion.png[images/function.png]  \
