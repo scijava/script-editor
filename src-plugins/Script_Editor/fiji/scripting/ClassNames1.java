@@ -98,7 +98,7 @@ class ClassNames1 {
 		String[] classname1=name.split("\\\\");
 		String[] classname2=classname1[classname1.length-1].split("/");
 		if(classname2[i].endsWith(".class")) {
-			Item item = new ClassName(classname2[i]);
+			Item item = new ClassName(classname2[i].substring(0,classname2[i].length()-6));
 			toAdd.add(item);
 		}
 		else {
