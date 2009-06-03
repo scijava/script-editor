@@ -73,6 +73,8 @@ class ClassNames1 {
 						String name = entry.getName();
 						if(!name.endsWith(".class"))		//ignoring the non class files
 							continue;
+						else if(name.endsWith("ProtocolSocketFactory.class"))
+							System.out.println("look here the faulty jar file is "+path);
 						addToTree(name,root,0);
 				}
 
@@ -193,7 +195,7 @@ class ClassNames1 {
 		System.out.println("the size of the tailset is"+toBeUsedInLoop.size());
 		for(Item i: toBeUsedInLoop) {
 
-			System.out.println(i.getName());                                    
+			//System.out.println(i.getName());                                    
 		}
 		for(Item i: toBeUsedInLoop) {
 
@@ -235,7 +237,7 @@ class ClassNames1 {
 		ArrayList listOfCompletions =new ArrayList();
 
 		for(Item i : setOfCompletions) {
-
+			try {
 			try {
 				if(i instanceof ClassName) {
 					//Class clazz = Class.forName(((ClassName)i).getCompleteName());
@@ -244,12 +246,13 @@ class ClassNames1 {
 					Constructor[] ctor = clazz.getConstructors();
 
 					for(Constructor c : ctor) {
-						System.out.println(c.toString());
+						//System.out.println(c.toString());
 						String cotrCompletion=createCotrCompletion(c.toString());
 						listOfCompletions.add(new BasicCompletion(defaultProvider,cotrCompletion));
 					}
 				}
-			} catch(Exception e){ e.printStackTrace(); }
+			} catch(NoClassDefFoundError e){ e.printStackTrace(); }
+			} catch(Exception e){ e.printStackTrace(); System.out.println(i.getName());}
 			listOfCompletions.add(new BasicCompletion(defaultProvider,i.getName()));
 		}
 		System.out.println("the compltion list has "+listOfCompletions.size());
