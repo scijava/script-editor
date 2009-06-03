@@ -54,9 +54,7 @@ class ClassNames1 {
 
 
 
-	/*this function adds every class name (with its path )
-	to a arraylist which is further converted to a
-	String array*/
+
 	public void setPathTree(String path){
 		File file = new File(path);
 		if (file.isDirectory()) {
@@ -79,9 +77,7 @@ class ClassNames1 {
 				}
 
 		}
-		else if (path.endsWith(".class")) {
-			addToTree(path,root,0);
-		}
+
 	}
 
 	public void setDirTree(String path) {
@@ -109,7 +105,7 @@ class ClassNames1 {
 			toAdd.add(item);
 		}
 		else {
-			Package item = new Package(classname2[i]);
+			Package item = new Package(classname2[i]+".");
 			toAdd.add(item);
 			Package next = (Package)toAdd.tailSet(item).first();
 			addToTree(name,next,i+1);
