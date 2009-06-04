@@ -71,8 +71,7 @@ class ClassNames1 {
 						String name = entry.getName();
 						if(!name.endsWith(".class"))		//ignoring the non class files
 							continue;
-						else if(name.endsWith("ProtocolSocketFactory.class"))
-							System.out.println("look here the faulty jar file is "+path);
+
 						addToTree(name,root,0);
 				}
 
@@ -133,15 +132,19 @@ class ClassNames1 {
 
 			if(index>0) {
 				String[] parts=text.split("\\.");
+				boolean isDotAtLast=false;
 				index=parts.length;
+				if(text.charAt(text.length()-1)=='.') {
+					isDotAtLast=true;
+				}
 				Package temp=root;
 				int temp1=index;
 				packageParts=parts;
 				Object temp2;
 				boolean isPresent=true;
-				while(temp1>1){
+				while(temp1>1) {
 
-					if(!((Package)findTailSet(temp,packageParts[index-temp1]).first()).getName().equals(packageParts[index-temp1])) {//looks if topLevel contains the first part of the package part
+					if(!((Package)findTailSet(temp,packageParts[index-temp1]).first()).getName().equals(packageParts[index-temp1]+".")) {//looks if topLevel contains the first part of the package part
 						isPresent=false;
 						break;
 					}
@@ -152,9 +155,13 @@ class ClassNames1 {
 
 				}
 
-				if(isPresent){
-
-					temp=findItemSet(temp,packageParts[index-1]);
+				if(isPresent) {
+					if(!isDotAtLast) {
+						temp=findItemSet(temp,packageParts[index-1]);
+					}
+					else  {
+						temp=(Package)findTailSet(temp,packageParts[index-temp1]).first();
+					}
 					defaultProvider.addCompletions(createListCompletions(temp));
 
 				}
@@ -185,6 +192,7 @@ class ClassNames1 {
 		}
 		return tail;
 	}
+
 	public Package findItemSet(Package parent,String text) {
 		Item item = new Package();
 		Package toBeUsedInLoop=findTailSet(parent,text);
