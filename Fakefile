@@ -219,20 +219,7 @@ CLASSPATH(plugins/IO_.jar)=jars/batik.jar
 CLASSPATH(plugins/Sync_Win.jar)=plugins/Image_5D.jar
 MAINCLASS(plugins/Script_Editor.jar)=fiji.scripting.Script_Editor
 CLASSPATH(plugins/Script_Editor.jar)=jars/rsyntaxtextarea.jar:jars/autocomplete.jar
-plugins/Script_Editor.jar <- src-plugins/Script_Editor/fiji/scripting/Script_Editor.java \
-							src-plugins/Script_Editor/fiji/scripting/TextEditor.java \
-							src-plugins/Script_Editor/fiji/scripting/CCellRenderer.java  \
-							src-plugins/Script_Editor/fiji/scripting/FindDialog.java  \
-							src-plugins/Script_Editor/fiji/scripting/ReplaceDialog.java  \
-							src-plugins/Script_Editor/fiji/scripting/ClassCompletionProvider.java \
-							src-plugins/Script_Editor/fiji/scripting/DefaultProvider.java \
-							src-plugins/Script_Editor/fiji/scripting/ClassNames.java \
-							src-plugins/Script_Editor/fiji/scripting/Tree.java \
-							src-plugins/Script_Editor/fiji/scripting/sortedSet.java \
-							src-plugins/Script_Editor/fiji/scripting/Package.java \
-							src-plugins/Script_Editor/fiji/scripting/ClassNames1.java \
-							src-plugins/Script_Editor/fiji/scripting/ClassName.java \
-							src-plugins/Script_Editor/fiji/scripting/Item.java \
+plugins/Script_Editor.jar <- src-plugins/Script_Editor/fiji/scripting/*.java  \
 							icon.png[images/icon.png] \
 							var.png[images/var.png]    \
 							funtion.png[images/function.png]  \
