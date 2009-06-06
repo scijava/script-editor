@@ -45,7 +45,7 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	/*sortedSet topLevel;
 	sortedSet lowestLevel;*/
 	Package topLevel;
-	ClassNames1 names;
+	ClassNames names;
 	/**
 	 * Constructor.
 	 *
@@ -55,7 +55,7 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	public ClassCompletionProvider(CompletionProvider defaultProvider,RSyntaxTextArea textArea) {
 		setDefaultProvider(defaultProvider);
 		this.textArea=textArea;
-		names =new ClassNames1();
+		names =new ClassNames();
 		names.run((System.getProperty("java.class.path")+File.pathSeparator+System.getProperty("sun.boot.class.path")).split(File.pathSeparator));
 		topLevel=names.getTopPackage();
 		//lowestLevel=names.getLowestLevel();
