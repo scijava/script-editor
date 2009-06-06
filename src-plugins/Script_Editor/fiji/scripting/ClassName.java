@@ -1,11 +1,14 @@
 package fiji.scripting;
 
 import java.lang.Comparable;
-
+import java.util.TreeSet;
+import java.lang.reflect.*;
 public class ClassName implements Item ,Comparable {
 
 	String key;
 	String completeName;
+	TreeSet<String> methodNames=new TreeSet<String>();
+
 
 	public ClassName() {
 	}
@@ -28,5 +31,14 @@ public class ClassName implements Item ,Comparable {
 		return(this.getName().compareTo(tree.getName()));
 	}
 
+	public void setMethodNames(Method[] methods) {
+		for(Method m : methods) {
+			String fullName = m.toString();
+			String[] bracketSeparated = fullName.split("\\(");
+			int lastDotBeforeBracket = bracketSeparated[0].lastIndexOf(".");
+			methodNames.add(fullName.substring(lastDotBeforeBracket+1));
+		}
+		//Collections.sort(methodNames);
+	}
 }
 
