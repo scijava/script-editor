@@ -52,7 +52,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		textArea = new RSyntaxTextArea(25,80);
       		textArea.addInputMethodListener(l);
       		textArea.addCaretListener(this);
-      		textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_C);
+      		textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
 	  	String words[]={"public","private","protected","println","static","System","Swing","void","main","catch","class"};
       		DefaultCompletionProvider provider1 =new DefaultCompletionProvider(words);
 		if(provider==null) {
