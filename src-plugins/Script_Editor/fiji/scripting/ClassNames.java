@@ -141,6 +141,7 @@ class ClassNames {
 			}
 
 			if(index>0) {
+				classStartCompletions(text);
 				String[] parts=text.split("\\.");
 				boolean isDotAtLast=false;
 				boolean isClassBeforeDot=false;
@@ -155,16 +156,19 @@ class ClassNames {
 				Object temp2;
 				boolean isPresent=true;
 				while(temp1>1) {
-					Item itemBeforeDot=findTailSet(temp,packageParts[index-temp1]).first();
+					Item itemBeforeDot=findTailSet((Package)temp,packageParts[index-temp1]).first();
 					if(itemBeforeDot instanceof ClassName) {
-						isClassBeforeDot=true;
-						break;
+						//System.out.println(itemBeforeDot.getName()+" "+packageParts[index-temp1]);
+						if(itemBeforeDot.getName().equals(packageParts[index-temp1])) {
+							isClassBeforeDot=true;
+						}
+						else{
+							isPresent=false;
+						}
+						break;                                                    //here I am assuming only one dot after a className that is why breaking the loop irrespective of isPresent
 					}
 					itemBeforeDot=findTailSet(temp,packageParts[index-temp1]+".").first();
 					if(itemBeforeDot instanceof Package) {
-						isPackageBeforeDot=true;
-					}
-					if (isPackageBeforeDot) {
 						if(!((Package)findTailSet(temp,packageParts[index-temp1]+".").first()).getName().equals(packageParts[index-temp1]+".")) {//looks if topLevel contains the first part of the package part
 							isPresent=false;
 							break;
@@ -183,16 +187,8 @@ class ClassNames {
 					if(!isDotAtLast) {
 						if(isClassBeforeDot) {
 							ClassName name = (ClassName)findTailSet(temp,packageParts[index-temp1]).first();
-							try {
-								try {
-									String fullname = name.getCompleteName();
-									System.out.println(fullname);
-									Class clazz=getClass().getClassLoader().loadClass(fullname);
-									//Class clazz=Class.forName(fullname);
-									name.setMethodNames(clazz.getMethods());
-								} catch(java.lang.Error e) { e.printStackTrace(); }
-							} catch(Exception e) { e.printStackTrace(); }
-							generateClassRelatedCompletions(name,packageParts,index-temp1);                   //does the rest of job when finds a class
+							loadMethodNames(name);
+							generateClassRelatedCompletions(name,packageParts);                   //does the rest of job when finds a class
 						}
 						else {
 							temp=findItemSet(temp,packageParts[index-1]);
@@ -201,17 +197,13 @@ class ClassNames {
 					}
 					else  {
 						Item temp3=findTailSet(temp,packageParts[index-temp1]).first();
+
 						if(temp3 instanceof ClassName) {
-						try {
-							try {
-								String fullname = ((ClassName)temp3).getCompleteName();
-								System.out.println(fullname);
-								Class clazz=getClass().getClassLoader().loadClass(fullname);
-								//Class clazz=Class.forName(fullname);
-								((ClassName)temp3).setMethodNames(clazz.getMethods());
-							} catch(java.lang.Error e) { e.printStackTrace(); }
-						} catch(Exception e) { e.printStackTrace(); }
-							defaultProvider.addCompletions(createFunctionCompletion(((ClassName)temp3).methodNames));
+							if(temp3.getName().equals(packageParts[index-temp1])) {
+								//System.out.println(temp3.getName()+" "+packageParts[index-temp1]);
+								loadMethodNames((ClassName)temp3);
+								defaultProvider.addCompletions(createFunctionCompletion(((ClassName)temp3).methodNames));
+							}
 						}
 						else {
 							temp=(Package)temp3;
@@ -230,6 +222,48 @@ class ClassNames {
 		}
 		return defaultProvider;
 
+	}
+
+	public void classStartCompletions(String text) {
+
+			String[] classParts = text.split("\\.");
+			boolean isDotAtLast=false;
+			if(text.charAt(text.length()-1)=='.') {
+				isDotAtLast=true;
+			}
+			if((classParts.length>1&&isDotAtLast) || (classParts.length>2&&!isDotAtLast)) {
+				return;
+			}
+			Package classItemBeforeDot=findClassSet(root,classParts[0]);
+			if(classItemBeforeDot.size()>0) {
+				if(classItemBeforeDot.first().getName().equals(classParts[0])) {
+					ClassName temp3=(ClassName)classItemBeforeDot.first();
+					loadMethodNames(temp3);
+
+					if(isDotAtLast) {
+						defaultProvider.addCompletions(createFunctionCompletion(temp3.methodNames));
+					}
+					else {
+						generateClassRelatedCompletions(temp3,classParts);
+					}
+				}
+			}
+	}
+
+
+	public void loadMethodNames(ClassName temp) {
+		if(temp.methodNames.size()<=0) {
+			String fullname = temp.getCompleteName();
+			try {
+				try {
+					Class clazz=getClass().getClassLoader().loadClass(fullname);
+					temp.setMethodNames(clazz.getMethods());
+					Field[] field = clazz.getFields();
+					for (Field f : field)
+						System.out.println(f.toString());
+				} catch(java.lang.Error e) { e.printStackTrace(); }
+			} catch(Exception e) { e.printStackTrace(); }
+		}
 	}
 
 	public Package findTailSet(Package parent,String text) {
@@ -331,23 +365,24 @@ class ClassNames {
 	public ArrayList createFunctionCompletion(TreeSet<String> setOfCompletions) {
 		ArrayList listOfCompletions=new ArrayList();
 		for(String name : setOfCompletions) {
-			listOfCompletions.add(new BasicCompletion(defaultProvider,name));      //currently basiccompletion can be changed to functioncompletion
+			listOfCompletions.add(new FunctionCompletion(defaultProvider,name,"int"));      //currently basiccompletion can be changed to functioncompletion
 		}
 		return listOfCompletions;
 	}
 
-	public void generateClassRelatedCompletions(ClassName className,String[] parts,int leftIndices) {
-		if(leftIndices==1) {
-			TreeSet<String> set =(TreeSet<String>)className.methodNames.tailSet(parts[0]);
+	public void generateClassRelatedCompletions(ClassName className,String[] parts) {
+		//if(leftIndices==1) {
+			TreeSet<String> set =(TreeSet<String>)className.methodNames.tailSet(parts[parts.length-1]);
 			for(String s : set) {
-				if(!s.startsWith(parts[0])) {
+				System.out.println(s);
+				if(!s.startsWith(parts[parts.length-1])) {
 					break;
 				}
 				else {
 					defaultProvider.addCompletion(new BasicCompletion(defaultProvider,s));
 				}
 			}
-		}
+		//}
 	}
 
 
