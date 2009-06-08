@@ -7,7 +7,7 @@ public class ClassName implements Item ,Comparable {
 
 	String key;
 	String completeName;
-	TreeSet<String> methodNames=new TreeSet<String>();
+	TreeSet<ClassMethod> methodNames=new TreeSet<ClassMethod>();
 
 
 	public ClassName() {
@@ -34,9 +34,9 @@ public class ClassName implements Item ,Comparable {
 	public void setMethodNames(Method[] methods) {
 		for(Method m : methods) {
 			String fullName = m.toString();
-			String[] bracketSeparated = fullName.split("\\(");
-			int lastDotBeforeBracket = bracketSeparated[0].lastIndexOf(".");
-			methodNames.add(fullName.substring(lastDotBeforeBracket+1));
+			//String[] bracketSeparated = fullName.split("\\(");
+			//int lastDotBeforeBracket = bracketSeparated[0].lastIndexOf(".");
+			methodNames.add(new ClassMethod(fullName));
 		}
 		//Collections.sort(methodNames);
 	}
