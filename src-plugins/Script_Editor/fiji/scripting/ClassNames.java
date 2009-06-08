@@ -362,24 +362,27 @@ class ClassNames {
 
 	}
 
-	public ArrayList createFunctionCompletion(TreeSet<String> setOfCompletions) {
+	public ArrayList createFunctionCompletion(TreeSet<ClassMethod> setOfCompletions) {
 		ArrayList listOfCompletions=new ArrayList();
-		for(String name : setOfCompletions) {
-			listOfCompletions.add(new FunctionCompletion(defaultProvider,name,"int"));      //currently basiccompletion can be changed to functioncompletion
+		for(ClassMethod method : setOfCompletions) {
+			if(method.isStatic && method.isPublic) {
+				listOfCompletions.add(new FunctionCompletion(defaultProvider,method.onlyName,method.returnType));      //currently basiccompletion can be changed to functioncompletion
+			}
 		}
 		return listOfCompletions;
 	}
 
 	public void generateClassRelatedCompletions(ClassName className,String[] parts) {
 		//if(leftIndices==1) {
-			TreeSet<String> set =(TreeSet<String>)className.methodNames.tailSet(parts[parts.length-1]);
-			for(String s : set) {
-				System.out.println(s);
-				if(!s.startsWith(parts[parts.length-1])) {
+			TreeSet<ClassMethod> set =(TreeSet<ClassMethod>)className.methodNames.tailSet(new ClassMethod(parts[parts.length-1],true));
+			for(ClassMethod c : set) {
+				//System.out.println(s);
+				if(!c.onlyName.startsWith(parts[parts.length-1])) {
 					break;
 				}
 				else {
-					defaultProvider.addCompletion(new BasicCompletion(defaultProvider,s));
+					if(c.isStatic && c.isPublic)
+						defaultProvider.addCompletion(new FunctionCompletion(defaultProvider,c.onlyName,c.returnType));
 				}
 			}
 		//}
