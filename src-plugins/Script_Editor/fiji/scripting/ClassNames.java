@@ -38,7 +38,7 @@ class ClassNames {
 	static Package root=new Package();
 	DefaultProvider defaultProvider;
 	Enumeration list1;
-	Package toReturnClassPart;
+	Package toReturnClassPart=new Package();
 	public void run(String[] args) {
 
 		for (int i = 1; i < args.length; i++){
@@ -127,12 +127,13 @@ class ClassNames {
 
 	public CompletionProvider getDefaultProvider(Package root,RSyntaxTextArea textArea) {
 		defaultProvider=new DefaultProvider();
-
 		String text=defaultProvider.getEnteredText(textArea);
+
+		//System.out.println(text);
 		if(!(text=="" || text==null)) {
 			String[] packageParts=new String[10];                             //this has to be improved as this restricts only less than 10 dots in a classfull name
 			int index=text.lastIndexOf(".");
-			if(index<0){
+			if(index<0) {
 				Package packagePart = findItemSet(root,text);
 				toReturnClassPart = new Package();
 				Package classPart= findClassSet(root,text);
@@ -142,6 +143,8 @@ class ClassNames {
 
 			if(index>0) {
 				classStartCompletions(text);
+				ObjStartCompletions obj=new ObjStartCompletions(this);
+				obj.setObjects(textArea,text,defaultProvider);
 				String[] parts=text.split("\\.");
 				boolean isDotAtLast=false;
 				boolean isClassBeforeDot=false;
@@ -202,7 +205,7 @@ class ClassNames {
 							if(temp3.getName().equals(packageParts[index-temp1])) {
 								//System.out.println(temp3.getName()+" "+packageParts[index-temp1]);
 								loadMethodNames((ClassName)temp3);
-								defaultProvider.addCompletions(createFunctionCompletion(((ClassName)temp3).methodNames));
+								defaultProvider.addCompletions(createFunctionCompletion(((ClassName)temp3).methodNames,true));
 							}
 						}
 						else {
@@ -241,7 +244,7 @@ class ClassNames {
 					loadMethodNames(temp3);
 
 					if(isDotAtLast) {
-						defaultProvider.addCompletions(createFunctionCompletion(temp3.methodNames));
+						defaultProvider.addCompletions(createFunctionCompletion(temp3.methodNames,true));
 					}
 					else {
 						generateClassRelatedCompletions(temp3,classParts);
@@ -362,7 +365,7 @@ class ClassNames {
 
 	}
 
-	public ArrayList createFunctionCompletion(TreeSet<ClassMethod> setOfCompletions) {
+	public ArrayList createFunctionCompletion(TreeSet<ClassMethod> setOfCompletions,boolean isStatic) {
 		ArrayList listOfCompletions=new ArrayList();
 		for(ClassMethod method : setOfCompletions) {
 			if(method.isStatic && method.isPublic) {
