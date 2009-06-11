@@ -41,6 +41,10 @@ public class ImportedClassObjects implements Comparable{
 		return this.fullClassName;
 	}
 	public int compareTo(Object o) {
-		return(this.name.compareTo(((ImportedClassObjects)o).name));
+		int i= this.name.compareTo(((ImportedClassObjects)o).name);
+		if(i!=0)
+			return(i);
+		else 
+			return(this.className.compareTo(((ImportedClassObjects)o).className));
 	}
 }
