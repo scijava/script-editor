@@ -151,32 +151,36 @@ public class ObjStartCompletions {
 			}
 			if(text.lastIndexOf(".")==text.indexOf(".")&&text.indexOf(".")>0) {
 				String objname=text.substring(0,text.indexOf("."));
-				ImportedClassObjects object=objectSet.tailSet(new ImportedClassObjects(objname)).first();
+				TreeSet<ImportedClassObjects> set=(TreeSet<ImportedClassObjects>)objectSet.tailSet(new ImportedClassObjects(objname,""));
 				TreeSet<ClassMethod> methodSet = new TreeSet<ClassMethod>();
-				if (object.name.equals(objname)) {
-					String fullname = object.getCompleteClassName();
-					try {
+				for(ImportedClassObjects object : set) {
+					if (object.name.equals(objname)) {
+						String fullname = object.getCompleteClassName();
 						try {
-							Class clazz=getClass().getClassLoader().loadClass(fullname);
-							Method[] methods = clazz.getMethods();
-							for(Method m : methods) {
-								String fullMethodName = m.toString();
-								methodSet.add(new ClassMethod(fullMethodName));
-							}
-						} catch(java.lang.Error e) { e.printStackTrace(); }
-					} catch(Exception e) { e.printStackTrace(); }
-					ArrayList listOfCompletions=new ArrayList();
-					if(!dotAtLast) {
-						methodSet=(TreeSet<ClassMethod>)methodSet.tailSet(new ClassMethod(text.substring(text.indexOf(".")+1),true));
-					}
-					for(ClassMethod method : methodSet) {
-						if((!dotAtLast)&&(!method.onlyName.startsWith(text.substring(text.indexOf(".")+1))))
-							break;
-						if((!method.isStatic) && method.isPublic) {
-							listOfCompletions.add(new FunctionCompletion(defaultProvider,method.onlyName,method.returnType));      //currently basiccompletion can be changed to functioncompletion
+							try {
+								Class clazz=getClass().getClassLoader().loadClass(fullname);
+								Method[] methods = clazz.getMethods();
+								for(Method m : methods) {
+									String fullMethodName = m.toString();
+									methodSet.add(new ClassMethod(fullMethodName));
+								}
+							} catch(java.lang.Error e) { e.printStackTrace(); }
+						} catch(Exception e) { e.printStackTrace(); }
+						ArrayList listOfCompletions=new ArrayList();
+						if(!dotAtLast) {
+							methodSet=(TreeSet<ClassMethod>)methodSet.tailSet(new ClassMethod(text.substring(text.indexOf(".")+1),true));
 						}
+						for(ClassMethod method : methodSet) {
+							if((!dotAtLast)&&(!method.onlyName.startsWith(text.substring(text.indexOf(".")+1))))
+								break;
+							if((!method.isStatic) && method.isPublic) {
+								listOfCompletions.add(new FunctionCompletion(defaultProvider,method.onlyName,method.returnType));      //currently basiccompletion can be changed to functioncompletion
+							}
+						}
+						defaultProvider.addCompletions(listOfCompletions);
 					}
-					defaultProvider.addCompletions(listOfCompletions);
+					else 
+						break;
 				}
 			}
 		}
