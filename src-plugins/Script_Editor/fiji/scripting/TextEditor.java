@@ -39,6 +39,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
    	RSyntaxTextArea textArea;
    	Document doc;
 	JMenuItem new1,open,save,saveas,quit,undo,redo,cut,copy,paste,find,replace,selectAll,autocomplete,jfcdialog,ijdialog;
+	JRadioButtonMenuItem langjava,langjavascript,langclojure,langpython,langruby;
 	//JMenu io;
 	FileInputStream fin;
       	FindDialog findDialog;
@@ -52,7 +53,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		textArea = new RSyntaxTextArea(25,80);
       		textArea.addInputMethodListener(l);
       		textArea.addCaretListener(this);
-      		textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
+      		textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
 	  	String words[]={"public","private","protected","println","static","System","Swing","void","main","catch","class"};
       		DefaultCompletionProvider provider1 =new DefaultCompletionProvider(words);
 		if(provider==null) {
@@ -60,7 +61,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		}
       		autocomp=new AutoCompletion(provider);
 	  	autocomp.setListCellRenderer(new CCellRenderer());
-		autocomp.setShowDescWindow(false);
+		autocomp.setShowDescWindow(true);
 		autocomp.setParameterAssistanceEnabled(true);
       		autocomp.install(textArea);
 	  	textArea.setToolTipSupplier((ToolTipSupplier)provider);
@@ -144,6 +145,8 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
        		mbar.add(edit);
         
         /******** The Edit menu part ends here *****************/
+
+		/********The options menu part starts here**************/
 		JMenu options = new JMenu("Options");
 		autocomplete = new JMenuItem("Autocomplete");
 		addToMenu(options,autocomplete,KeyEvent.VK_SPACE, ActionEvent.CTRL_MASK);
@@ -163,7 +166,53 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
        		mbar.add(options);
 
-       
+		/*********The Language parts starts here********************/
+		JMenu language = new JMenu("Language");
+
+		langjava = new JRadioButtonMenuItem("Java");
+		langjava.setMnemonic(KeyEvent.VK_J);
+		langjava.setActionCommand("Java");
+		langjava.setSelected(true);
+
+		langjavascript = new JRadioButtonMenuItem("Javascript");
+		langjavascript.setMnemonic(KeyEvent.VK_J);
+		langjavascript.setActionCommand("Javascript");
+
+		langpython = new JRadioButtonMenuItem("Python");
+		langpython.setMnemonic(KeyEvent.VK_P);
+		langpython.setActionCommand("Python");
+
+		langruby = new JRadioButtonMenuItem("Ruby");
+		langruby.setMnemonic(KeyEvent.VK_R);
+		langruby.setActionCommand("Ruby");
+
+		langclojure = new JRadioButtonMenuItem("Clojure");
+		langclojure.setMnemonic(KeyEvent.VK_C);
+		langclojure.setActionCommand("Clojure");
+
+		//Group the radio buttons.
+		ButtonGroup group = new ButtonGroup();
+		group.add(langclojure);
+		group.add(langjava);
+		group.add(langjavascript);
+		group.add(langpython);
+		group.add(langruby);
+
+		language.add(langclojure);
+		language.add(langjava);
+		language.add(langjavascript);
+		language.add(langpython);
+		language.add(langruby);
+
+		//Register a listener for the radio buttons.
+		langclojure.addActionListener(this);
+		langjava.addActionListener(this);
+		langjavascript.addActionListener(this);
+		langpython.addActionListener(this);
+		langruby.addActionListener(this);
+
+		//language.add(group);
+		mbar.add(language);
 
 
       /*********** The menu part ended here    ********************/
@@ -363,6 +412,22 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			Prefs.savePreferences();
 		}
 
+		if(ae.getSource()==langclojure) {
+			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
+		}
+		if(ae.getSource()==langjava) {
+			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
+		}
+		if(ae.getSource()==langjavascript) {
+			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
+		}
+		if(ae.getSource()==langpython) {
+			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
+		}
+		if(ae.getSource()==langruby) {
+			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
+		}
+
 	}
 
 	/*
@@ -375,6 +440,11 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		try {
 			if(file!=null) {
 				title=(String)file.getName()+" - Text Editor for Fiji";
+				if(file.getName().endsWith(".java")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
+				if(file.getName().endsWith(".js")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
+				if(file.getName().endsWith(".py")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
+				if(file.getName().endsWith(".rb")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
+				if(file.getName().endsWith(".clj")) {}
 				this.setTitle(title);
 			}
 				/*changing the title part ends*/
@@ -389,7 +459,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 					if(s==null) {
 						break;
 					}
-					System.out.println(s);
+					//System.out.println(s);
 					textArea.append(s+"\n");
 					//ba.textArea.setText(s);
 				}
@@ -397,7 +467,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			else if(returnVal != fcc.APPROVE_OPTION) {
 					System.out.println("Saving Canceled");
 			}
-			System.out.println("returnVal = "+returnVal+" and fcc.APPROVE_OPTION = "+fcc.APPROVE_OPTION);
+
 			//fin.close();
 		} catch (Exception ex) {
 			ex.printStackTrace();
@@ -449,8 +519,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 							String[] filenames;
           					filenames = f.list();
           					for(int i=0; i< filenames.length; i++) {
-								System.out.println(filenames[i]+" "+file.getName());
-								if(filenames[i].equals(file.getName())) {
+									if(filenames[i].equals(file.getName())) {
 									ifReplaceFile=true;
 									break;
 								}
@@ -471,6 +540,11 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 							else {
 								title=(String)file.getName()+" - Text Editor Demo for fiji";
 								this.setTitle(title);
+								if(file.getName().endsWith(".java")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
+								if(file.getName().endsWith(".js")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
+								if(file.getName().endsWith(".py")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
+								if(file.getName().endsWith(".rb")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
+								if(file.getName().endsWith(".clj")) {}
 								BufferedWriter outFile = new BufferedWriter( new FileWriter( file ) );
 								outFile.write( textArea.getText( ) ); //put in textfile
 								outFile.flush( ); // redundant, done by close()
@@ -551,7 +625,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	public void windowActivated(WindowEvent e) {
 	}
 	public void windowClosing(WindowEvent e) {
-		System.out.println("here window");
+		//System.out.println("here window");
 
 		if(fileChange) {
 			int val= JOptionPane.showConfirmDialog(this, "Do you want to save changes??"); 
