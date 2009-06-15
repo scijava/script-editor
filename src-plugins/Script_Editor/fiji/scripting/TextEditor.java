@@ -413,7 +413,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		}
 
 		if(ae.getSource()==langclojure) {
-			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
+			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());
 		}
 		if(ae.getSource()==langjava) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
@@ -444,7 +444,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 				if(file.getName().endsWith(".js")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
 				if(file.getName().endsWith(".py")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
 				if(file.getName().endsWith(".rb")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
-				if(file.getName().endsWith(".clj")) {}
+				if(file.getName().endsWith(".clj")) {((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());}
 				this.setTitle(title);
 			}
 				/*changing the title part ends*/
@@ -544,7 +544,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 								if(file.getName().endsWith(".js")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
 								if(file.getName().endsWith(".py")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
 								if(file.getName().endsWith(".rb")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
-								if(file.getName().endsWith(".clj")) {}
+								if(file.getName().endsWith(".clj")) {((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());}
 								BufferedWriter outFile = new BufferedWriter( new FileWriter( file ) );
 								outFile.write( textArea.getText( ) ); //put in textfile
 								outFile.flush( ); // redundant, done by close()
