@@ -57,4 +57,10 @@ June 11 09 : Did a few changes to the ObjStartCompletions and ImportedClassObjec
 
 June 12 09 : Read the grammer completely formulated the regular expressions and also learnt how to create a parser using JFlex, I mean how to create a JFlex code. Then later in the evening I started writing the code for ClojureTokenMaker and almost wrote the code with the help of the details sent to me by Robert, the author of RSyntaxTextArea.
 
-June 13 09 : Did some changes and then created the java code of the parser ClojureTokenMaker.java which parses the code of Clojure. Later did some changes as Multiline strings was not working and did some other changes 
+June 13 09 : Did some changes and then created the java code of the parser ClojureTokenMaker.java which parses the code of Clojure. Later did some changes as Multiline strings was not working and did some other changes
+
+JUne 15 09 : Discussed with gitte the need to include Matlab as one of the languages which Script Editor must support . Read the grammer of .m files.
+
+June 16 09 : Could not do much work as I was not well had viral fever overnight.
+
+June 17 09 : Got some relief from fever so continued the work of producing the work of creating Matlab parser and managed to complete by the evening. Adding the multiline comment took some time. Did some changes in FindDialog and ReplaceDialog to continue finding text even when the file end has been reached. 
