@@ -119,7 +119,9 @@ public class FindDialog extends JDialog implements ActionListener {
 		temp.add(contentPane, BorderLayout.NORTH);
 		setContentPane(temp);
 		getRootPane().setDefaultButton(findNextButton);
-		//setDefaultCloseOperation(EXIT_ON_CLOSE);
+
+      		setIconImage(editor.getIconImage());
+		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 		setTitle("Find");
 		applyComponentOrientation(orientation);
 	}
@@ -139,7 +141,8 @@ public class FindDialog extends JDialog implements ActionListener {
          		boolean regex = regexCB.isSelected();
         		boolean found = SearchEngine.find(textArea, text, forward,matchCase, wholeWord, regex);
          		if (!found) {
-            			JOptionPane.showMessageDialog(this, "Text not found");
+            			JOptionPane.showMessageDialog(this, "Fiji has finished searching the document");
+						textArea.setCaretPosition(0);
          		}
 		}
 		if(action=="Cancel"){
