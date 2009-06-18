@@ -472,7 +472,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 					langjavascript.setSelected(true);
 				}
 				if(file.getName().endsWith(".m")) {
-					//((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new MatlabTokenMaker());
+					((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new MatlabTokenMaker());
 					langmatlab.setSelected(true);
 				}
 				if(file.getName().endsWith(".py")) {
