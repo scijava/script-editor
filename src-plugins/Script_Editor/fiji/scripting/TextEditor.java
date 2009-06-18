@@ -39,7 +39,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
    	RSyntaxTextArea textArea;
    	Document doc;
 	JMenuItem new1,open,save,saveas,quit,undo,redo,cut,copy,paste,find,replace,selectAll,autocomplete,jfcdialog,ijdialog;
-	JRadioButtonMenuItem langjava,langjavascript,langclojure,langpython,langruby;
+	JRadioButtonMenuItem langjava,langjavascript,langclojure,langpython,langruby,langnone,langmatlab;
 	//JMenu io;
 	FileInputStream fin;
       	FindDialog findDialog;
@@ -172,7 +172,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		langjava = new JRadioButtonMenuItem("Java");
 		langjava.setMnemonic(KeyEvent.VK_J);
 		langjava.setActionCommand("Java");
-		langjava.setSelected(true);
+
 
 		langjavascript = new JRadioButtonMenuItem("Javascript");
 		langjavascript.setMnemonic(KeyEvent.VK_J);
@@ -190,24 +190,39 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		langclojure.setMnemonic(KeyEvent.VK_C);
 		langclojure.setActionCommand("Clojure");
 
+		langmatlab = new JRadioButtonMenuItem("Matlab");
+		langmatlab.setMnemonic(KeyEvent.VK_M);
+		langmatlab.setActionCommand("Matlab");
+
+		langnone = new JRadioButtonMenuItem("None");
+		langnone.setMnemonic(KeyEvent.VK_N);
+		langnone.setActionCommand("None");
+		langnone.setSelected(true);
+
 		//Group the radio buttons.
 		ButtonGroup group = new ButtonGroup();
+		group.add(langnone);
 		group.add(langclojure);
 		group.add(langjava);
 		group.add(langjavascript);
+		group.add(langmatlab);
 		group.add(langpython);
 		group.add(langruby);
 
+		language.add(langnone);
 		language.add(langclojure);
 		language.add(langjava);
 		language.add(langjavascript);
+		language.add(langmatlab);
 		language.add(langpython);
 		language.add(langruby);
 
 		//Register a listener for the radio buttons.
+		langnone.addActionListener(this);
 		langclojure.addActionListener(this);
 		langjava.addActionListener(this);
 		langjavascript.addActionListener(this);
+		langmatlab.addActionListener(this);
 		langpython.addActionListener(this);
 		langruby.addActionListener(this);
 
@@ -412,11 +427,19 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			Prefs.savePreferences();
 		}
 
+		if(ae.getSource()==langnone) {
+
+			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
+			//((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle();
+		}
 		if(ae.getSource()==langclojure) {
 			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());
 		}
 		if(ae.getSource()==langjava) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
+		}
+		if(ae.getSource()==langmatlab) {
+			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new MatlabTokenMaker());
 		}
 		if(ae.getSource()==langjavascript) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
@@ -440,11 +463,30 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		try {
 			if(file!=null) {
 				title=(String)file.getName()+" - Text Editor for Fiji";
-				if(file.getName().endsWith(".java")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
-				if(file.getName().endsWith(".js")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
-				if(file.getName().endsWith(".py")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
-				if(file.getName().endsWith(".rb")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
-				if(file.getName().endsWith(".clj")) {((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());}
+				if(file.getName().endsWith(".java")){ 
+					textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA); 
+					langjava.setSelected(true);
+				}
+				if(file.getName().endsWith(".js")) {
+					textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT); 
+					langjavascript.setSelected(true);
+				}
+				if(file.getName().endsWith(".m")) {
+					//((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new MatlabTokenMaker());
+					langmatlab.setSelected(true);
+				}
+				if(file.getName().endsWith(".py")) {
+					textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
+					langpython.setSelected(true);
+				}
+				if(file.getName().endsWith(".rb")) {
+					textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
+					langruby.setSelected(true);
+				}
+				if(file.getName().endsWith(".clj")) {
+					((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());
+					langclojure.setSelected(true);
+				}
 				this.setTitle(title);
 			}
 				/*changing the title part ends*/
@@ -540,11 +582,30 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 							else {
 								title=(String)file.getName()+" - Text Editor Demo for fiji";
 								this.setTitle(title);
-								if(file.getName().endsWith(".java")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
-								if(file.getName().endsWith(".js")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
-								if(file.getName().endsWith(".py")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
-								if(file.getName().endsWith(".rb")) textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
-								if(file.getName().endsWith(".clj")) {((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());}
+								if(file.getName().endsWith(".java")){ 
+									textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA); 
+									langjava.setSelected(true);
+								}
+								if(file.getName().endsWith(".js")) {
+									textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT); 
+									langjavascript.setSelected(true);
+								}
+								if(file.getName().endsWith(".m")) {
+									((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new MatlabTokenMaker());
+									langmatlab.setSelected(true);
+								}
+								if(file.getName().endsWith(".py")) {
+									textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
+									langpython.setSelected(true);
+								}
+								if(file.getName().endsWith(".rb")) {
+									textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
+									langruby.setSelected(true);
+								}
+								if(file.getName().endsWith(".clj")) {
+									((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());
+									langclojure.setSelected(true);
+								}
 								BufferedWriter outFile = new BufferedWriter( new FileWriter( file ) );
 								outFile.write( textArea.getText( ) ); //put in textfile
 								outFile.flush( ); // redundant, done by close()
