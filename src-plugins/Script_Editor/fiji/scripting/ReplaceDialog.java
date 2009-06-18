@@ -144,8 +144,9 @@ public class ReplaceDialog extends JDialog implements ActionListener {
 			temp.add(contentPane, BorderLayout.NORTH);
 			setContentPane(temp);
 			getRootPane().setDefaultButton(findNextButton);
+			setIconImage(editor.getIconImage());
 			setTitle("ReplaceDialogTitle");
-			setDefaultCloseOperation(EXIT_ON_CLOSE);
+			setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 			applyComponentOrientation(orientation);
 	}
 
@@ -163,7 +164,8 @@ public class ReplaceDialog extends JDialog implements ActionListener {
          		boolean regex = regexCB.isSelected();
         		boolean found = SearchEngine.find(textArea, text, forward,matchCase, wholeWord, regex);
          		if (!found) {
-            			JOptionPane.showMessageDialog(this, "Text not found");
+            			JOptionPane.showMessageDialog(this, "Fiji has finished searching the document");
+						textArea.setCaretPosition(0);
          		}
 		}
 		if(action=="Replace"){
@@ -178,7 +180,8 @@ public class ReplaceDialog extends JDialog implements ActionListener {
 			boolean regex = regexCB.isSelected();
 			boolean replace =SearchEngine.replace(textArea, text,replaceField.getText(), forward,matchCase, wholeWord, regex);
 			if (!replace) {
-				JOptionPane.showMessageDialog(this, "Text not found");
+				JOptionPane.showMessageDialog(this, "Fiji has finished searching the document");
+				textArea.setCaretPosition(0);
 			}
 		}
 
