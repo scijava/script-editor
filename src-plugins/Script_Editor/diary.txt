@@ -63,4 +63,6 @@ JUne 15 09 : Discussed with gitte the need to include Matlab as one of the langu
 
 June 16 09 : Could not do much work as I was not well had viral fever overnight.
 
-June 17 09 : Got some relief from fever so continued the work of producing the work of creating Matlab parser and managed to complete by the evening. Adding the multiline comment took some time. Did some changes in FindDialog and ReplaceDialog to continue finding text even when the file end has been reached. 
+June 17 09 : Got some relief from fever so continued the work of producing the work of creating Matlab parser and managed to complete by the evening. Adding the multiline comment took some time. Did some changes in FindDialog and ReplaceDialog to continue finding text even when the file end has been reached.
+
+June 19 09 : Created a new class LanguageScriptMap which maps from language extension(String) to the objects of RefreshScripts. But I was not able to import the packages for individual languages. So I talked to gitte and he asked me to add them to the classpath and then it worked fine but I am still facing a problem Refresh_Javas class used to run java is not contained in a package so I am not able to import Refresh_Javas class and hence by now the script editor doesnot run java scripts. One more important thing is that I changed the definition of runScript(String path) function in RefreshScripts class from protected to public and hence as gitte said it must be changed officially.
