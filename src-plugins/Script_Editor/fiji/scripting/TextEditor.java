@@ -18,6 +18,7 @@ import java.net.URL;
 import ij.io.*;
 import ij.IJ;
 import ij.Prefs;
+import ij.plugin.PlugIn;
 /*cell renderer part ends here*/
 import javax.imageio.*;
 import java.util.Arrays;
@@ -26,6 +27,12 @@ import javax.swing.text.*;
 import org.fife.ui.rtextarea.*;
 import org.fife.ui.rsyntaxtextarea.*;
 import org.fife.ui.autocomplete.*;
+import common.RefreshScripts;
+/*import Clojure.*;
+import Javascript.*;
+import Refresh_Javas.*;
+import Jython.*;
+import JRuby.*;*/
 
 class TextEditor extends JFrame implements ActionListener , ItemListener , ChangeListener ,MouseMotionListener,MouseListener ,CaretListener,InputMethodListener,DocumentListener,WindowListener	{
 
@@ -37,8 +44,9 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
    	File file,f;
    	CompletionProvider provider;
    	RSyntaxTextArea textArea;
+	JTextArea screen=new JTextArea();
    	Document doc;
-	JMenuItem new1,open,save,saveas,quit,undo,redo,cut,copy,paste,find,replace,selectAll,autocomplete,jfcdialog,ijdialog;
+	JMenuItem new1,open,save,saveas,run,quit,undo,redo,cut,copy,paste,find,replace,selectAll,autocomplete,jfcdialog,ijdialog;
 	JRadioButtonMenuItem langjava,langjavascript,langclojure,langpython,langruby,langnone,langmatlab;
 	//JMenu io;
 	FileInputStream fin;
@@ -50,7 +58,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		fcc = new JFileChooser();                                        //For the file opening saving things
 		JPanel cp = new JPanel(new BorderLayout());
       		title="Text Editor for Fiji";
-		textArea = new RSyntaxTextArea(25,80);
+		textArea = new RSyntaxTextArea();
       		textArea.addInputMethodListener(l);
       		textArea.addCaretListener(this);
       		textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
@@ -69,7 +77,15 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
       		doc=textArea.getDocument();
       		doc.addDocumentListener(this);
 		RTextScrollPane sp = new RTextScrollPane(textArea);
-      		cp.add(sp);
+		sp.setPreferredSize(new Dimension(600,350));
+		//	cp.add(sp);
+		screen.setEditable(false);
+		screen.setLineWrap(true);
+		Font font = new Font("Courier", Font.PLAIN, 12);
+		screen.setFont(font);
+		JScrollPane scroll = new JScrollPane(screen);
+		scroll.setPreferredSize(new Dimension(600,80));
+
 
       	/********* This part is used to change the 
          	   the icon of the 
@@ -88,8 +104,11 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
             /********setting the icon part ends ********/
 
+			JSplitPane panel = new JSplitPane(JSplitPane.VERTICAL_SPLIT, sp, scroll);
+			panel.setBorder(BorderFactory.createEmptyBorder(4,4,4,4));
+			panel.setResizeWeight(350.0/430.0);
 
-      		setContentPane(cp);
+      		setContentPane(panel);
       		setTitle(title);
       		addWindowListener(this);
       		setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -112,6 +131,10 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
         	file.add(saveas);
         	saveas.addActionListener(this);
         	file.addSeparator();
+			run = new JMenuItem("Run");
+			file.add(run);
+			run.addActionListener(this);
+			file.addSeparator();
 		quit = new JMenuItem("Quit");
         	file.add(quit);
         	quit.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, ActionEvent.ALT_MASK));
@@ -357,6 +380,9 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 			fileChange=false;
 			int temp= saveasaction();                   //temp for the int return type of the function nothing else
+		}
+		if(ae.getSource()==run) {
+			scriptRun();
 		}
 		if(ae.getSource()==quit) {
 			processWindowEvent( new WindowEvent(this, WindowEvent.WINDOW_CLOSING) );
@@ -684,6 +710,52 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	}
 
 	public void windowActivated(WindowEvent e) {
+	}
+	public void scriptRun() {
+		if(fileChange||title=="Text Editor Demo for Fiji") {
+			int val= JOptionPane.showConfirmDialog(this, "You must save the changes before running.Do you want to save changes??","Select an Option",JOptionPane.YES_NO_OPTION);
+			if(val==JOptionPane.YES_OPTION){
+
+				if(title=="Text Editor Demo for Fiji") {
+					int temp=saveasaction();       //temp saves here whether the option was Approved :)
+					if (temp == JFileChooser.APPROVE_OPTION) {
+						fileChange=false;
+						certainScriptRun();
+					}
+					else {
+						JOptionPane.showMessageDialog(this, "The script could not run because you did not save the file.");
+					}
+				}
+				else {
+					fileChange=false;
+					saveaction();
+					certainScriptRun();
+				}
+			}
+
+			if(val==JOptionPane.NO_OPTION) {
+				JOptionPane.showMessageDialog(this, "The script could not run because you did not save the file.");
+			}
+		}
+		else {
+			certainScriptRun();
+		}
+	}
+
+	public void certainScriptRun() {
+		//String refreshClass="";
+		String extension="";
+		LanguageScriptMap scriptmap=new LanguageScriptMap();
+		String fileName=(String)file.getName();
+		int i= fileName.lastIndexOf(".");
+		//String refreshClassName =(String)scriptmap.createScriptMap().get(fileName.substring(i));
+		if(i>0)
+			extension=fileName.substring(i);
+		RefreshScripts refreshClass =scriptmap.createScriptMap().get(fileName.substring(i));
+		if (refreshClass == null) IJ.error("Booh!"); 
+		else refreshClass.runScript(file.getPath());
+
+
 	}
 	public void windowClosing(WindowEvent e) {
 		//System.out.println("here window");
