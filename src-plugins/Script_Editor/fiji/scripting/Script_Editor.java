@@ -9,15 +9,16 @@ public class Script_Editor implements PlugIn {
 		//TextEditor editor=new TextEditor();
 		SwingUtilities.invokeLater(new Runnable() {
          		public void run() {
-            			new TextEditor();
+            			new TextEditor("");
          		}
       		});
 	}
 
-	public void run(String arg) {
+	public void run(final String arg) {
+		System.out.println(arg);
 		SwingUtilities.invokeLater(new Runnable() {
          		public void run() {
-            			new TextEditor();
+            			new TextEditor(arg);
          		}
       		});
 	}
