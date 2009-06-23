@@ -12,32 +12,21 @@ import java.awt.image.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.Document;
-/*for the cell renderer part*/
-import java.net.MalformedURLException;
-import java.net.URL;
 import ij.io.*;
 import ij.IJ;
 import ij.Prefs;
-import ij.plugin.PlugIn;
-/*cell renderer part ends here*/
 import javax.imageio.*;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import javax.swing.text.*;
 import org.fife.ui.rtextarea.*;
 import org.fife.ui.rsyntaxtextarea.*;
 import org.fife.ui.autocomplete.*;
 import common.RefreshScripts;
-/*import Clojure.*;
-import Javascript.*;
-import Refresh_Javas.*;
-import Jython.*;
-import JRuby.*;*/
+
 
 class TextEditor extends JFrame implements ActionListener , ItemListener , ChangeListener ,MouseMotionListener,MouseListener ,CaretListener,InputMethodListener,DocumentListener,WindowListener	{
 
 	JFileChooser fcc;                                                   //using filechooser
-	//String action="";
 	boolean fileChange=false;
    	String title="";
 	InputMethodListener l;
@@ -48,13 +37,13 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
    	Document doc;
 	JMenuItem new1,open,save,saveas,run,quit,undo,redo,cut,copy,paste,find,replace,selectAll,autocomplete,jfcdialog,ijdialog;
 	JRadioButtonMenuItem langjava,langjavascript,langclojure,langpython,langruby,langnone,langmatlab;
-	//JMenu io;
 	FileInputStream fin;
       	FindDialog findDialog;
    	ReplaceDialog replaceDialog;
 	AutoCompletion autocomp;
+	HashMap<String,RefreshScripts> scriptmap=new LanguageScriptMap();
 
-	public TextEditor() {
+	public TextEditor(String path1) {
 		fcc = new JFileChooser();                                        //For the file opening saving things
 		JPanel cp = new JPanel(new BorderLayout());
       		title="Text Editor for Fiji";
@@ -62,8 +51,6 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
       		textArea.addInputMethodListener(l);
       		textArea.addCaretListener(this);
       		textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
-	  	String words[]={"public","private","protected","println","static","System","Swing","void","main","catch","class"};
-      		DefaultCompletionProvider provider1 =new DefaultCompletionProvider(words);
 		if(provider==null) {
 			provider = createCompletionProvider();
 		}
@@ -194,32 +181,25 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 		langjava = new JRadioButtonMenuItem("Java");
 		langjava.setMnemonic(KeyEvent.VK_J);
-		langjava.setActionCommand("Java");
-
-
+		//langjava.setActionCommand("Java");
 		langjavascript = new JRadioButtonMenuItem("Javascript");
 		langjavascript.setMnemonic(KeyEvent.VK_J);
-		langjavascript.setActionCommand("Javascript");
-
+		//langjavascript.setActionCommand("Javascript");
 		langpython = new JRadioButtonMenuItem("Python");
 		langpython.setMnemonic(KeyEvent.VK_P);
-		langpython.setActionCommand("Python");
-
+		//langpython.setActionCommand("Python");
 		langruby = new JRadioButtonMenuItem("Ruby");
 		langruby.setMnemonic(KeyEvent.VK_R);
 		langruby.setActionCommand("Ruby");
-
 		langclojure = new JRadioButtonMenuItem("Clojure");
 		langclojure.setMnemonic(KeyEvent.VK_C);
-		langclojure.setActionCommand("Clojure");
-
+		//langclojure.setActionCommand("Clojure");
 		langmatlab = new JRadioButtonMenuItem("Matlab");
 		langmatlab.setMnemonic(KeyEvent.VK_M);
-		langmatlab.setActionCommand("Matlab");
-
+		//langmatlab.setActionCommand("Matlab");
 		langnone = new JRadioButtonMenuItem("None");
 		langnone.setMnemonic(KeyEvent.VK_N);
-		langnone.setActionCommand("None");
+		//langnone.setActionCommand("None");
 		langnone.setSelected(true);
 
 		//Group the radio buttons.
@@ -260,13 +240,16 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
       		setLocationRelativeTo(null);
 		setVisible(true);
+		System.out.println("here it is "+path1+" :over");
+		if(!(path1.equals("")||path1==null)) {
+			openaction(path1);
+		}
    	}
 
 	public void addToMenu(JMenu menu,JMenuItem menuitem,int keyevent,int actionevent) {
 		menu.add(menuitem);
 		menuitem.setAccelerator(KeyStroke.getKeyStroke(keyevent,actionevent));
 		menuitem.addActionListener(this);
-		//menu.addSeparator();
 	}
 
 
@@ -279,7 +262,6 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
    
      /******* the function which accounts for the actions in the menu ************/
 	public void actionPerformed(ActionEvent ae){
-		//action=ae.getActionCommand();
 		if(ae.getSource()==new1){
 			if(fileChange==true) {
 				int val= JOptionPane.showConfirmDialog(this, "Do you want to save changes??"); 
@@ -305,7 +287,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 			else{
 				doc.removeDocumentListener(this);
-		       		textArea.setText("");
+		       	textArea.setText("");
 				this.setTitle("TextEditor for Fiji");
 				doc.addDocumentListener(this);
 			}
@@ -328,46 +310,28 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 							path = workingDir + path;
 					}
 				}
-				try
-				{
-					file = new File(path);
-				}
-				catch(Exception e){System.out.println("problem in opening");}
+
 			//}
 				/*condition to check whether there is a change and the 
 			 	* user has really opted to open a new file
 			 	*/
 			if(fileChange==true&&returnVal==fcc.APPROVE_OPTION) {
-				//this.setTitle("Not saved - Text Editor Demo for Fiji");
 				int val= JOptionPane.showConfirmDialog(this, "Do you want to save changes??"); 
 				if(val==JOptionPane.YES_OPTION){
 					fileChange=false;
 					saveaction();
-
-					/*Document listener is removed before opening the file 
-					 * and then added thanx to gitte for telling 
-					 * about DocumentListener
-					 */
-
-					doc.removeDocumentListener(this);
-					openaction(returnVal);
-					doc.addDocumentListener(this);
-
+					openaction(path);
 				}
 				if(val==JOptionPane.NO_OPTION){
 					fileChange=false;
-					doc.removeDocumentListener(this);
-					openaction(returnVal);
-					doc.addDocumentListener(this);
+					openaction(path);
 				}
 				if(val==JOptionPane.CANCEL_OPTION){
 				}
 			 }
 
 			if(fileChange==false&&returnVal==fcc.APPROVE_OPTION) {
-				doc.removeDocumentListener(this);
-		       		openaction(returnVal);
-				doc.addDocumentListener(this);
+		       		openaction(path);
 			}
         
 		}
@@ -382,13 +346,13 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			int temp= saveasaction();                   //temp for the int return type of the function nothing else
 		}
 		if(ae.getSource()==run) {
-			scriptRun();
+			runScript();
 		}
 		if(ae.getSource()==quit) {
 			processWindowEvent( new WindowEvent(this, WindowEvent.WINDOW_CLOSING) );
 		}
          		     	   
-    		if(ae.getSource()==cut) {
+    	if(ae.getSource()==cut) {
 			textArea.cut();
 		}
 		if(ae.getSource()==copy) {
@@ -454,9 +418,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		}
 
 		if(ae.getSource()==langnone) {
-
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
-			//((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle();
 		}
 		if(ae.getSource()==langclojure) {
 			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());
@@ -484,8 +446,14 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	 */
 
 
-	public void openaction(int returnVal) {
+	public void openaction(String path) {
 
+		System.out.println("It is opened");
+		try {
+				file = new File(path);
+		}
+		catch(Exception e){System.out.println("problem in opening");}
+		doc.removeDocumentListener(this);
 		try {
 			if(file!=null) {
 				title=(String)file.getName()+" - Text Editor for Fiji";
@@ -517,26 +485,19 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			}
 				/*changing the title part ends*/
 			fin = new FileInputStream(file);
-				//DataInputStream din = new DataInputStream(fin);
 			BufferedReader din = new BufferedReader(new InputStreamReader(fin)); 
 			String s = "";
-			if (returnVal == fcc.APPROVE_OPTION) {
-				textArea.setText("");
-				while(true) {
-					s = din.readLine();
-					if(s==null) {
-						break;
-					}
-					//System.out.println(s);
-					textArea.append(s+"\n");
-					//ba.textArea.setText(s);
+
+			textArea.setText("");
+			while(true) {
+				s = din.readLine();
+				if(s==null) {
+					break;
 				}
-			}
-			else if(returnVal != fcc.APPROVE_OPTION) {
-					System.out.println("Saving Canceled");
+				textArea.append(s+"\n");
 			}
 
-			//fin.close();
+
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		} finally {
@@ -546,7 +507,8 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
         			} catch (Exception e2) {
             				e2.printStackTrace();
         			}
-			}
+				}
+				doc.addDocumentListener(this);
     		}
 
 	}
@@ -593,7 +555,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 								}
 							}
 							if(ifReplaceFile) {
-									int val= JOptionPane.showConfirmDialog(this, "Do you want to replace "+file.getName()+"??","D										o you want to replace "+file.getName()+"??",JOptionPane.YES_NO_OPTION); 
+									int val= JOptionPane.showConfirmDialog(this, "Do you want to replace "+file.getName()+"??","Do you want to replace "+file.getName()+"??",JOptionPane.YES_NO_OPTION); 
 									if(val==JOptionPane.YES_OPTION) {
 
 										//changing the title again
@@ -677,41 +639,27 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	public void mouseReleased(MouseEvent me) {}
 	public void mousePressed(MouseEvent me) {}
 
-	//this function is for the caret position change not of much use so far
-	public void caretUpdate(CaretEvent ce) {
-	 
-	//	fileChange=true;
-	}
+	public void caretUpdate(CaretEvent ce) {}
 
 	//next function is for the InputMethodEvent changes
 	public void inputMethodTextChanged(InputMethodEvent event) {
-
 		fileChange=true;
-
 	}
 	public void caretPositionChanged(InputMethodEvent event) {
-
 		fileChange=true;
-
 	}
 
 	//Its the real meat the Document Listener functions raise the flag when the text is modifiedd
 	public void insertUpdate(DocumentEvent e) {
-
 		fileChange=true;
-
 	}
 	public void removeUpdate(DocumentEvent e) {
-
 		fileChange=true;
+	}
+	public void changedUpdate(DocumentEvent e) {}
+	public void windowActivated(WindowEvent e) {}
 
-	}
-	public void changedUpdate(DocumentEvent e) {
-	}
-
-	public void windowActivated(WindowEvent e) {
-	}
-	public void scriptRun() {
+	public void runScript() {
 		if(fileChange||title=="Text Editor Demo for Fiji") {
 			int val= JOptionPane.showConfirmDialog(this, "You must save the changes before running.Do you want to save changes??","Select an Option",JOptionPane.YES_NO_OPTION);
 			if(val==JOptionPane.YES_OPTION){
@@ -743,15 +691,13 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	}
 
 	public void certainScriptRun() {
-		//String refreshClass="";
+
 		String extension="";
-		LanguageScriptMap scriptmap=new LanguageScriptMap();
 		String fileName=(String)file.getName();
 		int i= fileName.lastIndexOf(".");
-		//String refreshClassName =(String)scriptmap.createScriptMap().get(fileName.substring(i));
 		if(i>0)
 			extension=fileName.substring(i);
-		RefreshScripts refreshClass =scriptmap.createScriptMap().get(fileName.substring(i));
+		RefreshScripts refreshClass =scriptmap.get(fileName.substring(i));
 		if (refreshClass == null) IJ.error("Booh!"); 
 		else refreshClass.runScript(file.getPath());
 
@@ -764,12 +710,6 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			int val= JOptionPane.showConfirmDialog(this, "Do you want to save changes??"); 
 			if(val==JOptionPane.YES_OPTION){
 
-					/*
-					 * This all mess is just to ensure that 
-					 * the window doesnot close on doing foll things stepwise
-					 * step 1)trying to close window with a unsaved file
-					 * step 2)cancelling the save dialog box
-					 */
 				if(title=="Text Editor Demo for Fiji") {
 					int temp=saveasaction();       //temp saves here whether the option was Approved :)
 					if (temp == JFileChooser.APPROVE_OPTION) {
@@ -799,20 +739,12 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		}
 
 	}
-	public void windowClosed(WindowEvent e) {
+	public void windowClosed(WindowEvent e) {}
+	public void windowDeactivated(WindowEvent e) {}
+	public void windowDeiconified(WindowEvent e) {}
+	public void windowIconified(WindowEvent e) {}
+	public void windowOpened(WindowEvent e) {}
 
-	}
-	public void windowDeactivated(WindowEvent e) {
-
-	}
-	public void windowDeiconified(WindowEvent e) {
-
-	}
-	public void windowIconified(WindowEvent e) {
-	}
-	public void windowOpened(WindowEvent e) {
-
-	}
 /*autocomplete addition starts here*/
 
 
@@ -831,12 +763,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	}
 
 
-	/**
-	 * Creates the completion provider for the editor.  This provider can be
-	 * shared among multiple editors.
-	 *
-	 * @return The provider.
-	 */
+
 	private CompletionProvider createCompletionProvider() {
 
 
