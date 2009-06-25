@@ -1,4 +1,5 @@
 package fiji.scripting;
+
 import java.awt.Point;
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -131,9 +132,6 @@ public class DefaultProvider extends AbstractCompletionProvider {
 	}
 
 
-	/**
-	 * {@inheritDoc}
-	 */
 	public List getCompletionsAt(JTextComponent tc, Point p) {
 
 		int offset = tc.viewToModel(p);
@@ -191,9 +189,6 @@ public class DefaultProvider extends AbstractCompletionProvider {
 	}
 
 
-	/**
-	 * {@inheritDoc}
-	 */
 	public List getParameterizedCompletions(JTextComponent tc) {
 
 		List list = null;
@@ -285,12 +280,6 @@ public class DefaultProvider extends AbstractCompletionProvider {
 	}
 
 
-	/**
-	 * Loads completions from an XML file.  The XML should validate against
-	 * the completion XML schema.
-	 *
-	 * @param file An XML file to load from.
-	 * @throws IOException If an IO error occurs.
-	 */
+
 
 }
