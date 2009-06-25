@@ -36,7 +36,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	JTextArea screen=new JTextArea();
    	Document doc;
 	JMenuItem new1,open,save,saveas,run,quit,undo,redo,cut,copy,paste,find,replace,selectAll,autocomplete,jfcdialog,ijdialog;
-	JRadioButtonMenuItem langjava,langjavascript,langclojure,langpython,langruby,langnone,langmatlab;
+	JRadioButtonMenuItem[] lang=new JRadioButtonMenuItem[7];
 	FileInputStream fin;
       	FindDialog findDialog;
    	ReplaceDialog replaceDialog;
@@ -54,15 +54,15 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		if(provider==null) {
 			provider = createCompletionProvider();
 		}
-      		autocomp=new AutoCompletion(provider);
+      	autocomp=new AutoCompletion(provider);
 	  	autocomp.setListCellRenderer(new CCellRenderer());
 		autocomp.setShowDescWindow(true);
 		autocomp.setParameterAssistanceEnabled(true);
-      		autocomp.install(textArea);
+      	autocomp.install(textArea);
 	  	textArea.setToolTipSupplier((ToolTipSupplier)provider);
 		ToolTipManager.sharedInstance().registerComponent(textArea);
-      		doc=textArea.getDocument();
-      		doc.addDocumentListener(this);
+      	doc=textArea.getDocument();
+      	doc.addDocumentListener(this);
 		RTextScrollPane sp = new RTextScrollPane(textArea);
 		sp.setPreferredSize(new Dimension(600,350));
 		//	cp.add(sp);
@@ -79,80 +79,78 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
            	   window of the editor **********/
 
 		BufferedImage image = null;
-        	try {
-	   		image = ImageIO.read(new java.net.URL("file:images/icon.png"));
-        	}
-	       	catch (IOException e) {
-            		e.printStackTrace();
-        	}
-      		setIconImage(image);
+        try {
+			image = ImageIO.read(new java.net.URL("file:images/icon.png"));
+        } catch (IOException e) {
+           	e.printStackTrace();
+        }
+      	setIconImage(image);
 
       
 
-            /********setting the icon part ends ********/
+        /********setting the icon part ends ********/
 
-			JSplitPane panel = new JSplitPane(JSplitPane.VERTICAL_SPLIT, sp, scroll);
-			panel.setBorder(BorderFactory.createEmptyBorder(4,4,4,4));
-			panel.setResizeWeight(350.0/430.0);
-
-      		setContentPane(panel);
-      		setTitle(title);
-      		addWindowListener(this);
-      		setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+		JSplitPane panel = new JSplitPane(JSplitPane.VERTICAL_SPLIT, sp, scroll);
+		panel.setBorder(BorderFactory.createEmptyBorder(4,4,4,4));
+		panel.setResizeWeight(350.0/430.0);
+		setContentPane(panel);
+      	setTitle(title);
+      	addWindowListener(this);
+      	setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 
 	/*********** Creating the menu options in the text editor ****************/
 
 		JMenuBar mbar = new JMenuBar();
-        	setJMenuBar(mbar);
+        setJMenuBar(mbar);
 
       /*******  creating the menu for the File option **********/
 		JMenu file = new JMenu("File");
-        	file.setMnemonic(KeyEvent.VK_F);
+        file.setMnemonic(KeyEvent.VK_F);
 		new1= new JMenuItem("New");
-        	addToMenu(file,new1,KeyEvent.VK_N, ActionEvent.CTRL_MASK);
-        	open = new JMenuItem("Open...");
-        	addToMenu(file,open,KeyEvent.VK_O, ActionEvent.CTRL_MASK);
-        	save = new JMenuItem("Save");
-        	addToMenu(file,save,KeyEvent.VK_S, ActionEvent.CTRL_MASK);
-       		saveas = new JMenuItem("Save as...");
-        	file.add(saveas);
-        	saveas.addActionListener(this);
-        	file.addSeparator();
-			run = new JMenuItem("Run");
-			file.add(run);
-			run.addActionListener(this);
-			file.addSeparator();
+        addToMenu(file,new1,KeyEvent.VK_N, ActionEvent.CTRL_MASK);
+        open = new JMenuItem("Open...");
+        addToMenu(file,open,KeyEvent.VK_O, ActionEvent.CTRL_MASK);
+        save = new JMenuItem("Save");
+        addToMenu(file,save,KeyEvent.VK_S, ActionEvent.CTRL_MASK);
+       	saveas = new JMenuItem("Save as...");
+        file.add(saveas);
+        saveas.addActionListener(this);
+        file.addSeparator();
+		run = new JMenuItem("Run");
+		file.add(run);
+		run.addActionListener(this);
+		file.addSeparator();
 		quit = new JMenuItem("Quit");
-        	file.add(quit);
-        	quit.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, ActionEvent.ALT_MASK));
-        	quit.addActionListener(this);
-        	mbar.add(file);
+        file.add(quit);
+        quit.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, ActionEvent.ALT_MASK));
+        quit.addActionListener(this);
+        mbar.add(file);
 
         /********The file menu part ended here  ***************/
 
         /*********The Edit menu part starts here ***************/
 
 		JMenu edit = new JMenu("Edit");
-        	undo = new JMenuItem("Undo");
-        	addToMenu(edit,undo,KeyEvent.VK_Z, ActionEvent.CTRL_MASK);
+        undo = new JMenuItem("Undo");
+        addToMenu(edit,undo,KeyEvent.VK_Z, ActionEvent.CTRL_MASK);
 		redo = new JMenuItem("Redo");
-        	addToMenu(edit,redo,KeyEvent.VK_Y, ActionEvent.CTRL_MASK);
-			edit.addSeparator();
-        	cut = new JMenuItem("Cut");
-        	addToMenu(edit,cut,KeyEvent.VK_X, ActionEvent.CTRL_MASK);
+        addToMenu(edit,redo,KeyEvent.VK_Y, ActionEvent.CTRL_MASK);
+		edit.addSeparator();
+        cut = new JMenuItem("Cut");
+        addToMenu(edit,cut,KeyEvent.VK_X, ActionEvent.CTRL_MASK);
 		copy = new JMenuItem("Copy");
-        	addToMenu(edit,copy,KeyEvent.VK_C, ActionEvent.CTRL_MASK);
+        addToMenu(edit,copy,KeyEvent.VK_C, ActionEvent.CTRL_MASK);
 		paste = new JMenuItem("Paste");
-        	addToMenu(edit,paste,KeyEvent.VK_V, ActionEvent.CTRL_MASK);
-			edit.addSeparator();
+        addToMenu(edit,paste,KeyEvent.VK_V, ActionEvent.CTRL_MASK);
+		edit.addSeparator();
 		find = new JMenuItem("Find...");
-        	addToMenu(edit,find,KeyEvent.VK_F, ActionEvent.CTRL_MASK);
+        addToMenu(edit,find,KeyEvent.VK_F, ActionEvent.CTRL_MASK);
 		replace = new JMenuItem("Find and Replace...");
-        	addToMenu(edit,replace,KeyEvent.VK_H, ActionEvent.CTRL_MASK);
-			edit.addSeparator();
+        addToMenu(edit,replace,KeyEvent.VK_H, ActionEvent.CTRL_MASK);
+		edit.addSeparator();
 		selectAll = new JMenuItem("Select All");
-        	addToMenu(edit,selectAll,KeyEvent.VK_A, ActionEvent.CTRL_MASK);
-       		mbar.add(edit);
+        addToMenu(edit,selectAll,KeyEvent.VK_A, ActionEvent.CTRL_MASK);
+       	mbar.add(edit);
         
         /******** The Edit menu part ends here *****************/
 
@@ -174,71 +172,46 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 		options.add(io);
 
-       		mbar.add(options);
+    	mbar.add(options);
 
 		/*********The Language parts starts here********************/
 		JMenu language = new JMenu("Language");
 
-		langjava = new JRadioButtonMenuItem("Java");
-		langjava.setMnemonic(KeyEvent.VK_J);
-		//langjava.setActionCommand("Java");
-		langjavascript = new JRadioButtonMenuItem("Javascript");
-		langjavascript.setMnemonic(KeyEvent.VK_J);
-		//langjavascript.setActionCommand("Javascript");
-		langpython = new JRadioButtonMenuItem("Python");
-		langpython.setMnemonic(KeyEvent.VK_P);
-		//langpython.setActionCommand("Python");
-		langruby = new JRadioButtonMenuItem("Ruby");
-		langruby.setMnemonic(KeyEvent.VK_R);
-		langruby.setActionCommand("Ruby");
-		langclojure = new JRadioButtonMenuItem("Clojure");
-		langclojure.setMnemonic(KeyEvent.VK_C);
-		//langclojure.setActionCommand("Clojure");
-		langmatlab = new JRadioButtonMenuItem("Matlab");
-		langmatlab.setMnemonic(KeyEvent.VK_M);
-		//langmatlab.setActionCommand("Matlab");
-		langnone = new JRadioButtonMenuItem("None");
-		langnone.setMnemonic(KeyEvent.VK_N);
+		lang[0] = new JRadioButtonMenuItem("Java");
+		lang[0].setMnemonic(KeyEvent.VK_J);
+		lang[1] = new JRadioButtonMenuItem("Javascript");
+		lang[1].setMnemonic(KeyEvent.VK_J);
+		lang[2] = new JRadioButtonMenuItem("Python");
+		lang[2].setMnemonic(KeyEvent.VK_P);
+		lang[3] = new JRadioButtonMenuItem("Ruby");
+		lang[3].setMnemonic(KeyEvent.VK_R);
+		lang[4] = new JRadioButtonMenuItem("Clojure");
+		lang[4].setMnemonic(KeyEvent.VK_C);
+		lang[5] = new JRadioButtonMenuItem("Matlab");
+		lang[5].setMnemonic(KeyEvent.VK_M);
+		lang[6] = new JRadioButtonMenuItem("None");
+		lang[6].setMnemonic(KeyEvent.VK_N);
 		//langnone.setActionCommand("None");
-		langnone.setSelected(true);
+		lang[6].setSelected(true);
 
-		//Group the radio buttons.
 		ButtonGroup group = new ButtonGroup();
-		group.add(langnone);
-		group.add(langclojure);
-		group.add(langjava);
-		group.add(langjavascript);
-		group.add(langmatlab);
-		group.add(langpython);
-		group.add(langruby);
+		for(int i=0;i<7;i++) {
 
-		language.add(langnone);
-		language.add(langclojure);
-		language.add(langjava);
-		language.add(langjavascript);
-		language.add(langmatlab);
-		language.add(langpython);
-		language.add(langruby);
+			group.add(lang[i]);
+			language.add(lang[i]);
+			lang[i].addActionListener(this);
 
-		//Register a listener for the radio buttons.
-		langnone.addActionListener(this);
-		langclojure.addActionListener(this);
-		langjava.addActionListener(this);
-		langjavascript.addActionListener(this);
-		langmatlab.addActionListener(this);
-		langpython.addActionListener(this);
-		langruby.addActionListener(this);
+		}
 
-		//language.add(group);
+
 		mbar.add(language);
 
 
       /*********** The menu part ended here    ********************/
 
-      		pack();
+      	pack();
 	  	getToolkit().setDynamicLayout(true);            //added to accomodate the autocomplete part
-
-      		setLocationRelativeTo(null);
+		setLocationRelativeTo(null);
 		setVisible(true);
 		System.out.println("here it is "+path1+" :over");
 		if(!(path1.equals("")||path1==null)) {
@@ -270,7 +243,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 					saveaction();
 					doc.removeDocumentListener(this);
 					textArea.setText("");
-				       	this.setTitle("Text Editor for Fiji");
+				    this.setTitle("Text Editor for Fiji");
 					doc.addDocumentListener(this);
 
 				}
@@ -311,7 +284,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 					}
 				}
 
-			//}
+
 				/*condition to check whether there is a change and the 
 			 	* user has really opted to open a new file
 			 	*/
@@ -417,27 +390,31 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			Prefs.savePreferences();
 		}
 
-		if(ae.getSource()==langnone) {
-			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
-		}
-		if(ae.getSource()==langclojure) {
-			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());
-		}
-		if(ae.getSource()==langjava) {
+
+
+		if(ae.getSource()==lang[0]) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
 		}
-		if(ae.getSource()==langmatlab) {
-			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new MatlabTokenMaker());
-		}
-		if(ae.getSource()==langjavascript) {
+		if(ae.getSource()==lang[1]) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
 		}
-		if(ae.getSource()==langpython) {
+		if(ae.getSource()==lang[2]) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
 		}
-		if(ae.getSource()==langruby) {
+		if(ae.getSource()==lang[3]) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
 		}
+		if(ae.getSource()==lang[4]) {
+			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());
+		}
+		if(ae.getSource()==lang[5]) {
+			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new MatlabTokenMaker());
+		}
+		if(ae.getSource()==lang[6]) {
+			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
+		}
+
+
 
 	}
 
@@ -456,32 +433,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		doc.removeDocumentListener(this);
 		try {
 			if(file!=null) {
-				title=(String)file.getName()+" - Text Editor for Fiji";
-				if(file.getName().endsWith(".java")){ 
-					textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA); 
-					langjava.setSelected(true);
-				}
-				if(file.getName().endsWith(".js")) {
-					textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT); 
-					langjavascript.setSelected(true);
-				}
-				if(file.getName().endsWith(".m")) {
-					((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new MatlabTokenMaker());
-					langmatlab.setSelected(true);
-				}
-				if(file.getName().endsWith(".py")) {
-					textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
-					langpython.setSelected(true);
-				}
-				if(file.getName().endsWith(".rb")) {
-					textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
-					langruby.setSelected(true);
-				}
-				if(file.getName().endsWith(".clj")) {
-					((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());
-					langclojure.setSelected(true);
-				}
-				this.setTitle(title);
+				setLanguage(file);
 			}
 				/*changing the title part ends*/
 			fin = new FileInputStream(file);
@@ -568,32 +520,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 									}
 							}
 							else {
-								title=(String)file.getName()+" - Text Editor Demo for fiji";
-								this.setTitle(title);
-								if(file.getName().endsWith(".java")){ 
-									textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA); 
-									langjava.setSelected(true);
-								}
-								if(file.getName().endsWith(".js")) {
-									textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT); 
-									langjavascript.setSelected(true);
-								}
-								if(file.getName().endsWith(".m")) {
-									((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new MatlabTokenMaker());
-									langmatlab.setSelected(true);
-								}
-								if(file.getName().endsWith(".py")) {
-									textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
-									langpython.setSelected(true);
-								}
-								if(file.getName().endsWith(".rb")) {
-									textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
-									langruby.setSelected(true);
-								}
-								if(file.getName().endsWith(".clj")) {
-									((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());
-									langclojure.setSelected(true);
-								}
+								setLanguage(file);
 								BufferedWriter outFile = new BufferedWriter( new FileWriter( file ) );
 								outFile.write( textArea.getText( ) ); //put in textfile
 								outFile.flush( ); // redundant, done by close()
@@ -659,6 +586,37 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	public void changedUpdate(DocumentEvent e) {}
 	public void windowActivated(WindowEvent e) {}
 
+	public void setLanguage(File file) {
+
+		title=(String)file.getName()+" - Text Editor Demo for fiji";
+		this.setTitle(title);
+		if(file.getName().endsWith(".java")){ 
+			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA); 
+			lang[0].setSelected(true);
+		}
+		if(file.getName().endsWith(".js")) {
+			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT); 
+			lang[1].setSelected(true);
+		}
+		if(file.getName().endsWith(".m")) {
+			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new MatlabTokenMaker());
+			lang[5].setSelected(true);
+		}
+		if(file.getName().endsWith(".py")) {
+			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
+			lang[2].setSelected(true);
+		}
+		if(file.getName().endsWith(".rb")) {
+			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
+			lang[3].setSelected(true);
+		}
+		if(file.getName().endsWith(".clj")) {
+			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());
+			lang[4].setSelected(true);
+		}
+
+	}
+
 	public void runScript() {
 		if(fileChange||title=="Text Editor Demo for Fiji") {
 			int val= JOptionPane.showConfirmDialog(this, "You must save the changes before running.Do you want to save changes??","Select an Option",JOptionPane.YES_NO_OPTION);
@@ -704,7 +662,6 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 	}
 	public void windowClosing(WindowEvent e) {
-		//System.out.println("here window");
 
 		if(fileChange) {
 			int val= JOptionPane.showConfirmDialog(this, "Do you want to save changes??"); 
