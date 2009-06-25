@@ -3,6 +3,7 @@ package fiji.scripting;
 import java.lang.Comparable;
 import java.util.TreeSet;
 import java.lang.reflect.*;
+
 public class ClassName implements Item ,Comparable {
 
 	String key;
@@ -34,11 +35,8 @@ public class ClassName implements Item ,Comparable {
 	public void setMethodNames(Method[] methods) {
 		for(Method m : methods) {
 			String fullName = m.toString();
-			//String[] bracketSeparated = fullName.split("\\(");
-			//int lastDotBeforeBracket = bracketSeparated[0].lastIndexOf(".");
 			methodNames.add(new ClassMethod(fullName));
 		}
-		//Collections.sort(methodNames);
 	}
 }
 
