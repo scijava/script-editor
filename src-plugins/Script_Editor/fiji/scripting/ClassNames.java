@@ -1,6 +1,5 @@
 package fiji.scripting;
-//import ij.IJ;
-//import ij.Menus;
+
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -10,7 +9,6 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.ArrayList;
 import java.util.Iterator;
-//import java.util.List;
 import java.lang.reflect.*;
 import java.lang.*;
 import java.util.Map;
@@ -129,7 +127,7 @@ class ClassNames {
 		defaultProvider=new DefaultProvider();
 		String text=defaultProvider.getEnteredText(textArea);
 
-		//System.out.println(text);
+
 		if(!(text=="" || text==null)) {
 			String[] packageParts=new String[10];                             //this has to be improved as this restricts only less than 10 dots in a classfull name
 			int index=text.lastIndexOf(".");
@@ -161,7 +159,7 @@ class ClassNames {
 				while(temp1>1) {
 					Item itemBeforeDot=findTailSet((Package)temp,packageParts[index-temp1]).first();
 					if(itemBeforeDot instanceof ClassName) {
-						//System.out.println(itemBeforeDot.getName()+" "+packageParts[index-temp1]);
+
 						if(itemBeforeDot.getName().equals(packageParts[index-temp1])) {
 							isClassBeforeDot=true;
 						}
@@ -203,7 +201,7 @@ class ClassNames {
 
 						if(temp3 instanceof ClassName) {
 							if(temp3.getName().equals(packageParts[index-temp1])) {
-								//System.out.println(temp3.getName()+" "+packageParts[index-temp1]);
+
 								loadMethodNames((ClassName)temp3);
 								defaultProvider.addCompletions(createFunctionCompletion(((ClassName)temp3).methodNames,true));
 							}
@@ -304,7 +302,7 @@ class ClassNames {
 		try {
 			if(item.equals(toBeUsedInLoop.last())) {
 
-				//System.out.println(((Tree)tree2).key);
+
 				return(toBeUsedInLoop);
 			}
 			else {
@@ -336,13 +334,13 @@ class ClassNames {
 			try {
 				try {
 					if(i instanceof ClassName) {
-						//Class clazz = Class.forName(((ClassName)i).getCompleteName());
+
 						String fullName = ((ClassName)i).getCompleteName();
 						Class clazz=getClass().getClassLoader().loadClass(fullName);
 						Constructor[] ctor = clazz.getConstructors();
 
 						for(Constructor c : ctor) {
-							//System.out.println(c.toString());
+
 							String cotrCompletion=createCotrCompletion(c.toString());
 							listOfCompletions.add(new BasicCompletion(defaultProvider,cotrCompletion));
 						}
@@ -376,10 +374,10 @@ class ClassNames {
 	}
 
 	public void generateClassRelatedCompletions(ClassName className,String[] parts) {
-		//if(leftIndices==1) {
+
 			TreeSet<ClassMethod> set =(TreeSet<ClassMethod>)className.methodNames.tailSet(new ClassMethod(parts[parts.length-1],true));
 			for(ClassMethod c : set) {
-				//System.out.println(s);
+
 				if(!c.onlyName.startsWith(parts[parts.length-1])) {
 					break;
 				}
@@ -388,7 +386,7 @@ class ClassNames {
 						defaultProvider.addCompletion(new FunctionCompletion(defaultProvider,c.onlyName,c.returnType));
 				}
 			}
-		//}
+
 	}
 
 
