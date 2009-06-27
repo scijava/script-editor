@@ -11,9 +11,7 @@ public class Script_Editor implements PlugIn {
     }
 
 	public void run(String path) {
-		System.out.println(path);
 		String a = Macro.getOptions();
-		System.out.println(Thread.currentThread().getName());
 		try {
 			new TextEditor(Macro.getValue(a,"path",null));
 		} catch(Exception e) { new TextEditor(""); }
