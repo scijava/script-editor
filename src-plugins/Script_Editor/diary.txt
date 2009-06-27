@@ -74,3 +74,8 @@ June 23 09 : Repackaged the Refresh_Javas class as the Package name does not fol
 June 24 09 : Discussed with gitte about the need to remove the invokeLater() from the run function . This was the reason why I was getting a null value from Macro.getOptions() functions which in turn was creating a null pointer exception in Macro.getValue() function. This was happening because the thread which called the run function was changed due to invokeLater(). 
 
 June 25 09 : Did some more of refactoring in TextEditor and other classes . By now the script editor can run scripts. Provided the import statements based completions for JRuby and Javascript.
+
+June 26 09 : Did some changes suggested by gitte in his latest mail with subject texteditor refactoring, The changes include removing error-prone use of title for checking if file is unnamed etc. Discussed with gitte the need to do completions of only those classes which are imported. So I created two classes first which parses the document for import statements only till a package or a import statement or a comment is found. The other class parses the text for the constructor call hence called the Constructor parser.
+
+June 27 09 : Now I used both the above made classes to complete the classnames and its static members of only those which are imported. Next I have also used them to provide completions of the non-static members which are called by the objects which is taken care by the constructor parser which keeps track of the constructor call.
+
