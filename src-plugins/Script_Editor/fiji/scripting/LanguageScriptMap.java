@@ -9,7 +9,6 @@ import JRuby.Refresh_JRuby_Scripts;
 import Javascript.Refresh_Javascript_Scripts;
 import refreshJavas.Refresh_Javas;
 
-
 public class LanguageScriptMap extends HashMap<String,RefreshScripts>{
 
 	public LanguageScriptMap() {
