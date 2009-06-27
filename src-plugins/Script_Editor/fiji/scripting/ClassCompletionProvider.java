@@ -41,24 +41,24 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	 * The provider to use while in documentation comments.
 	 */
 	private CompletionProvider docCommentCompletionProvider;
-	//List listOfCompletions;
-	/*sortedSet topLevel;
-	sortedSet lowestLevel;*/
+
 	Package topLevel;
 	ClassNames names;
+	String language;
 	/**
 	 * Constructor.
 	 *
 	 * @param defaultProvider The provider to use when no provider is assigned
 	 *        to a particular token type.  This cannot be <code>null</code>.
 	 */
-	public ClassCompletionProvider(CompletionProvider defaultProvider,RSyntaxTextArea textArea) {
+	public ClassCompletionProvider(CompletionProvider defaultProvider,RSyntaxTextArea textArea,String language) {
 		setDefaultProvider(defaultProvider);
 		this.textArea=textArea;
 		names =new ClassNames();
+		this.language=language;
 		names.run((System.getProperty("java.class.path")+File.pathSeparator+System.getProperty("sun.boot.class.path")).split(File.pathSeparator));
 		topLevel=names.getTopPackage();
-		//lowestLevel=names.getLowestLevel();
+
 	}
 
 
@@ -132,13 +132,14 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	 * @see #setDefaultCompletionProvider(CompletionProvider)
 	 */
 	public CompletionProvider getDefaultProvider() {
-		//defaultProvider=(DefaultProvider)names.getDefaultProvider(topLevel,lowestLevel,textArea);
-		defaultProvider=(DefaultProvider)names.getDefaultProvider(topLevel,textArea);
+		defaultProvider=(DefaultProvider)names.getDefaultProvider(topLevel,textArea,language);
 		return defaultProvider;
 
 	}
 
-
+	public void setProviderLanguage(String lang) {
+		language=lang;
+	}
 
 
 
