@@ -16,7 +16,8 @@ import ij.io.*;
 import ij.IJ;
 import ij.Prefs;
 import javax.imageio.*;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
 import javax.swing.text.*;
 import org.fife.ui.rtextarea.*;
 import org.fife.ui.rsyntaxtextarea.*;
@@ -28,10 +29,12 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 	JFileChooser fcc;                                                   //using filechooser
 	boolean fileChange=false;
+	boolean isFileUnnamed=true;
    	String title="";
+	String language=new String();
 	InputMethodListener l;
    	File file,f;
-   	CompletionProvider provider;
+   	CompletionProvider provider1;
    	RSyntaxTextArea textArea;
 	JTextArea screen=new JTextArea();
    	Document doc;
@@ -41,7 +44,8 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
       	FindDialog findDialog;
    	ReplaceDialog replaceDialog;
 	AutoCompletion autocomp;
-	HashMap<String,RefreshScripts> scriptmap=new LanguageScriptMap();
+	LanguageScriptMap scriptmap=new LanguageScriptMap();
+	ClassCompletionProvider provider;
 
 	public TextEditor(String path1) {
 		fcc = new JFileChooser();                                        //For the file opening saving things
@@ -51,10 +55,10 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
       		textArea.addInputMethodListener(l);
       		textArea.addCaretListener(this);
       		textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
-		if(provider==null) {
-			provider = createCompletionProvider();
+		if(provider1==null) {
+			provider1 = createCompletionProvider();
 		}
-      	autocomp=new AutoCompletion(provider);
+      	autocomp=new AutoCompletion(provider1);
 	  	autocomp.setListCellRenderer(new CCellRenderer());
 		autocomp.setShowDescWindow(true);
 		autocomp.setParameterAssistanceEnabled(true);
@@ -215,7 +219,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		setVisible(true);
 		System.out.println("here it is "+path1+" :over");
 		if(!(path1.equals("")||path1==null)) {
-			openaction(path1);
+			open(path1);
 		}
    	}
 
@@ -244,6 +248,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 					doc.removeDocumentListener(this);
 					textArea.setText("");
 				    this.setTitle("Text Editor for Fiji");
+					isFileUnnamed=true;
 					doc.addDocumentListener(this);
 
 				}
@@ -293,18 +298,18 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 				if(val==JOptionPane.YES_OPTION){
 					fileChange=false;
 					saveaction();
-					openaction(path);
+					open(path);
 				}
 				if(val==JOptionPane.NO_OPTION){
 					fileChange=false;
-					openaction(path);
+					open(path);
 				}
 				if(val==JOptionPane.CANCEL_OPTION){
 				}
 			 }
 
 			if(fileChange==false&&returnVal==fcc.APPROVE_OPTION) {
-		       		openaction(path);
+		       		open(path);
 			}
         
 		}
@@ -394,24 +399,31 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 		if(ae.getSource()==lang[0]) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
+			provider.setProviderLanguage("Java");
 		}
 		if(ae.getSource()==lang[1]) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
+			provider.setProviderLanguage("Javascript");
 		}
 		if(ae.getSource()==lang[2]) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
+			provider.setProviderLanguage("Python");
 		}
 		if(ae.getSource()==lang[3]) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
+			provider.setProviderLanguage("Ruby");
 		}
 		if(ae.getSource()==lang[4]) {
 			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());
+			provider.setProviderLanguage("Clojure");
 		}
 		if(ae.getSource()==lang[5]) {
 			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new MatlabTokenMaker());
+			provider.setProviderLanguage("Matlab");
 		}
 		if(ae.getSource()==lang[6]) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
+			provider.setProviderLanguage("None");
 		}
 
 
@@ -423,7 +435,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	 */
 
 
-	public void openaction(String path) {
+	public void open(String path) {
 
 		System.out.println("It is opened");
 		try {
@@ -434,6 +446,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		try {
 			if(file!=null) {
 				setLanguage(file);
+				isFileUnnamed=false;
 			}
 				/*changing the title part ends*/
 			fin = new FileInputStream(file);
@@ -453,15 +466,15 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		} finally {
-    			if (null != fin) {
-        			try {
-            				fin.close();
-        			} catch (Exception e2) {
-            				e2.printStackTrace();
-        			}
-				}
-				doc.addDocumentListener(this);
-    		}
+    		if (null != fin) {
+        		try {
+					fin.close();
+        		} catch (Exception e2) {
+          			e2.printStackTrace();
+        		}
+			}
+			doc.addDocumentListener(this);
+    	}
 
 	}
 	/*This function performs the saveasoperation i.e. saving in the
@@ -542,7 +555,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	 */
 	public void saveaction(){
 
-		if(title=="Text Editor for Fiji") {
+		if(isFileUnnamed) {
 			int temp= saveasaction();         //temp has no use just because saveasaction has a int return type  
 		}
 		else {
@@ -593,36 +606,42 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		if(file.getName().endsWith(".java")){ 
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA); 
 			lang[0].setSelected(true);
+			provider.setProviderLanguage("Java");
 		}
 		if(file.getName().endsWith(".js")) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT); 
 			lang[1].setSelected(true);
+			provider.setProviderLanguage("Javascript");
 		}
 		if(file.getName().endsWith(".m")) {
 			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new MatlabTokenMaker());
 			lang[5].setSelected(true);
+			provider.setProviderLanguage("Matlab");
 		}
 		if(file.getName().endsWith(".py")) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
 			lang[2].setSelected(true);
+			provider.setProviderLanguage("Python");
 		}
 		if(file.getName().endsWith(".rb")) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
 			lang[3].setSelected(true);
+			provider.setProviderLanguage("Ruby");
 		}
 		if(file.getName().endsWith(".clj")) {
 			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());
 			lang[4].setSelected(true);
+			provider.setProviderLanguage("Clojure");
 		}
 
 	}
 
 	public void runScript() {
-		if(fileChange||title=="Text Editor Demo for Fiji") {
+		if(fileChange||isFileUnnamed) {
 			int val= JOptionPane.showConfirmDialog(this, "You must save the changes before running.Do you want to save changes??","Select an Option",JOptionPane.YES_NO_OPTION);
 			if(val==JOptionPane.YES_OPTION){
 
-				if(title=="Text Editor Demo for Fiji") {
+				if(isFileUnnamed) {
 					int temp=saveasaction();       //temp saves here whether the option was Approved :)
 					if (temp == JFileChooser.APPROVE_OPTION) {
 						fileChange=false;
@@ -661,13 +680,14 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 
 	}
+
 	public void windowClosing(WindowEvent e) {
 
 		if(fileChange) {
 			int val= JOptionPane.showConfirmDialog(this, "Do you want to save changes??"); 
 			if(val==JOptionPane.YES_OPTION){
 
-				if(title=="Text Editor Demo for Fiji") {
+				if(isFileUnnamed) {
 					int temp=saveasaction();       //temp saves here whether the option was Approved :)
 					if (temp == JFileChooser.APPROVE_OPTION) {
 						fileChange=false;
@@ -731,7 +751,8 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		CompletionProvider commentCP = createCommentCompletionProvider();
 
 		// Create the "parent" completion provider.
-		ClassCompletionProvider provider = new ClassCompletionProvider(new DefaultProvider(),textArea);
+		System.out.println("The language at the completion provider definition is "+language);
+		provider = new ClassCompletionProvider(new DefaultProvider(),textArea,language);
 		provider.setStringCompletionProvider(stringCP);
 		provider.setCommentCompletionProvider(commentCP);
 
