@@ -37,6 +37,10 @@ class ClassNames {
 	DefaultProvider defaultProvider;
 	Enumeration list1;
 	Package toReturnClassPart=new Package();
+	ImportStatementsParser parser=new ImportStatementsParser();
+	ObjStartCompletions obj;
+	ArrayList<String> packageNames=new ArrayList<String>();
+
 	public void run(String[] args) {
 
 		for (int i = 1; i < args.length; i++){
@@ -112,7 +116,6 @@ class ClassNames {
 				name = name.substring(slash + 1);
 			}
 			Item item = new ClassName(name.substring(0,name.length()-6),fullName.substring(0,fullName.length()-6));
-
 			toAdd.add(item);
 			 
 		}
@@ -123,25 +126,29 @@ class ClassNames {
 
 
 
-	public CompletionProvider getDefaultProvider(Package root,RSyntaxTextArea textArea) {
+	public CompletionProvider getDefaultProvider(Package root,RSyntaxTextArea textArea,String language) {
 		defaultProvider=new DefaultProvider();
 		String text=defaultProvider.getEnteredText(textArea);
 
 
 		if(!(text=="" || text==null)) {
+			parser.objCompletionPackages(textArea,language);
+			packageNames=parser.getPackageNames();
 			String[] packageParts=new String[10];                             //this has to be improved as this restricts only less than 10 dots in a classfull name
 			int index=text.lastIndexOf(".");
 			if(index<0) {
 				Package packagePart = findItemSet(root,text);
 				toReturnClassPart = new Package();
-				Package classPart= findClassSet(root,text);
-				packagePart.addAll(classPart);
+				//Package classPart= findClassSet(root,text);
+				Package importedClassPart=findImportedClassSet(root);
+				Package toShowClassPart=findCompletionClassSet(importedClassPart,text);
+				packagePart.addAll(toShowClassPart);
 				defaultProvider.addCompletions(createListCompletions(packagePart));
 			}
 
 			if(index>0) {
 				classStartCompletions(text);
-				ObjStartCompletions obj=new ObjStartCompletions(this);
+				obj=new ObjStartCompletions(this,language,packageNames);
 				obj.setObjects(textArea,text,defaultProvider);
 				String[] parts=text.split("\\.");
 				boolean isDotAtLast=false;
@@ -235,13 +242,14 @@ class ClassNames {
 			if((classParts.length>1&&isDotAtLast) || (classParts.length>2&&!isDotAtLast)) {
 				return;
 			}
-			Package classItemBeforeDot=findClassSet(root,classParts[0]);
+			Package classItemBeforeDot=findCompletionClassSet(findImportedClassSet(root),classParts[0]);
 			if(classItemBeforeDot.size()>0) {
 				if(classItemBeforeDot.first().getName().equals(classParts[0])) {
 					ClassName temp3=(ClassName)classItemBeforeDot.first();
 					loadMethodNames(temp3);
 
 					if(isDotAtLast) {
+						System.out.println("It is matched");
 						defaultProvider.addCompletions(createFunctionCompletion(temp3.methodNames,true));
 					}
 					else {
@@ -255,6 +263,7 @@ class ClassNames {
 	public void loadMethodNames(ClassName temp) {
 		if(temp.methodNames.size()<=0) {
 			String fullname = temp.getCompleteName();
+			System.out.println(fullname);
 			try {
 				try {
 					Class clazz=getClass().getClassLoader().loadClass(fullname);
@@ -311,7 +320,7 @@ class ClassNames {
 		} catch(Exception e){return toBeUsedInLoop;}
 	}
 
-	public Package findClassSet(Package parent,String text) {
+	/*public Package findClassSet(Package parent,String text) {
 
 		for(Item i : parent) {
 			if(i instanceof ClassName) {
@@ -325,6 +334,51 @@ class ClassNames {
 		}
 		return toReturnClassPart;
 
+	}*/
+
+	public Package findImportedClassSet(Package root) {
+		System.out.println(packageNames.get(0));
+		for(String s : packageNames) {
+			String[] parts=s.split("\\.");
+			Item current=findPackage(parts,root);                                    //to create this function
+			if(current instanceof Package) {
+				try {
+					for(Item i: (Package)current) {
+						if(i instanceof ClassName) {
+							toReturnClassPart.add(i);
+					}
+				}
+				} catch(Exception e) { e.printStackTrace(); }
+			}
+			if(current instanceof ClassName) {
+				toReturnClassPart.add(current);
+			}
+
+		}
+		return toReturnClassPart;
+	}
+
+	public Package findCompletionClassSet(Package set,String text) {
+
+		Package toReturn=new Package();
+		for(Item i: set) {
+			if(i.getName().startsWith(text)) {
+				toReturn.add(i);
+			}
+		}
+		return toReturn;
+	}
+
+	public Item findPackage(String[] splitPart,Package p) {
+		for(int i=0;i<splitPart.length-1;i++) {
+			p=(Package)findTailSet(p,splitPart[i]).first();
+		}
+		if(splitPart[splitPart.length-1].equals("*")) {
+			return (Item)p;
+		}
+		else {
+			return findTailSet(p,splitPart[splitPart.length-1]).first();
+		}
 	}
 
 	public ArrayList createListCompletions(Package setOfCompletions) {
@@ -370,6 +424,7 @@ class ClassNames {
 				listOfCompletions.add(new FunctionCompletion(defaultProvider,method.onlyName,method.returnType));      //currently basiccompletion can be changed to functioncompletion
 			}
 		}
+
 		return listOfCompletions;
 	}
 
