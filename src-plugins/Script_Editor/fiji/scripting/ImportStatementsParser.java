@@ -19,12 +19,15 @@ public class ImportStatementsParser {
 		Element map=doc.getDefaultRootElement();
 		int startLine = map.getElementIndex(0);
 		int endLine = map.getElementIndex(doc.getLength());
+		packageNames.clear();
 		for(int i= startLine;i<=endLine;i++) {
 			boolean isAfterImportLine=true;
 			Token token=doc.getTokenListForLine(i);
 			String packageName="";
 			boolean isAfterImport=false;
 			boolean isAfterPythonImport=false;
+			boolean isAfterClojureHyphen=false;
+			boolean isAfterClojureSpace=false;
 			for(;token!=null&&token.type!=0;token=token.getNextToken()) {
 
 				if(token.type==16||token.type==3||token.type==2||token.type==1) {      //for white space 
@@ -45,6 +48,21 @@ public class ImportStatementsParser {
 						continue;
 					}
 				}
+				if(language.equals("Matlab")) {
+					if(token.getLexeme().equals("import")) {
+						isAfterImportLine=false;
+						isAfterImport=true;
+						continue;
+					}
+					if(token.getNextToken().isWhitespace()) {
+						if(!packageName.equals("")) {
+							packageNames.add(packageName+"."+token.getLexeme());
+							packageName="";
+							continue;
+						}
+					}
+				}
+
 
 				//For javascript languaguge import statements
 				if(language.equals("Javascript")) {
@@ -88,6 +106,33 @@ public class ImportStatementsParser {
 						}
 					}
 				}
+
+				if(language.equals("Clojure")) {
+
+					if(token.getLexeme().equals("(")||token.getLexeme().equals(")"))         //for javascript import statements
+						continue;
+
+					if(token.type==5&&(token.getLexeme().equals("import"))) {
+						isAfterImport=true;
+						isAfterImportLine=false;
+						continue;
+					}
+					if(token.getLexeme().equals("'")) {
+						isAfterClojureHyphen=true;
+						isAfterClojureSpace=false;
+						packageName="";
+						continue;
+					}
+					if(isAfterClojureSpace) {
+						packageNames.add(packageName+"."+token.getLexeme());
+						continue;
+					}
+					if(isAfterClojureHyphen&&token.getNextToken().isWhitespace()) {
+						isAfterClojureSpace=true;
+					}
+
+				}
+
 				if(isAfterImport&&token.getLexeme().equals(";")) {             //for java and javascript
 					isAfterImport=false;
 					packageNames.add(packageName);
@@ -99,11 +144,12 @@ public class ImportStatementsParser {
 					packageName+=token.getLexeme();
 				}
 
+				if(!(language.equals("Python")||language.equals("Clojure"))) {
+					if(token.getNextToken().type==Token.NULL||token.getNextToken()==null) {            //for languages in which statements dont end with ";"
 
-				if(token.getNextToken().type==Token.NULL||token.getNextToken()==null) {            //for languages in which statements dont end with ";"
-
-					packageNames.add(packageName);
-					continue;
+						packageNames.add(packageName);
+						continue;
+					}
 				}
 
 
