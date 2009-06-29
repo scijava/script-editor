@@ -45,7 +45,6 @@ public class ConstructorParser {
 								ImportedClassObjects obj=new ImportedClassObjects(prevToPrev.getLexeme(),temp,temp2,true);
 								objectSet.add(obj);
 							}
-							System.out.println(prevToPrev.getLexeme()+" "+temp+" "+temp2);
 
 						}
 					}
@@ -76,7 +75,6 @@ public class ConstructorParser {
 					current=names.findTailSet((Package)current,name).first();
 				} catch(Exception e) { e.printStackTrace(); }
 			}
-			System.out.println("The name of the class name is "+current.getName());
 			if(current.getName().equals(name)) {
 				return ((ClassName)current).getCompleteName();
 			}
