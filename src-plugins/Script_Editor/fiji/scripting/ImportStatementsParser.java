@@ -159,16 +159,5 @@ public class ImportStatementsParser {
 		}
 	}
 
-	public Token getNextNonWhitespaceToken(Token t) {
-		Token toReturn = t.getNextToken();
-		while(toReturn!=null) {
-			if(toReturn.getNextToken().isWhitespace()) {
-				toReturn=toReturn.getNextToken();
-			}
-			else {
-				return(toReturn.getNextToken());
-			}
-		}
-		return toReturn;
-	}
+
 }
