@@ -79,3 +79,6 @@ June 26 09 : Did some changes suggested by gitte in his latest mail with subject
 
 June 27 09 : Now I used both the above made classes to complete the classnames and its static members of only those which are imported. Next I have also used them to provide completions of the non-static members which are called by the objects which is taken care by the constructor parser which keeps track of the constructor call.
 
+June 29 09 : I added two more languages support in the import parser and did some debugging to get the import statements working completely .
+
+June 30 09 : So far the constructor parser was just parsing the constructor calls as it is done in java and javascript. So I changed the code and added the support for all the languages.Moreover it was not looking complete as there was no completion for a thing like "list=new java.awt.List();" . It was a bit easier as there is no need to involve import statements parsing so I extended the class and added a new function to take care of this.Also I did some refactoring like removing some additional or commented out code.
