@@ -320,24 +320,7 @@ class ClassNames {
 		} catch(Exception e){return toBeUsedInLoop;}
 	}
 
-	/*public Package findClassSet(Package parent,String text) {
-
-		for(Item i : parent) {
-			if(i instanceof ClassName) {
-				if(i.getName().startsWith(text)) {
-					toReturnClassPart.add(i);
-				}
-			}
-			else {
-				findClassSet((Package)i,text);
-			}
-		}
-		return toReturnClassPart;
-
-	}*/
-
 	public Package findImportedClassSet(Package root) {
-		System.out.println(packageNames.get(0));
 		for(String s : packageNames) {
 			String[] parts=s.split("\\.");
 			Item current=findPackage(parts,root);                                    //to create this function
