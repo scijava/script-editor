@@ -10,7 +10,6 @@ public class ObjStartCompletions {
 	ArrayList<String> packageNames=new ArrayList<String>();
 	TreeSet<ImportedClassObjects> objectSet=new TreeSet<ImportedClassObjects>();
 	ClassNames names;
-
 	ConstructorParser parser1;
 	String language=new String();
 
@@ -18,12 +17,12 @@ public class ObjStartCompletions {
 		names=name;
 		language=lang;
 		this.packageNames=pNames;
-		parser1=new ConstructorParser(name);
+		parser1=new ConstructorParser(name,lang);
 	}
 
 	public void setObjects(RSyntaxTextArea textArea,String text,DefaultProvider defaultProvider) {
 
-		System.out.println("The first package element "+packageNames.get(0));
+		//System.out.println("The first package element "+packageNames.get(0));
 		parser1.setPackageNames(packageNames);
 		parser1.findConstructorObjects(textArea);
 		objectSet=parser1.getObjectSet();
