@@ -23,6 +23,7 @@ import org.fife.ui.rtextarea.*;
 import org.fife.ui.rsyntaxtextarea.*;
 import org.fife.ui.autocomplete.*;
 import common.RefreshScripts;
+import com.sun.jdi.connect.VMStartException;
 
 
 class TextEditor extends JFrame implements ActionListener , ItemListener , ChangeListener ,MouseMotionListener,MouseListener ,CaretListener,InputMethodListener,DocumentListener,WindowListener	{
@@ -38,7 +39,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
    	RSyntaxTextArea textArea;
 	JTextArea screen=new JTextArea();
    	Document doc;
-	JMenuItem new1,open,save,saveas,run,quit,undo,redo,cut,copy,paste,find,replace,selectAll,autocomplete,jfcdialog,ijdialog;
+	JMenuItem new1,open,save,saveas,compileAndRun,debug,quit,undo,redo,cut,copy,paste,find,replace,selectAll,autocomplete,jfcdialog,ijdialog;
 	JRadioButtonMenuItem[] lang=new JRadioButtonMenuItem[7];
 	FileInputStream fin;
       	FindDialog findDialog;
@@ -120,9 +121,15 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
         file.add(saveas);
         saveas.addActionListener(this);
         file.addSeparator();
-		run = new JMenuItem("Run");
+		JMenu run = new JMenu("Run");
+		compileAndRun=new JMenuItem("Compile and Run");
+		run.add(compileAndRun);
+		compileAndRun.addActionListener(this);
+		run.addSeparator();
+		debug=new JMenuItem("Start Debugging");
+		run.add(debug);
+		debug.addActionListener(this);
 		file.add(run);
-		run.addActionListener(this);
 		file.addSeparator();
 		quit = new JMenuItem("Quit");
         file.add(quit);
@@ -323,8 +330,18 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			fileChange=false;
 			int temp= saveasaction();                   //temp for the int return type of the function nothing else
 		}
-		if(ae.getSource()==run) {
+		if(ae.getSource()==compileAndRun) {
 			runScript();
+		}
+		if(ae.getSource()==debug) {
+			StartDebugging debugging=new StartDebugging(file.getPath());
+			try {
+				debugging.startDebugging();
+			} 
+			catch(Exception e){}
+
+
+
 		}
 		if(ae.getSource()==quit) {
 			processWindowEvent( new WindowEvent(this, WindowEvent.WINDOW_CLOSING) );
