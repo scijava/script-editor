@@ -401,3 +401,8 @@ TextEditorDemo.jar <-	TextEditorDemo.java \
 						var.png[images/var.png]    \
 						funtion.png[images/function.png]  \
 						c.xml
+
+# Script_Editor_Stub.jar (to include MainClassForDebugging in the classpath)
+
+MAINCLASS(jars/Script_Editor_Stub.jar)=stub.MainClassForDebugging
+jars/Script_Editor_Stub.jar <- src-plugins/Script_Editor/stub/MainClassForDebugging.java
