@@ -10,12 +10,9 @@ import java.util.Map;
 import java.util.Set;
 import java.io.*;
 
-
-
-
 public class StartDebugging {
 
-	  public String className = "fiji.scripting.MainClassForDebugging";
+	  public String className = "SamplePlugin";
 	  public String fieldName="foo";
 	  public String plugInName;
 	   List arguments;
@@ -34,33 +31,22 @@ public class StartDebugging {
 		}
 
 		public Process startDebugging() throws IOException,InterruptedException,AbsentInformationException {
-			String s=System.getProperty("java.class.path");
-			String p=File.separator;
-			String s1=System.setProperty("java.class.path",s+File.pathSeparator+"c:"+p+"DOCUME~1"+p+"Sumi"+p+"fiji"+p+"plugins"+p+p+"Script_Editor.jar");
+
+
 			VirtualMachine vm = launchVirtualMachine();
-			String s2=System.setProperty("java.class.path",s);
-			System.out.println(s2);
 			vm.resume();
 			addClassWatch(vm);
 			Process process= vm.process();
-
 			InputStream inputStream=process.getErrorStream();
-
 			EventQueue eventQueue = vm.eventQueue();
 
 			while (true) {
 			  EventSet eventSet = eventQueue.remove();
-			  System.out.println("It comes in while");
 			  for (Event event : eventSet) {
-				System.out.println("It comes here");
-				if (event instanceof VMDeathEvent
-					|| event instanceof VMDisconnectEvent) {
+				if (event instanceof VMDeathEvent || event instanceof VMDisconnectEvent) {
 					BufferedReader reader=new BufferedReader(new InputStreamReader(inputStream));
 					System.out.println(reader.readLine());
-				  // exit
-				  //out.flush();
-				  System.out.println(process.exitValue());
-				  return process;
+				    return process;
 				} else if (event instanceof ClassPrepareEvent) {
 					System.out.println("It comes in the class prepare event");
 					  // watch field on loaded class
@@ -75,10 +61,7 @@ public class StartDebugging {
 					BreakpointEvent breakEvent=(BreakpointEvent)event;
 					System.out.println(refType.getValue(toKnow));
 				}
-				else if(event instanceof VMStartEvent) {
-					System.out.println("The event is VMStartEvent of their type");
 
-				}
 			}
 			eventSet.resume();
 		}
@@ -97,7 +80,7 @@ public class StartDebugging {
 		for(String string:s)
 			System.out.println(string);
 		Connector.Argument mainarg=arguments.get("main");
-		mainarg.setValue("fiji.scripting.MainClassForDebugging plugins/SamplePlugin.java");
+		mainarg.setValue("stub.MainClassForDebugging "+plugInName.substring(plugInName.lastIndexOf(File.separator)+1));
 		try {
 			return defConnector.launch(arguments);
 
