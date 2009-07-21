@@ -336,7 +336,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		if(ae.getSource()==debug) {
 			StartDebugging debugging=new StartDebugging(file.getPath());
 			try {
-				debugging.startDebugging();
+				System.out.println(debugging.startDebugging().exitValue());
 			} 
 			catch(Exception e){}
 
