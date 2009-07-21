@@ -405,4 +405,5 @@ TextEditorDemo.jar <-	TextEditorDemo.java \
 # Script_Editor_Stub.jar (to include MainClassForDebugging in the classpath)
 
 MAINCLASS(jars/Script_Editor_Stub.jar)=stub.MainClassForDebugging
-jars/Script_Editor_Stub.jar <- src-plugins/Script_Editor/stub/MainClassForDebugging.java
+CLASSPATH(jars/Script_Editor_Stub.jar)=ij.jar
+jars/Script_Editor_Stub.jar <- stub/MainClassForDebugging.java
