@@ -54,12 +54,15 @@ public class StartDebugging {
 					refType = (ClassType)classPrepEvent.referenceType();
 					System.out.println("The class loaded is "+refType.name());
 					toKnow=refType.fieldByName(fieldName);
-					lineNumber=15;
+					lineNumber=16;
 					addBreakPointRequest(vm,refType,lineNumber);
 				}
 				else if(event instanceof BreakpointEvent) {
 					BreakpointEvent breakEvent=(BreakpointEvent)event;
 					System.out.println(refType.getValue(toKnow));
+				}
+				else if(event instanceof VMStartEvent) {
+					System.out.println("Virtual machine started");
 				}
 
 			}
@@ -80,7 +83,12 @@ public class StartDebugging {
 		for(String string:s)
 			System.out.println(string);
 		Connector.Argument mainarg=arguments.get("main");
-		mainarg.setValue("stub.MainClassForDebugging "+plugInName.substring(plugInName.lastIndexOf(File.separator)+1));
+		String s1=System.getProperty("java.class.path");
+		System.out.println(s1);
+
+
+		 mainarg.setValue("-classpath \""+s1+"\" stub.MainClassForDebugging "+plugInName.substring(plugInName.lastIndexOf(File.separator)+1));
+
 		try {
 			return defConnector.launch(arguments);
 
