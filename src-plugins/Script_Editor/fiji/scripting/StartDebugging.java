@@ -85,13 +85,10 @@ public class StartDebugging {
 		Connector.Argument mainarg=arguments.get("main");
 		String s1=System.getProperty("java.class.path");
 		System.out.println(s1);
-
-
-		 mainarg.setValue("-classpath \""+s1+"\" stub.MainClassForDebugging "+plugInName.substring(plugInName.lastIndexOf(File.separator)+1));
+		mainarg.setValue("-classpath \""+s1+"\" fiji.MainClassForDebugging "+plugInName.substring(plugInName.lastIndexOf(File.separator)+1));
 
 		try {
 			return defConnector.launch(arguments);
-
 		} catch (IOException exc) {
 			throw new Error("Unable to launch target VM: " + exc);
 		} catch (IllegalConnectorArgumentsException exc) {
@@ -100,7 +97,6 @@ public class StartDebugging {
 			throw new Error("Target VM failed to initialize: " +
 			exc.getMessage());
 		} 
-		//System.out.println("Not launched");
 		return null;
 	}
 
@@ -108,8 +104,7 @@ public class StartDebugging {
 	  private  void addClassWatch(VirtualMachine vm) {
 		System.out.println(className);
 		EventRequestManager erm = vm.eventRequestManager();
-		ClassPrepareRequest classPrepareRequest = erm
-			.createClassPrepareRequest();
+		ClassPrepareRequest classPrepareRequest = erm.createClassPrepareRequest();
 		classPrepareRequest.addClassFilter(className);
 		classPrepareRequest.setEnabled(true);
 	  }
