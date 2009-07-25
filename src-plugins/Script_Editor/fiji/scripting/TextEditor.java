@@ -39,7 +39,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
    	RSyntaxTextArea textArea;
 	JTextArea screen=new JTextArea();
    	Document doc;
-	JMenuItem new1,open,save,saveas,compileAndRun,debug,quit,undo,redo,cut,copy,paste,find,replace,selectAll,autocomplete,jfcdialog,ijdialog;
+	JMenuItem new1,open,save,saveas,compileAndRun,debug,quit,undo,redo,cut,copy,paste,find,replace,selectAll,autocomplete,jfcdialog,ijdialog,resume,terminate;
 	JRadioButtonMenuItem[] lang=new JRadioButtonMenuItem[7];
 	FileInputStream fin;
       	FindDialog findDialog;
@@ -47,6 +47,9 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	AutoCompletion autocomp;
 	LanguageScriptMap scriptmap=new LanguageScriptMap();
 	ClassCompletionProvider provider;
+	StartDebugging debugging;
+	Gutter gutter;
+	IconGroup iconGroup;
 
 	public TextEditor(String path1) {
 		fcc = new JFileChooser();                                        //For the file opening saving things
@@ -71,6 +74,16 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		RTextScrollPane sp = new RTextScrollPane(textArea);
 		sp.setPreferredSize(new Dimension(600,350));
 		//	cp.add(sp);
+		System.out.println(sp.isIconRowHeaderEnabled());
+		sp.setIconRowHeaderEnabled(true);
+		gutter=sp.getGutter();
+		System.out.println(gutter.isBookmarkingEnabled());
+		iconGroup=new IconGroup("bullets","images/",null,"png",null);
+		gutter.setBookmarkIcon(iconGroup.getIcon("var"));
+		gutter.setBookmarkingEnabled(true);
+		if(gutter.getBookmarkIcon()==null) {
+			System.out.println("It is disabled");
+		}
 		screen.setEditable(false);
 		screen.setLineWrap(true);
 		Font font = new Font("Courier", Font.PLAIN, 12);
@@ -213,9 +226,18 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			lang[i].addActionListener(this);
 
 		}
-
-
 		mbar.add(language);
+
+		JMenu breakpoints=new JMenu("Breakpoints");
+		resume=new JMenuItem("Resume");
+		resume.addActionListener(this);
+		breakpoints.add(resume);
+		terminate = new JMenuItem("Terminate");
+		terminate.addActionListener(this);
+		breakpoints.add(terminate);
+		mbar.add(breakpoints);
+
+
 
 
       /*********** The menu part ended here    ********************/
@@ -224,7 +246,6 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	  	getToolkit().setDynamicLayout(true);            //added to accomodate the autocomplete part
 		setLocationRelativeTo(null);
 		setVisible(true);
-		System.out.println("here it is "+path1+" :over");
 		if(!(path1.equals("")||path1==null)) {
 			open(path1);
 		}
@@ -334,7 +355,8 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			runScript();
 		}
 		if(ae.getSource()==debug) {
-			StartDebugging debugging=new StartDebugging(file.getPath());
+			BreakpointManager manager=new BreakpointManager(gutter,textArea,iconGroup);
+			debugging=new StartDebugging(file.getPath(),manager.findBreakpointsLineNumber());
 			try {
 				System.out.println(debugging.startDebugging().exitValue());
 			} 
@@ -442,8 +464,11 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
 			provider.setProviderLanguage("None");
 		}
-
-
+		if(ae.getSource()==resume) {
+			debugging.resumeVM();
+		}
+		if(ae.getSource()==terminate) {
+		}
 
 	}
 
