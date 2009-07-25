@@ -8,6 +8,7 @@ import com.sun.jdi.request.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Iterator;
 import java.io.*;
 
 public class StartDebugging {
@@ -16,24 +17,25 @@ public class StartDebugging {
 	  public String fieldName="foo";
 	  public String plugInName;
 	   List arguments;
-	    int lineNumber;
+	    List lineNumbers;
 	    Field toKnow;
 	    ClassType refType;
+		VirtualMachine vm;
 
-		public StartDebugging(String plugin) {
+		public StartDebugging(String plugin,List numbers) {
 			plugInName=plugin;
+			lineNumbers=numbers;
 		}
 	   
-	   public StartDebugging(String plugin,String field,int line) {
+	   public StartDebugging(String plugin,String field,List numbers) {
 			plugInName=plugin;
 			fieldName=field;
-			lineNumber=line;
+			lineNumbers=numbers;
 		}
 
 		public Process startDebugging() throws IOException,InterruptedException,AbsentInformationException {
 
-
-			VirtualMachine vm = launchVirtualMachine();
+			vm = launchVirtualMachine();
 			vm.resume();
 			addClassWatch(vm);
 			Process process= vm.process();
@@ -54,12 +56,22 @@ public class StartDebugging {
 					refType = (ClassType)classPrepEvent.referenceType();
 					System.out.println("The class loaded is "+refType.name());
 					toKnow=refType.fieldByName(fieldName);
-					lineNumber=16;
-					addBreakPointRequest(vm,refType,lineNumber);
+					System.out.println("The number of elements in the linenumber list is"+lineNumbers.size());
+					Iterator iterator=lineNumbers.iterator();
+					while(true) {
+						if(iterator.hasNext()) {
+							Integer k=(Integer)iterator.next();
+							System.out.println("The line number is "+k.intValue());
+							addBreakPointRequest(vm,refType,k.intValue()+1);
+						}
+						else 
+							break;
+					}
 				}
 				else if(event instanceof BreakpointEvent) {
 					BreakpointEvent breakEvent=(BreakpointEvent)event;
 					System.out.println(refType.getValue(toKnow));
+					//vm.suspend();
 				}
 				else if(event instanceof VMStartEvent) {
 					System.out.println("Virtual machine started");
@@ -70,6 +82,9 @@ public class StartDebugging {
 		}
 	}
 
+	public void resumeVM() {
+		vm.resume();
+	}
 	private  VirtualMachine launchVirtualMachine() {
 
 		VirtualMachineManager vmm=Bootstrap.virtualMachineManager();
@@ -84,7 +99,6 @@ public class StartDebugging {
 			System.out.println(string);
 		Connector.Argument mainarg=arguments.get("main");
 		String s1=System.getProperty("java.class.path");
-		System.out.println(s1);
 		mainarg.setValue("-classpath \""+s1+"\" fiji.MainClassForDebugging "+plugInName.substring(plugInName.lastIndexOf(File.separator)+1));
 
 		try {
