@@ -187,7 +187,7 @@ jars/zs.jar <- src-plugins/zs/**/*.java
 jars/fiji-scripting.jar <- src-plugins/fiji-scripting/**/*.java
 
 CLASSPATH(plugins/Refresh_Javas.jar)=jars/fiji-scripting.jar
-plugins/Refresh_Javas.jar <- src-plugins/refreshJavas/*.java
+plugins/Refresh_Javas.jar <- src-plugins/Refresh_Javas/fiji/scripting/java/*.java
 CLASSPATH(plugins/Jython_Interpreter.jar)=jars/fiji-scripting.jar:jars/jython2.2.1/jython.jar
 plugins/Jython_Interpreter.jar <- src-plugins/Jython/*.java
 CLASSPATH(plugins/Clojure_Interpreter.jar)=jars/fiji-scripting.jar:jars/clojure.jar
@@ -381,7 +381,6 @@ LAUNCHERS=$LAUNCHER(linux) $LAUNCHER(linux64) \
 check-launchers[./scripts/up-to-date-check.py fiji.cxx $LAUNCHERS] <-
 
 check-submodules[] <- check-ij check-VIB check-TrakEM2 check-mpicbg
-
 check-ij[./scripts/up-to-date-check.py ImageJA precompiled/ij.jar] <-
 check-*[./scripts/up-to-date-check.py * precompiled/*_.jar] <-
 
