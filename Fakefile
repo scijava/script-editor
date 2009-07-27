@@ -70,7 +70,7 @@ ignoreMissingFakefiles=true
 precompiledDirectory=precompiled/
 
 JAVA_HOME(linux)=java/linux/jdk1.6.0_10/jre
-JAVA_HOME(linux64)=java/linux-amd64/jdk1.6.0_10/jre
+JAVA_HOME(linux64)=java/linux-amd64/jdk1.6.0_13/jre
 JAVA_HOME(win32)=java/win32/jdk1.6.0_14/jre
 JAVA_HOME(win64)=java/win64/jdk1.6.0_04/jre
 JAVA_HOME(macosx)=java/macosx-java3d
@@ -187,7 +187,6 @@ jars/zs.jar <- src-plugins/zs/**/*.java
 jars/fiji-scripting.jar <- src-plugins/fiji-scripting/**/*.java
 
 CLASSPATH(plugins/Refresh_Javas.jar)=jars/fiji-scripting.jar
-plugins/Refresh_Javas.jar <- src-plugins/Refresh_Javas/fiji/scripting/java/*.java
 CLASSPATH(plugins/Jython_Interpreter.jar)=jars/fiji-scripting.jar:jars/jython2.2.1/jython.jar
 plugins/Jython_Interpreter.jar <- src-plugins/Jython/*.java
 CLASSPATH(plugins/Clojure_Interpreter.jar)=jars/fiji-scripting.jar:jars/clojure.jar
