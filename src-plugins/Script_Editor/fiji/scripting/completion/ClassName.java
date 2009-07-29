@@ -1,8 +1,8 @@
-package fiji.scripting;
+package fiji.scripting.completion;
 
 import java.lang.Comparable;
 import java.util.TreeSet;
-import java.lang.reflect.*;
+import java.lang.reflect.Method;
 
 public class ClassName implements Item ,Comparable {
 
