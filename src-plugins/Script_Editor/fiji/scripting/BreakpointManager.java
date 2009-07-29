@@ -1,7 +1,9 @@
 package fiji.scripting;
 
-import org.fife.ui.rsyntaxtextarea.*;
-import org.fife.ui.rtextarea.*;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rtextarea.Gutter;
+import org.fife.ui.rtextarea.IconGroup;
+import org.fife.ui.rtextarea.GutterIconInfo;
 import java.util.List;
 import java.util.ArrayList;
 import javax.swing.Icon;
@@ -13,7 +15,7 @@ public class BreakpointManager {
 	private ArrayList lineNumberList;
 	private RSyntaxTextArea textArea;
 	private IconGroup iconGroup;
-	
+
 	public BreakpointManager(Gutter gut,RSyntaxTextArea area,IconGroup group) {
 		gutter=gut;
 		textArea=area;
@@ -32,8 +34,8 @@ public class BreakpointManager {
 				lineNumberList.add(textArea.getLineOfOffset(offset));
 			} catch(BadLocationException ble){ 							//It never happens
 				System.out.println("bad location exception");
-			}	
+			}
 		}
 		return lineNumberList;
 	}
-}	
+}
