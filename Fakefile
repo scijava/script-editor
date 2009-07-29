@@ -220,7 +220,7 @@ CLASSPATH(plugins/IO_.jar)=jars/batik.jar
 CLASSPATH(plugins/Sync_Win.jar)=plugins/Image_5D.jar
 MAINCLASS(plugins/Script_Editor.jar)=fiji.scripting.Script_Editor
 CLASSPATH(plugins/Script_Editor.jar)=jars/rsyntaxtextarea.jar:jars/autocomplete.jar:plugins/Clojure_Interpreter.jar:plugins/JRuby_Interpreter.jar:plugins/Javascript_.jar:plugins/Jython_Interpreter.jar:plugins/Refresh_Javas.jar:jars/fiji-scripting.jar:$JAVA_HOME/../lib/tools.jar
-plugins/Script_Editor.jar <- src-plugins/Script_Editor/fiji/scripting/*.java  \
+plugins/Script_Editor.jar <- src-plugins/Script_Editor/**/*.java  \
 							icon.png[images/icon.png] \
 							var.png[images/var.png]    \
 							funtion.png[images/function.png]  \
