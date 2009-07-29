@@ -1,6 +1,8 @@
-package fiji.scripting;
+package fiji.scripting.completion;
 
-import org.fife.ui.rsyntaxtextarea.*;
+import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.Token;
 import java.util.TreeSet;
 import java.util.ArrayList;
 import javax.swing.text.Element;
@@ -209,7 +211,6 @@ public class ConstructorParser {
 		}
 	}
 	public String isClassPresent(String name,Package root) {
-		//System.out.println(packageNames.get(0));
 		for(String s : packageNames) {
 			String[] parts=s.split("\\.");
 			Item current=findPackage(parts,root);                                    //to create this function
