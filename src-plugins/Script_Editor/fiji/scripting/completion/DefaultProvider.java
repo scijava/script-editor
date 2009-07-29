@@ -1,11 +1,6 @@
-package fiji.scripting;
+package fiji.scripting.completion;
 
 import java.awt.Point;
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.text.BadLocationException;
@@ -13,11 +8,9 @@ import javax.swing.text.Document;
 import javax.swing.text.Element;
 import javax.swing.text.JTextComponent;
 import javax.swing.text.Segment;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
-import org.xml.sax.SAXException;
-import org.fife.ui.autocomplete.*;
+import org.fife.ui.autocomplete.AbstractCompletionProvider;
+import org.fife.ui.autocomplete.CompletionProvider;
+import org.fife.ui.autocomplete.ParameterizedCompletion;
 
 
 
