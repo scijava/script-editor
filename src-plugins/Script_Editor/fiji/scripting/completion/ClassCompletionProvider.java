@@ -1,5 +1,5 @@
 
-package fiji.scripting;
+package fiji.scripting.completion;
 
 import java.awt.Point;
 import java.awt.event.MouseEvent;
@@ -14,7 +14,9 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxUtilities;
 import org.fife.ui.rsyntaxtextarea.Token;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.ToolTipSupplier;
-import org.fife.ui.autocomplete.*;
+import org.fife.ui.autocomplete.Completion;
+import org.fife.ui.autocomplete.CompletionProvider;
+import org.fife.ui.autocomplete.CompletionProviderBase;
 
 
 public class ClassCompletionProvider extends CompletionProviderBase
