@@ -1,10 +1,10 @@
-package fiji.scripting;
+package fiji.scripting.completion;
 
-import org.fife.ui.rsyntaxtextarea.*;
-import javax.swing.text.*;
-import java.util.*;
-import org.fife.ui.autocomplete.*;
-import java.lang.reflect.*;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import java.util.TreeSet;
+import java.util.ArrayList;
+import org.fife.ui.autocomplete.FunctionCompletion;
+import java.lang.reflect.Method;
 
 public class ObjStartCompletions {
 	ArrayList<String> packageNames=new ArrayList<String>();
