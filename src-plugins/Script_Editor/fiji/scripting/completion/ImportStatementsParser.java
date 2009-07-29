@@ -1,6 +1,8 @@
-package fiji.scripting;
+package fiji.scripting.completion;
 
-import org.fife.ui.rsyntaxtextarea.*;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.Token;
+import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import java.util.ArrayList;
 import javax.swing.text.Element;
 
