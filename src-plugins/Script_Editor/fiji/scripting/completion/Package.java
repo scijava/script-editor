@@ -1,4 +1,4 @@
-package fiji.scripting;
+package fiji.scripting.completion;
 
 import java.util.TreeSet;
 import java.lang.Comparable;
