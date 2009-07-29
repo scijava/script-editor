@@ -1,4 +1,4 @@
-package fiji.scripting;
+package fiji.scripting.completion;
 
 import java.io.DataInputStream;
 import java.io.File;
@@ -9,8 +9,8 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.lang.reflect.*;
-import java.lang.*;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -18,9 +18,10 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.lang.Object;
 import java.awt.List;
-import java.awt.event.*;
-import org.fife.ui.autocomplete.*;
-import org.fife.ui.rsyntaxtextarea.*;
+import org.fife.ui.autocomplete.CompletionProvider;
+import org.fife.ui.autocomplete.BasicCompletion;
+import org.fife.ui.autocomplete.FunctionCompletion;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 
 	/****This class generates and prints the 
 	list of trees having each part of the classnames path 
@@ -102,7 +103,6 @@ class ClassNames {
 
 	public void addToTree(String fullName,Package toAdd,int i) {
 		String name=new String(fullName);                         //No splitting now
-		//String[] classname2=justClassName.split("/");
 		if(fullName.endsWith(".class")) {
 
 			for(;;) {
@@ -139,7 +139,6 @@ class ClassNames {
 			if(index<0) {
 				Package packagePart = findItemSet(root,text);
 				toReturnClassPart = new Package();
-				//Package classPart= findClassSet(root,text);
 				Package importedClassPart=findImportedClassSet(root);
 				Package toShowClassPart=findCompletionClassSet(importedClassPart,text);
 				packagePart.addAll(toShowClassPart);
