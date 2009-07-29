@@ -1,4 +1,4 @@
-package fiji.scripting;
+package fiji.scripting.completion;
 
 public interface Item {
 
