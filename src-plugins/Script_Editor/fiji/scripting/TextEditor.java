@@ -71,7 +71,7 @@ import fiji.scripting.completion.DefaultProvider;
 class TextEditor extends JFrame implements ActionListener , ItemListener , ChangeListener ,MouseMotionListener,MouseListener ,CaretListener,InputMethodListener,DocumentListener,WindowListener	{
 
 	JFileChooser fcc;                                                   //using filechooser
-	boolean fileChange=false;
+	boolean fileChanged=false;
 	boolean isFileUnnamed=true;
    	String title="";
 	String language=new String();
@@ -98,7 +98,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
       		title="Text Editor for Fiji";
 		textArea = new RSyntaxTextArea();
       		textArea.addInputMethodListener(l);
-      		textArea.addCaretListener(this);
+		textArea.addCaretListener(this);
       		textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
 		if(provider1==null) {
 			provider1 = createCompletionProvider();
@@ -133,23 +133,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		scroll.setPreferredSize(new Dimension(600,80));
 
 
-      	/********* This part is used to change the 
-         	   the icon of the 
-           	   window of the editor **********/
-
-		BufferedImage image = null;
-        try {
-			image = ImageIO.read(new java.net.URL("file:images/icon.png"));
-        } catch (IOException e) {
-           	e.printStackTrace();
-        }
-      	setIconImage(image);
-
-      
-
-        /********setting the icon part ends ********/
-
-		JSplitPane panel = new JSplitPane(JSplitPane.VERTICAL_SPLIT, sp, scroll);
+      	JSplitPane panel = new JSplitPane(JSplitPane.VERTICAL_SPLIT, sp, scroll);
 		panel.setBorder(BorderFactory.createEmptyBorder(4,4,4,4));
 		panel.setResizeWeight(350.0/430.0);
 		setContentPane(panel);
@@ -165,30 +149,19 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
       /*******  creating the menu for the File option **********/
 		JMenu file = new JMenu("File");
         file.setMnemonic(KeyEvent.VK_F);
-		new1= new JMenuItem("New");
-        addToMenu(file,new1,KeyEvent.VK_N, ActionEvent.CTRL_MASK);
-        open = new JMenuItem("Open...");
-        addToMenu(file,open,KeyEvent.VK_O, ActionEvent.CTRL_MASK);
-        save = new JMenuItem("Save");
-        addToMenu(file,save,KeyEvent.VK_S, ActionEvent.CTRL_MASK);
-       	saveas = new JMenuItem("Save as...");
-        file.add(saveas);
-        saveas.addActionListener(this);
+        addToMenu(file,new1,"New",0,KeyEvent.VK_N, ActionEvent.CTRL_MASK);
+        addToMenu(file,open,"Open...",0,KeyEvent.VK_O, ActionEvent.CTRL_MASK);
+        addToMenu(file,save,"Save",0,KeyEvent.VK_S, ActionEvent.CTRL_MASK);
+		addToMenu(file,save,"Save as...",1,0,0);
         file.addSeparator();
 		JMenu run = new JMenu("Run");
-		compileAndRun=new JMenuItem("Compile and Run");
-		run.add(compileAndRun);
-		compileAndRun.addActionListener(this);
+		addToMenu(run,compileAndRun,"Compile and Run",1,0,0);
 		run.addSeparator();
-		debug=new JMenuItem("Start Debugging");
-		run.add(debug);
-		debug.addActionListener(this);
+		addToMenu(run,debug,"Start Debugging",1,0,0);
 		file.add(run);
 		file.addSeparator();
-		quit = new JMenuItem("Quit");
-        file.add(quit);
-        quit.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, ActionEvent.ALT_MASK));
-        quit.addActionListener(this);
+		addToMenu(file,quit,"Quit",0,KeyEvent.VK_X, ActionEvent.ALT_MASK);
+        
         mbar.add(file);
 
         /********The file menu part ended here  ***************/
@@ -196,33 +169,24 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
         /*********The Edit menu part starts here ***************/
 
 		JMenu edit = new JMenu("Edit");
-        undo = new JMenuItem("Undo");
-        addToMenu(edit,undo,KeyEvent.VK_Z, ActionEvent.CTRL_MASK);
-		redo = new JMenuItem("Redo");
-        addToMenu(edit,redo,KeyEvent.VK_Y, ActionEvent.CTRL_MASK);
+        addToMenu(edit,undo,"Undo",0,KeyEvent.VK_Z, ActionEvent.CTRL_MASK);
+        addToMenu(edit,redo,"Redo",0,KeyEvent.VK_Y, ActionEvent.CTRL_MASK);
 		edit.addSeparator();
-        cut = new JMenuItem("Cut");
-        addToMenu(edit,cut,KeyEvent.VK_X, ActionEvent.CTRL_MASK);
-		copy = new JMenuItem("Copy");
-        addToMenu(edit,copy,KeyEvent.VK_C, ActionEvent.CTRL_MASK);
-		paste = new JMenuItem("Paste");
-        addToMenu(edit,paste,KeyEvent.VK_V, ActionEvent.CTRL_MASK);
+        addToMenu(edit,cut,"Cut",0,KeyEvent.VK_X, ActionEvent.CTRL_MASK);
+        addToMenu(edit,copy,"Copy",0,KeyEvent.VK_C, ActionEvent.CTRL_MASK);
+        addToMenu(edit,paste,"Paste",0,KeyEvent.VK_V, ActionEvent.CTRL_MASK);
 		edit.addSeparator();
-		find = new JMenuItem("Find...");
-        addToMenu(edit,find,KeyEvent.VK_F, ActionEvent.CTRL_MASK);
-		replace = new JMenuItem("Find and Replace...");
-        addToMenu(edit,replace,KeyEvent.VK_H, ActionEvent.CTRL_MASK);
+        addToMenu(edit,find,"Find...",0,KeyEvent.VK_F, ActionEvent.CTRL_MASK);
+        addToMenu(edit,replace,"Find and Replace...",0,KeyEvent.VK_H, ActionEvent.CTRL_MASK);
 		edit.addSeparator();
-		selectAll = new JMenuItem("Select All");
-        addToMenu(edit,selectAll,KeyEvent.VK_A, ActionEvent.CTRL_MASK);
+        addToMenu(edit,selectAll,"Select All",0,KeyEvent.VK_A, ActionEvent.CTRL_MASK);
        	mbar.add(edit);
         
         /******** The Edit menu part ends here *****************/
 
 		/********The options menu part starts here**************/
 		JMenu options = new JMenu("Options");
-		autocomplete = new JMenuItem("Autocomplete");
-		addToMenu(options,autocomplete,KeyEvent.VK_SPACE, ActionEvent.CTRL_MASK);
+		addToMenu(options,autocomplete,"Autocomplete",0,KeyEvent.VK_SPACE, ActionEvent.CTRL_MASK);
 		options.addSeparator();
 		JMenu io = new JMenu("Input/Output");
 		JMenu dialog= new JMenu("Open/Save Dialog");
@@ -256,7 +220,6 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		lang[5].setMnemonic(KeyEvent.VK_M);
 		lang[6] = new JRadioButtonMenuItem("None");
 		lang[6].setMnemonic(KeyEvent.VK_N);
-		//langnone.setActionCommand("None");
 		lang[6].setSelected(true);
 
 		ButtonGroup group = new ButtonGroup();
@@ -292,49 +255,50 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		}
    	}
 
-	public void addToMenu(JMenu menu,JMenuItem menuitem,int keyevent,int actionevent) {
+	public void addToMenu(JMenu menu,JMenuItem menuitem,String menuEntry,int keyEvent,int keyevent,int actionevent) {
+		menuitem=new JMenuItem(menuEntry);
 		menu.add(menuitem);
-		menuitem.setAccelerator(KeyStroke.getKeyStroke(keyevent,actionevent));
+		if(keyEvent==0)
+			menuitem.setAccelerator(KeyStroke.getKeyStroke(keyevent,actionevent));
 		menuitem.addActionListener(this);
 	}
 
-
-
-   		//test if the textArea is changed
-	//on opening change textArea to new Rsyntaxtextarea to clean up the window and check for the flag
-	//open an alert to check if the user wants to save in case the flag is true
-	//creating the buttoned alert and depending on yes , no and cancel
-	//now on closing the window checking if the user wants to save the file (only in case it is changed)
-   
-     /******* the function which accounts for the actions in the menu ************/
-	 
 	public void createNewDocument() {
 		doc.removeDocumentListener(this);
 		textArea.setText("");
-		this.setTitle("TextEditor for Fiji");
+		setTitle("TextEditor for Fiji");
 		isFileUnnamed=true;
+		fileChanged=false;
 		doc.addDocumentListener(this);
 	}
 
-	public void actionPerformed(ActionEvent ae){
-		if(ae.getSource()==new1){
-			if(fileChange==true) {
-				int val= JOptionPane.showConfirmDialog(this, "Do you want to save changes??");
-				if(val==JOptionPane.CANCEL_OPTION) {
-					return;
-				}
-				else if(val==JOptionPane.YES_OPTION){
-					if(save()!=JFileChooser.APPROVE_OPTION)
-						return;
-				}
-				else if(val!=JOptionPane.NO_OPTION) {
-					return;
-				}
-			 }
-			createNewDocument();
+	public int handleUnsavedChanges() {
+		if(fileChanged==true) {
+			int val= JOptionPane.showConfirmDialog(this, "Do you want to save changes??");
+			if(val==JOptionPane.CANCEL_OPTION) {
+				return 0;
+			}
+			else if(val==JOptionPane.YES_OPTION){
+				if(save()!=JFileChooser.APPROVE_OPTION)
+					return 0;
+			}
+			else if(val!=JOptionPane.NO_OPTION) {
+				return 0;
+			}
+		}
+		return 1;
+	}
+
+	public void actionPerformed(ActionEvent ae) {
+		String command=ae.getActionCommand();
+		if(command.equals("New")){
+			if(handleUnsavedChanges()==0)
+				return;
+			else
+				createNewDocument();
 		}
 
-		if (ae.getSource()==open) {
+		if (command.equals("Open...")) {
 			int returnVal=-1;
 
 				OpenDialog dialog = new OpenDialog("Open..","");
@@ -357,33 +321,23 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			 	* user has really opted to open a new file
 			 	*/
 			if(returnVal==fcc.APPROVE_OPTION) {
-				if(fileChange==true) {
-					int val= JOptionPane.showConfirmDialog(this, "Do you want to save changes???"); 
-					if(val==JOptionPane.CANCEL_OPTION){
-						return;
-					}
-					else if(val==JOptionPane.YES_OPTION){
-						if(save()!=JFileChooser.APPROVE_OPTION)
-							return;
-					}
-					else if(val!=JOptionPane.NO_OPTION){
-						return;
-					} 
-				}
-				open(path);
+				if(handleUnsavedChanges()==0)
+					return;
+				else
+					open(path);
 			}
         
 		}
-		if(ae.getSource()==save) {
+		if(command.equals("Save")) {
 			int temp=save();
 		}
-		if(ae.getSource()==saveas)  {
+		if(command.equals("Save as..."))  {
 			int temp= saveasaction();                   //temp for the int return type of the function nothing else
 		}
-		if(ae.getSource()==compileAndRun) {
+		if(command.equals("Compile and Run")) {
 			runScript();
 		}
-		if(ae.getSource()==debug) {
+		if(command.equals("Start Debugging")) {
 			BreakpointManager manager=new BreakpointManager(gutter,textArea,iconGroup);
 			debugging=new StartDebugging(file.getPath(),manager.findBreakpointsLineNumber());
 
@@ -392,30 +346,30 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			} 
 			catch(Exception e){}
 		}
-		if(ae.getSource()==quit) {
+		if(command.equals("Quit")) {
 			processWindowEvent( new WindowEvent(this, WindowEvent.WINDOW_CLOSING) );
 		}
          		     	   
-    	if(ae.getSource()==cut) {
+    	if(command.equals("Cut")) {
 			textArea.cut();
 		}
-		if(ae.getSource()==copy) {
+		if(command.equals("Copy")) {
 			textArea.copy();
 		}
-		if(ae.getSource()==paste) {
+		if(command.equals("Paste")) {
 			textArea.paste();
 		}
-		if(ae.getSource()==undo) {
+		if(command.equals("Undo")) {
 			textArea.undoLastAction();
 		}
-		if(ae.getSource()==redo) {
+		if(command.equals("Redo")) {
 			textArea.redoLastAction();
 		}
-		if(ae.getSource()==find) {
+		if(command.equals("Find...")) {
 
 			setFindAndReplace(false);
 		}
-		if(ae.getSource()==replace) {						//here should the code to close all other dialog boxes
+		if(command.equals("Replace..")) {						//here should the code to close all other dialog boxes
 			try{
 				setFindAndReplace(true);
 
@@ -423,60 +377,60 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		}
 
 
-		if(ae.getSource()==selectAll) {
+		if(command.equals("Select All")) {
 			textArea.setCaretPosition(0);
 			textArea.moveCaretPosition(textArea.getDocument().getLength());
 		}
 
-		if(ae.getSource()==autocomplete) {
+		if(command.equals("Autocomplete")) {
 			try{
 				autocomp.doCompletion();
 			} catch(Exception e){}
 		}
-		if(ae.getSource()==jfcdialog) {
+		if(command.equals("JFileChooser")) {
 			//Prefs.set(Prefs.OPTIONS,32);
 			Prefs.useJFileChooser=true;
 			Prefs.savePreferences();
 		}
-		if(ae.getSource()==ijdialog) {
+		if(command.equals("IJ")) {
 			Prefs.useJFileChooser=false;
 			Prefs.savePreferences();
 		}
 
 
 
-		if(ae.getSource()==lang[0]) {
+		if(command.equals("Java")) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
 			provider.setProviderLanguage("Java");
 		}
-		if(ae.getSource()==lang[1]) {
+		if(command.equals("Javascript")) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
 			provider.setProviderLanguage("Javascript");
 		}
-		if(ae.getSource()==lang[2]) {
+		if(command.equals("Python")) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
 			provider.setProviderLanguage("Python");
 		}
-		if(ae.getSource()==lang[3]) {
+		if(command.equals("Ruby")) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
 			provider.setProviderLanguage("Ruby");
 		}
-		if(ae.getSource()==lang[4]) {
+		if(command.equals("Clojure")) {
 			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());
 			provider.setProviderLanguage("Clojure");
 		}
-		if(ae.getSource()==lang[5]) {
+		if(command.equals("Matlab")) {
 			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new MatlabTokenMaker());
 			provider.setProviderLanguage("Matlab");
 		}
-		if(ae.getSource()==lang[6]) {
+		if(command.equals("None")) {
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
 			provider.setProviderLanguage("None");
 		}
-		if(ae.getSource()==resume) {
+		if(command.equals("Resume")) {
 			debugging.resumeVM();
 		}
-		if(ae.getSource()==terminate) {
+		if(command.equals("Terminate")) {
 		}
 
 	}
@@ -511,7 +465,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		doc.removeDocumentListener(this);
 		try {
 			if(file!=null) {
-				fileChange=false;
+				fileChanged=false;
 				setLanguage(file);
 				isFileUnnamed=false;
 				/*changing the title part ends*/
@@ -587,7 +541,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	}
 
 	public void saveAs(String path) {
-		int temp=saveAs(path,true);
+		saveAs(path,true);
 	}
 
 	public int saveAs(String path,boolean ifReplaceFile) {
@@ -602,7 +556,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 				int val= JOptionPane.showConfirmDialog(this, "Do you want to replace "+file.getName()+"??","Do you want to replace "+file.getName()+"??",JOptionPane.YES_NO_OPTION); 
 				if(val==JOptionPane.YES_OPTION) {
 					title=(String)file.getName()+" - Text Editor Demo for fiji";
-					this.setTitle(title);
+					setTitle(title);
 					writeToFile(file);
 				}
 				else 
@@ -627,6 +581,8 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			return(saveasaction());         //temp has no use just because saveasaction has a int return type  
 		}
 		else {
+			if(fileChanged) 
+				setTitle(getTitle().substring(1));
 			writeToFile(file);
 			return JFileChooser.APPROVE_OPTION;
 		}
@@ -634,7 +590,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 	public void writeToFile(File file) {
 		try {
-			fileChange=false;
+			fileChanged=false;
 			BufferedWriter outFile = new BufferedWriter( new FileWriter( file ) );
 			outFile.write( textArea.getText( ) ); //put in textfile
 			outFile.flush( ); // redundant, done by close()
@@ -658,18 +614,26 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 	//next function is for the InputMethodEvent changes
 	public void inputMethodTextChanged(InputMethodEvent event) {
-		fileChange=true;
+		if(!fileChanged)
+			setTitle("*"+getTitle());
+		fileChanged=true;
 	}
 	public void caretPositionChanged(InputMethodEvent event) {
-		fileChange=true;
+		if(!fileChanged)
+			setTitle("*"+getTitle());
+		fileChanged=true;
 	}
 
 	//Its the real meat the Document Listener functions raise the flag when the text is modifiedd
 	public void insertUpdate(DocumentEvent e) {
-		fileChange=true;
+		if(!fileChanged)
+			setTitle("*"+getTitle());
+		fileChanged=true;
 	}
 	public void removeUpdate(DocumentEvent e) {
-		fileChange=true;
+		if(!fileChanged)
+			setTitle("*"+getTitle());
+		fileChanged=true;
 	}
 	public void changedUpdate(DocumentEvent e) {}
 	public void windowActivated(WindowEvent e) {}
@@ -677,7 +641,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	public void setLanguage(File file) {
 
 		title=(String)file.getName()+" - Text Editor Demo for fiji";
-		this.setTitle(title);
+		setTitle(title);
 		if(file.getName().endsWith(".java")){ 
 			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA); 
 			lang[0].setSelected(true);
@@ -712,21 +676,20 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	}
 
 	public void runScript() {
-		if(fileChange||isFileUnnamed) {
+		if(fileChanged||isFileUnnamed) {
 			int val= JOptionPane.showConfirmDialog(this, "You must save the changes before running.Do you want to save changes??","Select an Option",JOptionPane.YES_NO_OPTION);
-			if(val==JOptionPane.YES_OPTION){
+			if(val!=JOptionPane.YES_OPTION)
+				return;
+			else {
 					int temp=save();       //temp saves here whether the option was Approved :)
-					if (temp == JFileChooser.APPROVE_OPTION) {
-						certainScriptRun();
-					}
+					if (temp != JFileChooser.APPROVE_OPTION) 
+						return;
 			}
 		}
-		else {
-			certainScriptRun();
-		}
+		runSavedScript();
 	}
 
-	public void certainScriptRun() {
+	public void runSavedScript() {
 
 		String extension="";
 		String fileName=(String)file.getName();
@@ -742,7 +705,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 	public void windowClosing(WindowEvent e) {
 
-		if(fileChange) {
+		if(fileChanged) {
 			int val= JOptionPane.showConfirmDialog(this, "Do you want to save changes??"); 
 			if(val==JOptionPane.CANCEL_OPTION) {
 				setVisible(true);
