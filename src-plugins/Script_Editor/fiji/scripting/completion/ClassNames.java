@@ -69,7 +69,7 @@ class ClassNames {
 			try {
 				ZipFile jarFile = new ZipFile(file);
 				list1 = jarFile.entries();
-			}catch(Exception e){System.out.println("Invalid jar file");}
+			}catch(Exception e){}
 				while (list1.hasMoreElements()){
 					ZipEntry entry =(ZipEntry)list1.nextElement();
 						String name = entry.getName();
@@ -248,7 +248,6 @@ class ClassNames {
 					loadMethodNames(temp3);
 
 					if(isDotAtLast) {
-						System.out.println("It is matched");
 						defaultProvider.addCompletions(createFunctionCompletion(temp3.methodNames,true));
 					}
 					else {
@@ -262,14 +261,11 @@ class ClassNames {
 	public void loadMethodNames(ClassName temp) {
 		if(temp.methodNames.size()<=0) {
 			String fullname = temp.getCompleteName();
-			System.out.println(fullname);
 			try {
 				try {
 					Class clazz=getClass().getClassLoader().loadClass(fullname);
 					temp.setMethodNames(clazz.getMethods());
 					Field[] field = clazz.getFields();
-					for (Field f : field)
-						System.out.println(f.toString());
 				} catch(java.lang.Error e) { e.printStackTrace(); }
 			} catch(Exception e) { e.printStackTrace(); }
 		}
@@ -296,7 +292,6 @@ class ClassNames {
 	public Package findItemSet(Package parent,String text) {
 		Item item = new Package();
 		Package toBeUsedInLoop=findTailSet(parent,text);
-		System.out.println("the size of the tailset is"+toBeUsedInLoop.size());
 
 		for(Item i: toBeUsedInLoop) {
 
@@ -383,11 +378,10 @@ class ClassNames {
 						listOfCompletions.add(new BasicCompletion(defaultProvider,i.getName()+"."));
 					}
 				} catch(NoClassDefFoundError e){ e.printStackTrace(); }
-			} catch(Exception e){ e.printStackTrace(); System.out.println(i.getName());}
+			} catch(Exception e){ e.printStackTrace(); }
 			listOfCompletions.add(new BasicCompletion(defaultProvider,i.getName()));
 
 		}
-		System.out.println("the compltion list has "+listOfCompletions.size());
 		return listOfCompletions;
 	}
 
