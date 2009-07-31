@@ -70,7 +70,7 @@ import fiji.scripting.completion.DefaultProvider;
 
 class TextEditor extends JFrame implements ActionListener , ItemListener , ChangeListener ,MouseMotionListener,MouseListener ,CaretListener,InputMethodListener,DocumentListener,WindowListener	{
 
-	JFileChooser fcc;                                                   //using filechooser
+	JFileChooser fcc;                                                   
 	boolean fileChanged=false;
 	boolean isFileUnnamed=true;
    	String title="";
@@ -91,15 +91,17 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	StartDebugging debugging;
 	Gutter gutter;
 	IconGroup iconGroup;
+	LanguageInformationMap map;
+	LanguageInformation langInfo;
 
 	public TextEditor(String path1) {
-		fcc = new JFileChooser();                                        //For the file opening saving things
+		fcc = new JFileChooser();                                        
 		JPanel cp = new JPanel(new BorderLayout());
-      		title="Text Editor for Fiji";
+      	title="Text Editor for Fiji";
 		textArea = new RSyntaxTextArea();
-      		textArea.addInputMethodListener(l);
+      	textArea.addInputMethodListener(l);
 		textArea.addCaretListener(this);
-      		textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
+      	textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
 		if(provider1==null) {
 			provider1 = createCompletionProvider();
 		}
@@ -114,25 +116,17 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
       	doc.addDocumentListener(this);
 		RTextScrollPane sp = new RTextScrollPane(textArea);
 		sp.setPreferredSize(new Dimension(600,350));
-		//	cp.add(sp);
-		System.out.println(sp.isIconRowHeaderEnabled());
 		sp.setIconRowHeaderEnabled(true);
 		gutter=sp.getGutter();
-		System.out.println(gutter.isBookmarkingEnabled());
 		iconGroup=new IconGroup("bullets","images/",null,"png",null);
 		gutter.setBookmarkIcon(iconGroup.getIcon("var"));
 		gutter.setBookmarkingEnabled(true);
-		if(gutter.getBookmarkIcon()==null) {
-			System.out.println("It is disabled");
-		}
 		screen.setEditable(false);
 		screen.setLineWrap(true);
 		Font font = new Font("Courier", Font.PLAIN, 12);
 		screen.setFont(font);
 		JScrollPane scroll = new JScrollPane(screen);
 		scroll.setPreferredSize(new Dimension(600,80));
-
-
       	JSplitPane panel = new JSplitPane(JSplitPane.VERTICAL_SPLIT, sp, scroll);
 		panel.setBorder(BorderFactory.createEmptyBorder(4,4,4,4));
 		panel.setResizeWeight(350.0/430.0);
@@ -190,13 +184,9 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		options.addSeparator();
 		JMenu io = new JMenu("Input/Output");
 		JMenu dialog= new JMenu("Open/Save Dialog");
-		JMenuItem jfcdialog=new JMenuItem("JFileChooser");
-		dialog.add(jfcdialog);
-		jfcdialog.addActionListener(this);
+		addToMenu(dialog,jfcdialog,"JFileChooser",1,0,0);
 		dialog.addSeparator();
-		JMenuItem ijdialog=new JMenuItem("IJ");
-		dialog.add(ijdialog);
-		ijdialog.addActionListener(this);
+		addToMenu(dialog,ijdialog,"IJ",1,0,0);
 		io.add(dialog);
 
 		options.add(io);
@@ -205,40 +195,26 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 		/*********The Language parts starts here********************/
 		JMenu language = new JMenu("Language");
-
-		lang[0] = new JRadioButtonMenuItem("Java");
-		lang[0].setMnemonic(KeyEvent.VK_J);
-		lang[1] = new JRadioButtonMenuItem("Javascript");
-		lang[1].setMnemonic(KeyEvent.VK_J);
-		lang[2] = new JRadioButtonMenuItem("Python");
-		lang[2].setMnemonic(KeyEvent.VK_P);
-		lang[3] = new JRadioButtonMenuItem("Ruby");
-		lang[3].setMnemonic(KeyEvent.VK_R);
-		lang[4] = new JRadioButtonMenuItem("Clojure");
-		lang[4].setMnemonic(KeyEvent.VK_C);
-		lang[5] = new JRadioButtonMenuItem("Matlab");
-		lang[5].setMnemonic(KeyEvent.VK_M);
-		lang[6] = new JRadioButtonMenuItem("None");
-		lang[6].setMnemonic(KeyEvent.VK_N);
-		lang[6].setSelected(true);
-
+		String[] langArray={"Java","Javascript","Python","Ruby","Clojure","Matlab","None"};
+		String[] langExt={".java",".js",".py",".rb",".clj",".m",".n"};
+		int[] keyevent={KeyEvent.VK_J,KeyEvent.VK_J,KeyEvent.VK_P,KeyEvent.VK_R,KeyEvent.VK_M,KeyEvent.VK_C,KeyEvent.VK_N};
 		ButtonGroup group = new ButtonGroup();
 		for(int i=0;i<7;i++) {
 
+			lang[i]=new JRadioButtonMenuItem(langArray[i]);
+			lang[i].setMnemonic(keyevent[i]);
 			group.add(lang[i]);
 			language.add(lang[i]);
 			lang[i].addActionListener(this);
+			lang[i].setActionCommand(langExt[i]);
 
 		}
+		lang[6].setSelected(true);
 		mbar.add(language);
-
+		map=new LanguageInformationMap(lang);
 		JMenu breakpoints=new JMenu("Breakpoints");
-		resume=new JMenuItem("Resume");
-		resume.addActionListener(this);
-		breakpoints.add(resume);
-		terminate = new JMenuItem("Terminate");
-		terminate.addActionListener(this);
-		breakpoints.add(terminate);
+		addToMenu(breakpoints,resume,"Resume",1,0,0);
+		addToMenu(breakpoints,terminate,"Terminate",1,0,0);
 		mbar.add(breakpoints);
 
 
@@ -274,7 +250,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 	public int handleUnsavedChanges() {
 		if(fileChanged==true) {
-			int val= JOptionPane.showConfirmDialog(this, "Do you want to save changes??");
+			int val= saveChangeDialog();
 			if(val==JOptionPane.CANCEL_OPTION) {
 				return 0;
 			}
@@ -289,6 +265,11 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		return 1;
 	}
 
+	public int saveChangeDialog() {
+		return(JOptionPane.showConfirmDialog(this, "Do you want to save changes??"));
+	}
+
+
 	public void actionPerformed(ActionEvent ae) {
 		String command=ae.getActionCommand();
 		if(command.equals("New")){
@@ -299,8 +280,8 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		}
 
 		if (command.equals("Open...")) {
-			int returnVal=-1;
-
+			if(handleUnsavedChanges()!=0) {
+				int returnVal=-1;
 				OpenDialog dialog = new OpenDialog("Open..","");
 				String directory = dialog.getDirectory();
 				String name = dialog.getFileName();
@@ -315,24 +296,16 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 							path = workingDir + path;
 					}
 				}
-
-
-				/*condition to check whether there is a change and the 
-			 	* user has really opted to open a new file
-			 	*/
-			if(returnVal==fcc.APPROVE_OPTION) {
-				if(handleUnsavedChanges()==0)
-					return;
-				else
+				if(returnVal==fcc.APPROVE_OPTION) 
 					open(path);
 			}
-        
-		}
+  		}
+
 		if(command.equals("Save")) {
-			int temp=save();
+			save();
 		}
 		if(command.equals("Save as..."))  {
-			int temp= saveasaction();                   //temp for the int return type of the function nothing else
+			saveasaction();                   
 		}
 		if(command.equals("Compile and Run")) {
 			runScript();
@@ -369,7 +342,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 			setFindAndReplace(false);
 		}
-		if(command.equals("Replace..")) {						//here should the code to close all other dialog boxes
+		if(command.equals("Find and Replace...")) {						//here should the code to close all other dialog boxes
 			try{
 				setFindAndReplace(true);
 
@@ -388,7 +361,6 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			} catch(Exception e){}
 		}
 		if(command.equals("JFileChooser")) {
-			//Prefs.set(Prefs.OPTIONS,32);
 			Prefs.useJFileChooser=true;
 			Prefs.savePreferences();
 		}
@@ -397,35 +369,10 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			Prefs.savePreferences();
 		}
 
-
-
-		if(command.equals("Java")) {
-			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
-			provider.setProviderLanguage("Java");
-		}
-		if(command.equals("Javascript")) {
-			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
-			provider.setProviderLanguage("Javascript");
-		}
-		if(command.equals("Python")) {
-			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
-			provider.setProviderLanguage("Python");
-		}
-		if(command.equals("Ruby")) {
-			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
-			provider.setProviderLanguage("Ruby");
-		}
-		if(command.equals("Clojure")) {
-			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());
-			provider.setProviderLanguage("Clojure");
-		}
-		if(command.equals("Matlab")) {
-			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new MatlabTokenMaker());
-			provider.setProviderLanguage("Matlab");
-		}
-		if(command.equals("None")) {
-			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
-			provider.setProviderLanguage("None");
+		//setting actionPerformed for language menu
+		if(command.startsWith(".")) {
+			langInfo=map.get(command);
+			setLanguageProperties(command);
 		}
 		if(command.equals("Resume")) {
 			debugging.resumeVM();
@@ -435,9 +382,19 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 	}
 
-	/*
-	 * this function performs the file opening operation
-	 */
+
+	private void setLanguageProperties(String string) {
+		if(string.equals(".clj")) {
+			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());
+		}
+		else if(string.equals(".m")) {
+			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new MatlabTokenMaker());
+		}
+		else {
+			textArea.setSyntaxEditingStyle(langInfo.getSyntaxStyle());
+		}
+		provider.setProviderLanguage(langInfo.getMenuEntry());
+	}
 
 	public void setFindAndReplace(boolean ifReplace) {
 		if(replaceDialog!=null){						//here should the code to close all other dialog boxes 
@@ -468,11 +425,9 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 				fileChanged=false;
 				setLanguage(file);
 				isFileUnnamed=false;
-				/*changing the title part ends*/
 				fin = new FileInputStream(file);
 				BufferedReader din = new BufferedReader(new InputStreamReader(fin)); 
 				String s = "";
-
 				textArea.setText("");
 				while(true) {
 					s = din.readLine();
@@ -500,16 +455,9 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
     	}
 
 	}
-	/*This function performs the saveasoperation i.e. saving in the
-	 * new file
-	 * Basically the motive behind creating different
-	 * functions is because they are used more than one time
-	 * int return type is given just because in one instance of 
-	 * its use the value of the button clicked in the save dialog 
-	 * box was required.
-	 */
+
 	public int saveasaction() {
-		SaveDialog sd = new SaveDialog("Save as ","new",".java");
+		SaveDialog sd = new SaveDialog("Save as ","new","");
 		String name = sd.getFileName();
 		if(name!=null) {
 			String path=sd.getDirectory()+name;
@@ -557,6 +505,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 				if(val==JOptionPane.YES_OPTION) {
 					title=(String)file.getName()+" - Text Editor Demo for fiji";
 					setTitle(title);
+					setLanguage(file);
 					writeToFile(file);
 				}
 				else 
@@ -572,13 +521,11 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		}
 		return JFileChooser.APPROVE_OPTION;
 	}
-        /*It performs save in either new or the same file depending on whether there was a 
-	 * file initially
-	 */
+       
 	public int save(){
 
 		if(isFileUnnamed) {
-			return(saveasaction());         //temp has no use just because saveasaction has a int return type  
+			return(saveasaction());         
 		}
 		else {
 			if(fileChanged) 
@@ -599,80 +546,25 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		catch(Exception e){}
 	}
 
-
-	public void itemStateChanged(ItemEvent ie) {}
-	public void stateChanged(ChangeEvent e) {}
-	public void mouseMoved(MouseEvent me) {}
-	public void mouseClicked(MouseEvent me) {}
-	public void mouseEntered(MouseEvent me) {}
-	public void mouseExited(MouseEvent me) {}
-	public void mouseDragged(MouseEvent me) {}
-	public void mouseReleased(MouseEvent me) {}
-	public void mousePressed(MouseEvent me) {}
-
-	public void caretUpdate(CaretEvent ce) {}
-
-	//next function is for the InputMethodEvent changes
-	public void inputMethodTextChanged(InputMethodEvent event) {
-		if(!fileChanged)
-			setTitle("*"+getTitle());
-		fileChanged=true;
-	}
-	public void caretPositionChanged(InputMethodEvent event) {
-		if(!fileChanged)
-			setTitle("*"+getTitle());
-		fileChanged=true;
-	}
-
-	//Its the real meat the Document Listener functions raise the flag when the text is modifiedd
-	public void insertUpdate(DocumentEvent e) {
-		if(!fileChanged)
-			setTitle("*"+getTitle());
-		fileChanged=true;
-	}
-	public void removeUpdate(DocumentEvent e) {
-		if(!fileChanged)
-			setTitle("*"+getTitle());
-		fileChanged=true;
-	}
-	public void changedUpdate(DocumentEvent e) {}
-	public void windowActivated(WindowEvent e) {}
-
 	public void setLanguage(File file) {
-
-		title=(String)file.getName()+" - Text Editor Demo for fiji";
+		boolean dotNotFound=true;
+		String fileName=file.getName();
+		title=fileName+" - Text Editor Demo for fiji";
 		setTitle(title);
-		if(file.getName().endsWith(".java")){ 
-			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA); 
-			lang[0].setSelected(true);
-			provider.setProviderLanguage("Java");
+		int k=fileName.lastIndexOf(".");
+		if(k>0) {
+			dotNotFound=false;
+			langInfo=map.get(fileName.substring(k));
 		}
-		if(file.getName().endsWith(".js")) {
-			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT); 
-			lang[1].setSelected(true);
-			provider.setProviderLanguage("Javascript");
+		if(langInfo==null||dotNotFound) 
+			langInfo=map.get(".n");
+		if(langInfo.getMenuEntry().equals("None")) {
+			setLanguageProperties(".n");
 		}
-		if(file.getName().endsWith(".m")) {
-			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new MatlabTokenMaker());
-			lang[5].setSelected(true);
-			provider.setProviderLanguage("Matlab");
+		else {
+			setLanguageProperties(fileName.substring(k));
 		}
-		if(file.getName().endsWith(".py")) {
-			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
-			lang[2].setSelected(true);
-			provider.setProviderLanguage("Python");
-		}
-		if(file.getName().endsWith(".rb")) {
-			textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
-			lang[3].setSelected(true);
-			provider.setProviderLanguage("Ruby");
-		}
-		if(file.getName().endsWith(".clj")) {
-			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());
-			lang[4].setSelected(true);
-			provider.setProviderLanguage("Clojure");
-		}
-
+		langInfo.getMenuItem().setSelected(true);
 	}
 
 	public void runScript() {
@@ -681,7 +573,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			if(val!=JOptionPane.YES_OPTION)
 				return;
 			else {
-					int temp=save();       //temp saves here whether the option was Approved :)
+					int temp=save();       
 					if (temp != JFileChooser.APPROVE_OPTION) 
 						return;
 			}
@@ -706,7 +598,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	public void windowClosing(WindowEvent e) {
 
 		if(fileChanged) {
-			int val= JOptionPane.showConfirmDialog(this, "Do you want to save changes??"); 
+			int val= saveChangeDialog(); 
 			if(val==JOptionPane.CANCEL_OPTION) {
 				setVisible(true);
 				return;
@@ -720,66 +612,53 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		this.dispose();
 
 	}
+
+	//next function is for the InputMethodEvent changes
+	public void inputMethodTextChanged(InputMethodEvent event) {
+		updateStatusOnChange();
+	}
+	public void caretPositionChanged(InputMethodEvent event) {
+		updateStatusOnChange();
+	}
+
+	public void insertUpdate(DocumentEvent e) {
+		updateStatusOnChange();
+	}
+	public void removeUpdate(DocumentEvent e) {
+		updateStatusOnChange();
+	}
+
+	private void updateStatusOnChange() {
+		if(!fileChanged)
+			setTitle("*"+getTitle());
+		fileChanged=true;
+	}
+
+	private CompletionProvider createCompletionProvider() {
+
+		provider = new ClassCompletionProvider(new DefaultProvider(),textArea,language);
+		return provider;
+
+	}
+
 	public void windowClosed(WindowEvent e) {}
 	public void windowDeactivated(WindowEvent e) {}
 	public void windowDeiconified(WindowEvent e) {}
 	public void windowIconified(WindowEvent e) {}
 	public void windowOpened(WindowEvent e) {}
+	public void itemStateChanged(ItemEvent ie) {}
+	public void stateChanged(ChangeEvent e) {}
+	public void mouseMoved(MouseEvent me) {}
+	public void mouseClicked(MouseEvent me) {}
+	public void mouseEntered(MouseEvent me) {}
+	public void mouseExited(MouseEvent me) {}
+	public void mouseDragged(MouseEvent me) {}
+	public void mouseReleased(MouseEvent me) {}
+	public void mousePressed(MouseEvent me) {}
+	public void caretUpdate(CaretEvent ce) {}
+	public void changedUpdate(DocumentEvent e) {}
+	public void windowActivated(WindowEvent e) {}
 
-/*autocomplete addition starts here*/
-
-
-	private CompletionProvider createCommentCompletionProvider() {
-		DefaultCompletionProvider cp = new DefaultCompletionProvider();
-		cp.addCompletion(new BasicCompletion(cp, "TODO:", "A to-do reminder"));
-		cp.addCompletion(new BasicCompletion(cp, "FIXME:", "A bug that needs to be fixed"));
-		return cp;
-	}
-
-
-
-	private CompletionProvider createCompletionProvider() {
-
-
-		// The provider used when typing a string.
-		CompletionProvider stringCP = createStringCompletionProvider();
-
-		// The provider used when typing a comment.
-		CompletionProvider commentCP = createCommentCompletionProvider();
-
-		// Create the "parent" completion provider.
-		System.out.println("The language at the completion provider definition is "+language);
-		provider = new ClassCompletionProvider(new DefaultProvider(),textArea,language);
-		provider.setStringCompletionProvider(stringCP);
-		provider.setCommentCompletionProvider(commentCP);
-
-		return provider;
-
-	}
-
-
-
-
-	private CompletionProvider createStringCompletionProvider() {
-
-		DefaultCompletionProvider cp = new DefaultCompletionProvider();
-		cp.addCompletion(new BasicCompletion(cp, "%c", "char", "Prints a character"));
-		cp.addCompletion(new BasicCompletion(cp, "%i", "signed int", "Prints a signed integer"));
-		cp.addCompletion(new BasicCompletion(cp, "%f", "float", "Prints a float"));
-		cp.addCompletion(new BasicCompletion(cp, "%s", "string", "Prints a string"));
-		cp.addCompletion(new BasicCompletion(cp, "%u", "unsigned int", "Prints an unsigned integer"));
-		cp.addCompletion(new BasicCompletion(cp, "\\n", "Newline", "Prints a newline"));
-		return cp;
-
-	}
-
-
-	/**
-	 * Focuses the text area.
-	 */
-	public void focusEditor() {
-		textArea.requestFocusInWindow();
-	}
 }
 
 
