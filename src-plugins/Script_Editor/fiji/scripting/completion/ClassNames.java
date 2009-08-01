@@ -23,31 +23,31 @@ import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.FunctionCompletion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 
-	/****This class generates and prints the 
-	list of trees having each part of the classnames path 
-	as a node of the tree like for java.awt.List ,the top level List
-	contains a Tree object with key "java" and one of its childList
-	element as awt which in turn has its childDList having its one childList
-	as Listwhich is infact also a leaf ***********/
+/****This class generates and prints the
+list of trees having each part of the classnames path
+as a node of the tree like for java.awt.List ,the top level List
+contains a Tree object with key "java" and one of its childList
+element as awt which in turn has its childDList having its one childList
+as Listwhich is infact also a leaf ***********/
 
 class ClassNames {
 
-	static List list=new List();
+	static List list = new List();
 
-	static Package root=new Package();
+	static Package root = new Package();
 	DefaultProvider defaultProvider;
 	Enumeration list1;
-	Package toReturnClassPart=new Package();
-	ImportStatementsParser parser=new ImportStatementsParser();
+	Package toReturnClassPart = new Package();
+	ImportStatementsParser parser = new ImportStatementsParser();
 	ObjStartCompletions obj;
-	ArrayList<String> packageNames=new ArrayList<String>();
+	ArrayList<String> packageNames = new ArrayList<String>();
 
 	public void run(String[] args) {
 
-		for (int i = 1; i < args.length; i++){
+		for (int i = 1; i < args.length; i++) {
 
 			setPathTree(args[i]);
-			 
+
 		}
 
 	}
@@ -59,26 +59,26 @@ class ClassNames {
 
 
 
-	public void setPathTree(String path){
+	public void setPathTree(String path) {
 		File file = new File(path);
 		if (file.isDirectory()) {
 			setDirTree(path);
 		}
-		if(path.endsWith(".jar")) {
+		if (path.endsWith(".jar")) {
 
 			try {
 				ZipFile jarFile = new ZipFile(file);
 				list1 = jarFile.entries();
-			}catch(Exception e){}
-				while (list1.hasMoreElements()){
-					ZipEntry entry =(ZipEntry)list1.nextElement();
-						String name = entry.getName();
-						if(!name.endsWith(".class"))		//ignoring the non class files
-							continue;
-						String[] classname1=name.split("\\\\");
-						String justClassName=classname1[classname1.length-1];
-						addToTree(justClassName,root,0);
-				}
+			} catch (Exception e) {}
+			while (list1.hasMoreElements()) {
+				ZipEntry entry = (ZipEntry)list1.nextElement();
+				String name = entry.getName();
+				if (!name.endsWith(".class"))		//ignoring the non class files
+					continue;
+				String[] classname1 = name.split("\\\\");
+				String justClassName = classname1[classname1.length-1];
+				addToTree(justClassName, root, 0);
+			}
 
 		}
 
@@ -86,7 +86,7 @@ class ClassNames {
 
 	public void setDirTree(String path) {
 		File file = new File(path);
-		if(file.isDirectory()) {
+		if (file.isDirectory()) {
 			if (!path.endsWith(File.separator))
 				path += File.separator;
 			String[] list = file.list();
@@ -94,30 +94,30 @@ class ClassNames {
 				setDirTree(path + list[i]);	//recursively adding the classnames to the list
 		}
 
-		if((path.endsWith(".class"))) {
-			String[] classname1=path.split("\\\\");
-			String justClassName=classname1[classname1.length-1];
-			addToTree(justClassName,root,0);
+		if ((path.endsWith(".class"))) {
+			String[] classname1 = path.split("\\\\");
+			String justClassName = classname1[classname1.length-1];
+			addToTree(justClassName, root, 0);
 		}
 	}
 
-	public void addToTree(String fullName,Package toAdd,int i) {
-		String name=new String(fullName);                         //No splitting now
-		if(fullName.endsWith(".class")) {
+	public void addToTree(String fullName, Package toAdd, int i) {
+		String name = new String(fullName);                       //No splitting now
+		if (fullName.endsWith(".class")) {
 
-			for(;;) {
-				int slash=name.indexOf("/");
-				if(slash<0) {
+			for (;;) {
+				int slash = name.indexOf("/");
+				if (slash < 0) {
 					break;
 				}
-				Package item = new Package(name.substring(0,slash)+".");
+				Package item = new Package(name.substring(0, slash) + ".");
 				toAdd.add(item);
-				toAdd = (Package)toAdd.tailSet(item).first(); 
+				toAdd = (Package)toAdd.tailSet(item).first();
 				name = name.substring(slash + 1);
 			}
-			Item item = new ClassName(name.substring(0,name.length()-6),fullName.substring(0,fullName.length()-6));
+			Item item = new ClassName(name.substring(0, name.length() - 6), fullName.substring(0, fullName.length() - 6));
 			toAdd.add(item);
-			 
+
 		}
 
 	}
@@ -126,94 +126,89 @@ class ClassNames {
 
 
 
-	public CompletionProvider getDefaultProvider(Package root,RSyntaxTextArea textArea,String language) {
-		defaultProvider=new DefaultProvider();
-		String text=defaultProvider.getEnteredText(textArea);
+	public CompletionProvider getDefaultProvider(Package root, RSyntaxTextArea textArea, String language) {
+		defaultProvider = new DefaultProvider();
+		String text = defaultProvider.getEnteredText(textArea);
 
 
-		if(!(text=="" || text==null)) {
-			parser.objCompletionPackages(textArea,language);
-			packageNames=parser.getPackageNames();
-			String[] packageParts=new String[10];                             //this has to be improved as this restricts only less than 10 dots in a classfull name
-			int index=text.lastIndexOf(".");
-			if(index<0) {
-				Package packagePart = findItemSet(root,text);
+		if (!(text == "" || text == null)) {
+			parser.objCompletionPackages(textArea, language);
+			packageNames = parser.getPackageNames();
+			String[] packageParts = new String[10];                           //this has to be improved as this restricts only less than 10 dots in a classfull name
+			int index = text.lastIndexOf(".");
+			if (index < 0) {
+				Package packagePart = findItemSet(root, text);
 				toReturnClassPart = new Package();
-				Package importedClassPart=findImportedClassSet(root);
-				Package toShowClassPart=findCompletionClassSet(importedClassPart,text);
+				Package importedClassPart = findImportedClassSet(root);
+				Package toShowClassPart = findCompletionClassSet(importedClassPart, text);
 				packagePart.addAll(toShowClassPart);
 				defaultProvider.addCompletions(createListCompletions(packagePart));
 			}
 
-			if(index>0) {
+			if (index > 0) {
 				classStartCompletions(text);
-				obj=new ObjStartCompletions(this,language,packageNames);
-				obj.setObjects(textArea,text,defaultProvider);
-				String[] parts=text.split("\\.");
-				boolean isDotAtLast=false;
-				boolean isClassBeforeDot=false;
-				boolean isPackageBeforeDot=false;
-				index=parts.length;
-				if(text.charAt(text.length()-1)=='.') {
-					isDotAtLast=true;
+				obj = new ObjStartCompletions(this, language, packageNames);
+				obj.setObjects(textArea, text, defaultProvider);
+				String[] parts = text.split("\\.");
+				boolean isDotAtLast = false;
+				boolean isClassBeforeDot = false;
+				boolean isPackageBeforeDot = false;
+				index = parts.length;
+				if (text.charAt(text.length() - 1) == '.') {
+					isDotAtLast = true;
 				}
-				Package temp=root;
-				int temp1=index;
-				packageParts=parts;
+				Package temp = root;
+				int temp1 = index;
+				packageParts = parts;
 				Object temp2;
-				boolean isPresent=true;
-				while(temp1>1) {
-					Item itemBeforeDot=findTailSet((Package)temp,packageParts[index-temp1]).first();
-					if(itemBeforeDot instanceof ClassName) {
+				boolean isPresent = true;
+				while (temp1 > 1) {
+					Item itemBeforeDot = findTailSet((Package)temp, packageParts[index-temp1]).first();
+					if (itemBeforeDot instanceof ClassName) {
 
-						if(itemBeforeDot.getName().equals(packageParts[index-temp1])) {
-							isClassBeforeDot=true;
-						}
-						else{
-							isPresent=false;
+						if (itemBeforeDot.getName().equals(packageParts[index-temp1])) {
+							isClassBeforeDot = true;
+						} else {
+							isPresent = false;
 						}
 						break;                                                    //here I am assuming only one dot after a className that is why breaking the loop irrespective of isPresent
 					}
-					itemBeforeDot=findTailSet(temp,packageParts[index-temp1]+".").first();
-					if(itemBeforeDot instanceof Package) {
-						if(!((Package)findTailSet(temp,packageParts[index-temp1]+".").first()).getName().equals(packageParts[index-temp1]+".")) {//looks if topLevel contains the first part of the package part
-							isPresent=false;
+					itemBeforeDot = findTailSet(temp, packageParts[index-temp1] + ".").first();
+					if (itemBeforeDot instanceof Package) {
+						if (!((Package)findTailSet(temp, packageParts[index-temp1] + ".").first()).getName().equals(packageParts[index-temp1] + ".")) {//looks if topLevel contains the first part of the package part
+							isPresent = false;
 							break;
-						}
-						else{
+						} else {
 
-								temp=(Package)findTailSet(temp,packageParts[index-temp1]+".").first();
-							}
+							temp = (Package)findTailSet(temp, packageParts[index-temp1] + ".").first();
+						}
 					}
 					temp1--;
 
 				}
 
-				if(isPresent) {
+				if (isPresent) {
 
-					if(!isDotAtLast) {
-						if(isClassBeforeDot) {
-							ClassName name = (ClassName)findTailSet(temp,packageParts[index-temp1]).first();
+					if (!isDotAtLast) {
+						if (isClassBeforeDot) {
+							ClassName name = (ClassName)findTailSet(temp, packageParts[index-temp1]).first();
 							loadMethodNames(name);
-							generateClassRelatedCompletions(name,packageParts);                   //does the rest of job when finds a class
-						}
-						else {
-							temp=findItemSet(temp,packageParts[index-1]);
+							generateClassRelatedCompletions(name, packageParts);                  //does the rest of job when finds a class
+						} else {
+							temp = findItemSet(temp, packageParts[index-1]);
 							defaultProvider.addCompletions(createListCompletions(temp));
 						}
-					}
-					else  {
-						Item temp3=findTailSet(temp,packageParts[index-temp1]).first();
+					} else  {
+						Item temp3 = findTailSet(temp, packageParts[index-temp1]).first();
 
-						if(temp3 instanceof ClassName) {
-							if(temp3.getName().equals(packageParts[index-temp1])) {
+						if (temp3 instanceof ClassName) {
+							if (temp3.getName().equals(packageParts[index-temp1])) {
 
 								loadMethodNames((ClassName)temp3);
-								defaultProvider.addCompletions(createFunctionCompletion(((ClassName)temp3).methodNames,true));
+								defaultProvider.addCompletions(createFunctionCompletion(((ClassName)temp3).methodNames, true));
 							}
-						}
-						else {
-							temp=(Package)temp3;
+						} else {
+							temp = (Package)temp3;
 							defaultProvider.addCompletions(createListCompletions(temp));
 						}
 
@@ -233,101 +228,107 @@ class ClassNames {
 
 	public void classStartCompletions(String text) {
 
-			String[] classParts = text.split("\\.");
-			boolean isDotAtLast=false;
-			if(text.charAt(text.length()-1)=='.') {
-				isDotAtLast=true;
-			}
-			if((classParts.length>1&&isDotAtLast) || (classParts.length>2&&!isDotAtLast)) {
-				return;
-			}
-			Package classItemBeforeDot=findCompletionClassSet(findImportedClassSet(root),classParts[0]);
-			if(classItemBeforeDot.size()>0) {
-				if(classItemBeforeDot.first().getName().equals(classParts[0])) {
-					ClassName temp3=(ClassName)classItemBeforeDot.first();
-					loadMethodNames(temp3);
+		String[] classParts = text.split("\\.");
+		boolean isDotAtLast = false;
+		if (text.charAt(text.length() - 1) == '.') {
+			isDotAtLast = true;
+		}
+		if ((classParts.length > 1 && isDotAtLast) || (classParts.length > 2 && !isDotAtLast)) {
+			return;
+		}
+		Package classItemBeforeDot = findCompletionClassSet(findImportedClassSet(root), classParts[0]);
+		if (classItemBeforeDot.size() > 0) {
+			if (classItemBeforeDot.first().getName().equals(classParts[0])) {
+				ClassName temp3 = (ClassName)classItemBeforeDot.first();
+				loadMethodNames(temp3);
 
-					if(isDotAtLast) {
-						defaultProvider.addCompletions(createFunctionCompletion(temp3.methodNames,true));
-					}
-					else {
-						generateClassRelatedCompletions(temp3,classParts);
-					}
+				if (isDotAtLast) {
+					defaultProvider.addCompletions(createFunctionCompletion(temp3.methodNames, true));
+				} else {
+					generateClassRelatedCompletions(temp3, classParts);
 				}
 			}
+		}
 	}
 
 
 	public void loadMethodNames(ClassName temp) {
-		if(temp.methodNames.size()<=0) {
+		if (temp.methodNames.size() <= 0) {
 			String fullname = temp.getCompleteName();
 			try {
 				try {
-					Class clazz=getClass().getClassLoader().loadClass(fullname);
+					Class clazz = getClass().getClassLoader().loadClass(fullname);
 					temp.setMethodNames(clazz.getMethods());
 					Field[] field = clazz.getFields();
-				} catch(java.lang.Error e) { e.printStackTrace(); }
-			} catch(Exception e) { e.printStackTrace(); }
+				} catch (java.lang.Error e) {
+					e.printStackTrace();
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
-	public Package findTailSet(Package parent,String text) {
+	public Package findTailSet(Package parent, String text) {
 		Package item = new Package(text);
-		Package tail=new Package();
-		for(Item i : parent.tailSet(item)) {
+		Package tail = new Package();
+		for (Item i : parent.tailSet(item)) {
 			tail.add(i);
 		}
 		return tail;
 	}
 
-	public Package findHeadSet(Package parent,String text) {
+	public Package findHeadSet(Package parent, String text) {
 		Package item = new Package(text);
-		Package tail=new Package();
-		for(Item i : parent.headSet(item)) {
+		Package tail = new Package();
+		for (Item i : parent.headSet(item)) {
 			tail.add(i);
 		}
 		return tail;
 	}
 
-	public Package findItemSet(Package parent,String text) {
+	public Package findItemSet(Package parent, String text) {
 		Item item = new Package();
-		Package toBeUsedInLoop=findTailSet(parent,text);
+		Package toBeUsedInLoop = findTailSet(parent, text);
 
-		for(Item i: toBeUsedInLoop) {
+		for (Item i: toBeUsedInLoop) {
 
-			if(!(i.getName().startsWith(text))){
+			if (!(i.getName().startsWith(text))) {
 				item = i;
 				break;
 			}
 
-			item=i;                                     
+			item = i;
 		}
 		try {
-			if(item.equals(toBeUsedInLoop.last())) {
+			if (item.equals(toBeUsedInLoop.last())) {
 
 
 				return(toBeUsedInLoop);
+			} else {
+				return(findHeadSet(toBeUsedInLoop, item.getName()));
 			}
-			else {
-				return(findHeadSet(toBeUsedInLoop,item.getName()));
-			}
-		} catch(Exception e){return toBeUsedInLoop;}
+		} catch (Exception e) {
+			return toBeUsedInLoop;
+		}
 	}
 
 	public Package findImportedClassSet(Package root) {
-		for(String s : packageNames) {
-			String[] parts=s.split("\\.");
-			Item current=findPackage(parts,root);                                    //to create this function
-			if(current instanceof Package) {
+		for (String s : packageNames) {
+			String[] parts = s.split("\\.");
+			Item current = findPackage(parts, root);                                 //to create this function
+			if (current instanceof Package) {
 				try {
-					for(Item i: (Package)current) {
-						if(i instanceof ClassName) {
+					for (Item i: (Package)current) {
+						if (i instanceof ClassName) {
 							toReturnClassPart.add(i);
+						}
 					}
+				} catch (Exception e) {
+					e.printStackTrace();
 				}
-				} catch(Exception e) { e.printStackTrace(); }
 			}
-			if(current instanceof ClassName) {
+			if (current instanceof ClassName) {
 				toReturnClassPart.add(current);
 			}
 
@@ -335,51 +336,54 @@ class ClassNames {
 		return toReturnClassPart;
 	}
 
-	public Package findCompletionClassSet(Package set,String text) {
+	public Package findCompletionClassSet(Package set, String text) {
 
-		Package toReturn=new Package();
-		for(Item i: set) {
-			if(i.getName().startsWith(text)) {
+		Package toReturn = new Package();
+		for (Item i: set) {
+			if (i.getName().startsWith(text)) {
 				toReturn.add(i);
 			}
 		}
 		return toReturn;
 	}
 
-	public Item findPackage(String[] splitPart,Package p) {
-		for(int i=0;i<splitPart.length-1;i++) {
-			p=(Package)findTailSet(p,splitPart[i]).first();
+	public Item findPackage(String[] splitPart, Package p) {
+		for (int i = 0; i < splitPart.length - 1; i++) {
+			p = (Package)findTailSet(p, splitPart[i]).first();
 		}
-		if(splitPart[splitPart.length-1].equals("*")) {
+		if (splitPart[splitPart.length-1].equals("*")) {
 			return (Item)p;
-		}
-		else {
-			return findTailSet(p,splitPart[splitPart.length-1]).first();
+		} else {
+			return findTailSet(p, splitPart[splitPart.length-1]).first();
 		}
 	}
 
 	public ArrayList createListCompletions(Package setOfCompletions) {
-		ArrayList listOfCompletions =new ArrayList();
+		ArrayList listOfCompletions = new ArrayList();
 
-		for(Item i : setOfCompletions) {
+		for (Item i : setOfCompletions) {
 			try {
 				try {
-					if(i instanceof ClassName) {
+					if (i instanceof ClassName) {
 
 						String fullName = ((ClassName)i).getCompleteName();
-						Class clazz=getClass().getClassLoader().loadClass(fullName);
+						Class clazz = getClass().getClassLoader().loadClass(fullName);
 						Constructor[] ctor = clazz.getConstructors();
 
-						for(Constructor c : ctor) {
+						for (Constructor c : ctor) {
 
-							String cotrCompletion=createCotrCompletion(c.toString());
-							listOfCompletions.add(new BasicCompletion(defaultProvider,cotrCompletion));
+							String cotrCompletion = createCotrCompletion(c.toString());
+							listOfCompletions.add(new BasicCompletion(defaultProvider, cotrCompletion));
 						}
-						listOfCompletions.add(new BasicCompletion(defaultProvider,i.getName()+"."));
+						listOfCompletions.add(new BasicCompletion(defaultProvider, i.getName() + "."));
 					}
-				} catch(NoClassDefFoundError e){ e.printStackTrace(); }
-			} catch(Exception e){ e.printStackTrace(); }
-			listOfCompletions.add(new BasicCompletion(defaultProvider,i.getName()));
+				} catch (NoClassDefFoundError e) {
+					e.printStackTrace();
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			listOfCompletions.add(new BasicCompletion(defaultProvider, i.getName()));
 
 		}
 		return listOfCompletions;
@@ -389,34 +393,33 @@ class ClassNames {
 
 		String[] bracketSeparated = cotr.split("\\(");
 		int lastDotBeforeBracket = bracketSeparated[0].lastIndexOf(".");
-		return(cotr.substring(lastDotBeforeBracket+1));
+		return(cotr.substring(lastDotBeforeBracket + 1));
 
 	}
 
-	public ArrayList createFunctionCompletion(TreeSet<ClassMethod> setOfCompletions,boolean isStatic) {
-		ArrayList listOfCompletions=new ArrayList();
-		for(ClassMethod method : setOfCompletions) {
-			if(method.isStatic && method.isPublic) {
-				listOfCompletions.add(new FunctionCompletion(defaultProvider,method.onlyName,method.returnType));      //currently basiccompletion can be changed to functioncompletion
+	public ArrayList createFunctionCompletion(TreeSet<ClassMethod> setOfCompletions, boolean isStatic) {
+		ArrayList listOfCompletions = new ArrayList();
+		for (ClassMethod method : setOfCompletions) {
+			if (method.isStatic && method.isPublic) {
+				listOfCompletions.add(new FunctionCompletion(defaultProvider, method.onlyName, method.returnType));    //currently basiccompletion can be changed to functioncompletion
 			}
 		}
 
 		return listOfCompletions;
 	}
 
-	public void generateClassRelatedCompletions(ClassName className,String[] parts) {
+	public void generateClassRelatedCompletions(ClassName className, String[] parts) {
 
-			TreeSet<ClassMethod> set =(TreeSet<ClassMethod>)className.methodNames.tailSet(new ClassMethod(parts[parts.length-1],true));
-			for(ClassMethod c : set) {
+		TreeSet<ClassMethod> set = (TreeSet<ClassMethod>)className.methodNames.tailSet(new ClassMethod(parts[parts.length-1], true));
+		for (ClassMethod c : set) {
 
-				if(!c.onlyName.startsWith(parts[parts.length-1])) {
-					break;
-				}
-				else {
-					if(c.isStatic && c.isPublic)
-						defaultProvider.addCompletion(new FunctionCompletion(defaultProvider,c.onlyName,c.returnType));
-				}
+			if (!c.onlyName.startsWith(parts[parts.length-1])) {
+				break;
+			} else {
+				if (c.isStatic && c.isPublic)
+					defaultProvider.addCompletion(new FunctionCompletion(defaultProvider, c.onlyName, c.returnType));
 			}
+		}
 
 	}
 

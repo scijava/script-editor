@@ -16,22 +16,22 @@ public class BreakpointManager {
 	private RSyntaxTextArea textArea;
 	private IconGroup iconGroup;
 
-	public BreakpointManager(Gutter gut, RSyntaxTextArea area, IconGroup group) {
-		gutter = gut;
-		textArea = area;
-		iconGroup = group;
-		lineNumberList = new ArrayList();
+	public BreakpointManager(Gutter gut,RSyntaxTextArea area,IconGroup group) {
+		gutter=gut;
+		textArea=area;
+		iconGroup=group;
+		lineNumberList=new ArrayList();
 	}
 
 	public List findBreakpointsLineNumber() {
 		lineNumberList.clear();
-		GutterIconInfo[] icons = gutter.getBookmarks();
-		for (int i = 0; i < icons.length; i++) {
-			Icon icon = icons[i].getIcon();
-			int offset = icons[i].getMarkedOffset();
+		GutterIconInfo[] icons=gutter.getBookmarks();
+		for(int i=0;i<icons.length;i++) {
+			Icon icon=icons[i].getIcon();
+			int offset=icons[i].getMarkedOffset();
 			try {
 				lineNumberList.add(textArea.getLineOfOffset(offset));
-			} catch (BadLocationException ble) { 							//It never happens
+			} catch(BadLocationException ble){ 							//It never happens
 				System.out.println("bad location exception");
 			}
 		}

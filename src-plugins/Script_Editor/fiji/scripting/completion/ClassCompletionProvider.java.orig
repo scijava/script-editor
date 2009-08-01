@@ -20,7 +20,7 @@ import org.fife.ui.autocomplete.CompletionProviderBase;
 
 
 public class ClassCompletionProvider extends CompletionProviderBase
-			implements ToolTipSupplier {
+								implements ToolTipSupplier {
 
 	/**
 	 * The provider to use when no provider is assigned to a particular token
@@ -53,14 +53,14 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	 * @param defaultProvider The provider to use when no provider is assigned
 	 *        to a particular token type.  This cannot be <code>null</code>.
 	 */
-	public ClassCompletionProvider(CompletionProvider defaultProvider, RSyntaxTextArea textArea, String language) {
+	public ClassCompletionProvider(CompletionProvider defaultProvider,RSyntaxTextArea textArea,String language) {
 		setDefaultProvider(defaultProvider);
-		this.textArea = textArea;
-		names = new ClassNames();
-		this.language = language;
+		this.textArea=textArea;
+		names =new ClassNames();
+		this.language=language;
 		names.run(System.getProperty("java.class.path").split(File.pathSeparator));
 		names.run(System.getProperty("sun.boot.class.path").split(File.pathSeparator));
-		topLevel = names.getTopPackage();
+		topLevel=names.getTopPackage();
 
 	}
 
@@ -106,8 +106,8 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	 * {@inheritDoc}
 	 */
 	public List getCompletionsAt(JTextComponent tc, Point p) {
-		return defaultProvider == null ? null :
-		       defaultProvider.getCompletionsAt(tc, p);
+		return defaultProvider==null ? null :
+				defaultProvider.getCompletionsAt(tc, p);
 	}
 
 	/**
@@ -122,8 +122,8 @@ public class ClassCompletionProvider extends CompletionProviderBase
 			return new ArrayList(0);
 		}
 		CompletionProvider provider = getProviderFor(comp);
-		return provider != null ? provider.getCompletions(comp) :
-		       new ArrayList(0);
+		return provider!=null ? provider.getCompletions(comp) :
+					new ArrayList(0);
 	}
 
 
@@ -135,13 +135,13 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	 * @see #setDefaultCompletionProvider(CompletionProvider)
 	 */
 	public CompletionProvider getDefaultProvider() {
-		defaultProvider = (DefaultProvider)names.getDefaultProvider(topLevel, textArea, language);
+		defaultProvider=(DefaultProvider)names.getDefaultProvider(topLevel,textArea,language);
 		return defaultProvider;
 
 	}
 
 	public void setProviderLanguage(String lang) {
-		language = lang;
+		language=lang;
 	}
 
 
@@ -208,25 +208,47 @@ public class ClassCompletionProvider extends CompletionProviderBase
 		RSyntaxDocument doc = (RSyntaxDocument)rsta.getDocument();
 		int line = rsta.getCaretLineNumber();
 		Token t = doc.getTokenListForLine(line);
-		if (t == null) {
+		if (t==null) {
 			return getDefaultProvider();
 		}
 
 		int dot = rsta.getCaretPosition();
 		Token curToken = RSyntaxUtilities.getTokenAtOffset(t, dot);
 
-		if (curToken == null) { // At end of the line
+		if (curToken==null) { // At end of the line
 
 			int type = doc.getLastTokenTypeOnLine(line);
-			if (type == Token.NULL) {
+			if (type==Token.NULL) {
 				Token temp = t.getLastPaintableToken();
-				if (temp == null) {
+				if (temp==null) {
 					return getDefaultProvider();
 				}
 				type = temp.type;
 			}
 
 			switch (type) {
+				case Token.ERROR_STRING_DOUBLE:
+					return getStringCompletionProvider();
+				case Token.COMMENT_EOL:
+				case Token.COMMENT_MULTILINE:
+					return getCommentCompletionProvider();
+				case Token.COMMENT_DOCUMENTATION:
+					return getDocCommentCompletionProvider();
+				default:
+					return getDefaultProvider();
+			}
+
+		}
+
+		// FIXME: This isn't always a safe assumption.
+		if (dot==curToken.offset) { // At the very beginning of a new token
+			// Need to check previous token for its type before deciding.
+			// Previous token may also be on previous line!
+			return getDefaultProvider();
+		}
+
+		switch (curToken.type) {
+			case Token.LITERAL_STRING_DOUBLE_QUOTE:
 			case Token.ERROR_STRING_DOUBLE:
 				return getStringCompletionProvider();
 			case Token.COMMENT_EOL:
@@ -234,36 +256,14 @@ public class ClassCompletionProvider extends CompletionProviderBase
 				return getCommentCompletionProvider();
 			case Token.COMMENT_DOCUMENTATION:
 				return getDocCommentCompletionProvider();
-			default:
+			case Token.NULL:
+			case Token.WHITESPACE:
+			case Token.IDENTIFIER:
+			case Token.VARIABLE:
+			case Token.PREPROCESSOR:
+			case Token.DATA_TYPE:
+			case Token.FUNCTION:
 				return getDefaultProvider();
-			}
-
-		}
-
-		// FIXME: This isn't always a safe assumption.
-		if (dot == curToken.offset) { // At the very beginning of a new token
-			// Need to check previous token for its type before deciding.
-			// Previous token may also be on previous line!
-			return getDefaultProvider();
-		}
-
-		switch (curToken.type) {
-		case Token.LITERAL_STRING_DOUBLE_QUOTE:
-		case Token.ERROR_STRING_DOUBLE:
-			return getStringCompletionProvider();
-		case Token.COMMENT_EOL:
-		case Token.COMMENT_MULTILINE:
-			return getCommentCompletionProvider();
-		case Token.COMMENT_DOCUMENTATION:
-			return getDocCommentCompletionProvider();
-		case Token.NULL:
-		case Token.WHITESPACE:
-		case Token.IDENTIFIER:
-		case Token.VARIABLE:
-		case Token.PREPROCESSOR:
-		case Token.DATA_TYPE:
-		case Token.FUNCTION:
-			return getDefaultProvider();
 		}
 
 		return null; // In a token type we can't auto-complete from.
@@ -301,7 +301,7 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	 * @see #getDefaultCompletionProvider()
 	 */
 	public void setDefaultProvider(CompletionProvider provider) {
-		if (provider == null) {
+		if (provider==null) {
 			throw new IllegalArgumentException("provider cannot be null");
 		}
 		this.defaultProvider = (DefaultProvider)provider;
@@ -329,7 +329,7 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	 * @see #clearParameterizedCompletionParams()
 	 */
 	public void setParameterizedCompletionParams(char listStart,
-	                String separator, char listEnd) {
+										String separator, char listEnd) {
 		throw new UnsupportedOperationException();
 	}
 
@@ -350,7 +350,7 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	 *
 	 * For this method to be called, the <tt>RSyntaxTextArea</tt> must be
 	 * registered with the <tt>javax.swing.ToolTipManager</tt> like so:
-	 *
+	 * 
 	 * <pre>
 	 * ToolTipManager.sharedInstance().registerComponent(textArea);
 	 * </pre>
@@ -364,7 +364,7 @@ public class ClassCompletionProvider extends CompletionProviderBase
 		String tip = null;
 
 		List completions = getCompletionsAt(textArea, e.getPoint());
-		if (completions != null && completions.size() > 0) {
+		if (completions!=null && completions.size()>0) {
 			// Only ever 1 match for us in C...
 			Completion c = (Completion)completions.get(0);
 			tip = c.getToolTipText();

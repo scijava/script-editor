@@ -8,7 +8,7 @@ import JRuby.Refresh_JRuby_Scripts;
 import Javascript.Refresh_Javascript_Scripts;
 import fiji.scripting.java.Refresh_Javas;
 
-public class LanguageScriptMap extends HashMap<String, RefreshScripts> {
+public class LanguageScriptMap extends HashMap<String,RefreshScripts>{
 
 	public LanguageScriptMap() {
 		put(".clj", new Refresh_Clojure_Scripts());
@@ -17,5 +17,5 @@ public class LanguageScriptMap extends HashMap<String, RefreshScripts> {
 		put(".rb", new Refresh_JRuby_Scripts());
 		put(".java", new Refresh_Javas());
 	}
-
+	
 }

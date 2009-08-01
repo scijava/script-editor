@@ -51,7 +51,7 @@ public class CCellRenderer extends CompletionCellRenderer {
 	private Icon getIcon(String resource) {
 		ClassLoader cl = getClass().getClassLoader();
 		URL url = cl.getResource(resource);
-		if (url == null) {
+		if (url==null) {
 			File file = new File(resource);
 			try {
 				url = file.toURI().toURL();
@@ -59,7 +59,7 @@ public class CCellRenderer extends CompletionCellRenderer {
 				mue.printStackTrace(); // Never happens
 			}
 		}
-		return url != null ? new ImageIcon(url) : null;
+		return url!=null ? new ImageIcon(url) : null;
 	}
 
 
@@ -67,7 +67,7 @@ public class CCellRenderer extends CompletionCellRenderer {
 	 * {@inheritDoc}
 	 */
 	protected void prepareForOtherCompletion(JList list,
-	                Completion c, int index, boolean selected, boolean hasFocus) {
+			Completion c, int index, boolean selected, boolean hasFocus) {
 		super.prepareForOtherCompletion(list, c, index, selected, hasFocus);
 		setIcon(emptyIcon);
 	}
@@ -77,10 +77,10 @@ public class CCellRenderer extends CompletionCellRenderer {
 	 * {@inheritDoc}
 	 */
 	protected void prepareForVariableCompletion(JList list,
-	                VariableCompletion vc, int index, boolean selected,
-	                boolean hasFocus) {
+			VariableCompletion vc, int index, boolean selected,
+			boolean hasFocus) {
 		super.prepareForVariableCompletion(list, vc, index, selected,
-		                                   hasFocus);
+										hasFocus);
 		setIcon(variableIcon);
 	}
 
@@ -89,10 +89,10 @@ public class CCellRenderer extends CompletionCellRenderer {
 	 * {@inheritDoc}
 	 */
 	protected void prepareForFunctionCompletion(JList list,
-	                FunctionCompletion fc, int index, boolean selected,
-	                boolean hasFocus) {
+			FunctionCompletion fc, int index, boolean selected,
+			boolean hasFocus) {
 		super.prepareForFunctionCompletion(list, fc, index, selected,
-		                                   hasFocus);
+										hasFocus);
 		setIcon(functionIcon);
 	}
 
@@ -122,7 +122,7 @@ public class CCellRenderer extends CompletionCellRenderer {
 
 		public void paintIcon(Component c, Graphics g, int x, int y) {
 		}
-
+		
 	}
 
 
