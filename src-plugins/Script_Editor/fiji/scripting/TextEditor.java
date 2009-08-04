@@ -486,11 +486,13 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 				if (val == JOptionPane.YES_OPTION) {
 					title = (String)file.getName() + " - Text Editor Demo for fiji";
 					setTitle(title);
+					isFileUnnamed=false;
 					setLanguage(file);
 					writeToFile(file);
 				} else
 					return -1;
 			} else {
+				isFileUnnamed=false;
 				setLanguage(file);
 				writeToFile(file);
 			}
