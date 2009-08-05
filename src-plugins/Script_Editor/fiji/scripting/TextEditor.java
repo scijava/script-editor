@@ -82,7 +82,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	JTextArea screen = new JTextArea();
 	Document doc;
 	JMenuItem new1, open, save, saveas, compileAndRun, debug, quit, undo, redo, cut, copy, paste, find, replace, selectAll, autocomplete, jfcdialog, ijdialog, resume, terminate;
-	JRadioButtonMenuItem[] lang = new JRadioButtonMenuItem[7];
+	JRadioButtonMenuItem[] lang = new JRadioButtonMenuItem[8];
 	FileInputStream fin;
 	FindAndReplaceDialog replaceDialog;
 	AutoCompletion autocomp;
@@ -195,11 +195,11 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 		/*********The Language parts starts here********************/
 		JMenu language = new JMenu("Language");
-		String[] langArray = {"Java", "Javascript", "Python", "Ruby", "Clojure", "Matlab", "None"};
-		String[] langExt = {".java", ".js", ".py", ".rb", ".clj", ".m", ".n"};
-		int[] keyevent = {KeyEvent.VK_J, KeyEvent.VK_J, KeyEvent.VK_P, KeyEvent.VK_R, KeyEvent.VK_M, KeyEvent.VK_C, KeyEvent.VK_N};
+		String[] langArray = {"Java", "Javascript", "Python", "Ruby", "Clojure", "Matlab", "BeanShell", "None"};
+		String[] langExt = {".java", ".js", ".py", ".rb", ".clj", ".m", ".bsh", ".n"};
+		int[] keyevent = {KeyEvent.VK_J, KeyEvent.VK_J, KeyEvent.VK_P, KeyEvent.VK_R, KeyEvent.VK_M, KeyEvent.VK_C, KeyEvent.VK_B, KeyEvent.VK_N};
 		ButtonGroup group = new ButtonGroup();
-		for (int i = 0; i < 7; i++) {
+		for (int i = 0; i < 8; i++) {
 
 			lang[i] = new JRadioButtonMenuItem(langArray[i]);
 			lang[i].setMnemonic(keyevent[i]);
@@ -209,7 +209,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			lang[i].setActionCommand(langExt[i]);
 
 		}
-		lang[6].setSelected(true);
+		lang[7].setSelected(true);
 		mbar.add(language);
 		map = new LanguageInformationMap(lang);
 		JMenu breakpoints = new JMenu("Breakpoints");
