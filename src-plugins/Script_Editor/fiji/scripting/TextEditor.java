@@ -81,7 +81,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	RSyntaxTextArea textArea;
 	JTextArea screen = new JTextArea();
 	Document doc;
-	JMenuItem new1, open, save, saveas, compileAndRun, debug, quit, undo, redo, cut, copy, paste, find, replace, selectAll, autocomplete, jfcdialog, ijdialog, resume, terminate;
+	JMenuItem new1, open, save, saveas, compileAndRun, debug, quit, undo, redo, cut, copy, paste, find, replace, selectAll, autocomplete, resume, terminate;
 	JRadioButtonMenuItem[] lang = new JRadioButtonMenuItem[8];
 	FileInputStream fin;
 	FindAndReplaceDialog replaceDialog;
@@ -148,12 +148,6 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		addToMenu(file, save, "Save", 0, KeyEvent.VK_S, ActionEvent.CTRL_MASK);
 		addToMenu(file, save, "Save as...", 1, 0, 0);
 		file.addSeparator();
-		JMenu run = new JMenu("Run");
-		addToMenu(run, compileAndRun, "Compile and Run", 1, 0, 0);
-		run.addSeparator();
-		addToMenu(run, debug, "Start Debugging", 1, 0, 0);
-		file.add(run);
-		file.addSeparator();
 		addToMenu(file, quit, "Quit", 0, KeyEvent.VK_X, ActionEvent.ALT_MASK);
 
 		mbar.add(file);
@@ -182,14 +176,6 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		JMenu options = new JMenu("Options");
 		addToMenu(options, autocomplete, "Autocomplete", 0, KeyEvent.VK_SPACE, ActionEvent.CTRL_MASK);
 		options.addSeparator();
-		JMenu io = new JMenu("Input/Output");
-		JMenu dialog = new JMenu("Open/Save Dialog");
-		addToMenu(dialog, jfcdialog, "JFileChooser", 1, 0, 0);
-		dialog.addSeparator();
-		addToMenu(dialog, ijdialog, "IJ", 1, 0, 0);
-		io.add(dialog);
-
-		options.add(io);
 
 		mbar.add(options);
 
@@ -212,6 +198,13 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		lang[7].setSelected(true);
 		mbar.add(language);
 		map = new LanguageInformationMap(lang);
+
+		JMenu run=new JMenu("Run");
+		addToMenu(run, compileAndRun, "Compile and Run", 0, KeyEvent.VK_F11, ActionEvent.CTRL_MASK);
+		run.addSeparator();
+		addToMenu(run, debug, "Start Debugging", 0, KeyEvent.VK_F11, 0);
+		mbar.add(run);
+
 		JMenu breakpoints = new JMenu("Breakpoints");
 		addToMenu(breakpoints, resume, "Resume", 1, 0, 0);
 		addToMenu(breakpoints, terminate, "Terminate", 1, 0, 0);
@@ -279,13 +272,11 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 		if (command.equals("Open...")) {
 			if (handleUnsavedChanges() != 0) {
-				int returnVal = -1;
 				OpenDialog dialog = new OpenDialog("Open..", "");
 				String directory = dialog.getDirectory();
 				String name = dialog.getFileName();
 				String path = "";
 				if (name != null) {
-					returnVal = fcc.APPROVE_OPTION;
 					path = directory + name;
 					boolean fullPath = path.startsWith("/") || path.startsWith("\\") || path.indexOf(":\\") == 1 || path.startsWith("http://");
 					if (!fullPath) {
@@ -293,9 +284,8 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 						if (workingDir != null)
 							path = workingDir + path;
 					}
-				}
-				if (returnVal == fcc.APPROVE_OPTION)
 					open(path);
+				}
 			}
 		}
 
@@ -358,14 +348,6 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			try {
 				autocomp.doCompletion();
 			} catch (Exception e) {}
-		}
-		if (command.equals("JFileChooser")) {
-			Prefs.useJFileChooser = true;
-			Prefs.savePreferences();
-		}
-		if (command.equals("IJ")) {
-			Prefs.useJFileChooser = false;
-			Prefs.savePreferences();
 		}
 
 		//setting actionPerformed for language menu
@@ -475,11 +457,9 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	}
 
 	public int saveAs(String path, boolean ifReplaceFile) {
-		if (!Prefs.useJFileChooser) {
+
 			file = new File(path);
-		} else {
-			file = fcc.getSelectedFile();
-		}
+
 		try {
 			if (ifReplaceFile) {
 				int val = JOptionPane.showConfirmDialog(this, "Do you want to replace " + file.getName() + "??", "Do you want to replace " + file.getName() + "??", JOptionPane.YES_NO_OPTION);
