@@ -25,7 +25,7 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 
 /****This class generates and prints the
 list of trees having each part of the classnames path
-as a node of the tree like for java.awt.List ,the top level List
+as a node of the tree like for java.awt.List, the top level List
 contains a Tree object with key "java" and one of its childList
 element as awt which in turn has its childDList having its one childList
 as Listwhich is infact also a leaf ***********/

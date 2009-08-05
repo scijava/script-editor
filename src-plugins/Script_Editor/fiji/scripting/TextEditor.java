@@ -68,7 +68,7 @@ import fiji.scripting.completion.ClassCompletionProvider;
 import fiji.scripting.completion.DefaultProvider;
 
 
-class TextEditor extends JFrame implements ActionListener , ItemListener , ChangeListener , MouseMotionListener, MouseListener , CaretListener, InputMethodListener, DocumentListener, WindowListener	{
+class TextEditor extends JFrame implements ActionListener, ItemListener, ChangeListener, MouseMotionListener, MouseListener, CaretListener, InputMethodListener, DocumentListener, WindowListener {
 
 	JFileChooser fcc;
 	boolean fileChanged = false;

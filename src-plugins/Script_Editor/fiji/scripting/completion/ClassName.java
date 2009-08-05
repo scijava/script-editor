@@ -4,7 +4,7 @@ import java.lang.Comparable;
 import java.util.TreeSet;
 import java.lang.reflect.Method;
 
-public class ClassName implements Item , Comparable {
+public class ClassName implements Item, Comparable {
 
 	String key;
 	String completeName;
