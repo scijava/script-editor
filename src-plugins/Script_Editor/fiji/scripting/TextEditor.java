@@ -70,7 +70,6 @@ import fiji.scripting.completion.DefaultProvider;
 
 class TextEditor extends JFrame implements ActionListener, ItemListener, ChangeListener, MouseMotionListener, MouseListener, CaretListener, InputMethodListener, DocumentListener, WindowListener {
 
-	JFileChooser fcc;
 	boolean fileChanged = false;
 	boolean isFileUnnamed = true;
 	String title = "";
@@ -92,7 +91,6 @@ class TextEditor extends JFrame implements ActionListener, ItemListener, ChangeL
 	IconGroup iconGroup;
 
 	public TextEditor(String path1) {
-		fcc = new JFileChooser();
 		JPanel cp = new JPanel(new BorderLayout());
 		title = "Text Editor for Fiji";
 		textArea = new RSyntaxTextArea();
