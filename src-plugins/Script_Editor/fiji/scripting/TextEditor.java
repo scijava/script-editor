@@ -86,13 +86,10 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	FileInputStream fin;
 	FindAndReplaceDialog replaceDialog;
 	AutoCompletion autocomp;
-	LanguageScriptMap scriptmap = new LanguageScriptMap();
 	ClassCompletionProvider provider;
 	StartDebugging debugging;
 	Gutter gutter;
 	IconGroup iconGroup;
-	LanguageInformationMap map;
-	LanguageInformation langInfo;
 
 	public TextEditor(String path1) {
 		fcc = new JFileChooser();
@@ -180,24 +177,23 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		mbar.add(options);
 
 		/*********The Language parts starts here********************/
-		JMenu language = new JMenu("Language");
-		String[] langArray = {"Java", "Javascript", "Python", "Ruby", "Clojure", "Matlab", "BeanShell", "None"};
-		String[] langExt = {".java", ".js", ".py", ".rb", ".clj", ".m", ".bsh", ".n"};
-		int[] keyevent = {KeyEvent.VK_J, KeyEvent.VK_J, KeyEvent.VK_P, KeyEvent.VK_R, KeyEvent.VK_M, KeyEvent.VK_C, KeyEvent.VK_B, KeyEvent.VK_N};
+		JMenu languages = new JMenu("Language");
 		ButtonGroup group = new ButtonGroup();
-		for (int i = 0; i < 8; i++) {
+		for (Languages.Language language :
+				Languages.getInstance().languages) {
+			JRadioButtonMenuItem item =
+				new JRadioButtonMenuItem(language.menuLabel);
+			if (language.shortCut != 0)
+				item.setMnemonic(language.shortCut);
+			item.addActionListener(this);
+			item.setActionCommand(language.extension);
 
-			lang[i] = new JRadioButtonMenuItem(langArray[i]);
-			lang[i].setMnemonic(keyevent[i]);
-			group.add(lang[i]);
-			language.add(lang[i]);
-			lang[i].addActionListener(this);
-			lang[i].setActionCommand(langExt[i]);
-
+			group.add(item);
+			languages.add(item);
+			language.item = item;
 		}
-		lang[7].setSelected(true);
-		mbar.add(language);
-		map = new LanguageInformationMap(lang);
+		Languages.getInstance().get("").item.setSelected(true);
+		mbar.add(languages);
 
 		JMenu run=new JMenu("Run");
 		addToMenu(run, compileAndRun, "Compile and Run", 0, KeyEvent.VK_F11, ActionEvent.CTRL_MASK);
@@ -351,28 +347,16 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		}
 
 		//setting actionPerformed for language menu
-		if (command.startsWith(".")) {
-			langInfo = map.get(command);
-			setLanguageProperties(command);
-		}
-		if (command.equals("Resume")) {
+		if (command.startsWith("."))
+			setLanguageByExtension(command);
+		if (command.equals("Resume"))
 			debugging.resumeVM();
-		}
-		if (command.equals("Terminate")) {
-		}
+		if (command.equals("Terminate")) { }
 
 	}
 
-
-	private void setLanguageProperties(String string) {
-		if (string.equals(".clj")) {
-			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());
-		} else if (string.equals(".m")) {
-			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new MatlabTokenMaker());
-		} else {
-			textArea.setSyntaxEditingStyle(langInfo.getSyntaxStyle());
-		}
-		provider.setProviderLanguage(langInfo.getMenuEntry());
+	protected RSyntaxDocument getDocument() {
+		return (RSyntaxDocument)textArea.getDocument();
 	}
 
 	public void setFindAndReplace(boolean ifReplace) {
@@ -403,8 +387,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		try {
 			if (file != null) {
 				fileChanged = false;
-				setLanguage(file);
-				isFileUnnamed = false;
+				setFileName(file);
 				fin = new FileInputStream(file);
 				BufferedReader din = new BufferedReader(new InputStreamReader(fin));
 				String s = "";
@@ -463,20 +446,11 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		try {
 			if (ifReplaceFile) {
 				int val = JOptionPane.showConfirmDialog(this, "Do you want to replace " + file.getName() + "??", "Do you want to replace " + file.getName() + "??", JOptionPane.YES_NO_OPTION);
-				if (val == JOptionPane.YES_OPTION) {
-					title = (String)file.getName() + " - Text Editor Demo for fiji";
-					setTitle(title);
-					isFileUnnamed=false;
-					setLanguage(file);
-					writeToFile(file);
-				} else
+				if (val != JOptionPane.YES_OPTION)
 					return -1;
-			} else {
-				isFileUnnamed=false;
-				setLanguage(file);
-				writeToFile(file);
 			}
-
+			writeToFile(file);
+			setFileName(file);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -488,9 +462,9 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		if (isFileUnnamed) {
 			return(saveasaction());
 		} else {
+			writeToFile(file);
 			if (fileChanged)
 				setTitle(getTitle().substring(1));
-			writeToFile(file);
 			return JFileChooser.APPROVE_OPTION;
 		}
 	}
@@ -505,24 +479,30 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		} catch (Exception e) {}
 	}
 
-	public void setLanguage(File file) {
-		boolean dotNotFound = true;
-		String fileName = file.getName();
-		title = fileName + " - Text Editor Demo for fiji";
+	public static String getExtension(String fileName) {
+		int dot = fileName.lastIndexOf(".");
+		return dot < 0 ?  "" : fileName.substring(dot);
+	}
+
+	private void setLanguageByExtension(String extension) {
+		Languages.Language info = Languages.getInstance().get(extension);
+
+		if (extension.equals(".clj"))
+			getDocument().setSyntaxStyle(new ClojureTokenMaker());
+		else if (extension.equals(".m"))
+			getDocument().setSyntaxStyle(new MatlabTokenMaker());
+		else
+			textArea.setSyntaxEditingStyle(info.syntaxStyle);
+		provider.setProviderLanguage(info.menuLabel);
+
+		info.item.setSelected(true);
+	}
+
+	public void setFileName(File file) {
+		isFileUnnamed = false;
+		title = file.getName();
 		setTitle(title);
-		int k = fileName.lastIndexOf(".");
-		if (k > 0) {
-			dotNotFound = false;
-			langInfo = map.get(fileName.substring(k));
-		}
-		if (langInfo == null || dotNotFound)
-			langInfo = map.get(".n");
-		if (langInfo.getMenuEntry().equals("None")) {
-			setLanguageProperties(".n");
-		} else {
-			setLanguageProperties(fileName.substring(k));
-		}
-		langInfo.getMenuItem().setSelected(true);
+		setLanguageByExtension(getExtension(title));
 	}
 
 	public void runScript() {
@@ -540,19 +520,17 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	}
 
 	public void runSavedScript() {
-
-		String extension = "";
-		String fileName = (String)file.getName();
-		int i = fileName.lastIndexOf(".");
-		if (i > 0)
-			extension = fileName.substring(i);
-		RefreshScripts refreshClass = scriptmap.get(fileName.substring(i));
-		if (refreshClass == null) IJ.error("Booh!");
-		else refreshClass.runScript(file.getPath());
-
-
+		String ext = getExtension(file.getName());
+		RefreshScripts interpreter =
+			Languages.getInstance().get(ext).interpreter;
+		if (interpreter == null)
+			IJ.error("There is no interpreter for " + ext
+					+ " files!");
+		else
+			interpreter.runScript(file.getPath());
 	}
 
+	// TODO: saveChangeDialog() should check fileChanged itself
 	public void windowClosing(WindowEvent e) {
 
 		if (fileChanged) {
