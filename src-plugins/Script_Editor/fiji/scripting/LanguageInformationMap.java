@@ -13,7 +13,8 @@ public class LanguageInformationMap extends HashMap<String, LanguageInformation>
 		put(".rb", new LanguageInformation(SyntaxConstants.SYNTAX_STYLE_RUBY, language[3], "Ruby"));
 		put(".clj", new LanguageInformation(null, language[4], "Clojure"));
 		put(".m", new LanguageInformation(null, language[5], "Matlab"));
-		put(".n", new LanguageInformation(SyntaxConstants.SYNTAX_STYLE_NONE, language[6], "None"));
+		put(".bsh", new LanguageInformation(SyntaxConstants.SYNTAX_STYLE_JAVA, language[6], "BeanShell"));
+		put(".n", new LanguageInformation(SyntaxConstants.SYNTAX_STYLE_NONE, language[7], "None"));
 	}
 
 }
