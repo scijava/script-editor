@@ -7,6 +7,7 @@ import Jython.Refresh_Jython_Scripts;
 import JRuby.Refresh_JRuby_Scripts;
 import Javascript.Refresh_Javascript_Scripts;
 import fiji.scripting.java.Refresh_Javas;
+import BSH.Refresh_BSH_Scripts;
 
 public class LanguageScriptMap extends HashMap<String, RefreshScripts> {
 
@@ -16,6 +17,7 @@ public class LanguageScriptMap extends HashMap<String, RefreshScripts> {
 		put(".js", new Refresh_Javascript_Scripts());
 		put(".rb", new Refresh_JRuby_Scripts());
 		put(".java", new Refresh_Javas());
+		put(".bsh",new Refresh_BSH_Scripts());
 	}
 
 }
