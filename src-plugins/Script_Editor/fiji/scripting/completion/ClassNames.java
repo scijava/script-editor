@@ -30,7 +30,7 @@ contains a Tree object with key "java" and one of its childList
 element as awt which in turn has its childDList having its one childList
 as Listwhich is infact also a leaf ***********/
 
-class ClassNames {
+public class ClassNames {
 
 	static List list = new List();
 
@@ -41,6 +41,10 @@ class ClassNames {
 	ImportStatementsParser parser = new ImportStatementsParser();
 	ObjStartCompletions obj;
 	ArrayList<String> packageNames = new ArrayList<String>();
+
+	public ClassNames(DefaultProvider provider) {
+		defaultProvider=provider;
+	}
 
 	public void run(String[] args) {
 
@@ -126,8 +130,7 @@ class ClassNames {
 
 
 
-	public CompletionProvider getDefaultProvider(Package root, RSyntaxTextArea textArea, String language) {
-		defaultProvider = new DefaultProvider();
+	public void setClassCompletions(Package root, RSyntaxTextArea textArea, String language) {
 		String text = defaultProvider.getEnteredText(textArea);
 
 
@@ -222,7 +225,6 @@ class ClassNames {
 
 
 		}
-		return defaultProvider;
 
 	}
 
