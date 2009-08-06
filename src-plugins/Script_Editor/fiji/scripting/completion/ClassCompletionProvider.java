@@ -53,10 +53,10 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	 * @param defaultProvider The provider to use when no provider is assigned
 	 *        to a particular token type.  This cannot be <code>null</code>.
 	 */
-	public ClassCompletionProvider(CompletionProvider defaultProvider, RSyntaxTextArea textArea, String language) {
-		setDefaultProvider(defaultProvider);
+	public ClassCompletionProvider(CompletionProvider provider, RSyntaxTextArea textArea, String language) {
+		setDefaultProvider(provider);
 		this.textArea = textArea;
-		names = new ClassNames();
+		names = new ClassNames(defaultProvider);
 		this.language = language;
 		names.run(System.getProperty("java.class.path").split(File.pathSeparator));
 		names.run(System.getProperty("sun.boot.class.path").split(File.pathSeparator));
@@ -135,7 +135,9 @@ public class ClassCompletionProvider extends CompletionProviderBase
 	 * @see #setDefaultCompletionProvider(CompletionProvider)
 	 */
 	public CompletionProvider getDefaultProvider() {
-		defaultProvider = (DefaultProvider)names.getDefaultProvider(topLevel, textArea, language);
+		defaultProvider.clear();
+		KeywordsCompletion.completeKeywords(defaultProvider,language,defaultProvider.getEnteredText(textArea));
+		names.setClassCompletions(topLevel, textArea, language);
 		return defaultProvider;
 
 	}
