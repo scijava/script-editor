@@ -1,7 +1,6 @@
 package fiji.scripting.completion;
 
-import java.lang.Comparable;
-
+// TODO: what does this class do?  Better name?
 public class ImportedClassObjects implements Comparable {
 
 	String name;
@@ -16,6 +15,7 @@ public class ImportedClassObjects implements Comparable {
 		isImported = imported;
 	}
 
+	// TODO: use this();
 	public ImportedClassObjects(String itsname, String classname) {
 		name = itsname;
 		className = classname;
@@ -38,13 +38,11 @@ public class ImportedClassObjects implements Comparable {
 	}
 
 	public String getCompleteClassName() {
-		return this.fullClassName;
+		return fullClassName;
 	}
 	public int compareTo(Object o) {
-		int i = this.name.compareTo(((ImportedClassObjects)o).name);
-		if (i != 0)
-			return(i);
-		else
-			return(this.className.compareTo(((ImportedClassObjects)o).className));
+		ImportedClassObjects other = (ImportedClassObjects)o;
+		int i = name.compareTo(other.name);
+		return i != 0 ? i : className.compareTo(other.className);
 	}
 }

@@ -1,23 +1,27 @@
 package fiji.scripting.completion;
 
+import java.awt.List;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
+
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import java.lang.Object;
-import java.awt.List;
+
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.FunctionCompletion;
@@ -31,7 +35,6 @@ element as awt which in turn has its childDList having its one childList
 as Listwhich is infact also a leaf ***********/
 
 class ClassNames {
-
 	static List list = new List();
 
 	static Package root = new Package();
@@ -43,45 +46,33 @@ class ClassNames {
 	ArrayList<String> packageNames = new ArrayList<String>();
 
 	public void run(String[] args) {
-
-		for (int i = 1; i < args.length; i++) {
-
-			setPathTree(args[i]);
-
-		}
-
+		for (String arg : args)
+			setPathTree(arg);
 	}
 
+	// TODO: rename to getRoot()
 	public Package getTopPackage() {
 		return root;
 	}
 
-
-
-
 	public void setPathTree(String path) {
 		File file = new File(path);
-		if (file.isDirectory()) {
+		if (file.isDirectory())
 			setDirTree(path);
-		}
-		if (path.endsWith(".jar")) {
-
-			try {
-				ZipFile jarFile = new ZipFile(file);
-				list1 = jarFile.entries();
-			} catch (Exception e) {}
+		else if (path.endsWith(".jar")) try {
+			ZipFile jarFile = new ZipFile(file);
+			list1 = jarFile.entries();
 			while (list1.hasMoreElements()) {
 				ZipEntry entry = (ZipEntry)list1.nextElement();
 				String name = entry.getName();
 				if (!name.endsWith(".class"))		//ignoring the non class files
 					continue;
+				// TODO: hmm.  Put together only to split?
 				String[] classname1 = name.split("\\\\");
 				String justClassName = classname1[classname1.length-1];
 				addToTree(justClassName, root, 0);
 			}
-
-		}
-
+		} catch (Exception e) { e.printStackTrace(); }
 	}
 
 	public void setDirTree(String path) {
@@ -93,8 +84,7 @@ class ClassNames {
 			for (int i = 0; i < list.length; i++)
 				setDirTree(path + list[i]);	//recursively adding the classnames to the list
 		}
-
-		if ((path.endsWith(".class"))) {
+		else if ((path.endsWith(".class"))) {
 			String[] classname1 = path.split("\\\\");
 			String justClassName = classname1[classname1.length-1];
 			addToTree(justClassName, root, 0);
@@ -104,12 +94,10 @@ class ClassNames {
 	public void addToTree(String fullName, Package toAdd, int i) {
 		String name = new String(fullName);                       //No splitting now
 		if (fullName.endsWith(".class")) {
-
 			for (;;) {
 				int slash = name.indexOf("/");
-				if (slash < 0) {
+				if (slash < 0)
 					break;
-				}
 				Package item = new Package(name.substring(0, slash) + ".");
 				toAdd.add(item);
 				toAdd = (Package)toAdd.tailSet(item).first();
@@ -117,20 +105,14 @@ class ClassNames {
 			}
 			Item item = new ClassName(name.substring(0, name.length() - 6), fullName.substring(0, fullName.length() - 6));
 			toAdd.add(item);
-
 		}
-
 	}
-
-
-
-
 
 	public CompletionProvider getDefaultProvider(Package root, RSyntaxTextArea textArea, String language) {
 		defaultProvider = new DefaultProvider();
 		String text = defaultProvider.getEnteredText(textArea);
 
-
+		// TODO: clarify (too convoluted)
 		if (!(text == "" || text == null)) {
 			parser.objCompletionPackages(textArea, language);
 			packageNames = parser.getPackageNames();
@@ -187,8 +169,8 @@ class ClassNames {
 
 				}
 
+				// TODO: Hmpf.  This _must_ be simplified
 				if (isPresent) {
-
 					if (!isDotAtLast) {
 						if (isClassBeforeDot) {
 							ClassName name = (ClassName)findTailSet(temp, packageParts[index-temp1]).first();
@@ -217,25 +199,18 @@ class ClassNames {
 
 				}
 			}
-
-
-
-
 		}
 		return defaultProvider;
-
 	}
 
 	public void classStartCompletions(String text) {
 
 		String[] classParts = text.split("\\.");
 		boolean isDotAtLast = false;
-		if (text.charAt(text.length() - 1) == '.') {
+		if (text.charAt(text.length() - 1) == '.')
 			isDotAtLast = true;
-		}
-		if ((classParts.length > 1 && isDotAtLast) || (classParts.length > 2 && !isDotAtLast)) {
+		if ((classParts.length > 1 && isDotAtLast) || (classParts.length > 2 && !isDotAtLast))
 			return;
-		}
 		Package classItemBeforeDot = findCompletionClassSet(findImportedClassSet(root), classParts[0]);
 		if (classItemBeforeDot.size() > 0) {
 			if (classItemBeforeDot.first().getName().equals(classParts[0])) {
@@ -281,6 +256,7 @@ class ClassNames {
 	public Package findHeadSet(Package parent, String text) {
 		Package item = new Package(text);
 		Package tail = new Package();
+		// TODO: this is probably an expensive wrapper around headSet()
 		for (Item i : parent.headSet(item)) {
 			tail.add(i);
 		}
@@ -291,6 +267,7 @@ class ClassNames {
 		Item item = new Package();
 		Package toBeUsedInLoop = findTailSet(parent, text);
 
+		// TODO: hmpf.  there's gotta be a cheaper way
 		for (Item i: toBeUsedInLoop) {
 
 			if (!(i.getName().startsWith(text))) {
@@ -389,6 +366,7 @@ class ClassNames {
 		return listOfCompletions;
 	}
 
+	// TODO: ctor?
 	public String createCotrCompletion(String cotr) {
 
 		String[] bracketSeparated = cotr.split("\\(");
@@ -422,12 +400,4 @@ class ClassNames {
 		}
 
 	}
-
-
-
-
 }
-
-
-
-

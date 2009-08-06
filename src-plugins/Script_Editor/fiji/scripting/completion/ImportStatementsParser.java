@@ -1,20 +1,22 @@
 package fiji.scripting.completion;
 
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fife.ui.rsyntaxtextarea.Token;
-import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
-import java.util.ArrayList;
 import javax.swing.text.Element;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.Token;
+
 public class ImportStatementsParser {
-
 	ArrayList<String> packageNames = new ArrayList<String>();
-
 
 	public ArrayList<String> getPackageNames() {
 		return packageNames;
 	}
 
+	// TODO: instead of textArea, accept RSyntaxDocument right away
 	public void objCompletionPackages(RSyntaxTextArea textArea, String language) {
 
 		RSyntaxDocument doc = (RSyntaxDocument)textArea.getDocument();
@@ -30,6 +32,7 @@ public class ImportStatementsParser {
 			boolean isAfterPythonImport = false;
 			boolean isAfterClojureHyphen = false;
 			boolean isAfterClojureSpace = false;
+			// TODO: no magic integers
 			for (; token != null && token.type != 0; token = token.getNextToken()) {
 
 				if (token.type == 16 || token.type == 3 || token.type == 2 || token.type == 1) {      //for white space
@@ -43,6 +46,8 @@ public class ImportStatementsParser {
 					isAfterImportLine = false;
 					break;
 				}
+				// TODO: expensive test after cheap one!
+				// TODO: refactor to use language-specific anonymous classes
 				if (language.equals("Java")) {
 					if (token.type == 4 && token.getLexeme().equals("import")) {
 						isAfterImportLine = false;
@@ -159,6 +164,4 @@ public class ImportStatementsParser {
 				break;
 		}
 	}
-
-
 }
