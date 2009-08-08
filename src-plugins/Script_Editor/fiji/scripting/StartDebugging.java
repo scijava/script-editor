@@ -8,6 +8,10 @@ import com.sun.jdi.ClassType;
 import com.sun.jdi.ReferenceType;
 import com.sun.jdi.AbsentInformationException;
 import com.sun.jdi.Field;
+import com.sun.jdi.LocalVariable;
+import com.sun.jdi.StackFrame;
+import com.sun.jdi.ThreadReference;
+import com.sun.jdi.IncompatibleThreadStateException;
 import com.sun.jdi.connect.LaunchingConnector;
 import com.sun.jdi.connect.Connector;
 import com.sun.jdi.connect.Transport;
@@ -41,6 +45,7 @@ public class StartDebugging {
 	List arguments;
 	List lineNumbers;
 	Field toKnow;
+	List<Field> fields;
 	ClassType refType;
 	VirtualMachine vm;
 
@@ -92,6 +97,7 @@ public class StartDebugging {
 					ClassPrepareEvent classPrepEvent = (ClassPrepareEvent) event;
 					refType = (ClassType)classPrepEvent.referenceType();
 					System.out.println("The class loaded is " + refType.name());
+					fields=refType.allFields();
 					toKnow = refType.fieldByName(fieldName);
 					System.out.println("The number of elements in the linenumber list is" + lineNumbers.size());
 					Iterator iterator = lineNumbers.iterator();
@@ -104,7 +110,35 @@ public class StartDebugging {
 							break;
 					}
 				} else if (event instanceof BreakpointEvent) {
+
 					BreakpointEvent breakEvent = (BreakpointEvent)event;
+					List<ThreadReference> threads=vm.allThreads();
+					for(ThreadReference thread:threads) {
+						if(thread.isSuspended()) {
+							try {
+								System.out.println(thread.name());
+									List<StackFrame> frames=thread.frames();
+									if(frames.size()>0) {
+										StackFrame frame=frames.get(0);
+										List<LocalVariable> variables=null;
+										try {
+											variables = frame.visibleVariables();
+										} catch(AbsentInformationException e) {}
+										if(variables!=null) {
+											System.out.println(frame.toString());
+											for(LocalVariable variable:variables) {
+												System.out.println("The name of variable "+variable.name()+" is "+frame.getValue(variable));
+											}
+										}
+									}
+
+							}catch(IncompatibleThreadStateException e) {System.out.println("Imcompatible thread state");}
+
+						}
+					}
+					for(Field f: fields) {
+						System.out.println("The value of "+f.name()+" is "+refType.getValue(f));
+					}
 					System.out.println(refType.getValue(toKnow));
 				} else if (event instanceof VMStartEvent) {
 					System.out.println("Virtual machine started");
