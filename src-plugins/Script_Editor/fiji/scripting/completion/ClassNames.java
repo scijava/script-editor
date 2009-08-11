@@ -34,12 +34,8 @@ contains a Tree object with key "java" and one of its childList
 element as awt which in turn has its childDList having its one childList
 as Listwhich is infact also a leaf ***********/
 
-<<<<<<< HEAD:src-plugins/Script_Editor/fiji/scripting/completion/ClassNames.java
 public class ClassNames {
 
-=======
-class ClassNames {
->>>>>>> contrib/script-editor:src-plugins/Script_Editor/fiji/scripting/completion/ClassNames.java
 	static List list = new List();
 
 	static Package root = new Package();
@@ -117,16 +113,10 @@ class ClassNames {
 		}
 	}
 
-<<<<<<< HEAD:src-plugins/Script_Editor/fiji/scripting/completion/ClassNames.java
-
-
 
 
 	public void setClassCompletions(Package root, RSyntaxTextArea textArea, String language) {
-=======
-	public CompletionProvider getDefaultProvider(Package root, RSyntaxTextArea textArea, String language) {
-		defaultProvider = new DefaultProvider();
->>>>>>> contrib/script-editor:src-plugins/Script_Editor/fiji/scripting/completion/ClassNames.java
+
 		String text = defaultProvider.getEnteredText(textArea);
 
 		// TODO: clarify (too convoluted)
@@ -217,11 +207,6 @@ class ClassNames {
 				}
 			}
 		}
-<<<<<<< HEAD:src-plugins/Script_Editor/fiji/scripting/completion/ClassNames.java
-
-=======
-		return defaultProvider;
->>>>>>> contrib/script-editor:src-plugins/Script_Editor/fiji/scripting/completion/ClassNames.java
 	}
 
 	public void classStartCompletions(String text) {
