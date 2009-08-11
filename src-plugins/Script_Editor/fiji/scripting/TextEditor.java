@@ -68,9 +68,9 @@ import fiji.scripting.completion.ClassCompletionProvider;
 import fiji.scripting.completion.DefaultProvider;
 
 
-class TextEditor extends JFrame implements ActionListener , ItemListener , ChangeListener , MouseMotionListener, MouseListener , CaretListener, InputMethodListener, DocumentListener, WindowListener	{
+class TextEditor extends JFrame implements ActionListener, ItemListener, ChangeListener, MouseMotionListener, MouseListener, CaretListener, InputMethodListener, DocumentListener, WindowListener {
 
-	JFileChooser fcc;
+	// TODO: clean up unnecessary variables
 	boolean fileChanged = false;
 	boolean isFileUnnamed = true;
 	String title = "";
@@ -84,34 +84,37 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	JMenuItem new1, open, save, saveas, compileAndRun, debug, quit, undo, redo, cut, copy, paste, find, replace, selectAll, autocomplete, resume, terminate;
 	JRadioButtonMenuItem[] lang = new JRadioButtonMenuItem[8];
 	FileInputStream fin;
+	// TODO: fix (enableReplace(boolean))
 	FindAndReplaceDialog replaceDialog;
 	AutoCompletion autocomp;
-	LanguageScriptMap scriptmap = new LanguageScriptMap();
+	// TODO: probably language can go
 	ClassCompletionProvider provider;
 	StartDebugging debugging;
 	Gutter gutter;
 	IconGroup iconGroup;
-	LanguageInformationMap map;
-	LanguageInformation langInfo;
 
 	public TextEditor(String path1) {
-		fcc = new JFileChooser();
 		JPanel cp = new JPanel(new BorderLayout());
 		title = "Text Editor for Fiji";
 		textArea = new RSyntaxTextArea();
 		textArea.addInputMethodListener(l);
 		textArea.addCaretListener(this);
+		// TODO: is this necessary?
 		textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
+		// TODO: much better naming required
+		// TODO: remove unnecessary curly brackets
 		if (provider1 == null) {
 			provider1 = createCompletionProvider();
 		}
 		autocomp = new AutoCompletion(provider1);
+		// TODO: is this really needed?
 		autocomp.setListCellRenderer(new CCellRenderer());
 		autocomp.setShowDescWindow(true);
 		autocomp.setParameterAssistanceEnabled(true);
 		autocomp.install(textArea);
 		textArea.setToolTipSupplier((ToolTipSupplier)provider);
 		ToolTipManager.sharedInstance().registerComponent(textArea);
+		// TODO: do we need doc?
 		doc = textArea.getDocument();
 		doc.addDocumentListener(this);
 		RTextScrollPane sp = new RTextScrollPane(textArea);
@@ -131,6 +134,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		panel.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
 		panel.setResizeWeight(350.0 / 430.0);
 		setContentPane(panel);
+		// TODO: Unnamed
 		setTitle(title);
 		addWindowListener(this);
 		setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -138,11 +142,13 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		/*********** Creating the menu options in the text editor ****************/
 
 		JMenuBar mbar = new JMenuBar();
+		// TODO: is this not too early?
 		setJMenuBar(mbar);
 
 		/*******  creating the menu for the File option **********/
 		JMenu file = new JMenu("File");
 		file.setMnemonic(KeyEvent.VK_F);
+		// TODO: this cannot work, new1 must be assigned
 		addToMenu(file, new1, "New", 0, KeyEvent.VK_N, ActionEvent.CTRL_MASK);
 		addToMenu(file, open, "Open...", 0, KeyEvent.VK_O, ActionEvent.CTRL_MASK);
 		addToMenu(file, save, "Save", 0, KeyEvent.VK_S, ActionEvent.CTRL_MASK);
@@ -167,39 +173,43 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		addToMenu(edit, find, "Find...", 0, KeyEvent.VK_F, ActionEvent.CTRL_MASK);
 		addToMenu(edit, replace, "Find and Replace...", 0, KeyEvent.VK_H, ActionEvent.CTRL_MASK);
 		edit.addSeparator();
+		// TODO: this belongs higher, no?
 		addToMenu(edit, selectAll, "Select All", 0, KeyEvent.VK_A, ActionEvent.CTRL_MASK);
 		mbar.add(edit);
 
 		/******** The Edit menu part ends here *****************/
 
+		// TODO: remove useless comments
 		/********The options menu part starts here**************/
+		// TODO: add accelerator keys for the menus, too
 		JMenu options = new JMenu("Options");
+		// TODO: CTRL, ALT
 		addToMenu(options, autocomplete, "Autocomplete", 0, KeyEvent.VK_SPACE, ActionEvent.CTRL_MASK);
 		options.addSeparator();
 
 		mbar.add(options);
 
 		/*********The Language parts starts here********************/
-		JMenu language = new JMenu("Language");
-		String[] langArray = {"Java", "Javascript", "Python", "Ruby", "Clojure", "Matlab", "BeanShell", "None"};
-		String[] langExt = {".java", ".js", ".py", ".rb", ".clj", ".m", ".bsh", ".n"};
-		int[] keyevent = {KeyEvent.VK_J, KeyEvent.VK_J, KeyEvent.VK_P, KeyEvent.VK_R, KeyEvent.VK_M, KeyEvent.VK_C, KeyEvent.VK_B, KeyEvent.VK_N};
+		JMenu languages = new JMenu("Language");
 		ButtonGroup group = new ButtonGroup();
-		for (int i = 0; i < 8; i++) {
+		for (Languages.Language language :
+				Languages.getInstance().languages) {
+			JRadioButtonMenuItem item =
+				new JRadioButtonMenuItem(language.menuLabel);
+			if (language.shortCut != 0)
+				item.setMnemonic(language.shortCut);
+			item.addActionListener(this);
+			item.setActionCommand(language.extension);
 
-			lang[i] = new JRadioButtonMenuItem(langArray[i]);
-			lang[i].setMnemonic(keyevent[i]);
-			group.add(lang[i]);
-			language.add(lang[i]);
-			lang[i].addActionListener(this);
-			lang[i].setActionCommand(langExt[i]);
-
+			group.add(item);
+			languages.add(item);
+			language.item = item;
 		}
-		lang[7].setSelected(true);
-		mbar.add(language);
-		map = new LanguageInformationMap(lang);
+		Languages.getInstance().get("").item.setSelected(true);
+		mbar.add(languages);
 
 		JMenu run=new JMenu("Run");
+		// TODO: allow outside-of-plugins/ sources
 		addToMenu(run, compileAndRun, "Compile and Run", 0, KeyEvent.VK_F11, ActionEvent.CTRL_MASK);
 		run.addSeparator();
 		addToMenu(run, debug, "Start Debugging", 0, KeyEvent.VK_F11, 0);
@@ -217,6 +227,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 		pack();
 		getToolkit().setDynamicLayout(true);            //added to accomodate the autocomplete part
+		// TODO: is this needed?
 		setLocationRelativeTo(null);
 		setVisible(true);
 		if (!(path1.equals("") || path1 == null)) {
@@ -227,12 +238,13 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	public void addToMenu(JMenu menu, JMenuItem menuitem, String menuEntry, int keyEvent, int keyevent, int actionevent) {
 		menuitem = new JMenuItem(menuEntry);
 		menu.add(menuitem);
-		if (keyEvent == 0)
+		if (keyEvent == 0) // == 0?  Not != 0?
 			menuitem.setAccelerator(KeyStroke.getKeyStroke(keyevent, actionevent));
 		menuitem.addActionListener(this);
 	}
 
 	public void createNewDocument() {
+		//TODO: Hmm.
 		doc.removeDocumentListener(this);
 		textArea.setText("");
 		setTitle("TextEditor for Fiji");
@@ -243,6 +255,8 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 	public int handleUnsavedChanges() {
 		if (fileChanged == true) {
+			// TODO: saveChangeDialog() is useless outside of this function; merge the code
+			// TODO: use switch()
 			int val = saveChangeDialog();
 			if (val == JOptionPane.CANCEL_OPTION) {
 				return 0;
@@ -263,14 +277,17 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 	public void actionPerformed(ActionEvent ae) {
 		String command = ae.getActionCommand();
+		// TODO: NO!!!!
 		if (command.equals("New")) {
 			if (handleUnsavedChanges() == 0)
 				return;
+			// TODO: NO!!!!
 			else
 				createNewDocument();
 		}
 
 		if (command.equals("Open...")) {
+			// TODO: handle == 0 by returning!
 			if (handleUnsavedChanges() != 0) {
 				OpenDialog dialog = new OpenDialog("Open..", "");
 				String directory = dialog.getDirectory();
@@ -293,9 +310,11 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 			save();
 		}
 		if (command.equals("Save as..."))  {
+			// TODO: fix "funny" naming
 			saveasaction();
 		}
 		if (command.equals("Compile and Run")) {
+			// TODO: s/Script//
 			runScript();
 		}
 		if (command.equals("Start Debugging")) {
@@ -304,6 +323,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 
 			try {
 				System.out.println(debugging.startDebugging().exitValue());
+			// TODO: at least use printStackTrace()
 			} catch (Exception e) {}
 		}
 		if (command.equals("Quit")) {
@@ -351,30 +371,20 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		}
 
 		//setting actionPerformed for language menu
-		if (command.startsWith(".")) {
-			langInfo = map.get(command);
-			setLanguageProperties(command);
-		}
-		if (command.equals("Resume")) {
+		// TODO: handle "None"
+		if (command.startsWith("."))
+			setLanguageByExtension(command);
+		if (command.equals("Resume"))
 			debugging.resumeVM();
-		}
-		if (command.equals("Terminate")) {
-		}
+		if (command.equals("Terminate")) { }
 
 	}
 
-
-	private void setLanguageProperties(String string) {
-		if (string.equals(".clj")) {
-			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new ClojureTokenMaker());
-		} else if (string.equals(".m")) {
-			((RSyntaxDocument)textArea.getDocument()).setSyntaxStyle(new MatlabTokenMaker());
-		} else {
-			textArea.setSyntaxEditingStyle(langInfo.getSyntaxStyle());
-		}
-		provider.setProviderLanguage(langInfo.getMenuEntry());
+	protected RSyntaxDocument getDocument() {
+		return (RSyntaxDocument)textArea.getDocument();
 	}
 
+	// TODO: nonono.
 	public void setFindAndReplace(boolean ifReplace) {
 		if (replaceDialog != null) {						//here should the code to close all other dialog boxes
 			if (replaceDialog.isReplace() != ifReplace) {
@@ -393,18 +403,18 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	}
 
 	public void open(String path) {
-
 		try {
 			file = new File(path);
 		} catch (Exception e) {
 			System.out.println("problem in opening");
 		}
+		// TODO: Why?
 		doc.removeDocumentListener(this);
 		try {
 			if (file != null) {
 				fileChanged = false;
-				setLanguage(file);
-				isFileUnnamed = false;
+				setFileName(file);
+				// TODO: urgh. no member variable; close
 				fin = new FileInputStream(file);
 				BufferedReader din = new BufferedReader(new InputStreamReader(fin));
 				String s = "";
@@ -414,9 +424,11 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 					if (s == null) {
 						break;
 					}
+					// TODO: use StringBuilder instead!!!
 					textArea.append(s + "\n");
 				}
 			} else {
+				// TODO: unify error handling.  Don't mix JOptionPane with IJ.error as if we had no clue what we want
 				JOptionPane.showMessageDialog(this, "The file name " + file.getName() + " not found.");
 			}
 
@@ -447,6 +459,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		}
 	}
 
+	// TODO: this is racy at best
 	public boolean checkForReplace(String directory, String name) {
 		return(new File(directory, name).exists());
 
@@ -463,20 +476,11 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		try {
 			if (ifReplaceFile) {
 				int val = JOptionPane.showConfirmDialog(this, "Do you want to replace " + file.getName() + "??", "Do you want to replace " + file.getName() + "??", JOptionPane.YES_NO_OPTION);
-				if (val == JOptionPane.YES_OPTION) {
-					title = (String)file.getName() + " - Text Editor Demo for fiji";
-					setTitle(title);
-					isFileUnnamed=false;
-					setLanguage(file);
-					writeToFile(file);
-				} else
+				if (val != JOptionPane.YES_OPTION)
 					return -1;
-			} else {
-				isFileUnnamed=false;
-				setLanguage(file);
-				writeToFile(file);
 			}
-
+			writeToFile(file);
+			setFileName(file);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -488,41 +492,51 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		if (isFileUnnamed) {
 			return(saveasaction());
 		} else {
+			writeToFile(file);
+			// TODO: handle more elegantly
 			if (fileChanged)
 				setTitle(getTitle().substring(1));
-			writeToFile(file);
 			return JFileChooser.APPROVE_OPTION;
 		}
 	}
 
 	public void writeToFile(File file) {
 		try {
+			// TODO: get a grip on the style to use
 			fileChanged = false;
 			BufferedWriter outFile = new BufferedWriter( new FileWriter( file ) );
 			outFile.write( textArea.getText( ) ); //put in textfile
 			outFile.flush( ); // redundant, done by close()
 			outFile.close( );
+		// TODO: at least printStackTrace
 		} catch (Exception e) {}
 	}
 
-	public void setLanguage(File file) {
-		boolean dotNotFound = true;
-		String fileName = file.getName();
-		title = fileName + " - Text Editor Demo for fiji";
+	public static String getExtension(String fileName) {
+		int dot = fileName.lastIndexOf(".");
+		return dot < 0 ?  "" : fileName.substring(dot);
+	}
+
+	private void setLanguageByExtension(String extension) {
+		Languages.Language info = Languages.getInstance().get(extension);
+
+		// TODO: these should go to upstream RSyntaxTextArea
+		if (extension.equals(".clj"))
+			getDocument().setSyntaxStyle(new ClojureTokenMaker());
+		else if (extension.equals(".m"))
+			getDocument().setSyntaxStyle(new MatlabTokenMaker());
+		else
+			textArea.setSyntaxEditingStyle(info.syntaxStyle);
+		provider.setProviderLanguage(info.menuLabel);
+
+		info.item.setSelected(true);
+	}
+
+	public void setFileName(File file) {
+		isFileUnnamed = false;
+		title = file.getName();
 		setTitle(title);
-		int k = fileName.lastIndexOf(".");
-		if (k > 0) {
-			dotNotFound = false;
-			langInfo = map.get(fileName.substring(k));
-		}
-		if (langInfo == null || dotNotFound)
-			langInfo = map.get(".n");
-		if (langInfo.getMenuEntry().equals("None")) {
-			setLanguageProperties(".n");
-		} else {
-			setLanguageProperties(fileName.substring(k));
-		}
-		langInfo.getMenuItem().setSelected(true);
+		setLanguageByExtension(getExtension(title));
 	}
 
 	public void runScript() {
@@ -539,20 +553,19 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		runSavedScript();
 	}
 
+	// TODO: do not require saving
 	public void runSavedScript() {
-
-		String extension = "";
-		String fileName = (String)file.getName();
-		int i = fileName.lastIndexOf(".");
-		if (i > 0)
-			extension = fileName.substring(i);
-		RefreshScripts refreshClass = scriptmap.get(fileName.substring(i));
-		if (refreshClass == null) IJ.error("Booh!");
-		else refreshClass.runScript(file.getPath());
-
-
+		String ext = getExtension(file.getName());
+		RefreshScripts interpreter =
+			Languages.getInstance().get(ext).interpreter;
+		if (interpreter == null)
+			IJ.error("There is no interpreter for " + ext
+					+ " files!");
+		else
+			interpreter.runScript(file.getPath());
 	}
 
+	// TODO: saveChangeDialog() should check fileChanged itself
 	public void windowClosing(WindowEvent e) {
 
 		if (fileChanged) {
@@ -586,6 +599,7 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 		updateStatusOnChange();
 	}
 
+	// TODO: rename into "markDirty"
 	private void updateStatusOnChange() {
 		if (!fileChanged)
 			setTitle("*" + getTitle());
@@ -593,12 +607,13 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	}
 
 	private CompletionProvider createCompletionProvider() {
-
+		// TODO: why the member variable?
 		provider = new ClassCompletionProvider(new DefaultProvider(), textArea, language);
 		return provider;
 
 	}
 
+	// TODO: use an anonymous WindowAdapter, MouseAdapter, etc instead
 	public void windowClosed(WindowEvent e) {}
 	public void windowDeactivated(WindowEvent e) {}
 	public void windowDeiconified(WindowEvent e) {}
@@ -616,9 +631,5 @@ class TextEditor extends JFrame implements ActionListener , ItemListener , Chang
 	public void caretUpdate(CaretEvent ce) {}
 	public void changedUpdate(DocumentEvent e) {}
 	public void windowActivated(WindowEvent e) {}
-
 }
-
-
-
-
+// TODO: check all files for whitespace issues
