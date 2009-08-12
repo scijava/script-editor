@@ -47,7 +47,7 @@ public class ClassNames {
 	ArrayList<String> packageNames = new ArrayList<String>();
 
 	public ClassNames(DefaultProvider provider) {
-		defaultProvider = provider;
+		defaultProvider=provider;
 	}
 
 	public void run(String[] args) {
@@ -65,21 +65,19 @@ public class ClassNames {
 		if (file.isDirectory())
 			setDirTree(path);
 		else if (path.endsWith(".jar")) try {
-				ZipFile jarFile = new ZipFile(file);
-				list1 = jarFile.entries();
-				while (list1.hasMoreElements()) {
-					ZipEntry entry = (ZipEntry)list1.nextElement();
-					String name = entry.getName();
-					if (!name.endsWith(".class"))		//ignoring the non class files
-						continue;
-					// TODO: hmm.  Put together only to split?
-					String[] classname1 = name.split("\\\\");
-					String justClassName = classname1[classname1.length-1];
-					addToTree(justClassName, root, 0);
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
+			ZipFile jarFile = new ZipFile(file);
+			list1 = jarFile.entries();
+			while (list1.hasMoreElements()) {
+				ZipEntry entry = (ZipEntry)list1.nextElement();
+				String name = entry.getName();
+				if (!name.endsWith(".class"))		//ignoring the non class files
+					continue;
+				// TODO: hmm.  Put together only to split?
+				String[] classname1 = name.split("\\\\");
+				String justClassName = classname1[classname1.length-1];
+				addToTree(justClassName, root, 0);
 			}
+		} catch (Exception e) { e.printStackTrace(); }
 	}
 
 	public void setDirTree(String path) {
@@ -90,7 +88,8 @@ public class ClassNames {
 			String[] list = file.list();
 			for (int i = 0; i < list.length; i++)
 				setDirTree(path + list[i]);	//recursively adding the classnames to the list
-		} else if ((path.endsWith(".class"))) {
+		}
+		else if ((path.endsWith(".class"))) {
 			String[] classname1 = path.split("\\\\");
 			String justClassName = classname1[classname1.length-1];
 			addToTree(justClassName, root, 0);

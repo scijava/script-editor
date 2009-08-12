@@ -97,7 +97,7 @@ public class StartDebugging {
 					ClassPrepareEvent classPrepEvent = (ClassPrepareEvent) event;
 					refType = (ClassType)classPrepEvent.referenceType();
 					System.out.println("The class loaded is " + refType.name());
-					fields = refType.allFields();
+					fields=refType.allFields();
 					toKnow = refType.fieldByName(fieldName);
 					System.out.println("The number of elements in the linenumber list is" + lineNumbers.size());
 					Iterator iterator = lineNumbers.iterator();
@@ -112,34 +112,32 @@ public class StartDebugging {
 				} else if (event instanceof BreakpointEvent) {
 
 					BreakpointEvent breakEvent = (BreakpointEvent)event;
-					List<ThreadReference> threads = vm.allThreads();
-					for (ThreadReference thread: threads) {
-						if (thread.isSuspended()) {
+					List<ThreadReference> threads=vm.allThreads();
+					for(ThreadReference thread:threads) {
+						if(thread.isSuspended()) {
 							try {
 								System.out.println(thread.name());
-								List<StackFrame> frames = thread.frames();
-								if (frames.size() > 0) {
-									StackFrame frame = frames.get(0);
-									List<LocalVariable> variables = null;
-									try {
-										variables = frame.visibleVariables();
-									} catch (AbsentInformationException e) {}
-									if (variables != null) {
-										System.out.println(frame.toString());
-										for (LocalVariable variable: variables) {
-											System.out.println("The name of variable " + variable.name() + " is " + frame.getValue(variable));
+									List<StackFrame> frames=thread.frames();
+									if(frames.size()>0) {
+										StackFrame frame=frames.get(0);
+										List<LocalVariable> variables=null;
+										try {
+											variables = frame.visibleVariables();
+										} catch(AbsentInformationException e) {}
+										if(variables!=null) {
+											System.out.println(frame.toString());
+											for(LocalVariable variable:variables) {
+												System.out.println("The name of variable "+variable.name()+" is "+frame.getValue(variable));
+											}
 										}
 									}
-								}
 
-							} catch (IncompatibleThreadStateException e) {
-								System.out.println("Imcompatible thread state");
-							}
+							}catch(IncompatibleThreadStateException e) {System.out.println("Imcompatible thread state");}
 
 						}
 					}
-					for (Field f: fields) {
-						System.out.println("The value of " + f.name() + " is " + refType.getValue(f));
+					for(Field f: fields) {
+						System.out.println("The value of "+f.name()+" is "+refType.getValue(f));
 					}
 					System.out.println(refType.getValue(toKnow));
 				} else if (event instanceof VMStartEvent) {
@@ -183,6 +181,7 @@ public class StartDebugging {
 		return null;
 	}
 
+	/** Watch all classes of name "Test" */
 	private  void addClassWatch(VirtualMachine vm) {
 		System.out.println(className);
 		EventRequestManager erm = vm.eventRequestManager();

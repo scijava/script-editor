@@ -193,9 +193,9 @@ class TextEditor extends JFrame implements ActionListener, ItemListener, ChangeL
 		JMenu languages = new JMenu("Language");
 		ButtonGroup group = new ButtonGroup();
 		for (Languages.Language language :
-		                Languages.getInstance().languages) {
+				Languages.getInstance().languages) {
 			JRadioButtonMenuItem item =
-			        new JRadioButtonMenuItem(language.menuLabel);
+				new JRadioButtonMenuItem(language.menuLabel);
 			if (language.shortCut != 0)
 				item.setMnemonic(language.shortCut);
 			item.addActionListener(this);
@@ -208,7 +208,7 @@ class TextEditor extends JFrame implements ActionListener, ItemListener, ChangeL
 		Languages.getInstance().get("").item.setSelected(true);
 		mbar.add(languages);
 
-		JMenu run = new JMenu("Run");
+		JMenu run=new JMenu("Run");
 		// TODO: allow outside-of-plugins/ sources
 		addToMenu(run, compileAndRun, "Compile and Run", 0, KeyEvent.VK_F11, ActionEvent.CTRL_MASK);
 		run.addSeparator();
@@ -323,7 +323,7 @@ class TextEditor extends JFrame implements ActionListener, ItemListener, ChangeL
 
 			try {
 				System.out.println(debugging.startDebugging().exitValue());
-				// TODO: at least use printStackTrace()
+			// TODO: at least use printStackTrace()
 			} catch (Exception e) {}
 		}
 		if (command.equals("Quit")) {
@@ -471,7 +471,7 @@ class TextEditor extends JFrame implements ActionListener, ItemListener, ChangeL
 
 	public int saveAs(String path, boolean ifReplaceFile) {
 
-		file = new File(path);
+			file = new File(path);
 
 		try {
 			if (ifReplaceFile) {
@@ -508,7 +508,7 @@ class TextEditor extends JFrame implements ActionListener, ItemListener, ChangeL
 			outFile.write( textArea.getText( ) ); //put in textfile
 			outFile.flush( ); // redundant, done by close()
 			outFile.close( );
-			// TODO: at least printStackTrace
+		// TODO: at least printStackTrace
 		} catch (Exception e) {}
 	}
 
@@ -557,10 +557,10 @@ class TextEditor extends JFrame implements ActionListener, ItemListener, ChangeL
 	public void runSavedScript() {
 		String ext = getExtension(file.getName());
 		RefreshScripts interpreter =
-		        Languages.getInstance().get(ext).interpreter;
+			Languages.getInstance().get(ext).interpreter;
 		if (interpreter == null)
 			IJ.error("There is no interpreter for " + ext
-			         + " files!");
+					+ " files!");
 		else
 			interpreter.runScript(file.getPath());
 	}
