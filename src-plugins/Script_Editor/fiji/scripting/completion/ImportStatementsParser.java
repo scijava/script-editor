@@ -16,10 +16,7 @@ public class ImportStatementsParser {
 		return packageNames;
 	}
 
-	// TODO: instead of textArea, accept RSyntaxDocument right away
-	public void objCompletionPackages(RSyntaxTextArea textArea, String language) {
-
-		RSyntaxDocument doc = (RSyntaxDocument)textArea.getDocument();
+	public void objCompletionPackages(RSyntaxDocument doc, String language) {
 		Element map = doc.getDefaultRootElement();
 		int startLine = map.getElementIndex(0);
 		int endLine = map.getElementIndex(doc.getLength());
@@ -32,24 +29,19 @@ public class ImportStatementsParser {
 			boolean isAfterPythonImport = false;
 			boolean isAfterClojureHyphen = false;
 			boolean isAfterClojureSpace = false;
-			// TODO: no magic integers
-			for (; token != null && token.type != 0; token = token.getNextToken()) {
+			for (; token != null && token.type != Token.NULL; token = token.getNextToken()) {
 
-				if (token.type == 16 || token.type == 3 || token.type == 2 || token.type == 1) {      //for white space
+				if (token.type == Token.WHITESPACE || token.type == Token.COMMENT_EOL || token.type == Token.COMMENT_MULTILINE || token.type == Token.COMMENT_DOCUMENTATION) {      //for white space
 					continue;
 				}
-				if (token.type == 3 || token.type == 2 || token.type == 1) {						//for comments
-					isAfterImportLine = false;
-					continue;
-				}
-				if ((token.type == 4 && token.getLexeme().equals("package"))) {
+				if ((token.type == Token.RESERVED_WORD && token.getLexeme().equals("package"))) {
 					isAfterImportLine = false;
 					break;
 				}
 				// TODO: expensive test after cheap one!
 				// TODO: refactor to use language-specific anonymous classes
-				if (language.equals("Java")) {
-					if (token.type == 4 && token.getLexeme().equals("import")) {
+				if (language.equals("Java") || language.equals("BeanShell")) {
+					if (token.type == Token.RESERVED_WORD && token.getLexeme().equals("import")) {
 						isAfterImportLine = false;
 						isAfterImport = true;
 						continue;
@@ -73,7 +65,7 @@ public class ImportStatementsParser {
 
 				//For javascript languaguge import statements
 				if (language.equals("Javascript")) {
-					if (token.type == 15 && (token.getLexeme().equals("importPackage") || token.getLexeme().equals("importClass"))) {
+					if (token.type == Token.IDENTIFIER && (token.getLexeme().equals("importPackage") || token.getLexeme().equals("importClass"))) {
 						isAfterImport = true;
 						isAfterImportLine = false;
 						continue;
@@ -83,7 +75,7 @@ public class ImportStatementsParser {
 				}
 				//For Ruby language import statements
 				if (language.equals("Ruby")) {
-					if (token.type == 5 && (token.getLexeme().equals("require"))) {
+					if (token.type == Token.FUNCTION && (token.getLexeme().equals("require"))) {
 						isAfterImport = true;
 						isAfterImportLine = false;
 						continue;
@@ -94,12 +86,12 @@ public class ImportStatementsParser {
 				}
 
 				if (language.equals("Python")) {
-					if (token.type == 4 && (token.getLexeme().equals("from"))) {
+					if (token.type == Token.RESERVED_WORD && (token.getLexeme().equals("from"))) {
 						isAfterImport = true;
 						isAfterImportLine = false;
 						continue;
 					}
-					if (token.type == 4 && (token.getLexeme().equals("import"))) {
+					if (token.type == Token.RESERVED_WORD && (token.getLexeme().equals("import"))) {
 						isAfterPythonImport = true;
 						continue;
 					}
@@ -118,7 +110,7 @@ public class ImportStatementsParser {
 					if (token.getLexeme().equals("(") || token.getLexeme().equals(")"))      //for javascript import statements
 						continue;
 
-					if (token.type == 5 && (token.getLexeme().equals("import"))) {
+					if (token.type == Token.FUNCTION && (token.getLexeme().equals("import"))) {
 						isAfterImport = true;
 						isAfterImportLine = false;
 						continue;
