@@ -60,7 +60,7 @@ public class ClassCompletionProvider extends CompletionProviderBase
 		this.language = language;
 		names.run(System.getProperty("java.class.path").split(File.pathSeparator));
 		names.run(System.getProperty("sun.boot.class.path").split(File.pathSeparator));
-		topLevel = names.getTopPackage();
+		topLevel = names.getRoot();
 
 	}
 
