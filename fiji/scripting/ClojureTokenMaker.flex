@@ -191,11 +191,11 @@ import org.fife.ui.rsyntaxtextarea.*;
 	 * Resets the scanner to read from a new input stream.
 	 * Does not close the old reader.
 	 *
-	 * All internal variables are reset, the old input stream 
+	 * All internal variables are reset, the old input stream
 	 * <b>cannot</b> be reused (internal buffer is discarded and lost).
 	 * Lexical state is set to <tt>YY_INITIAL</tt>.
 	 *
-	 * @param reader   the new input stream 
+	 * @param reader   the new input stream
 	 */
 	public final void yyreset(java.io.Reader reader) throws java.io.IOException {
 		// 's' has been updated.
@@ -321,7 +321,7 @@ Operator					= ({NonAssignmentOperator}|{AssignmentOperator})
 "eql?" |
 "str" |
 "strcat" |
-"gensym" | 
+"gensym" |
 "apply" |
 "list*" |
 "delay" |

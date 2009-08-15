@@ -29,7 +29,7 @@ public class Languages {
 
 	protected Languages() {
 		languages = new Language[] {
-		        new Language(".java", SyntaxConstants.SYNTAX_STYLE_JAVA, "Java", KeyEvent.VK_J, new Refresh_Javas(true)),
+		        new Language(".java", SyntaxConstants.SYNTAX_STYLE_JAVA, "Java", KeyEvent.VK_J, new Refresh_Javas()),
 		        new Language(".js", SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT, "Javascript", KeyEvent.VK_S, new Refresh_Javascript_Scripts()),
 		        new Language(".py", SyntaxConstants.SYNTAX_STYLE_PYTHON, "Python", KeyEvent.VK_P, new Refresh_Jython_Scripts()),
 		        new Language(".rb", SyntaxConstants.SYNTAX_STYLE_RUBY, "Ruby", KeyEvent.VK_R, new Refresh_JRuby_Scripts()),
