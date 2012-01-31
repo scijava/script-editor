@@ -6,38 +6,26 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>sc.fiji</groupId>
-		<artifactId>pom-fiji</artifactId>
+		<groupId>net.imagej</groupId>
+		<artifactId>pom-ij-ui-swing</artifactId>
 		<version>2.0.0-SNAPSHOT</version>
-		<relativePath />
 	</parent>
 
-	<artifactId>Script_Editor</artifactId>
+	<artifactId>ij-ui-swing-script-editor</artifactId>
 
-	<name>plugins/Script_Editor.jar</name>
-	<description></description>
+	<name>The Script Editor</name>
+	<description>The artist formerly known as the Fiji Script Editor, now based on the next generation architecture provided by ImageJ2</description>
 
 	<dependencies>
 		<dependency>
-			<groupId>com.fifesoft</groupId>
-			<artifactId>autocomplete</artifactId>
-			<version>2.0.2</version>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>ij-core</artifactId>
+			<version>${project.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>sc.fiji</groupId>
-			<artifactId>fiji-compat</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>sc.fiji</groupId>
-			<artifactId>fiji-lib</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>sc.fiji</groupId>
-			<artifactId>fiji-scripting</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>net.imagej</groupId>
-			<artifactId>ij</artifactId>
+			<groupId>net.java.sezpoz</groupId>
+			<artifactId>sezpoz</artifactId>
+			<version>${sezpoz.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fifesoft</groupId>
@@ -45,36 +33,10 @@
 			<version>2.0.4.1</version>
 		</dependency>
 		<dependency>
-			<groupId>sc.fiji</groupId>
-			<artifactId>BeanShell_Interpreter</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>sc.fiji</groupId>
-			<artifactId>CLI_</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>sc.fiji</groupId>
-			<artifactId>Clojure_Interpreter</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>sc.fiji</groupId>
-			<artifactId>JRuby_Interpreter</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>sc.fiji</groupId>
-			<artifactId>Javascript_</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>sc.fiji</groupId>
-			<artifactId>Jython_Interpreter</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>sc.fiji</groupId>
-			<artifactId>Refresh_Javas</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>sc.fiji</groupId>
-			<artifactId>fake</artifactId>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>${junit.version}</version>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 
@@ -85,7 +47,7 @@
 				<configuration>
 					<archive>
 						<manifest>
-							<mainClass>fiji.scripting.Script_Editor</mainClass>
+							<packageName>imagej.script</packageName>
 						</manifest>
 					</archive>
 				</configuration>
@@ -93,44 +55,15 @@
 		</plugins>
 	</build>
 
-	<profiles>
-		<profile>
-			<id>javac</id>
-			<activation>
-				<file>
-					<!-- NB: Custom properties do not work here, so we hardcode. -->
-					<exists>${java.home}/../lib/tools.jar</exists>
-				</file>
-			</activation>
-			<dependencies>
-				<dependency>
-					<groupId>com.sun</groupId>
-					<artifactId>tools</artifactId>
-					<version>1.4.2</version>
-					<scope>system</scope>
-					<systemPath>${java.home}/../lib/tools.jar</systemPath>
-				</dependency>
-			</dependencies>
-		</profile>
-	</profiles>
-
-	<ciManagement>
-		<system>Jenkins</system>
-		<url>http://jenkins.imagej.net/job/Script_Editor/</url>
-	</ciManagement>
-
-	<scm>
-		<connection>scm:git:git://github.com/fiji/Script_Editor</connection>
-		<developerConnection>scm:git:git@github.com:fiji/Script_Editor</developerConnection>
-		<tag>HEAD</tag>
-		<url>https://github.com/fiji/Script_Editor</url>
-	</scm>
-
+	<!-- NB: for project parent, in case of partial checkout -->
 	<repositories>
-		<!-- NB: for project parent, in case of partial checkout -->
 		<repository>
-			<id>imagej.public</id>
-			<url>http://maven.imagej.net/content/groups/public</url>
+			<id>imagej.releases</id>
+			<url>http://dev.imagejdev.org/maven2/releases</url>
+		</repository>
+		<repository>
+			<id>imagej.snapshots</id>
+			<url>http://dev.imagejdev.org/maven2/snapshots</url>
 		</repository>
 	</repositories>
 
