@@ -150,6 +150,13 @@
 		</profile>
 	</profiles>
 
+	<scm>
+		<connection>scm:git:git://github.com/fiji/Script_Editor</connection>
+		<developerConnection>scm:git:git@github.com:fiji/Script_Editor</developerConnection>
+		<tag>HEAD</tag>
+		<url>https://github.com/fiji/Script_Editor</url>
+	</scm>
+
 	<repositories>
 		<!-- NB: for project parent, in case of partial checkout -->
 		<repository>
