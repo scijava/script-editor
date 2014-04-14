@@ -150,6 +150,11 @@
 		</profile>
 	</profiles>
 
+	<ciManagement>
+		<system>Jenkins</system>
+		<url>http://jenkins.imagej.net/job/Script_Editor/</url>
+	</ciManagement>
+
 	<scm>
 		<connection>scm:git:git://github.com/fiji/Script_Editor</connection>
 		<developerConnection>scm:git:git@github.com:fiji/Script_Editor</developerConnection>
