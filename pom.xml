@@ -4,17 +4,51 @@
 
 	<parent>
 		<groupId>net.imagej</groupId>
-		<artifactId>pom-ij-ui-swing</artifactId>
-		<version>2.0.0-SNAPSHOT</version>
+		<artifactId>pom-imagej</artifactId>
+		<version>2.2</version>
+		<relativePath />
 	</parent>
 
-	<artifactId>ij-ui-swing-script-editor</artifactId>
+	<artifactId>imagej-ui-swing</artifactId>
+	<version>0.1.0-SNAPSHOT</version>
 
-	<name>The Script Editor</name>
-	<description>The artist formerly known as the Fiji Script Editor, now based on the next generation architecture provided by ImageJ2</description>
+	<name>ImageJ UI: Swing</name>
+	<description>ImageJ UI for Java Swing.</description>
+
+	<scm>
+		<connection>scm:git:git://github.com/imagej/imagej-ui-swing</connection>
+		<developerConnection>scm:git:git@github.com:imagej/imagej-ui-swing</developerConnection>
+		<tag>HEAD</tag>
+		<url>https://github.com/imagej/imagej-ui-swing</url>
+	</scm>
+
+	<issueManagement>
+		<system>GitHub Issues</system>
+		<url>https://github.com/imagej/imagej-ui-swing/issues</url>
+	</issueManagement>
+
+	<ciManagement>
+		<system>Jenkins</system>
+		<url>http://jenkins.imagej.net/job/ImageJ-UI-Swing/</url>
+	</ciManagement>
+
+	<repositories>
+		<repository>
+			<id>imagej.public</id>
+			<url>http://maven.imagej.net/content/groups/public</url>
+		</repository>
+	</repositories>
 
 	<dependencies>
 		<!-- SciJava dependencies -->
+		<dependency>
+			<groupId>net.imagej</groupId>
+			<artifactId>ij-commands</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>net.imagej</groupId>
+			<artifactId>ij-updater-core</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>net.imagej</groupId>
 			<artifactId>imagej-common</artifactId>
@@ -23,6 +57,14 @@
 			<groupId>org.scijava</groupId>
 			<artifactId>scijava-common</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.scijava</groupId>
+			<artifactId>scijava-ui-awt</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.scijava</groupId>
+			<artifactId>scijava-ui-swing</artifactId>
+		</dependency>
 
 		<!-- Third-party dependencies -->
 		<dependency>
@@ -30,23 +72,23 @@
 			<artifactId>rsyntaxtextarea</artifactId>
 			<version>2.0.4.1</version>
 		</dependency>
-
-		<!-- Test dependencies -->
 		<dependency>
-			<groupId>${project.groupId}</groupId>
-			<artifactId>ij-scripting-beanshell</artifactId>
-			<scope>test</scope>
+			<groupId>org.jfree</groupId>
+			<artifactId>jfreechart</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>${project.groupId}</groupId>
-			<artifactId>ij-scripting-jython</artifactId>
+			<groupId>org.jhotdraw</groupId>
+			<artifactId>jhotdraw</artifactId>
+			<version>7.6.0</version>
+		</dependency>
+
+		<!-- Test scope dependencies -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
-
-	<properties>
-		<project.rootdir>${basedir}/../../..</project.rootdir>
-	</properties>
 
 	<build>
 		<plugins>
@@ -55,20 +97,12 @@
 				<configuration>
 					<archive>
 						<manifest>
-							<packageName>imagej.script</packageName>
+							<packageName>net.imagej.ui.swing</packageName>
 						</manifest>
 					</archive>
 				</configuration>
 			</plugin>
 		</plugins>
 	</build>
-
-	<repositories>
-		<!-- NB: for project parent, in case of partial checkout -->
-		<repository>
-			<id>imagej.public</id>
-			<url>http://maven.imagej.net/content/groups/public</url>
-		</repository>
-	</repositories>
 
 </project>
