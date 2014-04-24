@@ -43,10 +43,6 @@
 		<!-- SciJava dependencies -->
 		<dependency>
 			<groupId>net.imagej</groupId>
-			<artifactId>ij-commands</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>net.imagej</groupId>
 			<artifactId>imagej-common</artifactId>
 		</dependency>
 		<dependency>
