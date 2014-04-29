@@ -246,7 +246,7 @@ public class FileFunctions {
 
 	public boolean newPlugin() {
 		Future<CommandModule> result =
-			parent.commandService.run(NewPlugin.class, true, new Object[] {"editor", parent}); // FIXME
+			parent.commandService.run(NewPlugin.class, true, "editor", parent);
 		try {
 			result.get();
 			return true;
