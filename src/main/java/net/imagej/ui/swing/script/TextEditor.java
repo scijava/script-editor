@@ -48,12 +48,10 @@ import java.io.CharArrayWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintWriter;
@@ -171,7 +169,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		  openHelp, addImport, clearScreen, nextError, previousError,
 		  openHelpWithoutFrames, nextTab, previousTab,
 		  runSelection, extractSourceJar, toggleBookmark,
-		  listBookmarks, openSourceForClass, newPlugin,
+		  listBookmarks, openSourceForClass,
 		  openSourceForMenuItem,
 		  openMacroFunctions, decreaseFontSize, increaseFontSize,
 		  chooseFontSize, chooseTabSize, gitGrep, openInGitweb,
@@ -473,10 +471,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		extractSourceJar = addToMenu(toolsMenu,
 			"Extract source .jar...", 0, 0);
 		extractSourceJar.setMnemonic(KeyEvent.VK_E);
-		newPlugin = addToMenu(toolsMenu,
-			"Create new plugin...", 0, 0);
-		newPlugin.setMnemonic(KeyEvent.VK_C);
-		newPlugin.setEnabled(false); // CTR TEMP: disabled for 2.0.0-beta5
 		openSourceForClass = addToMenu(toolsMenu,
 			"Open .java file for class...", 0, 0);
 		openSourceForClass.setMnemonic(KeyEvent.VK_J);
@@ -1044,8 +1038,6 @@ public class TextEditor extends JFrame implements ActionListener,
 			EditorPane editorPane = getEditorPane();
 			new FileFunctions(this).openInGitweb(editorPane.file, editorPane.gitDirectory, editorPane.getCaretLineNumber() + 1);
 		}
-		else if (source == newPlugin)
-			new FileFunctions(this).newPlugin();
 		else if (source == increaseFontSize || source == decreaseFontSize) {
 			getEditorPane().increaseFontSize((float)(source == increaseFontSize ? 1.2 : 1 / 1.2));
 			updateTabAndFontSize(false);
@@ -2326,7 +2318,13 @@ public class TextEditor extends JFrame implements ActionListener,
 	public void extractSourceJar(File file) {
 		try {
 			FileFunctions functions = new FileFunctions(this);
-			List<String> paths = functions.extractSourceJar(file.getAbsolutePath());
+			JFileChooser dialog = new JFileChooser();
+			dialog.setDialogTitle("Choose workspace directory");
+			dialog.setCurrentDirectory(new File(System.getProperty("user.home")));
+			dialog.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+			if (dialog.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
+			final File workspace = dialog.getSelectedFile();
+			List<String> paths = functions.extractSourceJar(file.getAbsolutePath(), workspace);
 			for (String path : paths)
 				if (!functions.isBinaryFile(path)) {
 					open(new File(path));
