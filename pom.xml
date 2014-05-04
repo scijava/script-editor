@@ -98,6 +98,18 @@
 			<artifactId>jhotdraw</artifactId>
 			<version>7.6.0</version>
 		</dependency>
+
+		<!-- Test dependencies -->
+		<dependency>
+			<groupId>org.scijava</groupId>
+			<artifactId>scripting-beanshell</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.scijava</groupId>
+			<artifactId>scripting-javascript</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
