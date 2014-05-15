@@ -2088,7 +2088,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			public void execute() {
 				Reader reader = null;
 				try {
-					reader = evalScript(getEditorPane().getFileName(), new FileReader(file), output, errors);
+					reader = evalScript(getEditorPane().file.getPath(), new FileReader(file), output, errors);
 
 					output.flush();
 					errors.flush();
