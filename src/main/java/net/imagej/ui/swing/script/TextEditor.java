@@ -1589,7 +1589,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (name.indexOf('_') < 0)
 			name += "_";
 		name += ".jar";
-		JFileChooser chooser = new JFileChooser(file.getParentFile());
+		JFileChooser chooser = new JFileChooser(file == null ? null : file.getParentFile());
 		chooser.setDialogTitle("Export");
 		chooser.setSelectedFile(new File(name));
 		if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return false;
