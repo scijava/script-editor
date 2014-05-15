@@ -1781,6 +1781,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				!isCompileable);
 		compile.setVisible(isCompileable);
 		autoSave.setVisible(isCompileable);
+		makeJar.setVisible(isCompileable);
 		makeJarWithSource.setVisible(isCompileable);
 
 		boolean isJava = language != null && language.getLanguageName().equals("Java");
