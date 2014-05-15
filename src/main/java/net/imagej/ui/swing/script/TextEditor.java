@@ -181,7 +181,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	protected int tabsMenuTabsStart;
 	protected Set<JMenuItem> tabsMenuItems;
 	protected FindAndReplaceDialog findDialog;
-	protected JCheckBoxMenuItem autoSave, showDeprecation, wrapLines, tabsEmulated;
+	protected JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated;
 	protected JTextArea errorScreen = new JTextArea();
 
 	protected final String templateFolder = "templates/";
@@ -440,8 +440,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		compile.setMnemonic(KeyEvent.VK_C);
 		autoSave = new JCheckBoxMenuItem("Auto-save before compiling");
 		runMenu.add(autoSave);
-		showDeprecation = new JCheckBoxMenuItem("Show deprecations");
-		runMenu.add(showDeprecation);
 
 		runMenu.addSeparator();
 		nextError = addToMenu(runMenu, "Next Error", KeyEvent.VK_F4, 0);
@@ -1783,7 +1781,6 @@ public class TextEditor extends JFrame implements ActionListener,
 				!isCompileable);
 		compile.setVisible(isCompileable);
 		autoSave.setVisible(isCompileable);
-		showDeprecation.setVisible(isCompileable);
 		makeJarWithSource.setVisible(isCompileable);
 
 		boolean isJava = language != null && language.getLanguageName().equals("Java");
