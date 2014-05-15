@@ -40,7 +40,7 @@
 	</repositories>
 
 	<dependencies>
-		<!-- SciJava dependencies -->
+		<!-- ImageJ dependencies -->
 		<dependency>
 			<groupId>net.imagej</groupId>
 			<artifactId>imagej-common</artifactId>
@@ -49,6 +49,8 @@
 			<groupId>net.imagej</groupId>
 			<artifactId>imagej-updater</artifactId>
 		</dependency>
+
+		<!-- ImgLib2 dependencies -->
 		<dependency>
 			<groupId>net.imglib2</groupId>
 			<artifactId>imglib2</artifactId>
@@ -65,6 +67,8 @@
 			<groupId>net.imglib2</groupId>
 			<artifactId>imglib2-ops</artifactId>
 		</dependency>
+
+		<!-- SciJava dependencies -->
 		<dependency>
 			<groupId>org.scijava</groupId>
 			<artifactId>scijava-common</artifactId>
