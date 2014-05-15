@@ -1889,7 +1889,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 	}
 
-	/** Using a Vector to benefit from all its methods being synchronzed. */
 	private ArrayList<Executer> executingTasks = new ArrayList<Executer>();
 
 	/** Generic Thread that keeps a starting time stamp,
