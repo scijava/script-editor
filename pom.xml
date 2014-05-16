@@ -30,11 +30,6 @@
 		</dependency>
 		<dependency>
 			<groupId>sc.fiji</groupId>
-			<artifactId>fake</artifactId>
-			<version>${fake.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>sc.fiji</groupId>
 			<artifactId>fiji-compat</artifactId>
 			<version>${fiji.version}</version>
 		</dependency>
