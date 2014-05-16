@@ -37,6 +37,8 @@ import java.awt.event.WindowEvent;
 import javax.swing.SwingUtilities;
 
 import org.scijava.Context;
+import org.scijava.script.ScriptLanguage;
+import org.scijava.script.ScriptService;
 
 /**
  * Interactive test for the script editor.
@@ -47,6 +49,9 @@ public class ScriptEditorTestDrive {
 	public static void main(String[] args) throws Exception {
 		final Context context = new Context();
 		final TextEditor editor = new TextEditor(context);
+		final ScriptService scriptService = context.getService(ScriptService.class);
+		final ScriptLanguage beanshell = scriptService.getLanguageByName("Beanshell");
+		editor.setLanguage(beanshell);
 		editor.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosed(final WindowEvent e) {

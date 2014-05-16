@@ -34,7 +34,6 @@ package net.imagej.ui.swing.script;
 import java.awt.Color;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -50,7 +49,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Future;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Matcher;
@@ -66,10 +64,6 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
 
-import net.imagej.ui.swing.script.commands.NewPlugin;
-import net.imagej.util.AppUtils;
-
-import org.scijava.command.CommandModule;
 import org.scijava.util.LineOutputStream;
 import org.scijava.util.ProcessUtils;
 
@@ -80,19 +74,17 @@ import org.scijava.util.ProcessUtils;
  */
 public class FileFunctions {
 
-	protected static File imagejRoot = AppUtils.getBaseDirectory();
-
 	protected TextEditor parent;
 
 	public FileFunctions(TextEditor parent) {
 		this.parent = parent;
 	}
 
-	public List<String> extractSourceJar(String path) throws IOException {
+	public List<String> extractSourceJar(String path, File workspace) throws IOException {
 		String baseName = new File(path).getName();
 		if (baseName.endsWith(".jar") || baseName.endsWith(".zip")) baseName =
 			baseName.substring(0, baseName.length() - 4);
-		File baseDirectory = new File(imagejRoot, "src-plugins/" + baseName);
+		File baseDirectory = new File(workspace, baseName);
 
 		List<String> result = new ArrayList<String>();
 		JarFile jar = new JarFile(path);
@@ -170,7 +162,7 @@ public class FileFunctions {
 
 	protected static Map<String, List<String>> class2source;
 
-	public String findSourcePath(String className) {
+	public String findSourcePath(String className, final File workspace) {
 		if (class2source == null) {
 			if (JOptionPane.showConfirmDialog(parent,
 					"The class " + className + " was not found "
@@ -180,7 +172,7 @@ public class FileFunctions {
 					!= JOptionPane.YES_OPTION)
 				return null;
 			class2source = new HashMap<String, List<String>>();
-			findJavaPaths(imagejRoot, "");
+			findJavaPaths(workspace, "");
 		}
 		int dot = className.lastIndexOf('.');
 		String baseName = className.substring(dot + 1);
@@ -204,9 +196,9 @@ public class FileFunctions {
 			}
 		}
 		if (paths.size() == 1)
-			return new File(imagejRoot, paths.get(0)).getAbsolutePath();
+			return new File(workspace, paths.get(0)).getAbsolutePath();
 		String[] names = paths.toArray(new String[paths.size()]);
-		JFileChooser chooser = new JFileChooser(imagejRoot);
+		JFileChooser chooser = new JFileChooser(workspace);
 		chooser.setDialogTitle("Choose path");
 		if (chooser.showOpenDialog(parent) !=  JFileChooser.APPROVE_OPTION) return null;
 		return chooser.getSelectedFile().getPath();
@@ -242,143 +234,6 @@ public class FileFunctions {
 				if (file.isDirectory())
 					findJavaPaths(file, prefix + "/" + files[i]);
 			}
-	}
-
-	public boolean newPlugin() {
-		Future<CommandModule> result =
-			parent.commandService.run(NewPlugin.class, true, "editor", parent);
-		try {
-			result.get();
-			return true;
-		} catch (Throwable t) {
-			parent.handleException(t);
-			return false;
-		}
-	}
-
-	public boolean newPlugin(String name) {
-		String originalName = name.replace('_', ' ');
-
-		name = name.replace(' ', '_');
-		if (name.indexOf('_') < 0)
-			name += "_";
-
-		final File file =
-			new File(imagejRoot, "src-plugins/" + name + "/" +
-				name + ".java");
-		final File dir = file.getParentFile();
-		if ((!dir.exists() && !dir.mkdirs()) || !dir.isDirectory()) return error("Could not make directory '" +
-			dir.getAbsolutePath() + "'");
-
-		String jar = "plugins/" + name + ".jar";
-		addToGitignore(jar);
-		addPluginJarToFakefile(jar);
-
-		File pluginsConfig = new File(dir, "plugins.config");
-		parent.open(pluginsConfig);
-		if (parent.getEditorPane().getDocument().getLength() == 0)
-			parent.getEditorPane().insert(
-				"# " + originalName + "\n"
-				+ "\n"
-				+ "# Author: \n"
-				+ "\n"
-				+ "Plugins, \"" + originalName + "\", " + name + "\n", 0);
-		parent.open(file);
-		if (parent.getEditorPane().getDocument().getLength() == 0)
-			parent.getEditorPane().insert(
-				"import ij.ImagePlus;\n"
-				+ "\n"
-				+ "import ij.plugin.filter.PlugInFilter;\n"
-				+ "\n"
-				+ "import ij.process.ImageProcessor;\n"
-				+ "\n"
-				+ "public class " + name + " implements PlugInFilter {\n"
-				+ "\tprotected ImagePlus image;\n"
-				+ "\n"
-				+ "\tpublic int setup(String arg, ImagePlus image) {\n"
-				+ "\t\tthis.image = image;\n"
-				+ "\t\treturn DOES_ALL;\n"
-				+ "\t}\n"
-				+ "\n"
-				+ "\tpublic void run(ImageProcessor ip) {\n"
-				+ "\t\t// Do something\n"
-				+ "\t}\n"
-				+ "}", 0);
-		return true;
-	}
-
-	public boolean addToGitignore(String name) {
-		if (!name.startsWith("/"))
-			name = "/" + name;
-		if (!name.endsWith("\n"))
-			name += "\n";
-
-		final File file = new File(imagejRoot, ".gitignore");
-		if (!file.exists()) return false;
-
-		try {
-			String content = readStream(new FileInputStream(file));
-			if (content.startsWith(name) || content.indexOf("\n" + name) >= 0)
-				return false;
-
-			FileOutputStream out = new FileOutputStream(file, true);
-			if (!content.endsWith("\n"))
-				out.write("\n".getBytes());
-			out.write(name.getBytes());
-			out.close();
-			return true;
-		} catch (FileNotFoundException e) {
-			return false;
-		} catch (IOException e) {
-			return error("Failure writing " + file);
-		}
-	}
-
-	public boolean addPluginJarToFakefile(final String name) {
-		final File file = new File(imagejRoot, "Fakefile");
-		if (!file.exists()) return false;
-
-		try {
-			String content = readStream(new FileInputStream(file));
-
-			// insert plugin target
-			int start = content.indexOf("\nPLUGIN_TARGETS=");
-			if (start < 0)
-				return false;
-			int end = content.indexOf("\n\n", start);
-			if (end < 0)
-				end = content.length();
-			int offset = content.indexOf("\n\t" + name, start);
-			if (offset < end && offset > start)
-				return false;
-			String insert = "\n\t" + name;
-			if (content.charAt(end - 1) != '\\')
-				insert = " \\" + insert;
-			content = content.substring(0, end) + insert + content.substring(end);
-
-			// insert classpath
-			offset = content.lastIndexOf("\nCLASSPATH(");
-			while (offset > 0 &&
-					(content.substring(offset).startsWith("\nCLASSPATH(jars/test-fiji.jar)") ||
-					content.substring(offset).startsWith("\nCLASSPATH(plugins/FFMPEG")))
-				offset = content.lastIndexOf("\nCLASSPATH(", offset - 1);
-			if (offset < 0)
-				return false;
-			offset = content.indexOf('\n', offset + 1);
-			if (offset < 0)
-				return false;
-			content = content.substring(0, offset) + "\nCLASSPATH(" + name + ")=jars/ij.jar" + content.substring(offset);
-
-			FileOutputStream out = new FileOutputStream(file);
-			out.write(content.getBytes());
-			out.close();
-
-			return true;
-		} catch (FileNotFoundException e) {
-			return false;
-		} catch (IOException e) {
-			return error("Failure writing " + file);
-		}
 	}
 
 	protected String readStream(InputStream in) throws IOException {

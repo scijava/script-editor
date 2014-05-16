@@ -48,12 +48,10 @@ import java.io.CharArrayWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintWriter;
@@ -121,6 +119,7 @@ import org.scijava.module.ModuleException;
 import org.scijava.module.ModuleService;
 import org.scijava.platform.PlatformService;
 import org.scijava.plugin.Parameter;
+import org.scijava.plugins.scripting.java.JavaEngine;
 import org.scijava.script.ScriptInfo;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptModule;
@@ -171,7 +170,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		  openHelp, addImport, clearScreen, nextError, previousError,
 		  openHelpWithoutFrames, nextTab, previousTab,
 		  runSelection, extractSourceJar, toggleBookmark,
-		  listBookmarks, openSourceForClass, newPlugin,
+		  listBookmarks, openSourceForClass,
 		  openSourceForMenuItem,
 		  openMacroFunctions, decreaseFontSize, increaseFontSize,
 		  chooseFontSize, chooseTabSize, gitGrep, openInGitweb,
@@ -183,7 +182,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	protected int tabsMenuTabsStart;
 	protected Set<JMenuItem> tabsMenuItems;
 	protected FindAndReplaceDialog findDialog;
-	protected JCheckBoxMenuItem autoSave, showDeprecation, wrapLines, tabsEmulated;
+	protected JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated;
 	protected JTextArea errorScreen = new JTextArea();
 
 	protected final String templateFolder = "templates/";
@@ -442,8 +441,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		compile.setMnemonic(KeyEvent.VK_C);
 		autoSave = new JCheckBoxMenuItem("Auto-save before compiling");
 		runMenu.add(autoSave);
-		showDeprecation = new JCheckBoxMenuItem("Show deprecations");
-		runMenu.add(showDeprecation);
 
 		runMenu.addSeparator();
 		nextError = addToMenu(runMenu, "Next Error", KeyEvent.VK_F4, 0);
@@ -473,10 +470,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		extractSourceJar = addToMenu(toolsMenu,
 			"Extract source .jar...", 0, 0);
 		extractSourceJar.setMnemonic(KeyEvent.VK_E);
-		newPlugin = addToMenu(toolsMenu,
-			"Create new plugin...", 0, 0);
-		newPlugin.setMnemonic(KeyEvent.VK_C);
-		newPlugin.setEnabled(false); // CTR TEMP: disabled for 2.0.0-beta5
 		openSourceForClass = addToMenu(toolsMenu,
 			"Open .java file for class...", 0, 0);
 		openSourceForClass.setMnemonic(KeyEvent.VK_J);
@@ -1044,8 +1037,6 @@ public class TextEditor extends JFrame implements ActionListener,
 			EditorPane editorPane = getEditorPane();
 			new FileFunctions(this).openInGitweb(editorPane.file, editorPane.gitDirectory, editorPane.getCaretLineNumber() + 1);
 		}
-		else if (source == newPlugin)
-			new FileFunctions(this).newPlugin();
 		else if (source == increaseFontSize || source == decreaseFontSize) {
 			getEditorPane().increaseFontSize((float)(source == increaseFontSize ? 1.2 : 1 / 1.2));
 			updateTabAndFontSize(false);
@@ -1599,7 +1590,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (name.indexOf('_') < 0)
 			name += "_";
 		name += ".jar";
-		JFileChooser chooser = new JFileChooser(file.getParentFile());
+		JFileChooser chooser = new JFileChooser(file == null ? null : file.getParentFile());
 		chooser.setDialogTitle("Export");
 		chooser.setSelectedFile(new File(name));
 		if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return false;
@@ -1622,99 +1613,26 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 	}
 
-	public void makeJar(File file, boolean includeSources)
+	public void makeJar(final File file, final boolean includeSources)
 			throws IOException {
-		throw new RuntimeException("TODO, when MiniMaven was integrated");
-		/*
-		List<String> paths = new ArrayList<String>();
-		List<String> names = new ArrayList<String>();
-		File tmpDir = null, file = getEditorPane().file;
-		String sourceName = null;
-		ScriptLanguage currentLanguage = getCurrentLanguage();
-		if (currentLanguage == null || !(currentLanguage.getLanguageName().equals("Java")))
-			sourceName = file.getName();
-		if (currentLanguage != null) try {
-			tmpDir = File.createTempFile("tmp", "");
-			tmpDir.delete();
-			tmpDir.mkdir();
+		if (!handleUnsavedChanges(true))
+			return;
 
-			String sourcePath;
-			Refresh_Javas java;
-			if (sourceName == null) {
-	 			sourcePath = file.getAbsolutePath();
-				java = (Refresh_Javas)currentLanguage.newInterpreter();
-			}
-			else {
-				// this is a script, we need to generate a Java wrapper
-				ScriptEngine interpreter = currentLanguage.getScriptEngine();
-				sourcePath = generateScriptWrapper(tmpDir, sourceName, interpreter);
-				java = (Refresh_Javas)scriptService.getByName("Java").getScriptEngine();
-			}
-			java.showDeprecation(showDeprecation.getState());
-			java.compile(sourcePath, tmpDir.getAbsolutePath());
-			getClasses(tmpDir, paths, names);
-			if (includeSources) {
-				String name = java.getPackageName(sourcePath);
-				name = (name == null ? "" :
-						name.replace('.', '/') + "/")
-					+ file.getName();
-				sourceName = name;
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-			if (e instanceof IOException)
-				throw (IOException)e;
-			throw new IOException(e.getMessage());
+		final ScriptEngine interpreter =
+			getCurrentLanguage().getScriptEngine();
+		if (interpreter instanceof JavaEngine) {
+			final JavaEngine java = (JavaEngine) interpreter;
+			final JTextAreaWriter errors = new JTextAreaWriter(errorScreen, log);
+			markCompileStart();
+			getTab().showErrors();
+			new Thread() {
+				public void run() {
+					java.makeJar(getEditorPane().file, includeSources, file, errors);
+					errorScreen.insert("Compilation finished.\n", errorScreen.getDocument().getLength());
+					markCompileEnd();
+				}
+			}.start();
 		}
-
-		OutputStream out = new FileOutputStream(path);
-		JarOutputStream jar = new JarOutputStream(out);
-
-		if (sourceName != null)
-			writeJarEntry(jar, sourceName,
-					getTextArea().getText().getBytes());
-		for (int i = 0; i < paths.size(); i++)
-			writeJarEntry(jar, names.get(i),
-					readFile(paths.get(i)));
-
-		jar.close();
-
-		if (tmpDir != null)
-			deleteRecursively(tmpDir);
-		*/
-	}
-
-	protected final static String scriptWrapper =
-		"import ij.IJ;\n" +
-		"\n" +
-		"import ij.plugin.PlugIn;\n" +
-		"\n" +
-		"public class CLASS_NAME implements PlugIn {\n" +
-		"\tpublic void run(String arg) {\n" +
-		"\t\ttry {\n" +
-		"\t\t\tnew INTERPRETER().runScript(getClass()\n" +
-		"\t\t\t\t.getResource(\"SCRIPT_NAME\").openStream());\n" +
-		"\t\t} catch (Exception e) {\n" +
-		"\t\t\tIJ.handleException(e);\n" +
-		"\t\t}\n" +
-		"\t}\n" +
-		"}\n";
-	protected String generateScriptWrapper(File outputDirectory, String scriptName, ScriptEngine interpreter)
-			throws FileNotFoundException, IOException {
-		String className = scriptName;
-		int dot = className.indexOf('.');
-		if (dot >= 0)
-			className = className.substring(0, dot);
-		if (className.indexOf('_') < 0)
-			className += "_";
-		String code = scriptWrapper.replace("CLASS_NAME", className)
-			.replace("SCRIPT_NAME", scriptName)
-			.replace("INTERPRETER", interpreter.getClass().getName());
-		File output = new File(outputDirectory, className + ".java");
-		OutputStream out = new FileOutputStream(output);
-		out.write(code.getBytes());
-		out.close();
-		return output.getAbsolutePath();
 	}
 
 	static void getClasses(File directory,
@@ -1791,7 +1709,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				!isCompileable);
 		compile.setVisible(isCompileable);
 		autoSave.setVisible(isCompileable);
-		showDeprecation.setVisible(isCompileable);
+		makeJar.setVisible(isCompileable);
 		makeJarWithSource.setVisible(isCompileable);
 
 		boolean isJava = language != null && language.getLanguageName().equals("Java");
@@ -1899,7 +1817,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 	}
 
-	/** Using a Vector to benefit from all its methods being synchronzed. */
 	private ArrayList<Executer> executingTasks = new ArrayList<Executer>();
 
 	/** Generic Thread that keeps a starting time stamp,
@@ -2099,7 +2016,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			public void execute() {
 				Reader reader = null;
 				try {
-					reader = evalScript(getEditorPane().getFileName(), new FileReader(file), output, errors);
+					reader = evalScript(getEditorPane().file.getPath(), new FileReader(file), output, errors);
 
 					output.flush();
 					errors.flush();
@@ -2123,32 +2040,24 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public void compile() {
-		throw new RuntimeException("TODO: implement using MiniMaven");
-		/*
 		if (!handleUnsavedChanges(true))
 			return;
 
 		final ScriptEngine interpreter =
 			getCurrentLanguage().getScriptEngine();
-		final JTextAreaWriter output = new JTextAreaWriter(getTab().screen, log);
-		final JTextAreaWriter errors = new JTextAreaWriter(errorScreen, log);
-		scriptService.initialize(interpreter, getEditorPane().getFileName(), output, errors);
-		getTab().showErrors();
-		if (interpreter instanceof Refresh_Javas) {
-			final Refresh_Javas java = (Refresh_Javas)interpreter;
-			final File file = getEditorPane().file;
-			final String sourcePath = file.getAbsolutePath();
-			java.showDeprecation(showDeprecation.getState());
+		if (interpreter instanceof JavaEngine) {
+			final JavaEngine java = (JavaEngine) interpreter;
+			final JTextAreaWriter errors = new JTextAreaWriter(errorScreen, log);
 			markCompileStart();
+			getTab().showErrors();
 			new Thread() {
 				public void run() {
-					java.compileAndRun(sourcePath, true);
+					java.compile(getEditorPane().file, errors);
 					errorScreen.insert("Compilation finished.\n", errorScreen.getDocument().getLength());
 					markCompileEnd();
 				}
 			}.start();
 		}
-		*/
 	}
 
 	public String getSelectedTextOrAsk(String label) {
@@ -2326,7 +2235,13 @@ public class TextEditor extends JFrame implements ActionListener,
 	public void extractSourceJar(File file) {
 		try {
 			FileFunctions functions = new FileFunctions(this);
-			List<String> paths = functions.extractSourceJar(file.getAbsolutePath());
+			JFileChooser dialog = new JFileChooser();
+			dialog.setDialogTitle("Choose workspace directory");
+			dialog.setCurrentDirectory(new File(System.getProperty("user.home")));
+			dialog.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+			if (dialog.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
+			final File workspace = dialog.getSelectedFile();
+			List<String> paths = functions.extractSourceJar(file.getAbsolutePath(), workspace);
 			for (String path : paths)
 				if (!functions.isBinaryFile(path)) {
 					open(new File(path));

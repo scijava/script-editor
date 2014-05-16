@@ -86,11 +86,11 @@ public class BookmarkDialog extends JDialog implements ActionListener {
 
 		KeyListener keyListener = new KeyAdapter() {
 			public void keyPressed(KeyEvent e) {
-				if (e.getKeyCode() == e.VK_ENTER) {
+				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
 					jumpToSelectedBookmark();
 					dispose();
 				}
-				else if (e.getKeyCode() == e.VK_ESCAPE)
+				else if (e.getKeyCode() == KeyEvent.VK_ESCAPE)
 					dispose();
 			}
 		};
