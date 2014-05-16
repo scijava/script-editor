@@ -1,18 +1,9 @@
 package fiji.scripting;
 
 import fiji.SimpleExecuter;
-
-import fiji.build.Fake;
-import fiji.build.Parser;
-import fiji.build.Rule;
-import fiji.build.SubFake;
-
 import ij.IJ;
-
 import ij.gui.GenericDialog;
-
 import ij.plugin.BrowserLauncher;
-import imagej.build.minimaven.MavenProject;
 
 import java.awt.Color;
 import java.awt.Cursor;
@@ -21,12 +12,10 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -36,7 +25,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -45,10 +33,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -60,10 +46,8 @@ import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
-
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
@@ -191,57 +175,6 @@ public class FileFunctions {
 				className = className.substring(0, dot);
 				path = dir + className.replace('.', '/') + ".java";
 			}
-
-		// Try to find it with the help of the Fakefile
-		File fakefile = new File(ijDir, "Fakefile");
-		if (fakefile.exists()) try {
-			Fake fake = new Fake();
-			if (parent != null) {
-				final JTextAreaOutputStream output = new JTextAreaOutputStream(parent.getTab().screen);
-				final JTextAreaOutputStream errors = new JTextAreaOutputStream(parent.errorScreen);
-				fake.out = new PrintStream(output);
-				fake.err = new PrintStream(errors);
-			}
-			Parser parser = fake.parse(new FileInputStream(fakefile), new File(ijDir));
-			parser.parseRules(null);
-			Rule rule = parser.getRule("plugins/" + baseName + ".jar");
-			if (rule == null)
-				rule = parser.getRule("jars/" + baseName + ".jar");
-			if (rule != null) {
-				String stripPath = rule.getStripPath();
-				dir = ijDir + "/";
-				if (rule instanceof SubFake) {
-					SubFake subFake = (SubFake)rule;
-					stripPath = rule.getLastPrerequisite();
-					fakefile = subFake.getFakefile();
-					if (fakefile != null) {
-						dir += rule.getLastPrerequisite();
-						parser = fake.parse(new FileInputStream(fakefile), new File(dir));
-						parser.parseRules(null);
-						rule = parser.getRule(baseName + ".jar");
-						if (rule != null)
-							stripPath = rule.getStripPath();
-					}
-					else {
-						MavenProject pom = subFake.getPOM();
-						if (pom != null) {
-							dir += rule.getLastPrerequisite();
-							stripPath = pom.getSourcePath();
-						}
-					}
-				}
-				if (stripPath != null) {
-					if (!stripPath.endsWith("/"))
-						stripPath += "/";
-					dir += stripPath;
-					path = dir + className.replace('.', '/') + ".java";
-					if (new File(path).exists())
-						return path;
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 
 		return null;
 	}
