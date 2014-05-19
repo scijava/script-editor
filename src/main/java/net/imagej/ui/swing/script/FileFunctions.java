@@ -572,13 +572,4 @@ public class FileFunctions {
 		JOptionPane.showMessageDialog(parent, message);
 		return false;
 	}
-
-	public static void main(String[] args) {
-		String root = System.getProperty("ij.dir");
-		try {
-			System.err.println(new FileFunctions(null).getSourcePath("script.imglib.analysis.DoGPeaks"));
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
 }
