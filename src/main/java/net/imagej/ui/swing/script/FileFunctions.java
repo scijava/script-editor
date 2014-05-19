@@ -40,6 +40,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,6 +66,8 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
 
+import org.scijava.util.AppUtils;
+import org.scijava.util.FileUtils;
 import org.scijava.util.LineOutputStream;
 import org.scijava.util.ProcessUtils;
 
@@ -572,4 +576,120 @@ public class FileFunctions {
 		JOptionPane.showMessageDialog(parent, message);
 		return false;
 	}
+	/**
+	 * Finds {@link URL}s of resources known to ImageJ. Both JAR files and files
+	 * on disk are searched, according to the following mechanism:
+	 * <ol>
+	 * <li>Resources at the given {@code pathPrefix} are discovered using
+	 * {@link ClassLoader#getResources(String)} with the current thread's context
+	 * class loader. In particular, this invocation discovers resources in JAR
+	 * files beneath the given {@code pathPrefix}.</li>
+	 * <li>The directory named {@code pathPrefix} beneath the
+	 * {@link AppUtils#getBaseDirectory() ImageJ application base directory}.</li>
+	 * </ol>
+	 * <p>
+	 * In both cases, resources are then recursively scanned using SciJava
+	 * Common's {@link FileUtils#listContents(URL)}, and anything matching the
+	 * given {@code regex} pattern is added to the output map.
+	 * </p>
+	 * <p>
+	 * Note that the {@code pathPrefix} directory is scanned <em>after</em> the
+	 * URL resources, so that users can more easily override resources provided
+	 * inside JAR files by placing a resource of the same name within the
+	 * {@code pathPrefix} directory.
+	 * </p>
+	 * 
+	 * @param regex The regex to use when matching resources, or null to match
+	 *          everything.
+	 * @param pathPrefix The path to search for resources.
+	 * @return A map of URLs referencing the matched resources.
+	 */
+	public static Map<String, URL> findResources(final String regex,
+		final String pathPrefix)
+	{
+		// scan URL resource paths first
+		final ClassLoader loader = Thread.currentThread().getContextClassLoader();
+		final ArrayList<URL> urls = new ArrayList<URL>();
+		try {
+			urls.addAll(Collections.list(loader.getResources(pathPrefix + "/")));
+		}
+		catch (final IOException exc) {
+			// error loading resources; proceed with an empty list
+		}
+
+		// scan directory second; user can thus override resources from JARs
+		final File baseDirectory = AppUtils.getBaseDirectory("imagej.dir", FileFunctions.class, null);
+		if (baseDirectory != null) {
+			try {
+				urls.add(new File(baseDirectory, pathPrefix).toURI().toURL());
+			}
+			catch (final MalformedURLException exc) {
+				// error adding directory; proceed without it
+			}
+		}
+
+		return findResources(regex, urls);
+	}
+
+	/**
+	 * Finds {@link URL}s of resources known to ImageJ.
+	 * <p>
+	 * Each of the given {@link URL}s is recursively scanned using SciJava
+	 * Common's {@link FileUtils#listContents(URL)}, and anything matching the
+	 * given {@code regex} pattern is added to the output map.</li>
+	 * 
+	 * @param regex The regex to use when matching resources, or null to match
+	 *          everything.
+	 * @param urls Paths to search for resources.
+	 * @return A map of URLs referencing the matched resources.
+	 */
+	public static Map<String, URL> findResources(final String regex,
+		final Iterable<URL> urls)
+	{
+		final HashMap<String, URL> result = new HashMap<String, URL>();
+		final Pattern pattern = regex == null ? null : Pattern.compile(regex);
+		for (final URL url : urls) {
+			getResources(pattern, result, url);
+		}
+		return result;
+	}
+
+	// -- Helper methods --
+
+	private static void getResources(final Pattern pattern,
+		final Map<String, URL> result, final URL base)
+	{
+		final String prefix = urlPath(base);
+		if (prefix == null) return; // unsupported base URL
+
+		for (final URL url : FileUtils.listContents(base)) {
+			final String s = urlPath(url);
+			if (s == null || !s.startsWith(prefix)) continue;
+
+			if (pattern == null || pattern.matcher(s).matches()) {
+				// this resource matches the pattern
+				final String key = urlPath(s.substring(prefix.length()));
+				if (key != null) result.put(key, url);
+			}
+		}
+	}
+
+	private static String urlPath(final URL url) {
+		try {
+			return url.toURI().toString();
+		}
+		catch (final URISyntaxException exc) {
+			return null;
+		}
+	}
+
+	private static String urlPath(final String path) {
+		try {
+			return new URI(path).getPath();
+		}
+		catch (final URISyntaxException exc) {
+			return null;
+		}
+	}
+
 }
