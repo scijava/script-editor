@@ -401,7 +401,6 @@ public class FileFunctions {
 				int newLine = text.lastIndexOf('\n');
 				if (offset - newLine <= width)
 					return;
-				int additional = 0;
 				while (offset - newLine > width) {
 					int remove = 0;
 					int space = text.lastIndexOf(' ', newLine + width);
