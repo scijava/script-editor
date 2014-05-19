@@ -104,7 +104,6 @@ import net.imagej.ui.swing.script.commands.ChooseFontSize;
 import net.imagej.ui.swing.script.commands.ChooseTabSize;
 import net.imagej.ui.swing.script.commands.GitGrep;
 import net.imagej.ui.swing.script.commands.KillScript;
-import net.imagej.util.AppUtils;
 
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
@@ -124,6 +123,7 @@ import org.scijava.script.ScriptInfo;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptModule;
 import org.scijava.script.ScriptService;
+import org.scijava.util.AppUtils;
 import org.scijava.util.FileUtils;
 import org.scijava.util.Prefs;
 
@@ -727,7 +727,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	 */
 	protected void addTemplates(JMenu templatesMenu) {
 		for (final Map.Entry<String, URL> entry :
-			new TreeMap<String, URL>(AppUtils.findResources(null, TEMPLATES_PATH)).entrySet()) {
+			new TreeMap<String, URL>(FileFunctions.findResources(null, TEMPLATES_PATH)).entrySet()) {
 			final String path = entry.getKey().replace('/', '>').replace('_', ' ');
 			final JMenu menu = getMenu(templatesMenu, path, true);
 
@@ -867,7 +867,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == open) {
 			final EditorPane editorPane = getEditorPane();
 			final File defaultDir = editorPane != null && editorPane.file != null ?
-				editorPane.file.getParentFile() : AppUtils.getBaseDirectory();
+				editorPane.file.getParentFile() : AppUtils.getBaseDirectory("imagej.dir", TextEditor.class, null);
 			final File file = openWithDialog("Open...", defaultDir, new String[] {
 				".class", ".jar"
 			}, false);
@@ -1526,7 +1526,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	public boolean saveAs() {
 		EditorPane editorPane = getEditorPane();
 		File dir = editorPane.file == null ?
-				AppUtils.getBaseDirectory() :
+				AppUtils.getBaseDirectory("imagej.dir", TextEditor.class, null) :
 				editorPane.file.getParentFile();
 		JFileChooser chooser = new JFileChooser(dir);
 		chooser.setDialogTitle("Save as");
