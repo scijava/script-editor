@@ -60,6 +60,7 @@ import java.io.Writer;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -388,8 +389,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		ButtonGroup group = new ButtonGroup();
 		List<ScriptLanguage> list = scriptService.getLanguages();
 		list.add(null);
+		Map<String, ScriptLanguage> languageMap = new HashMap<String, ScriptLanguage>();
 		for (final ScriptLanguage language : list) {
 			String name = language == null ? "None" : language.getLanguageName();
+			languageMap.put(name, language);
 
 			JRadioButtonMenuItem item = new JRadioButtonMenuItem(name);
 			if (language == null) {
@@ -422,7 +425,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		JMenu templates = new JMenu("Templates");
 		templates.setMnemonic(KeyEvent.VK_T);
-		addTemplates(templates);
+		addTemplates(templates, languageMap);
 		mbar.add(templates);
 
 		runMenu = new JMenu("Run");
@@ -724,11 +727,37 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	/**
 	 * Initializes the template menu.
+	 * <p>
+	 * Third-party components can add templates simply by providing
+	 * language-specific files in their resources, identified by a path of the
+	 * form {@code /script-templates/<language>/menu label}.
+	 * </p>
+	 * <p>
+	 * The sub menus of the template menu correspond to language names; Entries
+	 * for languages unknown to the script service will be discarded quietly.
+	 * </p>
+	 * 
+	 * @param templatesMenu
+	 *            the top-level menu to populate
+	 * @param languageMap
+	 *            the known languages
 	 */
-	protected void addTemplates(JMenu templatesMenu) {
+	protected void addTemplates(JMenu templatesMenu, Map<String, ScriptLanguage> languageMap) {
 		for (final Map.Entry<String, URL> entry :
 			new TreeMap<String, URL>(FileFunctions.findResources(null, TEMPLATES_PATH)).entrySet()) {
 			final String path = entry.getKey().replace('/', '>').replace('_', ' ');
+			int gt = path.indexOf('>');
+			if (gt < 1) {
+				log.warn("Ignoring invalid editor template: " + entry.getValue());
+				continue;
+			}
+			final String language = path.substring(0, gt);
+			if (!languageMap.containsKey(language)) {
+				log.debug("Ignoring editor template for language " + language
+						+ ": " + entry.getValue());
+				continue;
+			}
+			final ScriptLanguage engine = languageMap.get(language);
 			final JMenu menu = getMenu(templatesMenu, path, true);
 
 			String label = path.substring(path.lastIndexOf('>') + 1);
@@ -741,7 +770,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			item.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
-					loadTemplate(url);
+					loadTemplate(url, engine);
 				}
 			});
 		}
@@ -760,7 +789,18 @@ public class TextEditor extends JFrame implements ActionListener,
 			error("The template '" + url + "' was not found.");
 		}
 	}
+
 	public void loadTemplate(final URL url) {
+		final String path = url.getPath();
+		int dot = path.lastIndexOf('.');
+		ScriptLanguage language = null;
+		if (dot > 0) {
+			language = scriptService.getLanguageByExtension(path.substring(dot + 1));
+		}
+		loadTemplate(url, language);
+	}
+
+	public void loadTemplate(final URL url, final ScriptLanguage language) {
 		createNewDocument();
 
 		try {
@@ -768,13 +808,10 @@ public class TextEditor extends JFrame implements ActionListener,
 			InputStream in = url.openStream();
 			getTextArea().read(new BufferedReader(new InputStreamReader(in)), null);
 
-			final String path = url.getPath();
-			int dot = path.lastIndexOf('.');
-			if (dot > 0) {
-				ScriptLanguage language = scriptService.getLanguageByExtension(path.substring(dot + 1));
-				if (language != null)
-					setLanguage(language);
+			if (language != null) {
+				setLanguage(language);
 			}
+			final String path = url.getPath();
 			setFileName(path.substring(path.lastIndexOf('/') + 1));
 		} catch (Exception e) {
 			e.printStackTrace();
