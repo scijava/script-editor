@@ -201,11 +201,13 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	protected Map<ScriptLanguage, JRadioButtonMenuItem> languageMenuItems;
 	protected JRadioButtonMenuItem noneLanguageItem;
+	private List<AutoImporter> importerPlugins;
 
 	public TextEditor(final Context context) {
 		super("Script Editor");
 		context.inject(this);
 		initializeTokenMakers(pluginService, log);
+		importerPlugins = pluginService.createInstancesOfType(AutoImporter.class);
 		loadPreferences();
 
 		// Initialize menu
@@ -2364,8 +2366,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		return Prefs.getInt(TAB_SIZE_PREFS, DEFAULT_TAB_SIZE);
 	}
 
-	private Reader evalScript(final String filename, final Reader reader, final Writer output, final Writer errors) throws FileNotFoundException,
+	private Reader evalScript(final String filename, Reader reader, final Writer output, final Writer errors) throws FileNotFoundException,
 			ModuleException {
+		reader = DefaultAutoImporters.prefixAutoImports(language, importerPlugins, reader, errors);
 		// create script module for execution
 		final ScriptInfo info = new ScriptInfo(context, filename, reader);
 		final ScriptModule module = info.createModule();
