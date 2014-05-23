@@ -129,7 +129,15 @@ import org.scijava.util.FileUtils;
 import org.scijava.util.Prefs;
 
 /**
- * TODO
+ * A versatile script editor for ImageJ.
+ * <p>
+ * Based on the powerful SciJava scripting framework and the <a
+ * href="http://fifesoft.com/rsyntaxtextarea/">RSyntaxTextArea</a> library,
+ * this text editor offers users to script their way through image processing.
+ * Thanks to the <a href="https://github.com/scijava/scripting-java">Java
+ * backend for SciJava scripting</a>, it is even possible to develop Java
+ * plugins in the editor.
+ * </p>
  * 
  * @author Johannes Schindelin
  */
