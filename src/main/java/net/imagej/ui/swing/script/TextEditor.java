@@ -60,6 +60,7 @@ import java.io.Writer;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -104,7 +105,6 @@ import net.imagej.ui.swing.script.commands.ChooseFontSize;
 import net.imagej.ui.swing.script.commands.ChooseTabSize;
 import net.imagej.ui.swing.script.commands.GitGrep;
 import net.imagej.ui.swing.script.commands.KillScript;
-import net.imagej.util.AppUtils;
 
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
@@ -124,11 +124,20 @@ import org.scijava.script.ScriptInfo;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptModule;
 import org.scijava.script.ScriptService;
+import org.scijava.util.AppUtils;
 import org.scijava.util.FileUtils;
 import org.scijava.util.Prefs;
 
 /**
- * TODO
+ * A versatile script editor for ImageJ.
+ * <p>
+ * Based on the powerful SciJava scripting framework and the <a
+ * href="http://fifesoft.com/rsyntaxtextarea/">RSyntaxTextArea</a> library,
+ * this text editor offers users to script their way through image processing.
+ * Thanks to the <a href="https://github.com/scijava/scripting-java">Java
+ * backend for SciJava scripting</a>, it is even possible to develop Java
+ * plugins in the editor.
+ * </p>
  * 
  * @author Johannes Schindelin
  */
@@ -388,8 +397,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		ButtonGroup group = new ButtonGroup();
 		List<ScriptLanguage> list = scriptService.getLanguages();
 		list.add(null);
+		Map<String, ScriptLanguage> languageMap = new HashMap<String, ScriptLanguage>();
 		for (final ScriptLanguage language : list) {
 			String name = language == null ? "None" : language.getLanguageName();
+			languageMap.put(name, language);
 
 			JRadioButtonMenuItem item = new JRadioButtonMenuItem(name);
 			if (language == null) {
@@ -422,7 +433,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		JMenu templates = new JMenu("Templates");
 		templates.setMnemonic(KeyEvent.VK_T);
-		addTemplates(templates);
+		addTemplates(templates, languageMap);
 		mbar.add(templates);
 
 		runMenu = new JMenu("Run");
@@ -724,11 +735,37 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	/**
 	 * Initializes the template menu.
+	 * <p>
+	 * Third-party components can add templates simply by providing
+	 * language-specific files in their resources, identified by a path of the
+	 * form {@code /script-templates/<language>/menu label}.
+	 * </p>
+	 * <p>
+	 * The sub menus of the template menu correspond to language names; Entries
+	 * for languages unknown to the script service will be discarded quietly.
+	 * </p>
+	 * 
+	 * @param templatesMenu
+	 *            the top-level menu to populate
+	 * @param languageMap
+	 *            the known languages
 	 */
-	protected void addTemplates(JMenu templatesMenu) {
+	protected void addTemplates(JMenu templatesMenu, Map<String, ScriptLanguage> languageMap) {
 		for (final Map.Entry<String, URL> entry :
-			new TreeMap<String, URL>(AppUtils.findResources(null, TEMPLATES_PATH)).entrySet()) {
+			new TreeMap<String, URL>(FileFunctions.findResources(null, TEMPLATES_PATH)).entrySet()) {
 			final String path = entry.getKey().replace('/', '>').replace('_', ' ');
+			int gt = path.indexOf('>');
+			if (gt < 1) {
+				log.warn("Ignoring invalid editor template: " + entry.getValue());
+				continue;
+			}
+			final String language = path.substring(0, gt);
+			if (!languageMap.containsKey(language)) {
+				log.debug("Ignoring editor template for language " + language
+						+ ": " + entry.getValue());
+				continue;
+			}
+			final ScriptLanguage engine = languageMap.get(language);
 			final JMenu menu = getMenu(templatesMenu, path, true);
 
 			String label = path.substring(path.lastIndexOf('>') + 1);
@@ -741,7 +778,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			item.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
-					loadTemplate(url);
+					loadTemplate(url, engine);
 				}
 			});
 		}
@@ -760,7 +797,18 @@ public class TextEditor extends JFrame implements ActionListener,
 			error("The template '" + url + "' was not found.");
 		}
 	}
+
 	public void loadTemplate(final URL url) {
+		final String path = url.getPath();
+		int dot = path.lastIndexOf('.');
+		ScriptLanguage language = null;
+		if (dot > 0) {
+			language = scriptService.getLanguageByExtension(path.substring(dot + 1));
+		}
+		loadTemplate(url, language);
+	}
+
+	public void loadTemplate(final URL url, final ScriptLanguage language) {
 		createNewDocument();
 
 		try {
@@ -768,13 +816,10 @@ public class TextEditor extends JFrame implements ActionListener,
 			InputStream in = url.openStream();
 			getTextArea().read(new BufferedReader(new InputStreamReader(in)), null);
 
-			final String path = url.getPath();
-			int dot = path.lastIndexOf('.');
-			if (dot > 0) {
-				ScriptLanguage language = scriptService.getLanguageByExtension(path.substring(dot + 1));
-				if (language != null)
-					setLanguage(language);
+			if (language != null) {
+				setLanguage(language);
 			}
+			final String path = url.getPath();
 			setFileName(path.substring(path.lastIndexOf('/') + 1));
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -867,7 +912,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == open) {
 			final EditorPane editorPane = getEditorPane();
 			final File defaultDir = editorPane != null && editorPane.file != null ?
-				editorPane.file.getParentFile() : AppUtils.getBaseDirectory();
+				editorPane.file.getParentFile() : AppUtils.getBaseDirectory("imagej.dir", TextEditor.class, null);
 			final File file = openWithDialog("Open...", defaultDir, new String[] {
 				".class", ".jar"
 			}, false);
@@ -1526,7 +1571,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	public boolean saveAs() {
 		EditorPane editorPane = getEditorPane();
 		File dir = editorPane.file == null ?
-				AppUtils.getBaseDirectory() :
+				AppUtils.getBaseDirectory("imagej.dir", TextEditor.class, null) :
 				editorPane.file.getParentFile();
 		JFileChooser chooser = new JFileChooser(dir);
 		chooser.setDialogTitle("Save as");
