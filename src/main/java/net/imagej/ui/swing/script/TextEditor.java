@@ -119,6 +119,9 @@ import org.scijava.module.ModuleException;
 import org.scijava.module.ModuleService;
 import org.scijava.platform.PlatformService;
 import org.scijava.plugin.Parameter;
+import org.scijava.plugin.Plugin;
+import org.scijava.plugin.PluginInfo;
+import org.scijava.plugin.PluginService;
 import org.scijava.plugins.scripting.java.JavaEngine;
 import org.scijava.script.ScriptInfo;
 import org.scijava.script.ScriptLanguage;
@@ -156,19 +159,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	public static final int DEFAULT_WINDOW_WIDTH = 800;
 	public static final int DEFAULT_WINDOW_HEIGHT = 600;
 
-	static {
-		try {
-			AbstractTokenMakerFactory factory = (AbstractTokenMakerFactory)TokenMakerFactory.getDefaultInstance();
-			// TODO: these should go to upstream RSyntaxTextArea
-			factory.putMapping("text/matlab", MatlabTokenMaker.class.getName());
-			factory.putMapping("text/ij-macro", ImageJMacroTokenMaker.class.getName());
-			factory.putMapping("text/ecmascript", JavaScriptTokenMaker.class.getName());
-			factory.putMapping("text/beanshell", JavaTokenMaker.class.getName());
-		} catch (ClassCastException t) {
-			// ignore for now, but log it to stderr
-			t.printStackTrace();
-		}
-	}
+	private static AbstractTokenMakerFactory tokenMakerFactory = null;
 
 	protected JTabbedPane tabbed;
 	protected JMenuItem newFile, open, save, saveas, compileAndRun, compile, close,
@@ -214,6 +205,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	protected CommandService commandService;
 	@Parameter
 	protected ScriptService scriptService;
+	@Parameter
+	protected PluginService pluginService;
 
 	protected Map<ScriptLanguage, JRadioButtonMenuItem> languageMenuItems;
 	protected JRadioButtonMenuItem noneLanguageItem;
@@ -221,6 +214,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	public TextEditor(final Context context) {
 		super("Script Editor");
 		context.inject(this);
+		initializeTokenMakers(pluginService, log);
 		loadPreferences();
 
 		// Initialize menu
@@ -594,6 +588,25 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (editorPane != null)
 			editorPane.requestFocus();
 	}
+
+	private synchronized static void initializeTokenMakers(final PluginService pluginService, final LogService log) {
+		if (tokenMakerFactory != null) return;
+		tokenMakerFactory = (AbstractTokenMakerFactory)TokenMakerFactory.getDefaultInstance();
+		for (final PluginInfo<SyntaxHighlighter> info : pluginService.getPluginsOfType(SyntaxHighlighter.class)) try {
+			tokenMakerFactory.putMapping("text/" + info.getLabel(), info.getClassName());
+		} catch (Throwable t) {
+			log.warn("Could not register " + info.getLabel(), t);
+		}
+	}
+
+	@Plugin(type = SyntaxHighlighter.class, label = "ecmascript")
+	public static class ECMAScriptHighlighter extends JavaScriptTokenMaker implements SyntaxHighlighter {} 
+	@Plugin(type = SyntaxHighlighter.class, label = "matlab")
+	public static class MatlabHighlighter extends MatlabTokenMaker implements SyntaxHighlighter {} 
+	@Plugin(type = SyntaxHighlighter.class, label = "ij1-macro")
+	public static class IJ1MacroHighlighter extends ImageJMacroTokenMaker implements SyntaxHighlighter {} 
+	@Plugin(type = SyntaxHighlighter.class, label = "beanshell")
+	public static class BeanshellHighlighter extends JavaTokenMaker implements SyntaxHighlighter {} 
 
 	/**
 	 * Loads the preferences for the JFrame from file
