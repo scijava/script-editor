@@ -49,8 +49,8 @@ import org.scijava.script.ScriptLanguage;
  * Generates the statements for the auto-imports (for internal use by the script
  * editor only).
  * <p>
- * This class generates import statements for the auto-import feature of the
- * script editor and prefixes the {@link Reader} with those statements.
+ * This class generates import statements for the deprecated auto-import feature
+ * of the script editor and prefixes the {@link Reader} with those statements.
  * </p>
  * 
  * @author Johannes Schindelin
@@ -107,6 +107,13 @@ class DefaultAutoImporters {
 				throw new ModuleException(e);
 			}
 			return reader;
+		}
+
+		try {
+			errors.write("[WARNING] Auto-imports are active, but deprecated.\n");
+		}
+		catch (final IOException e) {
+			throw new ModuleException(e);
 		}
 
 		final StringBuilder builder = new StringBuilder();
