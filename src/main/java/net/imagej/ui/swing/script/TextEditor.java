@@ -40,6 +40,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -149,6 +151,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	       ChangeListener {
 
 	private static final String TEMPLATES_PATH = "script-templates";
+	public static final String AUTO_IMPORT_PREFS = "script.editor.AutoImport";
 	public static final String TAB_SIZE_PREFS = "script.editor.TabSize";
 	public static final String FONT_SIZE_PREFS = "script.editor.FontSize";
 	public static final String LINE_WRAP_PREFS = "script.editor.WrapLines";
@@ -182,7 +185,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	protected int tabsMenuTabsStart;
 	protected Set<JMenuItem> tabsMenuItems;
 	protected FindAndReplaceDialog findDialog;
-	protected JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated;
+	protected JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport;
 	protected JTextArea errorScreen = new JTextArea();
 
 	protected final String templateFolder = "templates/";
@@ -190,6 +193,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	protected int compileStartOffset;
 	protected Position compileStartPosition;
 	protected ErrorHandler errorHandler;
+
+	protected boolean respectAutoImports;
 
 	@Parameter
 	protected Context context;
@@ -210,11 +215,13 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	protected Map<ScriptLanguage, JRadioButtonMenuItem> languageMenuItems;
 	protected JRadioButtonMenuItem noneLanguageItem;
+	private List<AutoImporter> importerPlugins;
 
 	public TextEditor(final Context context) {
 		super("Script Editor");
 		context.inject(this);
 		initializeTokenMakers(pluginService, log);
+		importerPlugins = pluginService.createInstancesOfType(AutoImporter.class);
 		loadPreferences();
 
 		// Initialize menu
@@ -363,6 +370,17 @@ public class TextEditor extends JFrame implements ActionListener,
 		removeUnusedImports.setMnemonic(KeyEvent.VK_U);
 		sortImports = addToMenu(edit, "Sort imports", 0, 0);
 		sortImports.setMnemonic(KeyEvent.VK_S);
+		respectAutoImports = Prefs.getBoolean(AUTO_IMPORT_PREFS, false);
+		autoImport = new JCheckBoxMenuItem("Auto-import (deprecated)", respectAutoImports);
+		autoImport.addItemListener(new ItemListener() {
+
+			@Override
+			public void itemStateChanged(ItemEvent e) {
+				respectAutoImports = e.getStateChange() == ItemEvent.SELECTED;
+				Prefs.put(AUTO_IMPORT_PREFS, respectAutoImports);
+			}
+		});
+		edit.add(autoImport);
 		mbar.add(edit);
 
 		whiteSpaceMenu = new JMenu("Whitespace");
@@ -2409,15 +2427,19 @@ public class TextEditor extends JFrame implements ActionListener,
 		return Prefs.getInt(TAB_SIZE_PREFS, DEFAULT_TAB_SIZE);
 	}
 
-	private Reader evalScript(final String filename, final Reader reader, final Writer output, final Writer errors) throws FileNotFoundException,
+	private Reader evalScript(final String filename, Reader reader, final Writer output, final Writer errors) throws FileNotFoundException,
 			ModuleException {
+		final ScriptLanguage language = getCurrentLanguage();
+		if (respectAutoImports) {
+			reader = DefaultAutoImporters.prefixAutoImports(language, importerPlugins, reader, errors);
+		}
 		// create script module for execution
 		final ScriptInfo info = new ScriptInfo(context, filename, reader);
 		final ScriptModule module = info.createModule();
 		context.inject(module);
 
 		// use the currently selected language to execute the script
-		module.setLanguage(getCurrentLanguage());
+		module.setLanguage(language);
 
 		// map stdout and stderr to the UI
 		module.setOutputWriter(output);
