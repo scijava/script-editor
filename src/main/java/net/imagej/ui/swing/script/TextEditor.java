@@ -1601,12 +1601,16 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	public boolean saveAs() {
 		EditorPane editorPane = getEditorPane();
-		File dir = editorPane.file == null ?
-				AppUtils.getBaseDirectory("imagej.dir", TextEditor.class, null) :
-				editorPane.file.getParentFile();
+		File file = editorPane.file;
+		if (file == null) {
+			final File ijDir =
+				AppUtils.getBaseDirectory("imagej.dir", TextEditor.class, null);
+			file = new File(ijDir, editorPane.getFileName());
+		}
+		File dir = file.getParentFile();
 		JFileChooser chooser = new JFileChooser(dir);
 		chooser.setDialogTitle("Save as");
-		chooser.setSelectedFile(editorPane.file);
+		chooser.setSelectedFile(file);
 		if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return false;
 		return saveAs(chooser.getSelectedFile().getAbsolutePath(), true);
 	}
