@@ -115,6 +115,8 @@ import org.fife.ui.rsyntaxtextarea.modes.JavaScriptTokenMaker;
 import org.fife.ui.rsyntaxtextarea.modes.JavaTokenMaker;
 import org.scijava.Context;
 import org.scijava.command.CommandService;
+import org.scijava.event.ContextDisposingEvent;
+import org.scijava.event.EventHandler;
 import org.scijava.io.IOService;
 import org.scijava.log.LogService;
 import org.scijava.module.ModuleException;
@@ -625,6 +627,11 @@ public class TextEditor extends JFrame implements ActionListener,
 	public static class IJ1MacroHighlighter extends ImageJMacroTokenMaker implements SyntaxHighlighter {} 
 	@Plugin(type = SyntaxHighlighter.class, label = "beanshell")
 	public static class BeanshellHighlighter extends JavaTokenMaker implements SyntaxHighlighter {} 
+
+	@EventHandler
+	private void onEvent(final ContextDisposingEvent e) {
+		if (isDisplayable()) dispose();
+	}
 
 	/**
 	 * Loads the preferences for the JFrame from file
