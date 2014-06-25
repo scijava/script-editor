@@ -43,6 +43,7 @@ import javax.swing.text.BadLocationException;
 
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Token;
+import org.fife.ui.rsyntaxtextarea.TokenTypes;
 
 /**
  * TODO
@@ -57,7 +58,7 @@ public class TokenFunctions implements Iterable<Token> {
 	}
 
 	public static boolean tokenEquals(Token token, char[] text) {
-		if (token.getType() != token.RESERVED_WORD ||
+		if (token.getType() != TokenTypes.RESERVED_WORD ||
 				token.length() != text.length)
 			return false;
 		final char[] tokenText = token.getTextArray();
@@ -70,7 +71,7 @@ public class TokenFunctions implements Iterable<Token> {
 	}
 
 	public static boolean isIdentifier(Token token) {
-		if (token.getType() != token.IDENTIFIER)
+		if (token.getType() != TokenTypes.IDENTIFIER)
 			return false;
 		final char[] tokenText = token.getTextArray();
 		final int textOffset = token.getTextOffset();
@@ -135,7 +136,7 @@ public class TokenFunctions implements Iterable<Token> {
 	}
 
 	public static boolean isDot(Token token) {
-		if (token.getType() != token.IDENTIFIER) return false;
+		if (token.getType() != TokenTypes.IDENTIFIER) return false;
 		final char[] tokenText = token.getTextArray();
 		return tokenText != null && token.length() == 1 && tokenText[token.getTextOffset()] == '.';
 	}
@@ -216,7 +217,7 @@ public class TokenFunctions implements Iterable<Token> {
 	int skipToEOL(TokenIterator iter, Token current) {
 		int end = textArea.getDocument().getLength();
 		for (;;) {
-			if (current.getType() == current.NULL || !iter.hasNext())
+			if (current.getType() == TokenTypes.NULL || !iter.hasNext())
 				return end;
 			end = current.getEndOffset();
 			current = iter.next();
@@ -308,7 +309,7 @@ public class TokenFunctions implements Iterable<Token> {
 			boolean insertLF = false;
 			while (iter.hasNext()) {
 				Token token = iter.next();
-				if (token.getType() != token.RESERVED_WORD) {
+				if (token.getType() != TokenTypes.RESERVED_WORD) {
 					insertLF = false;
 					continue;
 				}
