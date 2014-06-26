@@ -36,8 +36,8 @@ import java.io.IOException;
 import javax.swing.text.Segment;
 
 import org.fife.ui.rsyntaxtextarea.AbstractJFlexTokenMaker;
-import org.fife.ui.rsyntaxtextarea.DefaultToken;
 import org.fife.ui.rsyntaxtextarea.Token;
+import org.fife.ui.rsyntaxtextarea.TokenImpl;
 
 /**
  * Scanner for the Matlab programming language.<p>
@@ -570,7 +570,7 @@ public class MatlabTokenMaker extends AbstractJFlexTokenMaker {
 			return yylex();
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
-			return new DefaultToken();
+			return new TokenImpl();
 		}
 
 	}

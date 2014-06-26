@@ -36,8 +36,8 @@ import java.io.IOException;
 import javax.swing.text.Segment;
 
 import org.fife.ui.rsyntaxtextarea.AbstractJFlexCTokenMaker;
-import org.fife.ui.rsyntaxtextarea.DefaultToken;
 import org.fife.ui.rsyntaxtextarea.Token;
+import org.fife.ui.rsyntaxtextarea.TokenImpl;
 
 /**
  * TODO
@@ -2471,7 +2471,7 @@ public class ImageJMacroTokenMaker extends AbstractJFlexCTokenMaker {
 			return yylex();
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
-			return new DefaultToken();
+			return new TokenImpl();
 		}
 
 	}

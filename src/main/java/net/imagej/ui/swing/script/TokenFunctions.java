@@ -43,6 +43,7 @@ import javax.swing.text.BadLocationException;
 
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Token;
+import org.fife.ui.rsyntaxtextarea.TokenTypes;
 
 /**
  * TODO
@@ -57,36 +58,41 @@ public class TokenFunctions implements Iterable<Token> {
 	}
 
 	public static boolean tokenEquals(Token token, char[] text) {
-		if (token.type != token.RESERVED_WORD ||
-				token.textCount != text.length)
+		if (token.getType() != TokenTypes.RESERVED_WORD ||
+				token.length() != text.length)
 			return false;
+		final char[] tokenText = token.getTextArray();
+		if (tokenText == null) return false;
+		final int textOffset = token.getTextOffset();
 		for (int i = 0; i < text.length; i++)
-			if (token.text[token.textOffset + i] != text[i])
+			if (tokenText[textOffset + i] != text[i])
 				return false;
 		return true;
 	}
 
 	public static boolean isIdentifier(Token token) {
-		if (token.type != token.IDENTIFIER)
+		if (token.getType() != TokenTypes.IDENTIFIER)
 			return false;
-		if (!Character.isJavaIdentifierStart(token.text[token.textOffset]))
+		final char[] tokenText = token.getTextArray();
+		final int textOffset = token.getTextOffset();
+		if (tokenText == null || !Character.isJavaIdentifierStart(tokenText[textOffset]))
 			return false;
-		for (int i = 1; i < token.textCount; i++)
-			if (!Character.isJavaIdentifierPart(token.text[token.textOffset + i]))
+		for (int i = 1; i < tokenText.length; i++)
+			if (!Character.isJavaIdentifierPart(tokenText[textOffset + i]))
 				return false;
 		return true;
 	}
 
 	public static String getText(Token token) {
-		if (token.text == null)
+		final char[] tokenText = token.getTextArray();
+		if (tokenText == null)
 			return "";
-		return new String(token.text,
-				token.textOffset, token.textCount);
+		return new String(tokenText, token.getTextOffset(), token.length());
 	}
 
 	public void replaceToken(Token token, String text) {
-		textArea.replaceRange(text, token.textOffset,
-				token.textOffset + token.textCount);
+		textArea.replaceRange(text, token.getOffset(),
+				token.getEndOffset());
 	}
 
 	class TokenIterator implements Iterator<Token> {
@@ -130,8 +136,9 @@ public class TokenFunctions implements Iterable<Token> {
 	}
 
 	public static boolean isDot(Token token) {
-		return token.type == token.IDENTIFIER && token.textCount == 1
-			&& token.text[token.textOffset] == '.';
+		if (token.getType() != TokenTypes.IDENTIFIER) return false;
+		final char[] tokenText = token.getTextArray();
+		return tokenText != null && token.length() == 1 && tokenText[token.getTextOffset()] == '.';
 	}
 
 	/* The following methods are Java-specific */
@@ -192,7 +199,7 @@ public class TokenFunctions implements Iterable<Token> {
 
 	Token skipNonCode(TokenIterator iter, Token current) {
 		for (;;) {
-			switch (current.type) {
+			switch (current.getType()) {
 				case Token.COMMENT_DOCUMENTATION:
 				case Token.COMMENT_EOL:
 				case Token.COMMENT_MULTILINE:
@@ -210,9 +217,9 @@ public class TokenFunctions implements Iterable<Token> {
 	int skipToEOL(TokenIterator iter, Token current) {
 		int end = textArea.getDocument().getLength();
 		for (;;) {
-			if (current.type == current.NULL || !iter.hasNext())
+			if (current.getType() == TokenTypes.NULL || !iter.hasNext())
 				return end;
-			end = current.offset + current.textCount;
+			end = current.getEndOffset();
 			current = iter.next();
 		}
 	}
@@ -224,7 +231,7 @@ public class TokenFunctions implements Iterable<Token> {
 		TokenIterator iter = new TokenIterator();
 		while (iter.hasNext()) {
 			Token token = iter.next();
-			int offset = token.offset;
+			int offset = token.getOffset();
 			token = skipNonCode(iter, token);
 			if (tokenEquals(token, importChars)) {
 				do {
@@ -232,14 +239,14 @@ public class TokenFunctions implements Iterable<Token> {
 						return result;
 					token = iter.next();
 				} while (!isIdentifier(token));
-				int start = token.offset, end = start;
+				int start = token.getOffset(), end = start;
 				do {
 					if (!iter.hasNext())
 						return result;
 					token = iter.next();
 					if (isDot(token) && iter.hasNext())
 						token = iter.next();
-					end = token.offset + token.textCount;
+					end = token.getEndOffset();
 				} while (isIdentifier(token));
 				String identifier = getText(start, end);
 				if (identifier.endsWith(";"))
@@ -302,7 +309,7 @@ public class TokenFunctions implements Iterable<Token> {
 			boolean insertLF = false;
 			while (iter.hasNext()) {
 				Token token = iter.next();
-				if (token.type != token.RESERVED_WORD) {
+				if (token.getType() != TokenTypes.RESERVED_WORD) {
 					insertLF = false;
 					continue;
 				}
@@ -311,7 +318,7 @@ public class TokenFunctions implements Iterable<Token> {
 					insertLF = true;
 				}
 				else {
-					offset = token.offset;
+					offset = token.getOffset();
 					break;
 				}
 			}
