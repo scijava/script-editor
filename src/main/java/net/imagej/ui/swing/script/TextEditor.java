@@ -584,12 +584,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 
 		try {
-			if (SwingUtilities.isEventDispatchThread())
+			if (SwingUtilities.isEventDispatchThread()) {
 				pack();
-			else
-				SwingUtilities.invokeAndWait(new Runnable() { public void run() {
-					pack();
-				}});
+			} else {
+				SwingUtilities.invokeAndWait(new Runnable() {
+					public void run() {
+						pack();
+					}
+				});
+			}
 		} catch (Exception ie) {}
 		findDialog = new FindAndReplaceDialog(this);
 
