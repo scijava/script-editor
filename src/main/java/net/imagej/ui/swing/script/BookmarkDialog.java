@@ -65,6 +65,7 @@ public class BookmarkDialog extends JDialog implements ActionListener {
 		list = new JList(bookmarks);
 		list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		list.addMouseListener(new MouseAdapter() {
+			@Override
 			public void mouseClicked(MouseEvent e) {
 				if (e.getClickCount() == 2) {
 					int index = list.locationToIndex(e.getPoint());
@@ -85,6 +86,7 @@ public class BookmarkDialog extends JDialog implements ActionListener {
 		getContentPane().add(panel);
 
 		KeyListener keyListener = new KeyAdapter() {
+			@Override
 			public void keyPressed(KeyEvent e) {
 				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
 					jumpToSelectedBookmark();
@@ -110,6 +112,7 @@ public class BookmarkDialog extends JDialog implements ActionListener {
 		return true;
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent e) {
 		Object source = e.getSource();
 		if (source == cancel)

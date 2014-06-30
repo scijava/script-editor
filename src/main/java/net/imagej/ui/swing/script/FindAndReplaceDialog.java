@@ -114,6 +114,7 @@ public class FindAndReplaceDialog extends JDialog implements ActionListener {
 		setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
 		KeyAdapter listener = new KeyAdapter() {
+			@Override
 			public void keyPressed(KeyEvent e) {
 				if (e.getKeyCode() == e.VK_ESCAPE)
 					dispose();
@@ -130,6 +131,7 @@ public class FindAndReplaceDialog extends JDialog implements ActionListener {
 		return textEditor.getTextArea();
 	}
 
+	@Override
 	public void show(boolean replace) {
 		setTitle(replace ? "Replace" : "Find");
 		replaceLabel.setEnabled(replace);
@@ -180,6 +182,7 @@ public class FindAndReplaceDialog extends JDialog implements ActionListener {
 		return button;
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent e) {
 		Object source = e.getSource();
 		if (source == cancel) {

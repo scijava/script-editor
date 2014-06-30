@@ -73,6 +73,7 @@ public class RecentFilesMenuItem extends JMenu {
 				add(prefs.pop());
 	}
 
+	@Override
 	public JMenuItem add(final String path) {
 		setEnabled(true);
 

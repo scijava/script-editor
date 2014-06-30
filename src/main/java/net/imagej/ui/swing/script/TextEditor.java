@@ -293,6 +293,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		for (final int size : new int[] { 8, 10, 12, 16, 20, 28, 42 } ) {
 			JRadioButtonMenuItem item = new JRadioButtonMenuItem("" + size + " pt");
 			item.addActionListener(new ActionListener() {
+				@Override
 				public void actionPerformed(ActionEvent event) {
 					getEditorPane().setFontSize(size);
 					updateTabAndFontSize(false);
@@ -323,6 +324,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		for (final int size : new int[] { 2, 4, 8 }) {
 			JRadioButtonMenuItem item = new JRadioButtonMenuItem("" + size);
 			item.addActionListener(new ActionListener() {
+				@Override
 				public void actionPerformed(ActionEvent event) {
 					getEditorPane().setTabSize(size);
 					updateTabAndFontSize(false);
@@ -341,6 +343,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		wrapLines = new JCheckBoxMenuItem("Wrap lines");
 		wrapLines.addChangeListener(new ChangeListener() {
+			@Override
 			public void stateChanged(ChangeEvent e) {
 				getEditorPane().setLineWrap(wrapLines.getState());
 			}
@@ -350,6 +353,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		// Add Tab inserts as spaces
 		tabsEmulated = new JCheckBoxMenuItem("Tab key inserts spaces");
 		tabsEmulated.addChangeListener(new ChangeListener() {
+			@Override
 			public void stateChanged(ChangeEvent e) {
 				getEditorPane().setTabsEmulated(tabsEmulated.getState());
 			}
@@ -396,6 +400,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		toggleWhiteSpaceLabeling = new JRadioButtonMenuItem("Label whitespace");
 		toggleWhiteSpaceLabeling.setMnemonic(KeyEvent.VK_L);
 		toggleWhiteSpaceLabeling.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				getTextArea().setWhitespaceVisible(toggleWhiteSpaceLabeling.isSelected());
 			}
@@ -553,6 +558,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		// make sure that the window is not closed by accident
 		addWindowListener(new WindowAdapter() {
+			@Override
 			public void windowClosing(WindowEvent e) {
 				while (tabbed.getTabCount() > 0) {
 					if (!handleUnsavedChanges())
@@ -563,12 +569,14 @@ public class TextEditor extends JFrame implements ActionListener,
 				dispose();
 			}
 
+			@Override
 			public void windowClosed(WindowEvent e) {
 				// TODO: integrate with WindowService (how does that hope to activate windows by name?)
 			}
 		});
 
 		addWindowFocusListener(new WindowAdapter() {
+			@Override
 			public void windowGainedFocus(WindowEvent e) {
 				final EditorPane editorPane = getEditorPane();
 				if (editorPane != null)
@@ -588,6 +596,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				pack();
 			} else {
 				SwingUtilities.invokeAndWait(new Runnable() {
+					@Override
 					public void run() {
 						pack();
 					}
@@ -598,6 +607,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		// Save the size of the window in the preferences
 		addComponentListener(new ComponentAdapter() {
+			@Override
 			public void componentResized(ComponentEvent e) {
 				saveWindowSizeToPrefs();
 			}
@@ -739,6 +749,7 @@ public class TextEditor extends JFrame implements ActionListener,
 					modifiers), component);
 		textArea.getActionMap().put(component,
 				new AbstractAction() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (!component.isEnabled())
 					return;
@@ -1716,6 +1727,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			markCompileStart();
 			getTab().showErrors();
 			new Thread() {
+				@Override
 				public void run() {
 					java.makeJar(getEditorPane().file, includeSources, file, errors);
 					errorScreen.insert("Compilation finished.\n", errorScreen.getDocument().getLength());
@@ -2141,6 +2153,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			markCompileStart();
 			getTab().showErrors();
 			new Thread() {
+				@Override
 				public void run() {
 					java.compile(getEditorPane().file, errors);
 					errorScreen.insert("Compilation finished.\n", errorScreen.getDocument().getLength());

@@ -99,18 +99,21 @@ public class TokenFunctions implements Iterable<Token> {
 		int line = -1;
 		Token current, next;
 
+		@Override
 		public boolean hasNext() {
 			if (next == null)
 				getNextToken();
 			return next != null;
 		}
 
+		@Override
 		public Token next() {
 			current = next;
 			next = null;
 			return current;
 		}
 
+		@Override
 		public void remove() {
 			throw new UnsupportedOperationException();
 		}
@@ -131,6 +134,7 @@ public class TokenFunctions implements Iterable<Token> {
 		}
 	}
 
+	@Override
 	public Iterator<Token> iterator() {
 		return new TokenIterator();
 	}
@@ -187,10 +191,12 @@ public class TokenFunctions implements Iterable<Token> {
 			return classOrPackage.equals(imp.classOrPackage);
 		}
 
+		@Override
 		public int compareTo(Import imp) {
 			return classOrPackage.compareTo(imp.classOrPackage);
 		}
 
+		@Override
 		public String toString() {
 			return "Import(" + classOrPackage + ","
 				+ startOffset + "-" + endOffset + ")";
@@ -396,10 +402,12 @@ public class TokenFunctions implements Iterable<Token> {
 			end++;
 
 		Collections.sort(imports, new Comparator<Import>() {
+			@Override
 			public int compare(Import i1, Import i2) {
 				return i1.classOrPackage.compareTo(i2.classOrPackage);
 			}
 
+			@Override
 			public boolean equals(Object o) {
 				return false;
 			}

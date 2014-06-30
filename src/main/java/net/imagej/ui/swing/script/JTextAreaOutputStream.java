@@ -58,20 +58,24 @@ public class JTextAreaOutputStream extends OutputStream {
 	public JTextAreaOutputStream(final JTextArea textArea) {
 		this.textArea = textArea;
 		updater.scheduleWithFixedDelay(new Runnable() {
+			@Override
 			public void run() {
 				flushQueue();
 			}
 		}, 10, 400, TimeUnit.MILLISECONDS);
 	}
 
+	@Override
 	public void write(int i) {
 		write(Character.toString((char)i));
 	}
 
+	@Override
 	public void write(byte[] buffer) {
 		write(new String(buffer));
 	}
 
+	@Override
 	public void write(byte[] buffer, int off, int len) {
 		write(new String(buffer, off, len));
 	}
@@ -105,11 +109,13 @@ public class JTextAreaOutputStream extends OutputStream {
 		}
 	}
 
+	@Override
 	public void flush() {
 		flushQueue();
 		textArea.repaint();
 	}
 
+	@Override
 	public void close() {
 		flush();
 		updater.shutdown();

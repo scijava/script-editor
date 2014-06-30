@@ -372,12 +372,15 @@ public class FileFunctions {
 			warn = Color.red;
 		}
 
+		@Override
 		public void changedUpdate(DocumentEvent e) { }
 
+		@Override
 		public void insertUpdate(DocumentEvent e) {
 			updateColor();
 		}
 
+		@Override
 		public void removeUpdate(DocumentEvent e) {
 			updateColor();
 		}
@@ -394,7 +397,9 @@ public class FileFunctions {
 			this.width = width;
 		}
 
+		@Override
 		public void changedUpdate(DocumentEvent e) { }
+		@Override
 		public void insertUpdate(DocumentEvent e) {
 			final Document document = e.getDocument();
 			int offset = e.getOffset() + e.getLength();
@@ -422,6 +427,7 @@ public class FileFunctions {
 
 					final int removeCount = remove, at = newLine;
 					SwingUtilities.invokeLater(new Runnable() {
+						@Override
 						public void run() {
 							try {
 								if (removeCount > 0)
@@ -433,6 +439,7 @@ public class FileFunctions {
 				}
 			} catch (BadLocationException e2) { /* ignore */ }
 		}
+		@Override
 		public void removeUpdate(DocumentEvent e) { }
 	}
 

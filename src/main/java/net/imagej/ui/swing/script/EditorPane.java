@@ -101,6 +101,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		getDocument().addDocumentListener(this);
 	}
 
+	@Override
 	public void setTabSize(int width) {
 		if (getTabSize() != width)
 			super.setTabSize(width);
@@ -125,6 +126,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			final boolean select) {
 		final String id = "WORD_MOVEMENT_" + select + direction;
 		return new RecordableTextAction(id) {
+			@Override
 			public void actionPerformedImpl(ActionEvent e,
 					RTextArea textArea) {
 				int pos = textArea.getCaretPosition();
@@ -140,6 +142,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 					textArea.setCaretPosition(pos);
 			}
 
+			@Override
 			public String getMacroID() {
 				return id;
 			}
@@ -161,12 +164,14 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		};
 	}
 
+	@Override
 	public void undoLastAction() {
 		undoInProgress = true;
 		super.undoLastAction();
 		undoInProgress = false;
 	}
 
+	@Override
 	public void redoLastAction() {
 		redoInProgress = true;
 		super.redoLastAction();
@@ -177,15 +182,18 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		return modifyCount != 0;
 	}
 
+	@Override
 	public void insertUpdate(DocumentEvent e) {
 		modified();
 	}
 
+	@Override
 	public void removeUpdate(DocumentEvent e) {
 		modified();
 	}
 
 	// triggered only by syntax highlighting
+	@Override
 	public void changedUpdate(DocumentEvent e) { }
 
 	protected void modified() {
@@ -292,6 +300,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		setTitle();
 		if (file != null) {
 			SwingUtilities.invokeLater(new Thread() {
+				@Override
 				public void run() {
 					setLanguageByFileName(file.getName());
 				}
@@ -442,6 +451,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setCaretPosition(info.getMarkedOffset());
 		}
 
+		@Override
 		public String toString() {
 			return "Line " + (getLineNumber() + 1) + " (" + getFileName() + ")";
 		}
@@ -487,6 +497,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		return count;
 	}
 
+	@Override
 	public void convertTabsToSpaces() {
 		beginAtomicEdit();
 		try {
@@ -497,6 +508,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			endAtomicEdit();
 		}
 	}
+	@Override
 	public void convertSpacesToTabs() {
 		beginAtomicEdit();
 		try {

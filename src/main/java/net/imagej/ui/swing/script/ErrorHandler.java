@@ -204,6 +204,7 @@ public class ErrorHandler {
 	}
 
 	class JavacErrorParser implements Parser {
+		@Override
 		public Error getError(String line) {
 			int colon = line.indexOf(".java:");
 			if (colon <= 0)
