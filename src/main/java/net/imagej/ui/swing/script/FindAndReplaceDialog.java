@@ -197,7 +197,7 @@ public class FindAndReplaceDialog extends JDialog implements ActionListener {
 		else if (source == replace)
 			searchOrReplace(true);
 		else if (source == replaceAll) {
-			int replace = SearchEngine.replaceAll(getTextArea(), getSearchContext(true));
+			int replace = SearchEngine.replaceAll(getTextArea(), getSearchContext(true)).getMarkedCount();
 			JOptionPane.showMessageDialog(this, replace
 					+ " replacements made!");
 		}
@@ -239,9 +239,9 @@ public class FindAndReplaceDialog extends JDialog implements ActionListener {
 	protected boolean searchOrReplaceFromHere(boolean replace, boolean forward) {
 		RSyntaxTextArea textArea = getTextArea();
 		SearchContext context = getSearchContext(forward);
-		return replace ?
+		return (replace ?
 			SearchEngine.replace(textArea, context) :
-			SearchEngine.find(textArea, context);
+			SearchEngine.find(textArea, context)).wasFound();
 	}
 
 	public boolean isReplace() {
