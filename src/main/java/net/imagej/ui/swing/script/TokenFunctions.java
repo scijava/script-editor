@@ -206,10 +206,10 @@ public class TokenFunctions implements Iterable<Token> {
 	Token skipNonCode(TokenIterator iter, Token current) {
 		for (;;) {
 			switch (current.getType()) {
-				case Token.COMMENT_DOCUMENTATION:
-				case Token.COMMENT_EOL:
-				case Token.COMMENT_MULTILINE:
-				case Token.WHITESPACE:
+				case TokenTypes.COMMENT_DOCUMENTATION:
+				case TokenTypes.COMMENT_EOL:
+				case TokenTypes.COMMENT_MULTILINE:
+				case TokenTypes.WHITESPACE:
 					break;
 				default:
 					return current;
