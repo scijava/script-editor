@@ -58,36 +58,23 @@ public class TokenFunctions implements Iterable<Token> {
 	}
 
 	public static boolean tokenEquals(Token token, char[] text) {
-		if (token.getType() != TokenTypes.RESERVED_WORD ||
-				token.length() != text.length)
-			return false;
-		final char[] tokenText = token.getTextArray();
-		if (tokenText == null) return false;
-		final int textOffset = token.getTextOffset();
-		for (int i = 0; i < text.length; i++)
-			if (tokenText[textOffset + i] != text[i])
-				return false;
-		return true;
+		return token.is(TokenTypes.RESERVED_WORD, text);
 	}
 
 	public static boolean isIdentifier(Token token) {
 		if (token.getType() != TokenTypes.IDENTIFIER)
 			return false;
-		final char[] tokenText = token.getTextArray();
-		final int textOffset = token.getTextOffset();
-		if (tokenText == null || !Character.isJavaIdentifierStart(tokenText[textOffset]))
+		final char[] tokenText = token.getLexeme().toCharArray();
+		if (tokenText == null || !Character.isJavaIdentifierStart(tokenText[0]))
 			return false;
 		for (int i = 1; i < tokenText.length; i++)
-			if (!Character.isJavaIdentifierPart(tokenText[textOffset + i]))
+			if (!Character.isJavaIdentifierPart(tokenText[i]))
 				return false;
 		return true;
 	}
 
 	public static String getText(Token token) {
-		final char[] tokenText = token.getTextArray();
-		if (tokenText == null)
-			return "";
-		return new String(tokenText, token.getTextOffset(), token.length());
+		return token.getLexeme();
 	}
 
 	public void replaceToken(Token token, String text) {
@@ -140,16 +127,13 @@ public class TokenFunctions implements Iterable<Token> {
 	}
 
 	public static boolean isDot(Token token) {
-		if (token.getType() != TokenTypes.IDENTIFIER) return false;
-		final char[] tokenText = token.getTextArray();
-		return tokenText != null && token.length() == 1 && tokenText[token.getTextOffset()] == '.';
+		return token.is(TokenTypes.IDENTIFIER, ".");
 	}
 
 	/* The following methods are Java-specific */
 
-	public final static char[] classCharacters = {'c', 'l', 'a', 's', 's'};
 	public static boolean isClass(Token token) {
-		return tokenEquals(token, classCharacters);
+		return token.is(TokenTypes.RESERVED_WORD, "class");
 	}
 
 	public String getClassName() {
@@ -206,10 +190,10 @@ public class TokenFunctions implements Iterable<Token> {
 	Token skipNonCode(TokenIterator iter, Token current) {
 		for (;;) {
 			switch (current.getType()) {
-				case Token.COMMENT_DOCUMENTATION:
-				case Token.COMMENT_EOL:
-				case Token.COMMENT_MULTILINE:
-				case Token.WHITESPACE:
+				case TokenTypes.COMMENT_DOCUMENTATION:
+				case TokenTypes.COMMENT_EOL:
+				case TokenTypes.COMMENT_MULTILINE:
+				case TokenTypes.WHITESPACE:
 					break;
 				default:
 					return current;
