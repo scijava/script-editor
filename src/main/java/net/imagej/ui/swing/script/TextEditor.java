@@ -564,11 +564,6 @@ public class TextEditor extends JFrame implements ActionListener,
 				if (!confirmClose()) return;
 				dispose();
 			}
-
-			@Override
-			public void windowClosed(WindowEvent e) {
-				// TODO: integrate with WindowService (how does that hope to activate windows by name?)
-			}
 		});
 
 		addWindowFocusListener(new WindowAdapter() {
