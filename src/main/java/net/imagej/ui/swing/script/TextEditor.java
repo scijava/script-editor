@@ -131,6 +131,7 @@ import org.scijava.script.ScriptInfo;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptModule;
 import org.scijava.script.ScriptService;
+import org.scijava.ui.CloseConfirmable;
 import org.scijava.util.AppUtils;
 import org.scijava.util.FileUtils;
 import org.scijava.util.Prefs;
@@ -150,7 +151,7 @@ import org.scijava.util.Prefs;
  */
 @SuppressWarnings("serial")
 public class TextEditor extends JFrame implements ActionListener,
-	       ChangeListener {
+	       ChangeListener, CloseConfirmable {
 
 	private static final String TEMPLATES_PATH = "script-templates";
 	public static final String AUTO_IMPORT_PREFS = "script.editor.AutoImport";
@@ -560,18 +561,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
-				while (tabbed.getTabCount() > 0) {
-					if (!handleUnsavedChanges())
-						return;
-					int index = tabbed.getSelectedIndex();
-					removeTab(index);
-				}
+				if (!confirmClose()) return;
 				dispose();
-			}
-
-			@Override
-			public void windowClosed(WindowEvent e) {
-				// TODO: integrate with WindowService (how does that hope to activate windows by name?)
 			}
 		});
 
@@ -2483,6 +2474,16 @@ public class TextEditor extends JFrame implements ActionListener,
 			log.error(e);
 		}
 		return reader;
+	}
+
+	@Override
+	public boolean confirmClose() {
+		while (tabbed.getTabCount() > 0) {
+			if (!handleUnsavedChanges()) return false;
+			int index = tabbed.getSelectedIndex();
+			removeTab(index);
+		}
+		return true;
 	}
 
 }
