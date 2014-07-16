@@ -26,22 +26,18 @@
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-math3</artifactId>
-			<version>${commons-math.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>fiji-compat</artifactId>
-			<version>${fiji-compat.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>fiji-lib</artifactId>
-			<version>${fiji-lib.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>fiji-scripting</artifactId>
-			<version>${fiji-scripting.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>net.imagej</groupId>
@@ -67,37 +63,30 @@
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>BeanShell_Interpreter</artifactId>
-			<version>${BeanShell_Interpreter.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>CLI_</artifactId>
-			<version>${CLI_.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>Clojure_Interpreter</artifactId>
-			<version>${Clojure_Interpreter.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>JRuby_Interpreter</artifactId>
-			<version>${JRuby_Interpreter.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>Javascript_</artifactId>
-			<version>${Javascript_.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>Jython_Interpreter</artifactId>
-			<version>${Jython_Interpreter.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>Refresh_Javas</artifactId>
-			<version>${Refresh_Javas.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.scijava</groupId>
