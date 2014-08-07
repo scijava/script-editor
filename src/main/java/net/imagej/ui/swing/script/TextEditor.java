@@ -61,6 +61,8 @@ import java.io.Reader;
 import java.io.Writer;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -134,6 +136,7 @@ import org.scijava.script.ScriptService;
 import org.scijava.ui.CloseConfirmable;
 import org.scijava.util.AppUtils;
 import org.scijava.util.FileUtils;
+import org.scijava.util.MiscUtils;
 import org.scijava.util.Prefs;
 
 /**
@@ -415,8 +418,20 @@ public class TextEditor extends JFrame implements ActionListener,
 		JMenu languages = new JMenu("Language");
 		languages.setMnemonic(KeyEvent.VK_L);
 		ButtonGroup group = new ButtonGroup();
-		List<ScriptLanguage> list = scriptService.getLanguages();
+
+		// get list of languages, and sort them by name
+		final ArrayList<ScriptLanguage> list =
+			new ArrayList<ScriptLanguage>(scriptService.getLanguages());
+		Collections.sort(list, new Comparator<ScriptLanguage>() {
+			@Override
+			public int compare(final ScriptLanguage l1, final ScriptLanguage l2) {
+				final String name1 = l1.getLanguageName();
+				final String name2 = l2.getLanguageName();
+				return MiscUtils.compare(name1, name2);
+			}
+		});
 		list.add(null);
+
 		Map<String, ScriptLanguage> languageMap = new HashMap<String, ScriptLanguage>();
 		for (final ScriptLanguage language : list) {
 			String name = language == null ? "None" : language.getLanguageName();
