@@ -66,6 +66,8 @@ import org.fife.ui.rtextarea.IconGroup;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.RecordableTextAction;
+import org.scijava.plugin.Parameter;
+import org.scijava.script.ScriptHeaderService;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.util.FileUtils;
 
@@ -84,6 +86,9 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	IconGroup iconGroup;
 	int modifyCount;
 	boolean undoInProgress, redoInProgress;
+
+	@Parameter
+	private ScriptHeaderService scriptHeaderService;
 
 	public EditorPane(TextEditor frame) {
 		this.frame = frame;
@@ -373,6 +378,11 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 				modifyCount = Integer.MIN_VALUE;
 			}
 		}
+		String header = null;
+
+		if (currentLanguage == null) {
+			header = scriptHeaderService.getHeader(language);
+		}
 		currentLanguage = language;
 
 		final String styleName = "text/" + languageName.toLowerCase().replace(' ', '-');
@@ -380,6 +390,11 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 		frame.setTitle();
 		frame.updateLanguageMenu(language);
+
+		// Add header text
+		if (header != null) {
+			setText(header += getText());
+		}
 	}
 
 	public float getFontSize() {

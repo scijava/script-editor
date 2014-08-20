@@ -129,6 +129,7 @@ import org.scijava.plugin.Plugin;
 import org.scijava.plugin.PluginInfo;
 import org.scijava.plugin.PluginService;
 import org.scijava.plugins.scripting.java.JavaEngine;
+import org.scijava.script.ScriptHeaderService;
 import org.scijava.script.ScriptInfo;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptModule;
@@ -218,6 +219,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	protected ScriptService scriptService;
 	@Parameter
 	protected PluginService pluginService;
+	@Parameter
+	protected ScriptHeaderService scriptHeaderService;
 
 	protected Map<ScriptLanguage, JRadioButtonMenuItem> languageMenuItems;
 	protected JRadioButtonMenuItem noneLanguageItem;
@@ -1589,6 +1592,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			boolean wasNew = tab != null && tab.editorPane.isNew();
 			if (!wasNew) {
 				tab = new Tab();
+				context.inject(tab.editorPane);
 				addDefaultAccelerators(tab.editorPane);
 			}
 			synchronized (tab.editorPane) {
