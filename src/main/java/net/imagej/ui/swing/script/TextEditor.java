@@ -459,7 +459,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			item.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
-					setLanguage(language);
+					setLanguage(language, true);
 				}
 			});
 
@@ -1798,7 +1798,11 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	void setLanguage(ScriptLanguage language) {
-		getEditorPane().setLanguage(language);
+		setLanguage(language, false);
+	}
+
+	void setLanguage(ScriptLanguage language, boolean addHeader) {
+		getEditorPane().setLanguage(language, addHeader);
 		updateTabAndFontSize(true);
 	}
 

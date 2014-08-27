@@ -355,6 +355,10 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	}
 
 	protected void setLanguage(ScriptLanguage language) {
+		setLanguage(language, false);
+	}
+
+	protected void setLanguage(ScriptLanguage language, boolean addHeader) {
 		String languageName;
 		String defaultExtension;
 		if (language == null) {
@@ -380,7 +384,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		}
 		String header = null;
 
-		if (currentLanguage == null) {
+		if (addHeader && currentLanguage == null) {
 			header = scriptHeaderService.getHeader(language);
 		}
 		currentLanguage = language;
