@@ -31,7 +31,7 @@
 
 package net.imagej.ui.swing.script.interpreter;
 
-import java.awt.BorderLayout;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
@@ -45,11 +45,18 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import javax.script.ScriptContext;
+import javax.swing.BorderFactory;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.WindowConstants;
+
+import net.miginfocom.swing.MigLayout;
 
 import org.scijava.log.LogService;
 import org.scijava.prefs.PrefService;
@@ -71,7 +78,7 @@ public class InterpreterWindow extends JFrame {
 
 	private final JSplitPane split;
 	private final JComboBox languageChoice;
-	private final JTextArea prompt;
+	private final JComponent prompt;
 	private final OutputPane output;
 	private Writer writer;
 
@@ -97,15 +104,9 @@ public class InterpreterWindow extends JFrame {
 			languages.put(language.getLanguageName(), language);
 		}
 
-		split = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
-		output = new OutputPane(log);
-		final Dimension outputDimensions = new Dimension(800, 600);
-		output.setPreferredSize(outputDimensions);
-		split.add(output);
-		prompt = new Prompt(this, output);
-		prompt.setEnabled(false);
-		split.add(prompt);
-		getContentPane().add(split, BorderLayout.SOUTH);
+		Container content = getContentPane();
+		content.setLayout(new MigLayout());
+
 		languageChoice = new JComboBox(getLanguageNames());
 		languageChoice.addItemListener(new ItemListener() {
 
@@ -119,7 +120,26 @@ public class InterpreterWindow extends JFrame {
 			}
 
 		});
-		getContentPane().add(languageChoice, BorderLayout.NORTH);
+		content.add(new JLabel("Language"));
+		content.add(languageChoice, "wrap");
+
+		split = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+		output = new OutputPane(log);
+		JScrollPane scroll = new JScrollPane(output);
+		final Dimension outputDimensions = new Dimension(800, 600);
+		scroll.setPreferredSize(outputDimensions);
+		scroll.setMinimumSize(new Dimension(320, 200));
+		split.add(scroll);
+
+		JPanel promptPanel = new JPanel();
+		promptPanel.setLayout(new MigLayout());
+		prompt = new Prompt(this, output);
+		prompt.setEnabled(false);
+		promptPanel.add(prompt);
+		promptPanel.setBorder(BorderFactory.createTitledBorder("Prompt"));
+		split.add(promptPanel);
+		content.add(split, "wrap, span 2");
+
 		pack();
 
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
