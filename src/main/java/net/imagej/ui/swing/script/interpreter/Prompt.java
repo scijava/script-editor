@@ -24,7 +24,7 @@ public class Prompt extends JTextArea {
 	private final OutputPane output;
 
 	public Prompt(final ScriptInterpreter interpreter, final OutputPane output) {
-		super(1, 2);
+		super(3, 2);
 		this.interpreter = interpreter;
 		this.output = output;
 		addKeyListener(new KeyAdapter() {
