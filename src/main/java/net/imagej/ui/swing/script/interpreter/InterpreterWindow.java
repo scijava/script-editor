@@ -130,7 +130,7 @@ public class InterpreterWindow extends JFrame {
 
 		JPanel promptPanel = new JPanel();
 		promptPanel.setLayout(new MigLayout());
-		prompt = new Prompt(this, output);
+		prompt = new Prompt(interpreter, output);
 		prompt.setEnabled(false);
 		promptPanel.add(prompt);
 		promptPanel.setBorder(BorderFactory.createTitledBorder("Prompt"));

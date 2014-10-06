@@ -11,6 +11,8 @@ import java.io.PrintStream;
 import javax.script.ScriptException;
 import javax.swing.JTextArea;
 
+import org.scijava.script.ScriptInterpreter;
+
 /**
  * The prompt for the script interpreter.
  * 
@@ -18,12 +20,12 @@ import javax.swing.JTextArea;
  */
 public class Prompt extends JTextArea {
 
-	private final InterpreterWindow window;
+	private final ScriptInterpreter interpreter;
 	private final OutputPane output;
 
-	public Prompt(final InterpreterWindow window, final OutputPane output) {
+	public Prompt(final ScriptInterpreter interpreter, final OutputPane output) {
 		super(1, 80);
-		this.window = window;
+		this.interpreter = interpreter;
 		this.output = output;
 		addKeyListener(new KeyAdapter() {
 
@@ -48,16 +50,16 @@ public class Prompt extends JTextArea {
 	}
 
 	private void up() {
-		setText(window.getInterpreter().walkHistory(getText(), false));
+		setText(interpreter.walkHistory(getText(), false));
 	}
 
 	private void down() {
-		setText(window.getInterpreter().walkHistory(getText(), true));
+		setText(interpreter.walkHistory(getText(), true));
 	}
 
 	private synchronized void execute() {
 		try {
-			window.getInterpreter().eval(getText());
+			interpreter.eval(getText());
 		}
 		catch (ScriptException e) {
 			e.printStackTrace(new PrintStream(output.getOutputStream()));
