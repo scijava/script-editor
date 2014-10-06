@@ -18,8 +18,6 @@ import org.scijava.log.LogService;
  */
 public class OutputPane extends JTextArea {
 
-	private static final long serialVersionUID = 1L;
-
 	private final LogService log;
 
 	public OutputPane(final LogService log) {

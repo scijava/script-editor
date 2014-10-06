@@ -72,8 +72,6 @@ import org.scijava.script.ScriptService;
  */
 public class InterpreterWindow extends JFrame {
 
-	private static final long serialVersionUID = 1L;
-
 	private final static String NO_LANGUAGE = "<None>";
 
 	private final JComponent prompt;

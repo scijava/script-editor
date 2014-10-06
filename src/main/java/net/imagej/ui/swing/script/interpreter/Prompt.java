@@ -18,8 +18,6 @@ import javax.swing.JTextArea;
  */
 public class Prompt extends JTextArea {
 
-	private static final long serialVersionUID = 1L;
-
 	private final InterpreterWindow window;
 	private final OutputPane output;
 
