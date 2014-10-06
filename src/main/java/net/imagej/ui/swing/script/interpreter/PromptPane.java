@@ -18,12 +18,14 @@ import org.scijava.script.ScriptInterpreter;
  * 
  * @author Johannes Schindelin
  */
-public class Prompt extends JTextArea {
+public class PromptPane extends JTextArea {
 
 	private final ScriptInterpreter interpreter;
 	private final OutputPane output;
 
-	public Prompt(final ScriptInterpreter interpreter, final OutputPane output) {
+	public PromptPane(final ScriptInterpreter interpreter,
+		final OutputPane output)
+	{
 		super(3, 2);
 		this.interpreter = interpreter;
 		this.output = output;

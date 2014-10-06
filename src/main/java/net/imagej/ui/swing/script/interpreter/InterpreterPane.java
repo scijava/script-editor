@@ -60,7 +60,7 @@ public class InterpreterPane {
 	private final JSplitPane splitPane;
 	private final OutputPane output;
 	private final Writer writer;
-	private final Prompt prompt;
+	private final PromptPane prompt;
 
 	/**
 	 * Constructs an interpreter UI pane for a specific scripting language.
@@ -96,7 +96,7 @@ public class InterpreterPane {
 		context.setErrorWriter(writer);
 		context.setWriter(writer);
 
-		prompt = new Prompt(interpreter, output);
+		prompt = new PromptPane(interpreter, output);
 		final JScrollPane promptScroll = new JScrollPane(prompt);
 
 		splitPane =
