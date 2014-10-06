@@ -40,7 +40,9 @@ import javax.swing.JFrame;
 import javax.swing.JTabbedPane;
 import javax.swing.WindowConstants;
 
+import org.scijava.Context;
 import org.scijava.log.LogService;
+import org.scijava.plugin.Parameter;
 import org.scijava.prefs.PrefService;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptService;
@@ -53,19 +55,25 @@ import org.scijava.script.ScriptService;
  */
 public class InterpreterWindow extends JFrame {
 
+	@Parameter
+	private PrefService prefs;
+
+	@Parameter
+	private ScriptService scriptService;
+
+	@Parameter
+	private LogService log;
+
 	private final List<InterpreterPane> tabs = new ArrayList<InterpreterPane>();
-	/**
-	 * Constructs the scripting interpreter window.
-	 * 
-	 * @param scriptService service to use for scripting
-	 * @param log service to use for logging
-	 */
-	public InterpreterWindow(final PrefService prefs, final ScriptService scriptService, final LogService log) {
+
+	/** Constructs the scripting interpreter window. */
+	public InterpreterWindow(final Context context) {
 		super("Scripting Interpreter");
+		context.inject(this);
 
 		final JTabbedPane tabbedPane = new JTabbedPane();
 
-		for (final ScriptLanguage language : languages(scriptService)) {
+		for (final ScriptLanguage language : languages()) {
 			final String name = language.getLanguageName();
 			final InterpreterPane tab =
 				new InterpreterPane(prefs, scriptService, language, log);
@@ -90,9 +98,7 @@ public class InterpreterWindow extends JFrame {
 	}
 
 	/** Gets the list of available scripting languages, sorted by name. */
-	private List<ScriptLanguage>
-		languages(final ScriptService scriptService)
-	{
+	private List<ScriptLanguage> languages() {
 		final List<ScriptLanguage> languages =
 			new ArrayList<ScriptLanguage>(scriptService.getLanguages());
 		Collections.sort(languages, new Comparator<ScriptLanguage>() {

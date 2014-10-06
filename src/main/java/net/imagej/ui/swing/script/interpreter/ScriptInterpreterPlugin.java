@@ -31,14 +31,12 @@
 
 package net.imagej.ui.swing.script.interpreter;
 
+import org.scijava.Context;
 import org.scijava.command.Command;
 import org.scijava.event.ContextDisposingEvent;
 import org.scijava.event.EventHandler;
-import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
-import org.scijava.prefs.PrefService;
-import org.scijava.script.ScriptService;
 
 /**
  * A GUI for the script engines.
@@ -54,19 +52,13 @@ import org.scijava.script.ScriptService;
 public class ScriptInterpreterPlugin implements Command {
 
 	@Parameter
-	private PrefService prefs;
-
-	@Parameter
-	private ScriptService scriptService;
-
-	@Parameter
-	private LogService log;
+	private Context context;
 
 	private InterpreterWindow frame;
 
 	@Override
 	public void run() {
-		frame = new InterpreterWindow(prefs, scriptService, log);
+		frame = new InterpreterWindow(context);
 		frame.setVisible(true);
 	}
 

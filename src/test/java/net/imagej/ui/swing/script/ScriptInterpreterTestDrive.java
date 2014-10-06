@@ -37,9 +37,6 @@ import java.awt.event.WindowEvent;
 import net.imagej.ui.swing.script.interpreter.InterpreterWindow;
 
 import org.scijava.Context;
-import org.scijava.log.LogService;
-import org.scijava.prefs.PrefService;
-import org.scijava.script.ScriptService;
 
 /**
  * Interactive test for the script interpreter.
@@ -49,11 +46,7 @@ import org.scijava.script.ScriptService;
 public class ScriptInterpreterTestDrive {
 	public static void main(String[] args) throws Exception {
 		final Context context = new Context();
-		final PrefService prefs = context.getService(PrefService.class);
-		final ScriptService scriptService = context.getService(ScriptService.class);
-		final LogService log = context.getService(LogService.class);
-		final InterpreterWindow interpreter =
-			new InterpreterWindow(prefs, scriptService, log);
+		final InterpreterWindow interpreter = new InterpreterWindow(context);
 		interpreter.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosed(final WindowEvent e) {
