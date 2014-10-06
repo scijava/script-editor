@@ -93,6 +93,8 @@ public class InterpreterWindow extends JFrame {
 	 * @param scriptService the script service
 	 */
 	public InterpreterWindow(final PrefService prefs, final ScriptService scriptService, final LogService log) {
+		super("Scripting Interpreter");
+
 		this.prefs = prefs;
 		this.scriptService = scriptService;
 
