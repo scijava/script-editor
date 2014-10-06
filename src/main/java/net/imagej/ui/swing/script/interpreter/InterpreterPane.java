@@ -89,9 +89,7 @@ public class InterpreterPane {
 
 		output = new OutputPane(log);
 		final JScrollPane outputScroll = new JScrollPane(output);
-		final Dimension outputDimensions = new Dimension(800, 600);
-		outputScroll.setPreferredSize(outputDimensions);
-		outputScroll.setMinimumSize(new Dimension(320, 200));
+		outputScroll.setPreferredSize(new Dimension(440, 400));
 
 		writer = output.getOutputWriter();
 		final ScriptContext context = interpreter.getEngine().getContext();
