@@ -64,8 +64,10 @@ public class Prompt extends JTextArea {
 	}
 
 	private synchronized void execute() {
+		final String text = getText();
+		output.append(">>> " + text + "\n");
 		try {
-			interpreter.eval(getText());
+			interpreter.eval(text);
 		}
 		catch (ScriptException e) {
 			e.printStackTrace(new PrintStream(output.getOutputStream()));
