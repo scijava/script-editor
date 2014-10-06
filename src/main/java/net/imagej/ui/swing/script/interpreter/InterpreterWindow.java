@@ -32,6 +32,8 @@
 package net.imagej.ui.swing.script.interpreter;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import javax.swing.JFrame;
@@ -63,7 +65,7 @@ public class InterpreterWindow extends JFrame {
 
 		final JTabbedPane tabbedPane = new JTabbedPane();
 
-		for (final ScriptLanguage language : scriptService.getLanguages()) {
+		for (final ScriptLanguage language : languages(scriptService)) {
 			final String name = language.getLanguageName();
 			final InterpreterPane tab =
 				new InterpreterPane(prefs, scriptService, language, log);
@@ -85,6 +87,23 @@ public class InterpreterWindow extends JFrame {
 			e.printStackTrace();
 		}
 		super.dispose();
+	}
+
+	/** Gets the list of available scripting languages, sorted by name. */
+	private List<ScriptLanguage>
+		languages(final ScriptService scriptService)
+	{
+		final List<ScriptLanguage> languages =
+			new ArrayList<ScriptLanguage>(scriptService.getLanguages());
+		Collections.sort(languages, new Comparator<ScriptLanguage>() {
+
+			@Override
+			public int compare(final ScriptLanguage l1, final ScriptLanguage l2) {
+				return l1.getLanguageName().compareTo(l2.getLanguageName());
+			}
+
+		});
+		return languages;
 	}
 
 }
