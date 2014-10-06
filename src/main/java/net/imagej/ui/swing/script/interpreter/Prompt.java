@@ -34,8 +34,14 @@ public class Prompt extends JTextArea {
 				final int code = event.getKeyCode();
 				switch (code) {
 				case VK_ENTER:
-					execute();
-					event.consume();
+					if (event.isShiftDown()) {
+						// multi-line input
+						insert("\n", getCaretPosition());
+					}
+					else {
+						execute();
+						event.consume();
+					}
 					break;
 				case VK_DOWN:
 					down();
