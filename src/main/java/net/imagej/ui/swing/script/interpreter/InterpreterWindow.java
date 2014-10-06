@@ -31,178 +31,60 @@
 
 package net.imagej.ui.swing.script.interpreter;
 
-import java.awt.Container;
-import java.awt.Dimension;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
-import java.io.Writer;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
-import javax.script.ScriptContext;
-import javax.swing.BorderFactory;
-import javax.swing.JComboBox;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JSplitPane;
-import javax.swing.JTextArea;
+import javax.swing.JTabbedPane;
 import javax.swing.WindowConstants;
-
-import net.miginfocom.swing.MigLayout;
 
 import org.scijava.log.LogService;
 import org.scijava.prefs.PrefService;
-import org.scijava.script.DefaultScriptInterpreter;
-import org.scijava.script.ScriptInterpreter;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptService;
 
 /**
  * The main interpreter window.
  * 
+ * @author Curtis Rueden
  * @author Johannes Schindelin
  */
 public class InterpreterWindow extends JFrame {
 
-	private final static String NO_LANGUAGE = "<None>";
-
-	private final Prompt prompt;
-	private final OutputPane output;
-	private Writer writer;
-
-	private final PrefService prefs;
-	private final ScriptService scriptService;
-	private final Map<String, ScriptLanguage> languages =
-		new TreeMap<String, ScriptLanguage>();
-	private final Map<String, ScriptInterpreter> interpreters =
-		new HashMap<String, ScriptInterpreter>();
-
-	private ScriptInterpreter interpreter;
-
+	private final List<InterpreterPane> tabs = new ArrayList<InterpreterPane>();
 	/**
-	 * Constructs the window.
+	 * Constructs the scripting interpreter window.
 	 * 
-	 * @param scriptService the script service
+	 * @param scriptService service to use for scripting
+	 * @param log service to use for logging
 	 */
 	public InterpreterWindow(final PrefService prefs, final ScriptService scriptService, final LogService log) {
 		super("Scripting Interpreter");
 
-		this.prefs = prefs;
-		this.scriptService = scriptService;
+		final JTabbedPane tabbedPane = new JTabbedPane();
 
 		for (final ScriptLanguage language : scriptService.getLanguages()) {
-			languages.put(language.getLanguageName(), language);
+			final String name = language.getLanguageName();
+			final InterpreterPane tab =
+				new InterpreterPane(prefs, scriptService, language, log);
+			tabs.add(tab);
+			tabbedPane.add(name, tab.getComponent());
 		}
 
-		Container content = getContentPane();
-		content.setLayout(new MigLayout());
-
-		final JComboBox languageChoice = new JComboBox(getLanguageNames());
-		languageChoice.addItemListener(new ItemListener() {
-
-			@Override
-			public void itemStateChanged(ItemEvent event) {
-				final String name = languageChoice.getSelectedItem().toString();
-				selectLanguage(name);
-				if (prompt.isEnabled()) {
-					prompt.requestFocusInWindow();
-				}
-			}
-
-		});
-		content.add(new JLabel("Language"));
-		content.add(languageChoice, "wrap");
-
-		final JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
-		output = new OutputPane(log);
-		JScrollPane scroll = new JScrollPane(output);
-		final Dimension outputDimensions = new Dimension(800, 600);
-		scroll.setPreferredSize(outputDimensions);
-		scroll.setMinimumSize(new Dimension(320, 200));
-		split.add(scroll);
-
-		JPanel promptPanel = new JPanel();
-		promptPanel.setLayout(new MigLayout());
-		prompt = new Prompt(interpreter, output);
-		prompt.setEnabled(false);
-		promptPanel.add(prompt);
-		promptPanel.setBorder(BorderFactory.createTitledBorder("Prompt"));
-		split.add(promptPanel);
-		content.add(split, "wrap, span 2");
-
+		setContentPane(tabbedPane);
 		pack();
 
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-
-		addFocusListener(new FocusListener() {
-
-			@Override
-			public void focusGained(FocusEvent arg0) {
-				interpreter.readHistory();
-			}
-
-			@Override
-			public void focusLost(FocusEvent arg0) {
-				interpreter.writeHistory();
-			}
-
-		});
 	}
 
 	@Override
 	public void dispose() {
-		try {
-			writer.close();
+		for (final InterpreterPane tab : tabs) try {
+			tab.dispose();
 		} catch (final Exception e) {
 			e.printStackTrace();
 		}
 		super.dispose();
-	}
-
-	private Object[] getLanguageNames() {
-		final List<Object> names = new ArrayList<Object>();
-		names.add(NO_LANGUAGE);
-		names.addAll(languages.keySet());
-		return names.toArray();
-	}
-
-	private synchronized void selectLanguage(String name) {
-		if (NO_LANGUAGE.equals(name)) {
-			prompt.setEnabled(false);
-			interpreter = null;
-			return;
-		}
-		interpreter = interpreters.get(name);
-		if (interpreter == null) {
-			final ScriptLanguage language = languages.get(name);
-			if (language == null) {
-				prompt.setEnabled(false);
-				throw new RuntimeException("Internal error: cannot resolve language: " + name);
-			}
-			interpreter = new DefaultScriptInterpreter(prefs, scriptService, language);
-			interpreters.put(name, interpreter);
-		}
-		if (writer != null) try {
-			writer.close();
-		} catch (final Exception e) {
-			e.printStackTrace();
-		}
-		writer = output.getOutputWriter();
-		final ScriptContext context = interpreter.getEngine().getContext();
-		context.setErrorWriter(writer);
-		context.setWriter(writer);
-		prompt.setEnabled(true);
-	}
-
-	public ScriptInterpreter getInterpreter() {
-		return interpreter;
 	}
 
 }
