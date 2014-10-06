@@ -47,15 +47,15 @@ public class Prompt extends JTextArea {
 		});
 	}
 
-	protected void up() {
+	private void up() {
 		setText(window.getInterpreter().walkHistory(getText(), false));
 	}
 
-	protected void down() {
+	private void down() {
 		setText(window.getInterpreter().walkHistory(getText(), true));
 	}
 
-	protected synchronized void execute() {
+	private synchronized void execute() {
 		try {
 			window.getInterpreter().eval(getText());
 		}
