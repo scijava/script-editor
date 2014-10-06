@@ -72,6 +72,7 @@ public class InterpreterWindow extends JFrame {
 		context.inject(this);
 
 		final JTabbedPane tabbedPane = new JTabbedPane();
+		setContentPane(tabbedPane);
 
 		for (final ScriptLanguage language : languages()) {
 			final String name = language.getLanguageName();
@@ -81,7 +82,6 @@ public class InterpreterWindow extends JFrame {
 			tabbedPane.add(name, tab.getComponent());
 		}
 
-		setContentPane(tabbedPane);
 		pack();
 
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
@@ -96,6 +96,8 @@ public class InterpreterWindow extends JFrame {
 		}
 		super.dispose();
 	}
+
+	// -- Helper methods --
 
 	/** Gets the list of available scripting languages, sorted by name. */
 	private List<ScriptLanguage> languages() {
