@@ -83,6 +83,9 @@ public class InterpreterWindow extends JFrame {
 			tabbedPane.add(name, tab.getComponent());
 		}
 
+		// read in interpreter histories, etc.
+		readState();
+
 		pack();
 
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
@@ -90,6 +93,8 @@ public class InterpreterWindow extends JFrame {
 
 	@Override
 	public void dispose() {
+		// write out interpreter histories, etc., when frame goes away
+		writeState();
 		for (final InterpreterPane tab : tabs) try {
 			tab.dispose();
 		} catch (final Exception e) {
@@ -113,6 +118,49 @@ public class InterpreterWindow extends JFrame {
 
 		});
 		return languages;
+	}
+
+	/**
+	 * Reads in persisted state, including the last active tab, as well as the
+	 * history of each interpreter.
+	 */
+	private void readState() {
+		setActiveLanguage(prefs.get(InterpreterWindow.class, "language"));
+		for (final InterpreterPane tab : tabs) {
+			tab.getInterpreter().readHistory();
+		}
+	}
+
+	/**
+	 * Writes out persisted state, including the currently active tab, as well as
+	 * the history of each interpreter.
+	 */
+	private void writeState() {
+		final String active = getActiveLanguage();
+		if (active != null) prefs.put(InterpreterWindow.class, "language", active);
+		for (final InterpreterPane tab : tabs) {
+			tab.getInterpreter().writeHistory();
+		}
+	}
+
+	/** Gets the name of the active language tab. */
+	private String getActiveLanguage() {
+		final int selected = tabbedPane.getSelectedIndex();
+		if (selected < 0) return null;
+		final InterpreterPane tab = tabs.get(selected);
+		return tab.getInterpreter().getLanguage().getLanguageName();
+	}
+
+	/** Sets the active language tab by name. */
+	private void setActiveLanguage(final String languageName) {
+		for (int i = 0; i < tabs.size(); i++) {
+			final InterpreterPane tab = tabs.get(i);
+			final String name = tab.getInterpreter().getLanguage().getLanguageName();
+			if (name.equals(languageName)) {
+				tabbedPane.setSelectedIndex(i);
+				break;
+			}
+		}
 	}
 
 }
