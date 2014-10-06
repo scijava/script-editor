@@ -101,6 +101,7 @@ public class InterpreterPane {
 
 		splitPane =
 			new JSplitPane(JSplitPane.VERTICAL_SPLIT, outputScroll, promptScroll);
+		splitPane.setResizeWeight(1);
 	}
 
 	public void dispose() throws IOException {
