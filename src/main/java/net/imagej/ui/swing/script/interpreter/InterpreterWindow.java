@@ -76,8 +76,6 @@ public class InterpreterWindow extends JFrame {
 
 	private final static String NO_LANGUAGE = "<None>";
 
-	private final JSplitPane split;
-	private final JComboBox languageChoice;
 	private final JComponent prompt;
 	private final OutputPane output;
 	private Writer writer;
@@ -107,7 +105,7 @@ public class InterpreterWindow extends JFrame {
 		Container content = getContentPane();
 		content.setLayout(new MigLayout());
 
-		languageChoice = new JComboBox(getLanguageNames());
+		final JComboBox languageChoice = new JComboBox(getLanguageNames());
 		languageChoice.addItemListener(new ItemListener() {
 
 			@Override
@@ -123,7 +121,7 @@ public class InterpreterWindow extends JFrame {
 		content.add(new JLabel("Language"));
 		content.add(languageChoice, "wrap");
 
-		split = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+		final JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 		output = new OutputPane(log);
 		JScrollPane scroll = new JScrollPane(output);
 		final Dimension outputDimensions = new Dimension(800, 600);
