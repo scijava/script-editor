@@ -47,7 +47,6 @@ import java.util.TreeMap;
 import javax.script.ScriptContext;
 import javax.swing.BorderFactory;
 import javax.swing.JComboBox;
-import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -74,7 +73,7 @@ public class InterpreterWindow extends JFrame {
 
 	private final static String NO_LANGUAGE = "<None>";
 
-	private final JComponent prompt;
+	private final Prompt prompt;
 	private final OutputPane output;
 	private Writer writer;
 
