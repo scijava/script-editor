@@ -65,13 +65,14 @@ public class InterpreterWindow extends JFrame {
 	private LogService log;
 
 	private final List<InterpreterPane> tabs = new ArrayList<InterpreterPane>();
+	private final JTabbedPane tabbedPane;
 
 	/** Constructs the scripting interpreter window. */
 	public InterpreterWindow(final Context context) {
 		super("Scripting Interpreter");
 		context.inject(this);
 
-		final JTabbedPane tabbedPane = new JTabbedPane();
+		tabbedPane = new JTabbedPane();
 		setContentPane(tabbedPane);
 
 		for (final ScriptLanguage language : languages()) {
