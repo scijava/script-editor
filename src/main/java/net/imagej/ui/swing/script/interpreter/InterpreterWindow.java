@@ -31,12 +31,15 @@
 
 package net.imagej.ui.swing.script.interpreter;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
 import javax.swing.JFrame;
+import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.WindowConstants;
 
@@ -83,6 +86,8 @@ public class InterpreterWindow extends JFrame {
 			tabbedPane.add(name, tab.getComponent());
 		}
 
+		syncTabs();
+
 		// read in interpreter histories, etc.
 		readState();
 
@@ -118,6 +123,27 @@ public class InterpreterWindow extends JFrame {
 
 		});
 		return languages;
+	}
+
+	/** Ensures that each tab's split pane stays sized the same. */
+	private void syncTabs() {
+		final PropertyChangeListener l = new PropertyChangeListener() {
+			@Override
+			public void propertyChange(final PropertyChangeEvent evt) {
+				final String prop = evt.getPropertyName();
+				if (!prop.equals(JSplitPane.DIVIDER_LOCATION_PROPERTY)) return;
+				final JSplitPane splitPane = (JSplitPane) evt.getSource();
+				final int dividerLocation = splitPane.getDividerLocation();
+				for (final InterpreterPane tab : tabs) {
+					final JSplitPane c = tab.getComponent();
+					if (c == splitPane) continue;
+					c.setDividerLocation(dividerLocation);
+				}
+			}
+		};
+		for (final InterpreterPane tab : tabs) {
+			tab.getComponent().addPropertyChangeListener(l);
+		}
 	}
 
 	/**
