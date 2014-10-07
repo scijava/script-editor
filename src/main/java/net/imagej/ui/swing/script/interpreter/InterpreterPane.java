@@ -32,10 +32,13 @@
 package net.imagej.ui.swing.script.interpreter;
 
 import java.awt.Dimension;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.io.Writer;
 
 import javax.script.ScriptContext;
+import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -102,10 +105,20 @@ public class InterpreterPane {
 		prompt = new PromptPane(interpreter, output);
 		final JScrollPane promptScroll = new JScrollPane(prompt);
 
+		final JButton clearButton = new JButton("Clear");
+		clearButton.setToolTipText("Clears the text in the output pane.");
+		clearButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(final ActionEvent e) {
+				output.setText("");
+			}
+		});
+
 		final JPanel bottomPane = new JPanel();
 		bottomPane.setLayout(new MigLayout("", "[grow,fill][pref]",
 			"[grow,fill,align top]"));
 		bottomPane.add(promptScroll);
+		bottomPane.add(clearButton, "w pref!, h pref!");
 
 		splitPane =
 			new JSplitPane(JSplitPane.VERTICAL_SPLIT, outputScroll, bottomPane);
