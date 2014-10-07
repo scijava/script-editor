@@ -39,7 +39,6 @@ import java.io.Writer;
 
 import javax.script.ScriptContext;
 import javax.swing.JButton;
-import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
@@ -137,7 +136,7 @@ public class InterpreterPane {
 	}
 
 	/** Gets the pane's Swing UI component. */
-	public JComponent getComponent() {
+	public JSplitPane getComponent() {
 		return splitPane;
 	}
 
