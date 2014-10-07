@@ -37,8 +37,11 @@ import java.io.Writer;
 
 import javax.script.ScriptContext;
 import javax.swing.JComponent;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
+
+import net.miginfocom.swing.MigLayout;
 
 import org.scijava.log.LogService;
 import org.scijava.prefs.PrefService;
@@ -99,8 +102,13 @@ public class InterpreterPane {
 		prompt = new PromptPane(interpreter, output);
 		final JScrollPane promptScroll = new JScrollPane(prompt);
 
+		final JPanel bottomPane = new JPanel();
+		bottomPane.setLayout(new MigLayout("", "[grow,fill][pref]",
+			"[grow,fill,align top]"));
+		bottomPane.add(promptScroll);
+
 		splitPane =
-			new JSplitPane(JSplitPane.VERTICAL_SPLIT, outputScroll, promptScroll);
+			new JSplitPane(JSplitPane.VERTICAL_SPLIT, outputScroll, bottomPane);
 		splitPane.setResizeWeight(1);
 	}
 
