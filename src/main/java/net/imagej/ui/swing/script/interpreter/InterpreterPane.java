@@ -64,7 +64,6 @@ public class InterpreterPane {
 
 	private final JSplitPane splitPane;
 	private final OutputPane output;
-	private final Writer writer;
 	private final PromptPane prompt;
 
 	/**
@@ -96,7 +95,7 @@ public class InterpreterPane {
 		final JScrollPane outputScroll = new JScrollPane(output);
 		outputScroll.setPreferredSize(new Dimension(440, 400));
 
-		writer = output.getOutputWriter();
+		final Writer writer = output.getOutputWriter();
 		final ScriptContext context = interpreter.getEngine().getContext();
 		context.setErrorWriter(writer);
 		context.setWriter(writer);
@@ -125,7 +124,7 @@ public class InterpreterPane {
 	}
 
 	public void dispose() throws IOException {
-		if (writer != null) writer.close();
+		output.close();
 	}
 
 	// -- InterpreterPane methods --

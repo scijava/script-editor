@@ -40,4 +40,19 @@ public class OutputPane extends JTextArea {
 		if (writer == null) writer = new JTextAreaWriter(this, log);
 		return writer;
 	}
+
+	public void close() {
+		try {
+			if (out != null) {
+				out.close();
+				out = null;
+			}
+			if (writer != null) {
+				writer.close();
+				writer = null;
+			}
+		} catch (final Exception e) {
+			log.error(e);
+		}
+	}
 }
