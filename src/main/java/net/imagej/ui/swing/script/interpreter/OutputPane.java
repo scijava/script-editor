@@ -19,6 +19,8 @@ import org.scijava.log.LogService;
 public class OutputPane extends JTextArea {
 
 	private final LogService log;
+	private OutputStream out;
+	private Writer writer;
 
 	public OutputPane(final LogService log) {
 		this.log = log;
@@ -29,11 +31,13 @@ public class OutputPane extends JTextArea {
 		setLineWrap(true);
 	}
 
-	public OutputStream getOutputStream() {
-		return new JTextAreaOutputStream(this);
+	public synchronized OutputStream getOutputStream() {
+		if (out == null) out = new JTextAreaOutputStream(this);
+		return out;
 	}
 
-	public Writer getOutputWriter() {
-		return new JTextAreaWriter(this, log);
+	public synchronized Writer getOutputWriter() {
+		if (writer == null) writer = new JTextAreaWriter(this, log);
+		return writer;
 	}
 }
