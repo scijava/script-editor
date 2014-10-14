@@ -4,12 +4,14 @@ import static java.awt.event.KeyEvent.VK_DOWN;
 import static java.awt.event.KeyEvent.VK_ENTER;
 import static java.awt.event.KeyEvent.VK_UP;
 
+import java.awt.Rectangle;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.PrintStream;
 
 import javax.script.ScriptException;
 import javax.swing.JTextArea;
+import javax.swing.text.BadLocationException;
 
 import org.scijava.script.ScriptInterpreter;
 
@@ -47,15 +49,38 @@ public class PromptPane extends JTextArea {
 					}
 					break;
 				case VK_DOWN:
-					down();
+					if (isInRow(-1)) {
+						down();
+						event.consume();
+					}
 					break;
 				case VK_UP:
-					up();
+					if (isInRow(0)) {
+						up();
+						event.consume();
+					}
 					break;
 				}
 			}
 
 		});
+	}
+
+	private boolean isInRow(final int row) {
+		try {
+			final int rowHeight = getRowHeight();
+			final Rectangle rect = modelToView(getCaretPosition());
+			int rowTop = row * rowHeight;
+			if (rowTop < 0) {
+				final Rectangle lastRect = modelToView(getDocument().getLength());
+				rowTop += lastRect.y + lastRect.height;
+			}
+			return rect.y == rowTop;
+		}
+		catch (BadLocationException e) {
+			e.printStackTrace(new PrintStream(output.getOutputStream()));
+			return true;
+		}
 	}
 
 	private void up() {
