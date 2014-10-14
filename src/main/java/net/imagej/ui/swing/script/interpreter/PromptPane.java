@@ -27,6 +27,7 @@ public class PromptPane extends JTextArea {
 		final OutputPane output)
 	{
 		super(3, 2);
+		setLineWrap(true);
 		this.interpreter = interpreter;
 		this.output = output;
 		addKeyListener(new KeyAdapter() {
