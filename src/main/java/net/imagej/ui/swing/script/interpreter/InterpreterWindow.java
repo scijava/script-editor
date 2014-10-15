@@ -36,6 +36,7 @@ import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 
 import javax.swing.JFrame;
@@ -114,6 +115,12 @@ public class InterpreterWindow extends JFrame {
 	private List<ScriptLanguage> languages() {
 		final List<ScriptLanguage> languages =
 			new ArrayList<ScriptLanguage>(scriptService.getLanguages());
+
+		// skip compiled languages (makes no sense to interpret them)
+		for (final Iterator<ScriptLanguage> iter = languages.iterator(); iter.hasNext(); ) {
+			if (iter.next().isCompiledLanguage()) iter.remove();
+		}
+
 		Collections.sort(languages, new Comparator<ScriptLanguage>() {
 
 			@Override
