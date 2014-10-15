@@ -42,7 +42,9 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.scijava.Context;
 import org.scijava.module.ModuleException;
+import org.scijava.plugin.PluginService;
 import org.scijava.script.ScriptLanguage;
 
 /**
@@ -57,11 +59,12 @@ import org.scijava.script.ScriptLanguage;
  */
 class DefaultAutoImporters {
 
-	static Reader prefixAutoImports(final ScriptLanguage language,
-		final Collection<AutoImporter> importers, final Reader reader,
-		final Writer errors) throws ModuleException
+	private static Collection<AutoImporter> importers;
+
+	static Reader prefixAutoImports(final Context context, final ScriptLanguage language,
+		final Reader reader, final Writer errors) throws ModuleException
 	{
-		final ImportStatementGenerator generator = getImportGenerator(language);
+		final Object generator = getImportGenerator(context, language);
 		if (generator == null) {
 			try {
 				errors.write("[WARNING] Auto-imports not available for language '" +
@@ -80,7 +83,7 @@ class DefaultAutoImporters {
 			throw new ModuleException(e);
 		}
 
-		final String statements = generator.getImportStatements(importers);
+		final String statements = generator.getImportStatements();
 
 		try {
 			final PushbackReader result =
@@ -93,9 +96,13 @@ class DefaultAutoImporters {
 		}
 	}
 
-	private static ImportStatementGenerator getImportGenerator(
-		final ScriptLanguage language)
+	private static ImportStatementGenerator getImportGenerator(final Context context, final ScriptLanguage language)
 	{
+		if (importers == null) {
+			final PluginService pluginService = context.getService(PluginService.class);
+			importers = pluginService.createInstancesOfType(AutoImporter.class);
+		}
+
 		final String name = language == null ? null : language.getLanguageName();
 		if ("Javascript".equals(name) || "ECMAScript".equals(name)) {
 			return new DefaultImportStatements("importClass(Packages.", ");\n");
@@ -140,7 +147,7 @@ class DefaultAutoImporters {
 		void generate(StringBuilder builder, String packageName,
 			List<String> classNames);
 
-		String getImportStatements(Collection<AutoImporter> importers);
+		String getImportStatements();
 	}
 
 	private static class DefaultImportStatements implements
@@ -173,7 +180,7 @@ class DefaultAutoImporters {
 		}
 
 		@Override
-		public String getImportStatements(final Collection<AutoImporter> importers) {
+		public String getImportStatements() {
 			final StringBuilder builder = new StringBuilder();
 			for (final AutoImporter importer : importers) {
 				for (final Entry<String, List<String>> entry : importer

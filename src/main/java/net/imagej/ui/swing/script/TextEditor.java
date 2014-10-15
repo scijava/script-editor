@@ -217,13 +217,11 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	protected Map<ScriptLanguage, JRadioButtonMenuItem> languageMenuItems;
 	protected JRadioButtonMenuItem noneLanguageItem;
-	private List<AutoImporter> importerPlugins;
 
 	public TextEditor(final Context context) {
 		super("Script Editor");
 		context.inject(this);
 		initializeTokenMakers(pluginService, log);
-		importerPlugins = pluginService.createInstancesOfType(AutoImporter.class);
 		loadPreferences();
 
 		// Initialize menu
@@ -2442,7 +2440,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			ModuleException {
 		final ScriptLanguage language = getCurrentLanguage();
 		if (respectAutoImports) {
-			reader = DefaultAutoImporters.prefixAutoImports(language, importerPlugins, reader, errors);
+			reader = DefaultAutoImporters.prefixAutoImports(context, language, reader, errors);
 		}
 		// create script module for execution
 		final ScriptInfo info = new ScriptInfo(context, filename, reader);
