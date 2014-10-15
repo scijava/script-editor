@@ -64,13 +64,13 @@ class DefaultAutoImporters {
 		final String name = language == null ? null : language.getLanguageName();
 		final ImportStatementGenerator generator;
 		if ("Javascript".equals(name) || "ECMAScript".equals(name)) {
-			generator = new DefaulImportStatements("importClass(Packages.", ");\n");
+			generator = new DefaultImportStatements("importClass(Packages.", ");\n");
 		}
 		else if ("Beanshell".equals(name)) {
-			generator = new DefaulImportStatements("import ", ";\n");
+			generator = new DefaultImportStatements("import ", ";\n");
 		}
 		else if ("Ruby".equals(name)) {
-			generator = new DefaulImportStatements("java_import '", "'\n");
+			generator = new DefaultImportStatements("java_import '", "'\n");
 		}
 		else if ("Python".equals(name)) {
 			generator = new ImportStatementGenerator() {
@@ -145,14 +145,14 @@ class DefaultAutoImporters {
 			List<String> classNames);
 	}
 
-	private static class DefaulImportStatements implements
+	private static class DefaultImportStatements implements
 		ImportStatementGenerator
 	{
 
 		private final String prefix, suffix;
 		private final Set<String> exclude;
 
-		DefaulImportStatements(final String prefix, final String suffix,
+		DefaultImportStatements(final String prefix, final String suffix,
 			final String... classNamesToExclude)
 		{
 			this.prefix = prefix;
