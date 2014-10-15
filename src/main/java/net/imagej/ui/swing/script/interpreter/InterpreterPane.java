@@ -163,6 +163,17 @@ public class InterpreterPane {
 		return splitPane;
 	}
 
+	/** Print a message to the output panel */
+	public void print(String string) {
+		final Writer writer = output.getOutputWriter();
+		try {
+			writer.write(string + "\n");
+		}
+		catch (IOException e) {
+			e.printStackTrace(new PrintWriter(writer));
+		}
+	}
+
 	// -- Utility methods --
 
 	public static ScriptInterpreter createInterpreter(

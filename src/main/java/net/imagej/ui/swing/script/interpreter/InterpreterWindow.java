@@ -189,4 +189,14 @@ public class InterpreterWindow extends JFrame {
 		}
 	}
 
+	/** Print a message to the current language's output panel */
+	public void print(String string) {
+		final int selected = tabbedPane.getSelectedIndex();
+		if (selected < 0) {
+			System.out.println(string);
+			return;
+		}
+		final InterpreterPane tab = tabs.get(selected);
+		tab.print(string);
+	}
 }
