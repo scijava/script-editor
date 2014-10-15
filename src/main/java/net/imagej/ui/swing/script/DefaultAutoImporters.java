@@ -104,7 +104,7 @@ public class DefaultAutoImporters {
 		}
 
 		final String name = language == null ? null : language.getLanguageName();
-		if ("Javascript".equals(name) || "ECMAScript".equals(name)) {
+		if ("Javascript".equalsIgnoreCase(name) || "ECMAScript".equals(name)) {
 			return new DefaultImportStatements("importClass(Packages.", ");\n");
 		}
 		if ("Beanshell".equals(name)) {
