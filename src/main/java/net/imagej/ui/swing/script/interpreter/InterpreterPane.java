@@ -115,8 +115,8 @@ public class InterpreterPane {
 		final JPanel bottomPane = new JPanel();
 		bottomPane.setLayout(new MigLayout("", "[grow,fill][pref]",
 			"[grow,fill,align top]"));
-		bottomPane.add(promptScroll);
-		bottomPane.add(clearButton, "w pref!, h pref!");
+		bottomPane.add(promptScroll, "spany 2");
+		bottomPane.add(clearButton, "w pref!, h pref!, wrap");
 
 		splitPane =
 			new JSplitPane(JSplitPane.VERTICAL_SPLIT, outputScroll, bottomPane);
