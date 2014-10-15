@@ -47,7 +47,7 @@ import org.scijava.script.ScriptLanguage;
 
 /**
  * Generates the statements for the auto-imports (for internal use by the script
- * editor only).
+ * editor and script interpreter only).
  * <p>
  * This class generates import statements for the deprecated auto-import feature
  * of the script editor and prefixes the {@link Reader} with those statements.
@@ -61,19 +61,53 @@ class DefaultAutoImporters {
 		final Collection<AutoImporter> importers, final Reader reader,
 		final Writer errors) throws ModuleException
 	{
+		final ImportStatementGenerator generator = getImportGenerator(language);
+		if (generator == null) {
+			try {
+				errors.write("[WARNING] Auto-imports not available for language '" +
+					(language == null ? "(null)" : language.getLanguageName()) + "'.\n");
+			}
+			catch (final IOException e) {
+				throw new ModuleException(e);
+			}
+			return reader;
+		}
+
+		try {
+			errors.write("[WARNING] Auto-imports are active, but deprecated.\n");
+		}
+		catch (final IOException e) {
+			throw new ModuleException(e);
+		}
+
+		final String statements = generator.getImportStatements(importers);
+
+		try {
+			final PushbackReader result =
+				new PushbackReader(reader, statements.length());
+			result.unread(statements.toCharArray());
+			return result;
+		}
+		catch (final IOException e) {
+			throw new ModuleException(e);
+		}
+	}
+
+	private static ImportStatementGenerator getImportGenerator(
+		final ScriptLanguage language)
+	{
 		final String name = language == null ? null : language.getLanguageName();
-		final ImportStatementGenerator generator;
 		if ("Javascript".equals(name) || "ECMAScript".equals(name)) {
-			generator = new DefaultImportStatements("importClass(Packages.", ");\n");
+			return new DefaultImportStatements("importClass(Packages.", ");\n");
 		}
-		else if ("Beanshell".equals(name)) {
-			generator = new DefaultImportStatements("import ", ";\n");
+		if ("Beanshell".equals(name)) {
+			return new DefaultImportStatements("import ", ";\n");
 		}
-		else if ("Ruby".equals(name)) {
-			generator = new DefaultImportStatements("java_import '", "'\n");
+		if ("Ruby".equals(name)) {
+			return new DefaultImportStatements("java_import '", "'\n");
 		}
-		else if ("Python".equals(name)) {
-			generator = new ImportStatementGenerator() {
+		if ("Python".equals(name)) {
+			return new DefaultImportStatements(null, null) {
 
 				@Override
 				public void generate(final StringBuilder builder,
@@ -98,51 +132,15 @@ class DefaultAutoImporters {
 				}
 			};
 		}
-		else {
-			try {
-				errors.write("[WARNING] Auto-imports not available for language '" +
-					name + "'.\n");
-			}
-			catch (final IOException e) {
-				throw new ModuleException(e);
-			}
-			return reader;
-		}
-
-		try {
-			errors.write("[WARNING] Auto-imports are active, but deprecated.\n");
-		}
-		catch (final IOException e) {
-			throw new ModuleException(e);
-		}
-
-		final StringBuilder builder = new StringBuilder();
-		for (final AutoImporter importer : importers) {
-			for (final Entry<String, List<String>> entry : importer
-				.getDefaultImports().entrySet())
-			{
-				final String packageName = entry.getKey();
-				final List<String> classNames = entry.getValue();
-				generator.generate(builder, packageName, classNames);
-			}
-		}
-		final String statements = builder.toString();
-
-		try {
-			final PushbackReader result =
-				new PushbackReader(reader, statements.length());
-			result.unread(statements.toCharArray());
-			return result;
-		}
-		catch (final IOException e) {
-			throw new ModuleException(e);
-		}
+		return null;
 	}
 
 	private static interface ImportStatementGenerator {
 
 		void generate(StringBuilder builder, String packageName,
 			List<String> classNames);
+
+		String getImportStatements(Collection<AutoImporter> importers);
 	}
 
 	private static class DefaultImportStatements implements
@@ -172,6 +170,21 @@ class DefaultAutoImporters {
 				builder.append(prefix).append(packageName).append('.')
 					.append(className).append(suffix);
 			}
+		}
+
+		@Override
+		public String getImportStatements(final Collection<AutoImporter> importers) {
+			final StringBuilder builder = new StringBuilder();
+			for (final AutoImporter importer : importers) {
+				for (final Entry<String, List<String>> entry : importer
+					.getDefaultImports().entrySet())
+				{
+					final String packageName = entry.getKey();
+					final List<String> classNames = entry.getValue();
+					generate(builder, packageName, classNames);
+				}
+			}
+			return builder.toString();
 		}
 
 	}
