@@ -57,7 +57,7 @@ import org.scijava.script.ScriptLanguage;
  * 
  * @author Johannes Schindelin
  */
-class DefaultAutoImporters {
+public class DefaultAutoImporters {
 
 	private static Collection<AutoImporter> importers;
 
@@ -83,7 +83,7 @@ class DefaultAutoImporters {
 			throw new ModuleException(e);
 		}
 
-		final String statements = generator.getImportStatements();
+		final String statements = generator.toString();
 
 		try {
 			final PushbackReader result =
@@ -96,7 +96,7 @@ class DefaultAutoImporters {
 		}
 	}
 
-	private static ImportStatementGenerator getImportGenerator(final Context context, final ScriptLanguage language)
+	public static Object getImportGenerator(final Context context, final ScriptLanguage language)
 	{
 		if (importers == null) {
 			final PluginService pluginService = context.getService(PluginService.class);
@@ -147,7 +147,6 @@ class DefaultAutoImporters {
 		void generate(StringBuilder builder, String packageName,
 			List<String> classNames);
 
-		String getImportStatements();
 	}
 
 	private static class DefaultImportStatements implements
@@ -180,7 +179,7 @@ class DefaultAutoImporters {
 		}
 
 		@Override
-		public String getImportStatements() {
+		public String toString() {
 			final StringBuilder builder = new StringBuilder();
 			for (final AutoImporter importer : importers) {
 				for (final Entry<String, List<String>> entry : importer
