@@ -35,14 +35,17 @@ import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.Writer;
 
 import javax.script.ScriptContext;
+import javax.script.ScriptException;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 
+import net.imagej.ui.swing.script.DefaultAutoImporters;
 import net.miginfocom.swing.MigLayout;
 
 import org.scijava.log.LogService;
@@ -117,6 +120,27 @@ public class InterpreterPane {
 			"[grow,fill,align top]"));
 		bottomPane.add(promptScroll, "spany 2");
 		bottomPane.add(clearButton, "w pref!, h pref!, wrap");
+
+		final Object importGenerator =
+				DefaultAutoImporters.getImportGenerator(log.getContext(), interpreter.getLanguage());
+		if (importGenerator != null) {
+			final JButton autoImportButton = new JButton("Auto-Import");
+			autoImportButton.setToolTipText("Auto-imports common classes.");
+			autoImportButton.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(final ActionEvent e) {
+					try {
+						interpreter.getEngine().eval(importGenerator.toString());
+					}
+					catch (ScriptException e1) {
+						e1.printStackTrace(new PrintWriter(output.getOutputWriter()));
+					}
+					autoImportButton.setEnabled(false);
+					prompt.requestFocus();
+				}
+			});
+			bottomPane.add(autoImportButton, "w pref!, h pref!, wrap");
+		}
 
 		splitPane =
 			new JSplitPane(JSplitPane.VERTICAL_SPLIT, outputScroll, bottomPane);
