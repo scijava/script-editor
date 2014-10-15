@@ -27,7 +27,7 @@ public class OutputPane extends JTextArea {
 		Font font = new Font("Courier", Font.PLAIN, 12);
 		setFont(font);
 		setEditable(false);
-		setFocusable(false);
+		setFocusable(true);
 		setLineWrap(true);
 	}
 
