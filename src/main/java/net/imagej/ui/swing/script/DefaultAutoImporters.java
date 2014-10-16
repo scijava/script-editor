@@ -107,13 +107,13 @@ public class DefaultAutoImporters {
 		if ("Javascript".equalsIgnoreCase(name) || "ECMAScript".equals(name)) {
 			return new DefaultImportStatements("importClass(Packages.", ");\n");
 		}
-		if ("Beanshell".equals(name)) {
+		if ("Beanshell".equalsIgnoreCase(name)) {
 			return new DefaultImportStatements("import ", ";\n");
 		}
-		if ("Ruby".equals(name)) {
+		if ("Ruby".equalsIgnoreCase(name)) {
 			return new DefaultImportStatements("java_import '", "'\n");
 		}
-		if ("Python".equals(name)) {
+		if ("Python".equalsIgnoreCase(name)) {
 			return new DefaultImportStatements(null, null) {
 
 				@Override
