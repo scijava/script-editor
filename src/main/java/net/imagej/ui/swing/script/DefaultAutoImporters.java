@@ -42,12 +42,14 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.scijava.Context;
 import org.scijava.module.ModuleException;
+import org.scijava.plugin.PluginService;
 import org.scijava.script.ScriptLanguage;
 
 /**
  * Generates the statements for the auto-imports (for internal use by the script
- * editor only).
+ * editor and script interpreter only).
  * <p>
  * This class generates import statements for the deprecated auto-import feature
  * of the script editor and prefixes the {@link Reader} with those statements.
@@ -55,25 +57,64 @@ import org.scijava.script.ScriptLanguage;
  * 
  * @author Johannes Schindelin
  */
-class DefaultAutoImporters {
+public class DefaultAutoImporters {
 
-	static Reader prefixAutoImports(final ScriptLanguage language,
-		final Collection<AutoImporter> importers, final Reader reader,
-		final Writer errors) throws ModuleException
+	private static Collection<AutoImporter> importers;
+
+	static Reader prefixAutoImports(final Context context, final ScriptLanguage language,
+		final Reader reader, final Writer errors) throws ModuleException
 	{
+		final Object generator = getImportGenerator(context, language);
+		if (generator == null) {
+			try {
+				errors.write("[WARNING] Auto-imports not available for language '" +
+					(language == null ? "(null)" : language.getLanguageName()) + "'.\n");
+			}
+			catch (final IOException e) {
+				throw new ModuleException(e);
+			}
+			return reader;
+		}
+
+		try {
+			errors.write("[WARNING] Auto-imports are active, but deprecated.\n");
+		}
+		catch (final IOException e) {
+			throw new ModuleException(e);
+		}
+
+		final String statements = generator.toString();
+
+		try {
+			final PushbackReader result =
+				new PushbackReader(reader, statements.length());
+			result.unread(statements.toCharArray());
+			return result;
+		}
+		catch (final IOException e) {
+			throw new ModuleException(e);
+		}
+	}
+
+	public static Object getImportGenerator(final Context context, final ScriptLanguage language)
+	{
+		if (importers == null) {
+			final PluginService pluginService = context.getService(PluginService.class);
+			importers = pluginService.createInstancesOfType(AutoImporter.class);
+		}
+
 		final String name = language == null ? null : language.getLanguageName();
-		final ImportStatementGenerator generator;
-		if ("Javascript".equals(name) || "ECMAScript".equals(name)) {
-			generator = new DefaulImportStatements("importClass(Packages.", ");\n");
+		if ("Javascript".equalsIgnoreCase(name) || "ECMAScript".equals(name)) {
+			return new DefaultImportStatements("importClass(Packages.", ");\n");
 		}
-		else if ("Beanshell".equals(name)) {
-			generator = new DefaulImportStatements("import ", ";\n");
+		if ("Beanshell".equals(name)) {
+			return new DefaultImportStatements("import ", ";\n");
 		}
-		else if ("Ruby".equals(name)) {
-			generator = new DefaulImportStatements("java_import '", "'\n");
+		if ("Ruby".equals(name)) {
+			return new DefaultImportStatements("java_import '", "'\n");
 		}
-		else if ("Python".equals(name)) {
-			generator = new ImportStatementGenerator() {
+		if ("Python".equals(name)) {
+			return new DefaultImportStatements(null, null) {
 
 				@Override
 				public void generate(final StringBuilder builder,
@@ -98,61 +139,24 @@ class DefaultAutoImporters {
 				}
 			};
 		}
-		else {
-			try {
-				errors.write("[WARNING] Auto-imports not available for language '" +
-					name + "'.\n");
-			}
-			catch (final IOException e) {
-				throw new ModuleException(e);
-			}
-			return reader;
-		}
-
-		try {
-			errors.write("[WARNING] Auto-imports are active, but deprecated.\n");
-		}
-		catch (final IOException e) {
-			throw new ModuleException(e);
-		}
-
-		final StringBuilder builder = new StringBuilder();
-		for (final AutoImporter importer : importers) {
-			for (final Entry<String, List<String>> entry : importer
-				.getDefaultImports().entrySet())
-			{
-				final String packageName = entry.getKey();
-				final List<String> classNames = entry.getValue();
-				generator.generate(builder, packageName, classNames);
-			}
-		}
-		final String statements = builder.toString();
-
-		try {
-			final PushbackReader result =
-				new PushbackReader(reader, statements.length());
-			result.unread(statements.toCharArray());
-			return result;
-		}
-		catch (final IOException e) {
-			throw new ModuleException(e);
-		}
+		return null;
 	}
 
 	private static interface ImportStatementGenerator {
 
 		void generate(StringBuilder builder, String packageName,
 			List<String> classNames);
+
 	}
 
-	private static class DefaulImportStatements implements
+	private static class DefaultImportStatements implements
 		ImportStatementGenerator
 	{
 
 		private final String prefix, suffix;
 		private final Set<String> exclude;
 
-		DefaulImportStatements(final String prefix, final String suffix,
+		DefaultImportStatements(final String prefix, final String suffix,
 			final String... classNamesToExclude)
 		{
 			this.prefix = prefix;
@@ -172,6 +176,21 @@ class DefaultAutoImporters {
 				builder.append(prefix).append(packageName).append('.')
 					.append(className).append(suffix);
 			}
+		}
+
+		@Override
+		public String toString() {
+			final StringBuilder builder = new StringBuilder();
+			for (final AutoImporter importer : importers) {
+				for (final Entry<String, List<String>> entry : importer
+					.getDefaultImports().entrySet())
+				{
+					final String packageName = entry.getKey();
+					final List<String> classNames = entry.getValue();
+					generate(builder, packageName, classNames);
+				}
+			}
+			return builder.toString();
 		}
 
 	}
