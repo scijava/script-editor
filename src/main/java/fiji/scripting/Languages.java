@@ -1,25 +1,18 @@
 package fiji.scripting;
 
 import BSH.Refresh_BSH_Scripts;
-
 import CLI.Refresh_Macros;
-
 import Clojure.Refresh_Clojure_Scripts;
-
 import JRuby.Refresh_JRuby_Scripts;
-
 import Javascript.Refresh_Javascript_Scripts;
-
 import Jython.Refresh_Jython_Scripts;
 
 import common.RefreshScripts;
 
 import fiji.scripting.java.Refresh_Javas;
-
 import ij.IJ;
 
 import java.awt.event.KeyEvent;
-
 import java.util.HashMap;
 import java.util.Map;
 

@@ -1,41 +1,43 @@
 package fiji.scripting;
 
-import com.sun.jdi.Location;
-import com.sun.jdi.VirtualMachine;
-import com.sun.jdi.VirtualMachineManager;
+import com.sun.jdi.AbsentInformationException;
 import com.sun.jdi.Bootstrap;
 import com.sun.jdi.ClassType;
-import com.sun.jdi.ReferenceType;
-import com.sun.jdi.AbsentInformationException;
 import com.sun.jdi.Field;
+import com.sun.jdi.IncompatibleThreadStateException;
 import com.sun.jdi.LocalVariable;
+import com.sun.jdi.Location;
+import com.sun.jdi.ReferenceType;
 import com.sun.jdi.StackFrame;
 import com.sun.jdi.ThreadReference;
-import com.sun.jdi.IncompatibleThreadStateException;
-import com.sun.jdi.connect.LaunchingConnector;
+import com.sun.jdi.VirtualMachine;
+import com.sun.jdi.VirtualMachineManager;
 import com.sun.jdi.connect.Connector;
-import com.sun.jdi.connect.Transport;
 import com.sun.jdi.connect.IllegalConnectorArgumentsException;
+import com.sun.jdi.connect.LaunchingConnector;
+import com.sun.jdi.connect.Transport;
 import com.sun.jdi.connect.VMStartException;
-import com.sun.jdi.event.Event;
-import com.sun.jdi.event.EventSet;
-import com.sun.jdi.event.EventQueue;
 import com.sun.jdi.event.BreakpointEvent;
-import com.sun.jdi.event.VMStartEvent;
-import com.sun.jdi.event.VMDeathEvent;
 import com.sun.jdi.event.ClassPrepareEvent;
+import com.sun.jdi.event.Event;
+import com.sun.jdi.event.EventQueue;
+import com.sun.jdi.event.EventSet;
+import com.sun.jdi.event.VMDeathEvent;
 import com.sun.jdi.event.VMDisconnectEvent;
-import com.sun.jdi.request.ClassPrepareRequest;
+import com.sun.jdi.event.VMStartEvent;
 import com.sun.jdi.request.BreakpointRequest;
+import com.sun.jdi.request.ClassPrepareRequest;
 import com.sun.jdi.request.EventRequestManager;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Iterator;
+
+import ij.IJ;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import ij.IJ;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class StartDebugging {
 

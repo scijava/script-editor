@@ -1,12 +1,10 @@
 package fiji.scripting.completion;
 
+import java.util.ArrayList;
+
 import javax.swing.text.Element;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Token;
 
 public class ImportStatementsParser {

@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Set;
 
 import javax.swing.text.BadLocationException;
-import javax.swing.text.Document;
 
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Token;

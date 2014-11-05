@@ -5,10 +5,13 @@
  */
 package fiji.scripting;
 
-import java.io.*;
+import java.io.IOException;
+
 import javax.swing.text.Segment;
 
-import org.fife.ui.rsyntaxtextarea.*;
+import org.fife.ui.rsyntaxtextarea.AbstractJFlexCTokenMaker;
+import org.fife.ui.rsyntaxtextarea.DefaultToken;
+import org.fife.ui.rsyntaxtextarea.Token;
 
 
 /**

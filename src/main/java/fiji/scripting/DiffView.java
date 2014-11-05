@@ -1,18 +1,14 @@
 package fiji.scripting;
 
 import fiji.SimpleExecuter;
-
 import fiji.SimpleExecuter.LineHandler;
-
 import ij.IJ;
 
 import java.awt.Color;
-
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -21,7 +17,6 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextPane;
-
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;

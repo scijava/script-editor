@@ -1,14 +1,11 @@
 package fiji.scripting.completion;
 
 import java.lang.reflect.Method;
-
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.TreeSet;
 
 import org.fife.ui.autocomplete.FunctionCompletion;
-
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 
 // TODO: rename to ObjectInstances

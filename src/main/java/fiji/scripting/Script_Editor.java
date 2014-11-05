@@ -1,21 +1,17 @@
 package fiji.scripting;
 
 import fiji.FijiClassLoader;
-
 import ij.IJ;
 import ij.Macro;
-
 import ij.plugin.PlugIn;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import javax.swing.SwingUtilities;
-
-import java.lang.reflect.Method;
-
 import java.net.URL;
 import java.net.URLClassLoader;
+
+import javax.swing.SwingUtilities;
 
 public class Script_Editor implements PlugIn {
 	protected static TextEditor instance;

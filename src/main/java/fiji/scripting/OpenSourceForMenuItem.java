@@ -3,12 +3,9 @@ package fiji.scripting;
 import common.RefreshScripts;
 
 import fiji.IJ_Alt_Key_Listener;
-
 import fiji.util.MenuItemDiverter;
-
 import ij.IJ;
 import ij.Menus;
-
 import ij.plugin.BrowserLauncher;
 
 import javax.swing.JOptionPane;

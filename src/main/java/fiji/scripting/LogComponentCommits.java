@@ -3,37 +3,26 @@ package fiji.scripting;
 import fiji.CheckClassVersions;
 import fiji.SimpleExecuter;
 import fiji.SimpleExecuter.LineHandler;
-
 import fiji.build.ByteCodeAnalyzer;
 import fiji.build.Fake;
-import fiji.build.FakeException;
 import fiji.build.Parser;
 import fiji.build.Rule;
-
-import fiji.scripting.FileFunctions;
-
 import ij.IJ;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
-
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-
 import java.net.MalformedURLException;
 import java.net.URL;
-
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -41,12 +30,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-
-import java.util.jar.Attributes;
-import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
-
 import java.util.zip.ZipEntry;
 
 

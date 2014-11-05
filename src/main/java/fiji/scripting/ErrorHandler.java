@@ -1,15 +1,12 @@
 package fiji.scripting;
 
-import fiji.scripting.Languages;
 import fiji.scripting.Languages.Language;
-
 import ij.IJ;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JTextArea;
-
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultHighlighter;
 import javax.swing.text.Document;

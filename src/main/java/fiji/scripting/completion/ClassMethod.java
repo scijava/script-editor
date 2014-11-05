@@ -1,6 +1,5 @@
 package fiji.scripting.completion;
 
-import java.lang.Comparable;
 
 public class ClassMethod implements Comparable {
 	String onlyName;

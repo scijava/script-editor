@@ -2,9 +2,7 @@ package fiji.scripting;
 
 import ij.IJ;
 import ij.Menus;
-
 import ij.macro.Interpreter;
-
 import ij.plugin.MacroInstaller;
 
 import java.util.regex.Matcher;

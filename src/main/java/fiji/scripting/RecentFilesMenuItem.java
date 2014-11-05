@@ -4,7 +4,6 @@ import ij.Prefs;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Stack;

@@ -1,13 +1,14 @@
 package fiji.scripting.completion;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.TreeSet;
+
+import javax.swing.text.Element;
+
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Token;
-import java.util.TreeSet;
-import java.util.ArrayList;
-import java.util.Collection;
-
-import javax.swing.text.Element;
 
 public class ConstructorParser {
 	protected TreeSet<ImportedClassObjects> objectSet = new TreeSet<ImportedClassObjects>();

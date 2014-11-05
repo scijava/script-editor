@@ -1,28 +1,17 @@
 package fiji.scripting.completion;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-
-import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.FunctionCompletion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;

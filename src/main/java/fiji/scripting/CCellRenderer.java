@@ -1,28 +1,21 @@
 package fiji.scripting;
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
-import javax.swing.event.*;
-import javax.swing.JOptionPane;
-import java.io.*;
-import javax.swing.filechooser.*;
-import javax.swing.colorchooser.*;
-import java.awt.image.*;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
-import javax.swing.text.Document;
+import java.awt.Component;
+import java.awt.Graphics;
+import java.io.File;
+import java.io.Serializable;
 /*for the cell renderer part*/
 import java.net.MalformedURLException;
 import java.net.URL;
+
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
+import javax.swing.JList;
+
+import org.fife.ui.autocomplete.Completion;
+import org.fife.ui.autocomplete.CompletionCellRenderer;
+import org.fife.ui.autocomplete.FunctionCompletion;
+import org.fife.ui.autocomplete.VariableCompletion;
 /*cell renderer part ends here*/
-import javax.imageio.*;
-import java.awt.geom.AffineTransform;
-import java.util.Arrays;
-import java.util.List;
-import javax.swing.text.*;
-import org.fife.ui.rtextarea.*;
-import org.fife.ui.rsyntaxtextarea.*;
-import org.fife.ui.autocomplete.*;
 
 public class CCellRenderer extends CompletionCellRenderer {
 

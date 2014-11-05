@@ -1,7 +1,6 @@
 package fiji.scripting;
 
 import ij.io.OpenDialog;
-
 import ij.plugin.PlugIn;
 
 public class ShowPluginChanges implements PlugIn {

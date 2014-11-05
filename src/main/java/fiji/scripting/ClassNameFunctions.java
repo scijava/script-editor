@@ -2,13 +2,10 @@ package fiji.scripting;
 
 import fiji.scripting.completion.ClassCompletionProvider;
 import fiji.scripting.completion.ClassNames;
-
 import ij.gui.GenericDialog;
-
 import ij.plugin.BrowserLauncher;
 
 import java.awt.Frame;
-
 import java.util.List;
 
 import javax.swing.JOptionPane;

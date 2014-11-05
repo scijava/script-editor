@@ -1,13 +1,15 @@
 package fiji.scripting;
 
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fife.ui.rtextarea.Gutter;
-import org.fife.ui.rtextarea.IconGroup;
-import org.fife.ui.rtextarea.GutterIconInfo;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
+
 import javax.swing.Icon;
 import javax.swing.text.BadLocationException;
+
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rtextarea.Gutter;
+import org.fife.ui.rtextarea.GutterIconInfo;
+import org.fife.ui.rtextarea.IconGroup;
 
 public class BreakpointManager {
 

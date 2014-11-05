@@ -3,26 +3,18 @@ package fiji.scripting;
 import fiji.build.Fake;
 import fiji.build.Parser;
 import fiji.build.Rule;
-
-import fiji.scripting.JTextAreaOutputStream;
-
 import ij.IJ;
-
 import ij.io.OpenDialog;
-
 import ij.plugin.PlugIn;
 
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Font;
-
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.PrintStream;
-
 import java.util.Arrays;
 
 import javax.swing.BoxLayout;

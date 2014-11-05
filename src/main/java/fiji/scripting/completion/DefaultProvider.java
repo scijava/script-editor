@@ -3,13 +3,15 @@ package fiji.scripting.completion;
 import java.awt.Point;
 import java.util.ArrayList;
 import java.util.List;
+
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.text.Element;
 import javax.swing.text.JTextComponent;
 import javax.swing.text.Segment;
+
 import org.fife.ui.autocomplete.AbstractCompletionProvider;
-import org.fife.ui.autocomplete.CompletionProvider;
+import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.ParameterizedCompletion;
 
 

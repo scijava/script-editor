@@ -1,26 +1,17 @@
 package fiji.scripting;
 
-import fiji.scripting.ErrorHandler;
-import fiji.scripting.ErrorHandler.Error;
-
 import ij.IJ;
-
 import ij.text.TextWindow;
 
 import java.io.CharArrayWriter;
 import java.io.File;
 import java.io.PrintWriter;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-
 import java.util.Map;
 import java.util.WeakHashMap;
 
 import javax.swing.JTextArea;
-
-import javax.swing.text.BadLocationException;
-import javax.swing.text.Document;
 
 public class ExceptionHandler implements IJ.ExceptionHandler {
 	protected Map<ThreadGroup, TextEditor> threadMap =

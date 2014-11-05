@@ -11,7 +11,6 @@ package fiji.scripting;
  */
 
 import fiji.SimpleExecuter;
-
 import fiji.build.ByteCodeAnalyzer;
 import fiji.build.CompileJar;
 import fiji.build.Fake;
@@ -20,7 +19,6 @@ import fiji.build.Parser;
 import fiji.build.Rule;
 import fiji.build.SubFake;
 import fiji.build.Util;
-
 import ij.IJ;
 
 import java.io.ByteArrayOutputStream;
@@ -30,13 +28,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
