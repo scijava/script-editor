@@ -157,7 +157,7 @@ import org.scijava.util.Prefs;
 public class TextEditor extends JFrame implements ActionListener,
 	       ChangeListener, CloseConfirmable {
 
-	private static final String TEMPLATES_PATH = "script-templates";
+	private static final Set<String> TEMPLATE_PATHS = new HashSet<String>();
 	public static final String AUTO_IMPORT_PREFS = "script.editor.AutoImport";
 	public static final String TAB_SIZE_PREFS = "script.editor.TabSize";
 	public static final String FONT_SIZE_PREFS = "script.editor.FontSize";
@@ -168,6 +168,14 @@ public class TextEditor extends JFrame implements ActionListener,
 	public static final int DEFAULT_TAB_SIZE = 4;
 	public static final int DEFAULT_WINDOW_WIDTH = 800;
 	public static final int DEFAULT_WINDOW_HEIGHT = 600;
+
+	static {
+		// Add known script template paths.
+		addTemplatePath("script_templates");
+		// This path interferes with javadoc generation but is preserved for
+		// backwards compatibility
+		addTemplatePath("script-templates");
+	}
 
 	private static AbstractTokenMakerFactory tokenMakerFactory = null;
 
@@ -639,6 +647,16 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 	}
 
+	/**
+	 * Adds a script template path that will be scanned by future TextEditor
+	 * instances.
+	 *
+	 * @param path Resource path to scan for scripts.
+	 */
+	public static void addTemplatePath(final String path) {
+		TEMPLATE_PATHS.add(path);
+	}
+
 	@Plugin(type = SyntaxHighlighter.class, label = "ecmascript")
 	public static class ECMAScriptHighlighter extends JavaScriptTokenMaker implements SyntaxHighlighter {} 
 	@Plugin(type = SyntaxHighlighter.class, label = "matlab")
@@ -810,36 +828,39 @@ public class TextEditor extends JFrame implements ActionListener,
 	 *            the known languages
 	 */
 	protected void addTemplates(JMenu templatesMenu, Map<String, ScriptLanguage> languageMap) {
-		for (final Map.Entry<String, URL> entry :
-			new TreeMap<String, URL>(FileFunctions.findResources(null, TEMPLATES_PATH)).entrySet()) {
-			final String path = entry.getKey().replace('/', '>').replace('_', ' ');
-			int gt = path.indexOf('>');
-			if (gt < 1) {
-				log.warn("Ignoring invalid editor template: " + entry.getValue());
-				continue;
-			}
-			final String language = path.substring(0, gt);
-			if (!languageMap.containsKey(language)) {
-				log.debug("Ignoring editor template for language " + language
-						+ ": " + entry.getValue());
-				continue;
-			}
-			final ScriptLanguage engine = languageMap.get(language);
-			final JMenu menu = getMenu(templatesMenu, path, true);
-
-			String label = path.substring(path.lastIndexOf('>') + 1);
-			final int dot = label.lastIndexOf('.');
-			if (dot > 0)
-				label = label.substring(0, dot);
-			final JMenuItem item = new JMenuItem(label);
-			menu.add(item);
-			final URL url = entry.getValue();
-			item.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					loadTemplate(url, engine);
+		for (final String templatePath : TEMPLATE_PATHS) {
+			for (final Map.Entry<String, URL> entry : new TreeMap<String, URL>(
+				FileFunctions.findResources(null, templatePath)).entrySet())
+			{
+				final String path = entry.getKey().replace('/', '>').replace('_', ' ');
+				int gt = path.indexOf('>');
+				if (gt < 1) {
+					log.warn("Ignoring invalid editor template: " + entry.getValue());
+					continue;
 				}
-			});
+				final String language = path.substring(0, gt);
+				if (!languageMap.containsKey(language)) {
+					log.debug("Ignoring editor template for language " + language + ": " +
+						entry.getValue());
+					continue;
+				}
+				final ScriptLanguage engine = languageMap.get(language);
+				final JMenu menu = getMenu(templatesMenu, path, true);
+
+				String label = path.substring(path.lastIndexOf('>') + 1);
+				final int dot = label.lastIndexOf('.');
+				if (dot > 0) label = label.substring(0, dot);
+				final JMenuItem item = new JMenuItem(label);
+				menu.add(item);
+				final URL url = entry.getValue();
+				item.addActionListener(new ActionListener() {
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						loadTemplate(url, engine);
+					}
+				});
+			}
 		}
 	}
 
