@@ -517,19 +517,6 @@ public class MatlabTokenMaker extends AbstractJFlexTokenMaker {
 
 
 	/**
-	 * Returns the text to place at the beginning and end of a
-	 * line to "comment" it in a this programming language.
-	 *
-	 * @return The start and end strings to add to a line to "comment"
-	 *         it out.
-	 */
-	@Override
-	public String[] getLineCommentStartAndEnd() {
-		return new String[] { ";", null };
-	}
-
-
-	/**
 	 * Returns the first token in the linked list of tokens generated
 	 * from <code>text</code>.  This method must be implemented by
 	 * subclasses so they can correctly implement syntax highlighting.
