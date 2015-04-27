@@ -127,6 +127,7 @@ import org.scijava.plugin.Plugin;
 import org.scijava.plugin.PluginInfo;
 import org.scijava.plugin.PluginService;
 import org.scijava.plugins.scripting.java.JavaEngine;
+import org.scijava.prefs.PrefService;
 import org.scijava.script.ScriptHeaderService;
 import org.scijava.script.ScriptInfo;
 import org.scijava.script.ScriptLanguage;
@@ -137,7 +138,6 @@ import org.scijava.ui.UIService;
 import org.scijava.util.AppUtils;
 import org.scijava.util.FileUtils;
 import org.scijava.util.MiscUtils;
-import org.scijava.util.Prefs;
 import org.scijava.widget.FileWidget;
 
 /**
@@ -152,6 +152,7 @@ import org.scijava.widget.FileWidget;
  * </p>
  * 
  * @author Johannes Schindelin
+ * @author Jonathan Hale
  */
 @SuppressWarnings("serial")
 public class TextEditor extends JFrame implements ActionListener,
@@ -231,6 +232,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	protected ScriptHeaderService scriptHeaderService;
 	@Parameter
 	private UIService uiService;
+	@Parameter
+	protected PrefService prefService;
 
 	protected Map<ScriptLanguage, JRadioButtonMenuItem> languageMenuItems;
 	protected JRadioButtonMenuItem noneLanguageItem;
@@ -391,14 +394,14 @@ public class TextEditor extends JFrame implements ActionListener,
 		removeUnusedImports.setMnemonic(KeyEvent.VK_U);
 		sortImports = addToMenu(edit, "Sort imports", 0, 0);
 		sortImports.setMnemonic(KeyEvent.VK_S);
-		respectAutoImports = Prefs.getBoolean(AUTO_IMPORT_PREFS, false);
+		respectAutoImports = prefService.getBoolean(AUTO_IMPORT_PREFS, false);
 		autoImport = new JCheckBoxMenuItem("Auto-import (deprecated)", respectAutoImports);
 		autoImport.addItemListener(new ItemListener() {
 
 			@Override
 			public void itemStateChanged(ItemEvent e) {
 				respectAutoImports = e.getStateChange() == ItemEvent.SELECTED;
-				Prefs.put(AUTO_IMPORT_PREFS, respectAutoImports);
+				prefService.put(AUTO_IMPORT_PREFS, respectAutoImports);
 			}
 		});
 		edit.add(autoImport);
@@ -689,8 +692,8 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		setPreferredSize(
 			new Dimension(
-				Prefs.getInt(WINDOW_WIDTH, dim.width),
-				Prefs.getInt(WINDOW_HEIGHT, dim.height) ) );
+				prefService.getInt(WINDOW_WIDTH, dim.width),
+				prefService.getInt(WINDOW_HEIGHT, dim.height) ) );
 	}
 
 	/**
@@ -698,10 +701,10 @@ public class TextEditor extends JFrame implements ActionListener,
 	 */
 	public void savePreferences(){
 		EditorPane pane = getEditorPane();
-		Prefs.put(TAB_SIZE_PREFS, pane.getTabSize());
-		Prefs.put(FONT_SIZE_PREFS, pane.getFontSize());
-		Prefs.put(LINE_WRAP_PREFS, pane.getLineWrap());
-		Prefs.put(TABS_EMULATED_PREFS, pane.getTabsEmulated());
+		prefService.put(TAB_SIZE_PREFS, pane.getTabSize());
+		prefService.put(FONT_SIZE_PREFS, pane.getFontSize());
+		prefService.put(LINE_WRAP_PREFS, pane.getLineWrap());
+		prefService.put(TABS_EMULATED_PREFS, pane.getTabsEmulated());
 	}
 
 	/**
@@ -716,8 +719,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	 */
 	public void saveWindowSizeToPrefs(){
 		Dimension dim  = getSize();
-		Prefs.put(WINDOW_HEIGHT,dim.height);
-		Prefs.put(WINDOW_WIDTH, dim.width);
+		prefService.put(WINDOW_HEIGHT,dim.height);
+		prefService.put(WINDOW_WIDTH, dim.width);
 	}
 
 	final public RSyntaxTextArea getTextArea() {
@@ -1396,15 +1399,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 
 		/**
-		 * Loads the preferences for the Tab from ij.Prefs and apply them.
+		 * Loads the preferences for the Tab and apply them.
 		 */
 		public void loadPreferences() {
 			editorPane.setTabSize(getTabSizeSetting());
-			editorPane.setFontSize(Prefs.getFloat(FONT_SIZE_PREFS,
+			editorPane.setFontSize(prefService.getFloat(FONT_SIZE_PREFS,
 				editorPane.getFontSize()));
-			editorPane.setLineWrap(Prefs.getBoolean(LINE_WRAP_PREFS,
+			editorPane.setLineWrap(prefService.getBoolean(LINE_WRAP_PREFS,
 				editorPane.getLineWrap()));
-			editorPane.setTabsEmulated(Prefs.getBoolean(TABS_EMULATED_PREFS,
+			editorPane.setTabsEmulated(prefService.getBoolean(TABS_EMULATED_PREFS,
 				editorPane.getTabsEmulated()));
 		}
 
@@ -2447,7 +2450,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	private int getTabSizeSetting() {
-		return Prefs.getInt(TAB_SIZE_PREFS, DEFAULT_TAB_SIZE);
+		return prefService.getInt(TAB_SIZE_PREFS, DEFAULT_TAB_SIZE);
 	}
 
 	private Reader evalScript(final String filename, Reader reader, final Writer output, final Writer errors) throws FileNotFoundException,
