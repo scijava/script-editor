@@ -85,7 +85,6 @@ import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
-import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
@@ -101,7 +100,6 @@ import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import javax.swing.filechooser.FileFilter;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Position;
 
@@ -135,10 +133,12 @@ import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptModule;
 import org.scijava.script.ScriptService;
 import org.scijava.ui.CloseConfirmable;
+import org.scijava.ui.UIService;
 import org.scijava.util.AppUtils;
 import org.scijava.util.FileUtils;
 import org.scijava.util.MiscUtils;
 import org.scijava.util.Prefs;
+import org.scijava.widget.FileWidget;
 
 /**
  * A versatile script editor for ImageJ.
@@ -229,6 +229,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	protected PluginService pluginService;
 	@Parameter
 	protected ScriptHeaderService scriptHeaderService;
+	@Parameter
+	private UIService uiService;
 
 	protected Map<ScriptLanguage, JRadioButtonMenuItem> languageMenuItems;
 	protected JRadioButtonMenuItem noneLanguageItem;
@@ -993,9 +995,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			final EditorPane editorPane = getEditorPane();
 			final File defaultDir = editorPane != null && editorPane.file != null ?
 				editorPane.file.getParentFile() : AppUtils.getBaseDirectory("imagej.dir", TextEditor.class, null);
-			final File file = openWithDialog("Open...", defaultDir, new String[] {
-				".class", ".jar"
-			}, false);
+			final File file = openWithDialog(defaultDir);
 			if (file != null)
 				new Thread() {
 					@Override
@@ -1657,12 +1657,9 @@ public class TextEditor extends JFrame implements ActionListener,
 				AppUtils.getBaseDirectory("imagej.dir", TextEditor.class, null);
 			file = new File(ijDir, editorPane.getFileName());
 		}
-		File dir = file.getParentFile();
-		JFileChooser chooser = new JFileChooser(dir);
-		chooser.setDialogTitle("Save as");
-		chooser.setSelectedFile(file);
-		if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return false;
-		return saveAs(chooser.getSelectedFile().getAbsolutePath(), true);
+		final File fileToSave = uiService.chooseFile(file, FileWidget.SAVE_STYLE);
+		if (fileToSave == null) return false;
+		return saveAs(fileToSave.getAbsolutePath(), true);
 	}
 
 	public void saveAs(String path) {
@@ -1720,11 +1717,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (name.indexOf('_') < 0)
 			name += "_";
 		name += ".jar";
-		JFileChooser chooser = new JFileChooser(file == null ? null : file.getParentFile());
-		chooser.setDialogTitle("Export");
-		chooser.setSelectedFile(new File(name));
-		if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return false;
-		File selectedFile = chooser.getSelectedFile();
+
+		final File selectedFile = uiService.chooseFile(file, FileWidget.SAVE_STYLE);
+		if (selectedFile == null) return false;
 		if (selectedFile.exists() &&
 				JOptionPane.showConfirmDialog(this,
 					"Do you want to replace " + selectedFile + "?",
@@ -2361,9 +2356,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public void extractSourceJar() {
-		File file = openWithDialog("Open...", null, new String[] {
-			".jar"
-		}, true);
+		File file = openWithDialog(null);
 		if (file != null)
 			extractSourceJar(file);
 	}
@@ -2371,12 +2364,10 @@ public class TextEditor extends JFrame implements ActionListener,
 	public void extractSourceJar(File file) {
 		try {
 			FileFunctions functions = new FileFunctions(this);
-			JFileChooser dialog = new JFileChooser();
-			dialog.setDialogTitle("Choose workspace directory");
-			dialog.setCurrentDirectory(new File(System.getProperty("user.home")));
-			dialog.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-			if (dialog.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
-			final File workspace = dialog.getSelectedFile();
+			final File workspace =
+				uiService.chooseFile(new File(System.getProperty("user.home")),
+					FileWidget.DIRECTORY_STYLE);
+			if (workspace == null) return;
 			List<String> paths = functions.extractSourceJar(file.getAbsolutePath(), workspace);
 			for (String path : paths)
 				if (!functions.isBinaryFile(path)) {
@@ -2393,36 +2384,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	/* extensionMustMatch == false means extension must not match */
-	protected File openWithDialog(final String title, final File defaultDir,
-		final String[] extensions, final boolean extensionMustMatch)
-	{
-		JFileChooser dialog = new JFileChooser();
-		dialog.setDialogTitle(title);
-		if (defaultDir != null) dialog.setCurrentDirectory(defaultDir);
-		if (extensions != null) dialog.addChoosableFileFilter(new FileFilter() {
-
-			@Override
-			public boolean accept(File file) {
-				String name = file.getName();
-				for (String extension : extensions)
-					if (name.endsWith(extension)) return extensionMustMatch;
-				return !extensionMustMatch;
-			}
-
-			@Override
-			public String getDescription() {
-				StringBuilder builder = new StringBuilder();
-				String separator = "Only ";
-				for (String extension : extensions) {
-					builder.append(separator).append(extension);
-					separator = ", ";
-				}
-				builder.append(" files");
-				return builder.toString();
-			}
-		});
-		if (dialog.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return null;
-		return dialog.getSelectedFile();
+	protected File openWithDialog(final File defaultDir) {
+		return uiService.chooseFile(defaultDir, FileWidget.OPEN_STYLE);
 	}
 
 	/**
