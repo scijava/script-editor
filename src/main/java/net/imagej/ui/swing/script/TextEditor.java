@@ -1407,7 +1407,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			scroll.setPreferredSize(new Dimension(600, 80));
 			bottom.add(scroll, bc);
 
-			super.setTopComponent(editorPane.embedWithScrollbars());
+			super.setTopComponent(editorPane.wrappedInScrollbars());
 			super.setBottomComponent(bottom);
 		}
 
