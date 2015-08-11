@@ -794,7 +794,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public ScriptLanguage getCurrentLanguage() {
-		return getEditorPane().currentLanguage;
+		return getEditorPane().getCurrentLanguage();
 	}
 
 	public JMenuItem addToMenu(JMenu menu, String menuEntry, int key,
@@ -1060,7 +1060,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == open) {
 			final EditorPane editorPane = getEditorPane();
 			final File defaultDir =
-				editorPane.curFile != null ? editorPane.curFile
+				editorPane.getFile() != null ? editorPane.getFile()
 					.getParentFile() : AppUtils.getBaseDirectory("imagej.dir",
 					TextEditor.class, null);
 			final File file = openWithDialog(defaultDir);
@@ -1190,7 +1190,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		*/
 		else if (source == gitGrep) {
 			String searchTerm = getTextArea().getSelectedText();
-			File searchRoot = getEditorPane().curFile;
+			File searchRoot = getEditorPane().getFile();
 			if (searchRoot == null) {
 				error("File was not yet saved; no location known!");
 				return;
@@ -1202,8 +1202,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		else if (source == openInGitweb) {
 			EditorPane editorPane = getEditorPane();
-			new FileFunctions(this).openInGitweb(editorPane.curFile,
-				editorPane.gitDirectory, editorPane.getCaretLineNumber() + 1);
+			new FileFunctions(this).openInGitweb(editorPane.getFile(),
+				editorPane.getGitDirectory(), editorPane.getCaretLineNumber() + 1);
 		}
 		else if (source == increaseFontSize || source == decreaseFontSize) {
 			getEditorPane().increaseFontSize(
@@ -1301,7 +1301,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public boolean reload(String message) {
-		File file = getEditorPane().curFile;
+		File file = getEditorPane().getFile();
 		if (file == null || !file.exists()) return true;
 
 		boolean modified = getEditorPane().fileChanged();
@@ -1501,7 +1501,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			final JTextAreaWriter output =
 				new JTextAreaWriter(this.screen, TextEditor.this.log);
 			final JTextAreaWriter errors = new JTextAreaWriter(errorScreen, log);
-			final File file = getEditorPane().curFile;
+			final File file = getEditorPane().getFile();
 			// Pipe current text into the runScript:
 			final PipedInputStream pi = new PipedInputStream();
 			final PipedOutputStream po = new PipedOutputStream(pi);
@@ -1676,7 +1676,7 @@ public class TextEditor extends JFrame implements ActionListener,
 					tabsMenuItems.add(addToMenu(tabsMenu, tab.editorPane.getFileName(),
 						0, 0));
 				}
-				setFileName(tab.editorPane.curFile);
+				setFileName(tab.editorPane.getFile());
 				try {
 					updateTabAndFontSize(true);
 				}
@@ -1701,7 +1701,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	public boolean saveAs() {
 		EditorPane editorPane = getEditorPane();
-		File file = editorPane.curFile;
+		File file = editorPane.getFile();
 		if (file == null) {
 			final File ijDir =
 				AppUtils.getBaseDirectory("imagej.dir", TextEditor.class, null);
@@ -1729,7 +1729,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public boolean save() {
-		File file = getEditorPane().curFile;
+		File file = getEditorPane().getFile();
 		if (file == null) return saveAs();
 		if (!write(file)) return false;
 		setTitle();
@@ -1749,7 +1749,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public boolean makeJar(boolean includeSources) {
-		File file = getEditorPane().curFile;
+		File file = getEditorPane().getFile();
 		if ((file == null || isCompiled()) && !handleUnsavedChanges(true)) {
 			return false;
 		}
@@ -1792,7 +1792,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 				@Override
 				public void run() {
-					java.makeJar(getEditorPane().curFile, includeSources, file, errors);
+					java.makeJar(getEditorPane().getFile(), includeSources, file, errors);
 					errorScreen.insert("Compilation finished.\n", errorScreen
 						.getDocument().getLength());
 					markCompileEnd();
@@ -1905,11 +1905,11 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	public void updateTabAndFontSize(boolean setByLanguage) {
 		EditorPane pane = getEditorPane();
-		if (pane.currentLanguage == null) return;
+		if (pane.getCurrentLanguage() == null) return;
 
 		if (setByLanguage) {
 			final boolean isPython =
-				pane.currentLanguage.getLanguageName().equals("Python");
+				pane.getCurrentLanguage().getLanguageName().equals("Python");
 			pane.setTabSize(isPython ? 4 : getTabSizeSetting());
 		}
 
@@ -2191,7 +2191,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final JTextAreaWriter output = new JTextAreaWriter(getTab().screen, log);
 		final JTextAreaWriter errors = new JTextAreaWriter(errorScreen, log);
 
-		final File file = getEditorPane().curFile;
+		final File file = getEditorPane().getFile();
 		new TextEditor.Executer(output, errors) {
 
 			@Override
@@ -2199,7 +2199,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				Reader reader = null;
 				try {
 					reader =
-						evalScript(getEditorPane().curFile.getPath(), new FileReader(file),
+						evalScript(getEditorPane().getFile().getPath(), new FileReader(file),
 							output, errors);
 
 					output.flush();
@@ -2236,7 +2236,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 				@Override
 				public void run() {
-					java.compile(getEditorPane().curFile, errors);
+					java.compile(getEditorPane().getFile(), errors);
 					errorScreen.insert("Compilation finished.\n", errorScreen
 						.getDocument().getLength());
 					markCompileEnd();
@@ -2367,8 +2367,8 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	boolean editorPaneContainsFile(EditorPane editorPane, File file) {
 		try {
-			return file != null && editorPane != null && editorPane.curFile != null &&
-				file.getCanonicalFile().equals(editorPane.curFile.getCanonicalFile());
+			return file != null && editorPane != null && editorPane.getFile() != null &&
+				file.getCanonicalFile().equals(editorPane.getFile().getCanonicalFile());
 		}
 		catch (IOException e) {
 			return false;
@@ -2376,14 +2376,14 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public File getFile() {
-		return getEditorPane().curFile;
+		return getEditorPane().getFile();
 	}
 
 	public File getFileForBasename(String baseName) {
 		File file = getFile();
 		if (file != null && file.getName().equals(baseName)) return file;
 		for (int i = 0; i < tabbed.getTabCount(); i++) {
-			file = getEditorPane(i).curFile;
+			file = getEditorPane(i).getFile();
 			if (file != null && file.getName().equals(baseName)) return file;
 		}
 		return null;

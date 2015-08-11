@@ -72,23 +72,24 @@ import org.scijava.script.ScriptLanguage;
 import org.scijava.util.FileUtils;
 
 /**
- * TODO
+ * Main text editing component of the script editor, based on
+ * {@link RSyntaxTextArea}.
  * 
  * @author Johannes Schindelin
  * @author Jonathan Hale
  */
 public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
-	TextEditor frame;
-	String fallBackBaseName;
-	File curFile;
-	File gitDirectory;
-	long fileLastModified;
-	ScriptLanguage currentLanguage;
-	Gutter gutter;
-	IconGroup iconGroup;
-	int modifyCount;
-	boolean undoInProgress, redoInProgress;
+	private TextEditor frame;
+	private String fallBackBaseName;
+	private File curFile;
+	private File gitDirectory;
+	private long fileLastModified;
+	private ScriptLanguage currentLanguage;
+	private Gutter gutter;
+	private IconGroup iconGroup;
+	private int modifyCount;
+	private boolean undoInProgress, redoInProgress;
 
 	@Parameter
 	private ScriptHeaderService scriptHeaderService;
@@ -105,7 +106,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		}
 
 		this.frame = frame;
-		
+
 		setLineWrap(false);
 		setTabSize(8);
 		getActionMap()
@@ -234,7 +235,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	}
 
 	public boolean wasChangedOutside() {
-		return curFile != null && curFile.exists() && curFile.lastModified() != fileLastModified;
+		return curFile != null && curFile.exists() &&
+			curFile.lastModified() != fileLastModified;
 	}
 
 	public void write(File file) throws IOException {
@@ -404,6 +406,24 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		if (header != null) {
 			setText(header += getText());
 		}
+	}
+
+	/**
+	 * Get file currently open in this {@link EditorPane}.
+	 * 
+	 * @return the file.
+	 */
+	public File getFile() {
+		return curFile;
+	}
+
+	/**
+	 * Get {@link ScriptLanguage} used for this {@link EditorPane}.
+	 * 
+	 * @return current {@link ScriptLanguage}.
+	 */
+	public ScriptLanguage getCurrentLanguage() {
+		return currentLanguage;
 	}
 
 	public float getFontSize() {
