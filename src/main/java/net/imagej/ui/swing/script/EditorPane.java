@@ -44,6 +44,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.util.Collection;
 import java.util.List;
 import java.util.Vector;
 
@@ -477,9 +478,15 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		}
 	}
 
-	public void getBookmarks(int tab, Vector<Bookmark> result) {
-		if (gutter == null)
-			return;
+	/**
+	 * Add this editors bookmarks to the specified collection.
+	 * 
+	 * @param tab Tab index to set for added bookmarks.
+	 * @param result Collection to add the bookmarks to.
+	 */
+	public void getBookmarks(final int tab, final Collection<Bookmark> result) {
+		if (gutter == null) return;
+
 		for (GutterIconInfo info : gutter.getBookmarks())
 			result.add(new Bookmark(tab, info));
 	}
