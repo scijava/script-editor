@@ -46,7 +46,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.Collection;
 import java.util.List;
-import java.util.Vector;
 
 import javax.swing.JScrollPane;
 import javax.swing.JViewport;
@@ -79,6 +78,7 @@ import org.scijava.util.FileUtils;
  * @author Jonathan Hale
  */
 public class EditorPane extends RSyntaxTextArea implements DocumentListener {
+
 	TextEditor frame;
 	String fallBackBaseName;
 	File file, gitDirectory;
@@ -96,22 +96,21 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		this.frame = frame;
 		setLineWrap(false);
 		setTabSize(8);
-		getActionMap().put(DefaultEditorKit
-				.nextWordAction, wordMovement(+1, false));
-		getActionMap().put(DefaultEditorKit
-				.selectionNextWordAction, wordMovement(+1, true));
-		getActionMap().put(DefaultEditorKit
-				.previousWordAction, wordMovement(-1, false));
-		getActionMap().put(DefaultEditorKit
-				.selectionPreviousWordAction, wordMovement(-1, true));
+		getActionMap()
+			.put(DefaultEditorKit.nextWordAction, wordMovement(+1, false));
+		getActionMap().put(DefaultEditorKit.selectionNextWordAction,
+			wordMovement(+1, true));
+		getActionMap().put(DefaultEditorKit.previousWordAction,
+			wordMovement(-1, false));
+		getActionMap().put(DefaultEditorKit.selectionPreviousWordAction,
+			wordMovement(-1, true));
 		ToolTipManager.sharedInstance().registerComponent(this);
 		getDocument().addDocumentListener(this);
 	}
 
 	@Override
 	public void setTabSize(int width) {
-		if (getTabSize() != width)
-			super.setTabSize(width);
+		if (getTabSize() != width) super.setTabSize(width);
 	}
 
 	public void embedWithScrollbars(Container container) {
@@ -129,24 +128,20 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		return sp;
 	}
 
-	RecordableTextAction wordMovement(final int direction,
-			final boolean select) {
+	RecordableTextAction wordMovement(final int direction, final boolean select) {
 		final String id = "WORD_MOVEMENT_" + select + direction;
 		return new RecordableTextAction(id) {
+
 			@Override
-			public void actionPerformedImpl(ActionEvent e,
-					RTextArea textArea) {
+			public void actionPerformedImpl(ActionEvent e, RTextArea textArea) {
 				int pos = textArea.getCaretPosition();
-				int end = direction < 0 ? 0 :
-					textArea.getDocument().getLength();
+				int end = direction < 0 ? 0 : textArea.getDocument().getLength();
 				while (pos != end && !isWordChar(textArea, pos))
 					pos += direction;
 				while (pos != end && isWordChar(textArea, pos))
 					pos += direction;
-				if (select)
-					textArea.moveCaretPosition(pos);
-				else
-					textArea.setCaretPosition(pos);
+				if (select) textArea.moveCaretPosition(pos);
+				else textArea.setCaretPosition(pos);
 			}
 
 			@Override
@@ -156,15 +151,12 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 			boolean isWordChar(RTextArea textArea, int pos) {
 				try {
-					char c = textArea.getText(pos
-						+ (direction < 0 ? -1 : 0), 1)
-						.charAt(0);
-					return c > 0x7f ||
-						(c >= 'A' && c <= 'Z') ||
-						(c >= 'a' && c <= 'z') ||
-						(c >= '0' && c <= '9') ||
-						c == '_';
-				} catch (BadLocationException e) {
+					char c =
+						textArea.getText(pos + (direction < 0 ? -1 : 0), 1).charAt(0);
+					return c > 0x7f || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+						(c >= '0' && c <= '9') || c == '_';
+				}
+				catch (BadLocationException e) {
 					return false;
 				}
 			}
@@ -201,42 +193,40 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	// triggered only by syntax highlighting
 	@Override
-	public void changedUpdate(DocumentEvent e) { }
+	public void changedUpdate(DocumentEvent e) {}
 
 	protected void modified() {
 		checkForOutsideChanges();
 		boolean update = modifyCount == 0;
-		if (undoInProgress)
-			modifyCount--;
-		else if (redoInProgress || modifyCount >= 0)
-			modifyCount++;
+		if (undoInProgress) modifyCount--;
+		else if (redoInProgress || modifyCount >= 0) modifyCount++;
 		else // not possible to get back to clean state
-			modifyCount = Integer.MIN_VALUE;
-		if (update || modifyCount == 0)
-			setTitle();
+		modifyCount = Integer.MIN_VALUE;
+		if (update || modifyCount == 0) setTitle();
 	}
 
 	public boolean isNew() {
-		return !fileChanged() && file == null &&
-			fallBackBaseName == null &&
+		return !fileChanged() && file == null && fallBackBaseName == null &&
 			getDocument().getLength() == 0;
 	}
 
 	public void checkForOutsideChanges() {
-		if (frame != null && wasChangedOutside() &&
-				!frame.reload("The file " + file.getName()
-					+ " was changed outside of the editor"))
-			fileLastModified = file.lastModified();
+		if (frame != null &&
+			wasChangedOutside() &&
+			!frame.reload("The file " + file.getName() +
+				" was changed outside of the editor")) fileLastModified =
+			file.lastModified();
 	}
 
 	public boolean wasChangedOutside() {
 		return file != null && file.exists() &&
-				file.lastModified() != fileLastModified;
+			file.lastModified() != fileLastModified;
 	}
 
 	public void write(File file) throws IOException {
 		BufferedWriter outFile =
-			new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), "UTF-8"));
+			new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file),
+				"UTF-8"));
 		outFile.write(getText());
 		outFile.close();
 		modifyCount = 0;
@@ -250,36 +240,37 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		else {
 			int line = 0;
 			try {
-				if (file.getCanonicalPath().equals(oldFile.getCanonicalPath()))
-					line = getCaretLineNumber();
-			} catch (Exception e) { /* ignore */ }
+				if (file.getCanonicalPath().equals(oldFile.getCanonicalPath())) line =
+					getCaretLineNumber();
+			}
+			catch (Exception e) { /* ignore */}
 			if (!file.exists()) {
 				modifyCount = Integer.MIN_VALUE;
 				setFileName(file);
 				return;
 			}
 			StringBuffer string = new StringBuffer();
-			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
+			BufferedReader reader =
+				new BufferedReader(new InputStreamReader(new FileInputStream(file),
+					"UTF-8"));
 			char[] buffer = new char[16384];
 			for (;;) {
 				int count = reader.read(buffer);
-				if (count < 0)
-					break;
+				if (count < 0) break;
 				string.append(buffer, 0, count);
 			}
 			reader.close();
 			setText(string.toString());
 			this.file = file;
-			if (line > getLineCount())
-				line = getLineCount() - 1;
+			if (line > getLineCount()) line = getLineCount() - 1;
 			try {
 				setCaretPosition(getLineStartOffset(line));
-			} catch (BadLocationException e) { /* ignore */ }
+			}
+			catch (BadLocationException e) { /* ignore */}
 		}
 		discardAllEdits();
 		modifyCount = 0;
-		fileLastModified = file == null || !file.exists() ? 0 :
-			file.lastModified();
+		fileLastModified = file == null || !file.exists() ? 0 : file.lastModified();
 	}
 
 	public void setFileName(String baseName) {
@@ -291,14 +282,13 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		for (String extension : currentLanguage.getExtensions()) {
 			extension = "." + extension;
 			if (baseName.endsWith(extension)) {
-				name = name.substring(0, name.length()
-						- extension.length());
+				name = name.substring(0, name.length() - extension.length());
 				break;
 			}
 		}
 		fallBackBaseName = name;
-		if (currentLanguage.getLanguageName().equals("Java"))
-			new TokenFunctions(this).setClassName(name);
+		if (currentLanguage.getLanguageName().equals("Java")) new TokenFunctions(
+			this).setClassName(name);
 	}
 
 	public void setFileName(final File file) {
@@ -307,6 +297,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		setTitle();
 		if (file != null) {
 			SwingUtilities.invokeLater(new Thread() {
+
 				@Override
 				public void run() {
 					setLanguageByFileName(file.getName());
@@ -314,8 +305,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			});
 			fallBackBaseName = null;
 		}
-		fileLastModified = file == null || !file.exists() ? 0 :
-			file.lastModified();
+		fileLastModified = file == null || !file.exists() ? 0 : file.lastModified();
 	}
 
 	protected void updateGitDirectory() {
@@ -327,8 +317,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	}
 
 	protected String getFileName() {
-		if (file != null)
-			return file.getName();
+		if (file != null) return file.getName();
 		String extension = "";
 		if (currentLanguage != null) {
 			List<String> extensions = currentLanguage.getExtensions();
@@ -336,24 +325,22 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 				extension = "." + extensions.get(0);
 			}
 			if (currentLanguage.getLanguageName().equals("Java")) {
-				String name =
-					new TokenFunctions(this).getClassName();
+				String name = new TokenFunctions(this).getClassName();
 				if (name != null) {
 					return name + extension;
 				}
 			}
 		}
-		return (fallBackBaseName == null ? "New_" : fallBackBaseName)
-			+ extension;
+		return (fallBackBaseName == null ? "New_" : fallBackBaseName) + extension;
 	}
 
 	private synchronized void setTitle() {
-		if (frame != null)
-			frame.setTitle();
+		if (frame != null) frame.setTitle();
 	}
 
 	protected void setLanguageByFileName(String name) {
-		setLanguage(frame.scriptService.getLanguageByExtension(FileUtils.getExtension(name)));
+		setLanguage(frame.scriptService.getLanguageByExtension(FileUtils
+			.getExtension(name)));
 	}
 
 	protected void setLanguage(ScriptLanguage language) {
@@ -366,14 +353,15 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		if (language == null) {
 			languageName = "None";
 			defaultExtension = ".txt";
-		} else {
+		}
+		else {
 			languageName = language.getLanguageName();
 			List<String> extensions = language.getExtensions();
-			defaultExtension = extensions.size() == 0 ? "" : ("." + extensions.get(0));
+			defaultExtension =
+				extensions.size() == 0 ? "" : ("." + extensions.get(0));
 		}
-		if (fallBackBaseName != null && fallBackBaseName.endsWith(".txt"))
-			fallBackBaseName = fallBackBaseName.substring(0,
-				fallBackBaseName.length() - 4);
+		if (fallBackBaseName != null && fallBackBaseName.endsWith(".txt")) fallBackBaseName =
+			fallBackBaseName.substring(0, fallBackBaseName.length() - 4);
 		if (file != null) {
 			String name = file.getName();
 			String ext = "." + FileUtils.getExtension(name);
@@ -391,7 +379,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		}
 		currentLanguage = language;
 
-		final String styleName = "text/" + languageName.toLowerCase().replace(' ', '-');
+		final String styleName =
+			"text/" + languageName.toLowerCase().replace(' ', '-');
 		setSyntaxEditingStyle(styleName);
 
 		frame.setTitle();
@@ -412,13 +401,11 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	}
 
 	public void increaseFontSize(float factor) {
-		if (factor == 1)
-			return;
+		if (factor == 1) return;
 		SyntaxScheme scheme = getSyntaxScheme();
 		for (int i = 0; i < scheme.getStyleCount(); i++) {
 			Style style = scheme.getStyle(i);
-			if (style == null || style.font == null)
-				continue;
+			if (style == null || style.font == null) continue;
 			float size = Math.max(5, style.font.getSize2D() * factor);
 			style.font = style.font.deriveFont(size);
 		}
@@ -437,7 +424,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	}
 
 	protected RSyntaxDocument getRSyntaxDocument() {
-		return (RSyntaxDocument)getDocument();
+		return (RSyntaxDocument) getDocument();
 	}
 
 	public void toggleBookmark() {
@@ -447,10 +434,12 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public void toggleBookmark(int line) {
 		if (gutter != null) try {
 			gutter.toggleBookmark(line);
-		} catch (BadLocationException e) { /* ignore */ }
+		}
+		catch (BadLocationException e) { /* ignore */}
 	}
 
 	public class Bookmark {
+
 		int tab;
 		GutterIconInfo info;
 
@@ -462,7 +451,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		public int getLineNumber() {
 			try {
 				return getLineOfOffset(info.getMarkedOffset());
-			} catch (BadLocationException e) {
+			}
+			catch (BadLocationException e) {
 				return -1;
 			}
 		}
@@ -521,13 +511,15 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 				inQuotes = false;
 			}
 		}
-		if (count>0) {
+		if (count > 0) {
 			beginAtomicEdit();
 			try {
 				setText(new String(chars));
-			} catch (Throwable t) {
+			}
+			catch (Throwable t) {
 				t.printStackTrace();
-			} finally {
+			}
+			finally {
 				endAtomicEdit();
 			}
 		}
@@ -539,20 +531,25 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		beginAtomicEdit();
 		try {
 			super.convertTabsToSpaces();
-		} catch (Throwable t) {
+		}
+		catch (Throwable t) {
 			t.printStackTrace();
-		} finally {
+		}
+		finally {
 			endAtomicEdit();
 		}
 	}
+
 	@Override
 	public void convertSpacesToTabs() {
 		beginAtomicEdit();
 		try {
 			super.convertSpacesToTabs();
-		} catch (Throwable t) {
+		}
+		catch (Throwable t) {
 			t.printStackTrace();
-		} finally {
+		}
+		finally {
 			endAtomicEdit();
 		}
 	}
