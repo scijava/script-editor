@@ -611,7 +611,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			@Override
 			public void windowGainedFocus(WindowEvent e) {
 				final EditorPane editorPane = getEditorPane();
-				if (editorPane != null) editorPane.checkForOutsideChanges();
+				editorPane.checkForOutsideChanges();
 			}
 		});
 
@@ -653,7 +653,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		open(null);
 
 		final EditorPane editorPane = getEditorPane();
-		if (editorPane != null) editorPane.requestFocus();
+		editorPane.requestFocus();
 	}
 
 	private synchronized static void initializeTokenMakers(
@@ -755,9 +755,42 @@ public class TextEditor extends JFrame implements ActionListener,
 		return getEditorPane();
 	}
 
+	/**
+	 * Get the currently selected tab.
+	 * 
+	 * @return The currently selected tab. Never null.
+	 */
+	public Tab getTab() {
+		int index = tabbed.getSelectedIndex();
+		if (index < 0) {
+			// should not happen, but safety first.
+			if (tabbed.getTabCount() == 0) {
+				// should not happen either, but, again, safety first.
+				createNewDocument();
+			}
+
+			tabbed.setSelectedIndex(0);
+		}
+		return (Tab) tabbed.getComponentAt(index);
+	}
+
+	/**
+	 * Get tab at provided index.
+	 * 
+	 * @param index the index of the tab.
+	 * @return the {@link Tab} at given index or <code>null</code>.
+	 */
+	public Tab getTab(int index) {
+		return (Tab) tabbed.getComponentAt(index);
+	}
+
+	/**
+	 * Return the {@link EditorPane} of the currently selected {@link Tab}.
+	 * 
+	 * @return the current {@link EditorPane}. Never <code>null</code>.
+	 */
 	public EditorPane getEditorPane() {
-		Tab tab = getTab();
-		return tab == null ? null : tab.editorPane;
+		return getTab().editorPane;
 	}
 
 	public ScriptLanguage getCurrentLanguage() {
@@ -1027,7 +1060,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == open) {
 			final EditorPane editorPane = getEditorPane();
 			final File defaultDir =
-				editorPane != null && editorPane.file != null ? editorPane.file
+				editorPane.file != null ? editorPane.file
 					.getParentFile() : AppUtils.getBaseDirectory("imagej.dir",
 					TextEditor.class, null);
 			final File file = openWithDialog(defaultDir);
@@ -1104,7 +1137,9 @@ public class TextEditor extends JFrame implements ActionListener,
 			.convertTabsToSpaces();
 		else if (source == replaceSpacesWithTabs) getTextArea()
 			.convertSpacesToTabs();
-		else if (source == clearScreen) getTab().getScreen().setText("");
+		else if (source == clearScreen) {
+			getTab().getScreen().setText("");
+		}
 		else if (source == zapGremlins) zapGremlins();
 		else if (source == savePreferences) savePreferences();
 		else if (source == openHelp) openHelp(null);
@@ -1286,16 +1321,6 @@ public class TextEditor extends JFrame implements ActionListener,
 				break;
 		}
 		return false;
-	}
-
-	public Tab getTab() {
-		int index = tabbed.getSelectedIndex();
-		if (index < 0) return null;
-		return (Tab) tabbed.getComponentAt(index);
-	}
-
-	public Tab getTab(int index) {
-		return (Tab) tabbed.getComponentAt(index);
 	}
 
 	public class Tab extends JSplitPane {
@@ -1632,7 +1657,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 
 		try {
-			Tab tab = getTab();
+			Tab tab = (tabbed.getTabCount() == 0) ? null : getTab();
 			boolean wasNew = tab != null && tab.editorPane.isNew();
 			if (!wasNew) {
 				tab = new Tab();
@@ -1872,7 +1897,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		nextError.setVisible(!isMacro && isRunnable);
 		previousError.setVisible(!isMacro && isRunnable);
 
-		if (getEditorPane() == null) return;
 		boolean isInGit = getEditorPane().getGitDirectory() != null;
 		gitMenu.setVisible(isInGit);
 
@@ -1934,7 +1958,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	synchronized void setTitle() {
 		final Tab tab = getTab();
-		if (null == tab || null == tab.editorPane) return;
+
 		final boolean fileChanged = tab.editorPane.fileChanged();
 		final String fileName = tab.editorPane.getFileName();
 		final String title =
