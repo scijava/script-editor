@@ -1060,7 +1060,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == open) {
 			final EditorPane editorPane = getEditorPane();
 			final File defaultDir =
-				editorPane.file != null ? editorPane.file
+				editorPane.curFile != null ? editorPane.curFile
 					.getParentFile() : AppUtils.getBaseDirectory("imagej.dir",
 					TextEditor.class, null);
 			final File file = openWithDialog(defaultDir);
@@ -1190,7 +1190,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		*/
 		else if (source == gitGrep) {
 			String searchTerm = getTextArea().getSelectedText();
-			File searchRoot = getEditorPane().file;
+			File searchRoot = getEditorPane().curFile;
 			if (searchRoot == null) {
 				error("File was not yet saved; no location known!");
 				return;
@@ -1202,7 +1202,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		else if (source == openInGitweb) {
 			EditorPane editorPane = getEditorPane();
-			new FileFunctions(this).openInGitweb(editorPane.file,
+			new FileFunctions(this).openInGitweb(editorPane.curFile,
 				editorPane.gitDirectory, editorPane.getCaretLineNumber() + 1);
 		}
 		else if (source == increaseFontSize || source == decreaseFontSize) {
@@ -1301,7 +1301,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public boolean reload(String message) {
-		File file = getEditorPane().file;
+		File file = getEditorPane().curFile;
 		if (file == null || !file.exists()) return true;
 
 		boolean modified = getEditorPane().fileChanged();
@@ -1501,7 +1501,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			final JTextAreaWriter output =
 				new JTextAreaWriter(this.screen, TextEditor.this.log);
 			final JTextAreaWriter errors = new JTextAreaWriter(errorScreen, log);
-			final File file = getEditorPane().file;
+			final File file = getEditorPane().curFile;
 			// Pipe current text into the runScript:
 			final PipedInputStream pi = new PipedInputStream();
 			final PipedOutputStream po = new PipedOutputStream(pi);
@@ -1676,7 +1676,7 @@ public class TextEditor extends JFrame implements ActionListener,
 					tabsMenuItems.add(addToMenu(tabsMenu, tab.editorPane.getFileName(),
 						0, 0));
 				}
-				setFileName(tab.editorPane.file);
+				setFileName(tab.editorPane.curFile);
 				try {
 					updateTabAndFontSize(true);
 				}
@@ -1701,7 +1701,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	public boolean saveAs() {
 		EditorPane editorPane = getEditorPane();
-		File file = editorPane.file;
+		File file = editorPane.curFile;
 		if (file == null) {
 			final File ijDir =
 				AppUtils.getBaseDirectory("imagej.dir", TextEditor.class, null);
@@ -1729,7 +1729,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public boolean save() {
-		File file = getEditorPane().file;
+		File file = getEditorPane().curFile;
 		if (file == null) return saveAs();
 		if (!write(file)) return false;
 		setTitle();
@@ -1749,7 +1749,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public boolean makeJar(boolean includeSources) {
-		File file = getEditorPane().file;
+		File file = getEditorPane().curFile;
 		if ((file == null || isCompiled()) && !handleUnsavedChanges(true)) {
 			return false;
 		}
@@ -1792,7 +1792,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 				@Override
 				public void run() {
-					java.makeJar(getEditorPane().file, includeSources, file, errors);
+					java.makeJar(getEditorPane().curFile, includeSources, file, errors);
 					errorScreen.insert("Compilation finished.\n", errorScreen
 						.getDocument().getLength());
 					markCompileEnd();
@@ -2191,7 +2191,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final JTextAreaWriter output = new JTextAreaWriter(getTab().screen, log);
 		final JTextAreaWriter errors = new JTextAreaWriter(errorScreen, log);
 
-		final File file = getEditorPane().file;
+		final File file = getEditorPane().curFile;
 		new TextEditor.Executer(output, errors) {
 
 			@Override
@@ -2199,7 +2199,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				Reader reader = null;
 				try {
 					reader =
-						evalScript(getEditorPane().file.getPath(), new FileReader(file),
+						evalScript(getEditorPane().curFile.getPath(), new FileReader(file),
 							output, errors);
 
 					output.flush();
@@ -2236,7 +2236,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 				@Override
 				public void run() {
-					java.compile(getEditorPane().file, errors);
+					java.compile(getEditorPane().curFile, errors);
 					errorScreen.insert("Compilation finished.\n", errorScreen
 						.getDocument().getLength());
 					markCompileEnd();
@@ -2367,8 +2367,8 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	boolean editorPaneContainsFile(EditorPane editorPane, File file) {
 		try {
-			return file != null && editorPane != null && editorPane.file != null &&
-				file.getCanonicalFile().equals(editorPane.file.getCanonicalFile());
+			return file != null && editorPane != null && editorPane.curFile != null &&
+				file.getCanonicalFile().equals(editorPane.curFile.getCanonicalFile());
 		}
 		catch (IOException e) {
 			return false;
@@ -2376,14 +2376,14 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public File getFile() {
-		return getEditorPane().file;
+		return getEditorPane().curFile;
 	}
 
 	public File getFileForBasename(String baseName) {
 		File file = getFile();
 		if (file != null && file.getName().equals(baseName)) return file;
 		for (int i = 0; i < tabbed.getTabCount(); i++) {
-			file = getEditorPane(i).file;
+			file = getEditorPane(i).curFile;
 			if (file != null && file.getName().equals(baseName)) return file;
 		}
 		return null;

@@ -81,7 +81,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	TextEditor frame;
 	String fallBackBaseName;
-	File file, gitDirectory;
+	File curFile;
+	File gitDirectory;
 	long fileLastModified;
 	ScriptLanguage currentLanguage;
 	Gutter gutter;
@@ -221,19 +222,19 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	}
 
 	public boolean isNew() {
-		return !fileChanged() && file == null && fallBackBaseName == null &&
+		return !fileChanged() && curFile == null && fallBackBaseName == null &&
 			getDocument().getLength() == 0;
 	}
 
 	public void checkForOutsideChanges() {
 		if (wasChangedOutside() &&
-			!frame.reload("The file " + file.getName() +
+			!frame.reload("The file " + curFile.getName() +
 				" was changed outside of the editor")) fileLastModified =
-			file.lastModified();
+			curFile.lastModified();
 	}
 
 	public boolean wasChangedOutside() {
-		return file != null && file.exists() && file.lastModified() != fileLastModified;
+		return curFile != null && curFile.exists() && curFile.lastModified() != fileLastModified;
 	}
 
 	public void write(File file) throws IOException {
@@ -247,8 +248,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	}
 
 	public void open(final File file) throws IOException {
-		final File oldFile = this.file;
-		this.file = null;
+		final File oldFile = curFile;
+		curFile = null;
 		if (file == null) setText("");
 		else {
 			int line = 0;
@@ -274,7 +275,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			}
 			reader.close();
 			setText(string.toString());
-			this.file = file;
+			curFile = file;
 			if (line > getLineCount()) line = getLineCount() - 1;
 			try {
 				setCaretPosition(getLineStartOffset(line));
@@ -305,7 +306,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	}
 
 	public void setFileName(final File file) {
-		this.file = file;
+		curFile = file;
 		updateGitDirectory();
 		synchronized (this) {
 			frame.setTitle();
@@ -324,7 +325,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	}
 
 	protected void updateGitDirectory() {
-		gitDirectory = new FileFunctions(frame).getGitDirectory(file);
+		gitDirectory = new FileFunctions(frame).getGitDirectory(curFile);
 	}
 
 	public File getGitDirectory() {
@@ -332,7 +333,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	}
 
 	protected String getFileName() {
-		if (file != null) return file.getName();
+		if (curFile != null) return curFile.getName();
 		String extension = "";
 		if (currentLanguage != null) {
 			List<String> extensions = currentLanguage.getExtensions();
@@ -373,12 +374,12 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		}
 		if (fallBackBaseName != null && fallBackBaseName.endsWith(".txt")) fallBackBaseName =
 			fallBackBaseName.substring(0, fallBackBaseName.length() - 4);
-		if (file != null) {
-			String name = file.getName();
+		if (curFile != null) {
+			String name = curFile.getName();
 			String ext = "." + FileUtils.getExtension(name);
 			if (!defaultExtension.equals(ext)) {
 				name = name.substring(0, name.length() - ext.length());
-				file = new File(file.getParentFile(), name + defaultExtension);
+				curFile = new File(curFile.getParentFile(), name + defaultExtension);
 				updateGitDirectory();
 				modifyCount = Integer.MIN_VALUE;
 			}
