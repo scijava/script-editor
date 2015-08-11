@@ -256,7 +256,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		newFile.setMnemonic(KeyEvent.VK_N);
 		open = addToMenu(file, "Open...",  KeyEvent.VK_O, ctrl);
 		open.setMnemonic(KeyEvent.VK_O);
-		openRecent = new RecentFilesMenuItem(this);
+		openRecent = new RecentFilesMenuItem(prefService, this);
 		openRecent.setMnemonic(KeyEvent.VK_R);
 		file.add(openRecent);
 		save = addToMenu(file, "Save", KeyEvent.VK_S, ctrl);
