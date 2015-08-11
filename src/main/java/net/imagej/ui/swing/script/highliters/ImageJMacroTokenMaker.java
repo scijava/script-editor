@@ -29,7 +29,7 @@
  * #L%
  */
 
-package net.imagej.ui.swing.script;
+package net.imagej.ui.swing.script.highliters;
 
 import java.io.IOException;
 

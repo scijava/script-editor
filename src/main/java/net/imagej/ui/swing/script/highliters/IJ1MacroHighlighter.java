@@ -1,7 +1,6 @@
 
 package net.imagej.ui.swing.script.highliters;
 
-import net.imagej.ui.swing.script.ImageJMacroTokenMaker;
 import net.imagej.ui.swing.script.SyntaxHighlighter;
 
 import org.scijava.plugin.Plugin;
