@@ -161,13 +161,8 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private static final Set<String> TEMPLATE_PATHS = new HashSet<String>();
 	public static final String AUTO_IMPORT_PREFS = "script.editor.AutoImport";
-	public static final String TAB_SIZE_PREFS = "script.editor.TabSize";
-	public static final String FONT_SIZE_PREFS = "script.editor.FontSize";
-	public static final String LINE_WRAP_PREFS = "script.editor.WrapLines";
-	public static final String TABS_EMULATED_PREFS = "script.editor.TabsEmulated";
 	public static final String WINDOW_HEIGHT = "script.editor.height";
 	public static final String WINDOW_WIDTH = "script.editor.width";
-	public static final int DEFAULT_TAB_SIZE = 4;
 	public static final int DEFAULT_WINDOW_WIDTH = 800;
 	public static final int DEFAULT_WINDOW_HEIGHT = 600;
 
@@ -727,17 +722,6 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	/**
-	 * Retrieves and saves the preferences to the persistent store
-	 */
-	public void savePreferences() {
-		EditorPane pane = getEditorPane();
-		prefService.put(TAB_SIZE_PREFS, pane.getTabSize());
-		prefService.put(FONT_SIZE_PREFS, pane.getFontSize());
-		prefService.put(LINE_WRAP_PREFS, pane.getLineWrap());
-		prefService.put(TABS_EMULATED_PREFS, pane.getTabsEmulated());
-	}
-
-	/**
 	 * Saves the window size to preferences.
 	 * <p>
 	 * Separated from savePreferences because we always want to save the window
@@ -1141,7 +1125,9 @@ public class TextEditor extends JFrame implements ActionListener,
 			getTab().getScreen().setText("");
 		}
 		else if (source == zapGremlins) zapGremlins();
-		else if (source == savePreferences) savePreferences();
+		else if (source == savePreferences) {
+			getEditorPane().savePreferences();
+		}
 		else if (source == openHelp) openHelp(null);
 		else if (source == openHelpWithoutFrames) openHelp(null, false);
 		else if (source == openMacroFunctions) try {
@@ -1423,21 +1409,6 @@ public class TextEditor extends JFrame implements ActionListener,
 
 			super.setTopComponent(editorPane.embedWithScrollbars());
 			super.setBottomComponent(bottom);
-
-			loadPreferences();
-		}
-
-		/**
-		 * Loads the preferences for the Tab and apply them.
-		 */
-		public void loadPreferences() {
-			editorPane.setTabSize(getTabSizeSetting());
-			editorPane.setFontSize(prefService.getFloat(FONT_SIZE_PREFS, editorPane
-				.getFontSize()));
-			editorPane.setLineWrap(prefService.getBoolean(LINE_WRAP_PREFS, editorPane
-				.getLineWrap()));
-			editorPane.setTabsEmulated(prefService.getBoolean(TABS_EMULATED_PREFS,
-				editorPane.getTabsEmulated()));
 		}
 
 		/** Invoke in the context of the event dispatch thread. */
@@ -1662,6 +1633,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			if (!wasNew) {
 				tab = new Tab();
 				context.inject(tab.editorPane);
+				tab.editorPane.loadPreferences();
 				addDefaultAccelerators(tab.editorPane);
 			}
 			synchronized (tab.editorPane) {
@@ -1908,9 +1880,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (pane.getCurrentLanguage() == null) return;
 
 		if (setByLanguage) {
-			final boolean isPython =
-				pane.getCurrentLanguage().getLanguageName().equals("Python");
-			pane.setTabSize(isPython ? 4 : getTabSizeSetting());
+			if (pane.getCurrentLanguage().getLanguageName().equals("Python")) {
+				pane.setTabSize(4);
+			} else {
+				// set tab size to current preferences.
+				pane.resetTabSize();
+			}
 		}
 
 		int tabSize = pane.getTabSize();
@@ -2496,10 +2471,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		final ScriptLanguage language = getCurrentLanguage();
 		if (language == null) return false;
 		return language.isCompiledLanguage();
-	}
-
-	private int getTabSizeSetting() {
-		return prefService.getInt(TAB_SIZE_PREFS, DEFAULT_TAB_SIZE);
 	}
 
 	private Reader evalScript(final String filename, Reader reader,

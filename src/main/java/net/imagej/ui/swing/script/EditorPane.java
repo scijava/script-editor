@@ -67,6 +67,7 @@ import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.RecordableTextAction;
 import org.scijava.plugin.Parameter;
+import org.scijava.prefs.PrefService;
 import org.scijava.script.ScriptHeaderService;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.util.FileUtils;
@@ -80,7 +81,7 @@ import org.scijava.util.FileUtils;
  */
 public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
-	private TextEditor frame;
+	private final TextEditor frame;
 	private String fallBackBaseName;
 	private File curFile;
 	private File gitDirectory;
@@ -93,6 +94,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	@Parameter
 	private ScriptHeaderService scriptHeaderService;
+	@Parameter
+	private PrefService prefService;
 
 	/**
 	 * Constructor.
@@ -587,4 +590,41 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			endAtomicEdit();
 		}
 	}
+
+	// --- Preferences ---
+	public static final String FONT_SIZE_PREFS = "script.editor.FontSize";
+	public static final String LINE_WRAP_PREFS = "script.editor.WrapLines";
+	public static final String TAB_SIZE_PREFS = "script.editor.TabSize";
+	public static final String TABS_EMULATED_PREFS = "script.editor.TabsEmulated";
+
+	public static final int DEFAULT_TAB_SIZE = 4;
+
+	/**
+	 * Loads the preferences for the Tab and apply them.
+	 */
+	public void loadPreferences() {
+		resetTabSize();
+		setFontSize(prefService.getFloat(FONT_SIZE_PREFS, getFontSize()));
+		setLineWrap(prefService.getBoolean(LINE_WRAP_PREFS, getLineWrap()));
+		setTabsEmulated(prefService.getBoolean(TABS_EMULATED_PREFS,
+			getTabsEmulated()));
+	}
+
+	/**
+	 * Retrieves and saves the preferences to the persistent store
+	 */
+	public void savePreferences() {
+		prefService.put(TAB_SIZE_PREFS, getTabSize());
+		prefService.put(FONT_SIZE_PREFS, getFontSize());
+		prefService.put(LINE_WRAP_PREFS, getLineWrap());
+		prefService.put(TABS_EMULATED_PREFS, getTabsEmulated());
+	}
+
+	/**
+	 * Reset tab size to current preferences.
+	 */
+	public void resetTabSize() {
+		setTabSize(prefService.getInt(TAB_SIZE_PREFS, DEFAULT_TAB_SIZE));
+	}
+
 }
