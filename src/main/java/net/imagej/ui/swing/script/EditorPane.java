@@ -92,8 +92,19 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	@Parameter
 	private ScriptHeaderService scriptHeaderService;
 
+	/**
+	 * Constructor.
+	 * 
+	 * @param frame TextEditor this {@link EditorPane} should belong to. Never
+	 *          <code>null</code>.
+	 */
 	public EditorPane(TextEditor frame) {
+		if (frame == null) {
+			throw new IllegalArgumentException("frame cannot be null");
+		}
+
 		this.frame = frame;
+		
 		setLineWrap(false);
 		setTabSize(8);
 		getActionMap()
@@ -202,7 +213,11 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		else if (redoInProgress || modifyCount >= 0) modifyCount++;
 		else // not possible to get back to clean state
 		modifyCount = Integer.MIN_VALUE;
-		if (update || modifyCount == 0) setTitle();
+		if (update || modifyCount == 0) {
+			synchronized (this) {
+				frame.setTitle();
+			}
+		}
 	}
 
 	public boolean isNew() {
@@ -211,16 +226,14 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	}
 
 	public void checkForOutsideChanges() {
-		if (frame != null &&
-			wasChangedOutside() &&
+		if (wasChangedOutside() &&
 			!frame.reload("The file " + file.getName() +
 				" was changed outside of the editor")) fileLastModified =
 			file.lastModified();
 	}
 
 	public boolean wasChangedOutside() {
-		return file != null && file.exists() &&
-			file.lastModified() != fileLastModified;
+		return file != null && file.exists() && file.lastModified() != fileLastModified;
 	}
 
 	public void write(File file) throws IOException {
@@ -294,7 +307,9 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public void setFileName(final File file) {
 		this.file = file;
 		updateGitDirectory();
-		setTitle();
+		synchronized (this) {
+			frame.setTitle();
+		}
 		if (file != null) {
 			SwingUtilities.invokeLater(new Thread() {
 
@@ -332,10 +347,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			}
 		}
 		return (fallBackBaseName == null ? "New_" : fallBackBaseName) + extension;
-	}
-
-	private synchronized void setTitle() {
-		if (frame != null) frame.setTitle();
 	}
 
 	protected void setLanguageByFileName(String name) {
@@ -383,7 +394,9 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			"text/" + languageName.toLowerCase().replace(' ', '-');
 		setSyntaxEditingStyle(styleName);
 
-		frame.setTitle();
+		synchronized(this) {
+			frame.setTitle();
+		}
 		frame.updateLanguageMenu(language);
 
 		// Add header text
