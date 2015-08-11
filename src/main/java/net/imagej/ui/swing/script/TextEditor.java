@@ -111,8 +111,6 @@ import net.imagej.ui.swing.script.commands.KillScript;
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
-import org.fife.ui.rsyntaxtextarea.modes.JavaScriptTokenMaker;
-import org.fife.ui.rsyntaxtextarea.modes.JavaTokenMaker;
 import org.scijava.Context;
 import org.scijava.command.CommandService;
 import org.scijava.event.ContextDisposingEvent;
@@ -123,7 +121,6 @@ import org.scijava.module.ModuleException;
 import org.scijava.module.ModuleService;
 import org.scijava.platform.PlatformService;
 import org.scijava.plugin.Parameter;
-import org.scijava.plugin.Plugin;
 import org.scijava.plugin.PluginInfo;
 import org.scijava.plugin.PluginService;
 import org.scijava.plugins.scripting.java.JavaEngine;
@@ -680,34 +677,6 @@ public class TextEditor extends JFrame implements ActionListener,
 	 */
 	public static void addTemplatePath(final String path) {
 		TEMPLATE_PATHS.add(path);
-	}
-
-	@Plugin(type = SyntaxHighlighter.class, label = "ecmascript")
-	public static class ECMAScriptHighlighter extends JavaScriptTokenMaker
-		implements SyntaxHighlighter
-	{
-		// Everything implemented in JavaScriptTokenMaker
-	}
-
-	@Plugin(type = SyntaxHighlighter.class, label = "matlab")
-	public static class MatlabHighlighter extends MatlabTokenMaker implements
-		SyntaxHighlighter
-	{
-		// Everything implemented in MatlabTokenMaker
-	}
-
-	@Plugin(type = SyntaxHighlighter.class, label = "ij1-macro")
-	public static class IJ1MacroHighlighter extends ImageJMacroTokenMaker
-		implements SyntaxHighlighter
-	{
-		// Everything implemented in ImageJMacroTokenMaker
-	}
-
-	@Plugin(type = SyntaxHighlighter.class, label = "beanshell")
-	public static class BeanshellHighlighter extends JavaTokenMaker implements
-		SyntaxHighlighter
-	{
-		// Everything implemented in JavaTokenMaker
 	}
 
 	@SuppressWarnings("unused")

@@ -28,6 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
+
 package net.imagej.ui.swing.script;
 
 import org.fife.ui.rsyntaxtextarea.TokenMaker;
@@ -43,4 +44,6 @@ import org.scijava.plugin.SciJavaPlugin;
  * 
  * @author Johannes Schindelin
  */
-public interface SyntaxHighlighter extends SciJavaPlugin, TokenMaker { }
+public interface SyntaxHighlighter extends SciJavaPlugin, TokenMaker {
+	// NB: Marker interface.
+}
