@@ -55,6 +55,7 @@ import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultEditorKit;
 
+import org.fife.rsta.ac.LanguageSupport;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Style;
@@ -65,6 +66,7 @@ import org.fife.ui.rtextarea.IconGroup;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.RecordableTextAction;
+import org.scijava.Context;
 import org.scijava.plugin.Parameter;
 import org.scijava.prefs.PrefService;
 import org.scijava.script.ScriptHeaderService;
@@ -94,11 +96,17 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private boolean redoInProgress;
 
 	@Parameter
+	Context context;
+	@Parameter
 	private ScriptService scriptService;
 	@Parameter
 	private ScriptHeaderService scriptHeaderService;
 	@Parameter
 	private PrefService prefService;
+
+	private static LanguageSupportService autoCompleteService = null;
+	private LanguageSupport langSupport = null; // currently installed language
+																							// support
 
 	/**
 	 * Constructor.
@@ -478,6 +486,30 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		// Add header text
 		if (header != null) {
 			setText(header += getText());
+		}
+
+		// update language support (autocompletion)
+		if (currentLanguage != null) {
+			if (autoCompleteService == null) {
+				// manual first time lazy service creation.
+				autoCompleteService = new LanguageSupportService();
+				context.inject(autoCompleteService);
+				autoCompleteService.initialize();
+			}
+
+			// try to get language support for current language, may be null.
+			LanguageSupport newLangSupport =
+				autoCompleteService.getCompletionProvider(currentLanguage);
+
+			if (langSupport != null) {
+				// uninstall existing language support.
+				langSupport.uninstall(this);
+			}
+			langSupport = newLangSupport;
+
+			if (newLangSupport != null) {
+				newLangSupport.install(this);
+			}
 		}
 	}
 
