@@ -388,17 +388,13 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public void setFileName(final File file) {
 		curFile = file;
 		updateGitDirectory();
-		synchronized (this) {
-			frame.setTitle();
-		}
+		
 		if (file != null) {
-			SwingUtilities.invokeLater(new Thread() {
-
-				@Override
-				public void run() {
-					setLanguageByFileName(file.getName());
-				}
-			});
+			synchronized (this) {
+				frame.setTitle();
+			}
+			
+			setLanguageByFileName(file.getName());
 			fallBackBaseName = null;
 		}
 		fileLastModified = file == null || !file.exists() ? 0 : file.lastModified();
