@@ -227,7 +227,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	public TextEditor(final Context context) {
 		super("Script Editor");
 		context.inject(this);
-		initializeTokenMakers(pluginService, log);
+		initializeTokenMakers();
 		loadPreferences();
 
 		// Initialize menu
@@ -647,9 +647,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		editorPane.requestFocus();
 	}
 
-	private synchronized static void initializeTokenMakers(
-		final PluginService pluginService, final LogService log)
-	{
+	private synchronized void initializeTokenMakers() {
 		if (tokenMakerFactory != null) return;
 		tokenMakerFactory =
 			(AbstractTokenMakerFactory) TokenMakerFactory.getDefaultInstance();
