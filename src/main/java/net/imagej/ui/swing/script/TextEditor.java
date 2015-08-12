@@ -1929,6 +1929,15 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	synchronized void setTitle() {
+		/* 
+		 * This method might still get called after all tabs have been closed because
+		 * the ScriptEditor is being shutdown and we saved our changes via the dialog.
+		 * Therefore, we need to check if there actually is a tab to set the title for.
+		 */
+		if (tabbed.getTabCount() == 0) {
+			return;
+		}
+		
 		final Tab tab = getTab();
 
 		final boolean fileChanged = tab.editorPane.fileChanged();
