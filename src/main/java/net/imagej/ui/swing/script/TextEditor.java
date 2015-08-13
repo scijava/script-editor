@@ -33,8 +33,6 @@ package net.imagej.ui.swing.script;
 
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -83,17 +81,13 @@ import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
-import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
 import javax.swing.JRadioButtonMenuItem;
-import javax.swing.JScrollPane;
-import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.KeyStroke;
@@ -744,14 +738,15 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * Get tab at provided index.
 	 *
 	 * @param index the index of the tab.
-	 * @return the {@link Tab} at given index or <code>null</code>.
+	 * @return the {@link TextEditorTab} at given index or <code>null</code>.
 	 */
 	public TextEditorTab getTab(final int index) {
 		return (TextEditorTab) tabbed.getComponentAt(index);
 	}
 
 	/**
-	 * Return the {@link EditorPane} of the currently selected {@link Tab}.
+	 * Return the {@link EditorPane} of the currently selected
+	 * {@link TextEditorTab}.
 	 *
 	 * @return the current {@link EditorPane}. Never <code>null</code>.
 	 */
@@ -759,6 +754,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		return getTab().editorPane;
 	}
 
+	/**
+	 * @return {@link ScriptLanguage} used in the current {@link EditorPane}.
+	 */
 	public ScriptLanguage getCurrentLanguage() {
 		return getEditorPane().getCurrentLanguage();
 	}
@@ -1001,13 +999,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		return false;
 	}
 
-	protected void grabFocus() {
-		toFront();
-	}
-
 	protected void grabFocus(final int laterCount) {
 		if (laterCount == 0) {
-			grabFocus();
+			toFront();
 			return;
 		}
 
@@ -1092,7 +1086,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == chooseTabSize) {
 			commandService.run(ChooseTabSize.class, true, "editor", this);
 		}
-		else if (source == addImport) addImport(null);
+		else if (source == addImport) {
+			addImport(getSelectedClassNameOrAsk());
+		}
 		else if (source == removeUnusedImports) new TokenFunctions(getTextArea())
 			.removeUnusedImports();
 		else if (source == sortImports) new TokenFunctions(getTextArea())
@@ -1206,7 +1202,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		editorPane.requestFocus();
 		setTitle();
 		editorPane.checkForOutsideChanges();
-		
+
 		editorPane.setLanguageByFileName(editorPane.getFileName());
 		toggleWhiteSpaceLabeling.setSelected(editorPane.isWhitespaceVisible());
 	}
@@ -1215,7 +1211,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		return getTab(index).editorPane;
 	}
 
-	public void findOrReplace(final boolean replace) {
+	public void findOrReplace(final boolean doReplace) {
 		findDialog.setLocationRelativeTo(this);
 
 		// override search pattern only if
@@ -1223,7 +1219,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final String selection = getTextArea().getSelectedText();
 		if (selection != null) findDialog.setSearchPattern(selection);
 
-		findDialog.show(replace);
+		findDialog.show(doReplace);
 	}
 
 	public void gotoLine() {
@@ -1665,7 +1661,8 @@ public class TextEditor extends JFrame implements ActionListener,
 				setTitle(title); // to the main window
 				// Update all tabs: could have changed
 				for (int i = 0; i < tabbed.getTabCount(); i++)
-					tabbed.setTitleAt(i, ((TextEditorTab) tabbed.getComponentAt(i)).getTitle());
+					tabbed.setTitleAt(i, ((TextEditorTab) tabbed.getComponentAt(i))
+						.getTitle());
 			}
 		});
 	}
@@ -1878,15 +1875,14 @@ public class TextEditor extends JFrame implements ActionListener,
 			t.printStackTrace();
 		}
 	}
-	
+
 	/** Invoke in the context of the event dispatch thread. */
 	private void execute(final boolean selectionOnly) throws IOException {
 		final TextEditorTab tab = getTab();
-		
+
 		tab.prepare();
-		
-		final JTextAreaWriter output =
-			new JTextAreaWriter(tab.screen, log);
+
+		final JTextAreaWriter output = new JTextAreaWriter(tab.screen, log);
 		final JTextAreaWriter errors = new JTextAreaWriter(errorScreen, log);
 		final File file = getEditorPane().getFile();
 		// Pipe current text into the runScript:
@@ -2138,18 +2134,21 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	protected void switchTabRelative(final int delta) {
-		int index = tabbed.getSelectedIndex();
 		final int count = tabbed.getTabCount();
-		index = ((index + delta) % count);
-		if (index < 0) index += count;
+		int index = ((tabbed.getSelectedIndex() + delta) % count);
+		if (index < 0) {
+			index += count;
+		}
+
 		switchTo(index);
 	}
 
-	protected void removeTab(int index) {
+	protected void removeTab(final int index) {
+		final int menuItemIndex = index + tabsMenuTabsStart;
+
 		tabbed.remove(index);
-		index += tabsMenuTabsStart;
-		tabsMenuItems.remove(tabsMenu.getItem(index));
-		tabsMenu.remove(index);
+		tabsMenuItems.remove(tabsMenu.getItem(menuItemIndex));
+		tabsMenu.remove(menuItemIndex);
 	}
 
 	boolean editorPaneContainsFile(final EditorPane editorPane, final File file) {
@@ -2178,9 +2177,6 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public void addImport(String className) {
-		if (className == null) {
-			className = getSelectedClassNameOrAsk();
-		}
 		if (className != null) {
 			new TokenFunctions(getTextArea()).addImport(className.trim());
 		}
@@ -2192,7 +2188,8 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	public void openHelp(String className, final boolean withFrames) {
 		if (className == null) {
-			className = getSelectedClassNameOrAsk();
+			// FIXME: This cannot be right.
+			getSelectedClassNameOrAsk();
 		}
 	}
 
@@ -2240,8 +2237,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public void writeError(String message) {
-		final TextEditorTab tab = getTab();
-		tab.showErrors();
+		getTab().showErrors();
 		if (!message.endsWith("\n")) message += "\n";
 		errorScreen.insert(message, errorScreen.getDocument().getLength());
 	}
