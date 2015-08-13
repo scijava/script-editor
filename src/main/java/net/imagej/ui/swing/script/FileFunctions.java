@@ -446,7 +446,7 @@ public class FileFunctions {
 	public class ScreenOutputStream extends LineOutputStream {
 		@Override
 		public void println(String line) {
-			TextEditor.Tab tab = parent.getTab();
+			TextEditorTab tab = parent.getTab();
 			tab.screen.insert(line + "\n", tab.screen.getDocument().getLength());
 		}
 	}
