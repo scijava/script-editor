@@ -71,6 +71,7 @@ import org.scijava.plugin.Parameter;
 import org.scijava.prefs.PrefService;
 import org.scijava.script.ScriptHeaderService;
 import org.scijava.script.ScriptLanguage;
+import org.scijava.script.ScriptService;
 import org.scijava.util.FileUtils;
 
 /**
@@ -96,6 +97,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private boolean undoInProgress;
 	private boolean redoInProgress;
 
+	@Parameter
+	private ScriptService scriptService;
 	@Parameter
 	private ScriptHeaderService scriptHeaderService;
 	@Parameter
@@ -425,7 +428,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 * @see #setLanguage(ScriptLanguage, boolean)
 	 */
 	protected void setLanguageByFileName(final String name) {
-		setLanguage(frame.scriptService.getLanguageByExtension(FileUtils
+		setLanguage(scriptService.getLanguageByExtension(FileUtils
 			.getExtension(name)));
 	}
 
