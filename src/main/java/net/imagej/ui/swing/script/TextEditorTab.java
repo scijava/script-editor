@@ -39,7 +39,7 @@ public class TextEditorTab extends JSplitPane {
 		super.setResizeWeight(350.0 / 430.0);
 
 		this.textEditor = textEditor;
-		editorPane = new EditorPane(textEditor);
+		editorPane = new EditorPane();
 
 		screen.setEditable(false);
 		screen.setLineWrap(true);

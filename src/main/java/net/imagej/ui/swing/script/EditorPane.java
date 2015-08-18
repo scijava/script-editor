@@ -81,8 +81,6 @@ import org.scijava.util.FileUtils;
  */
 public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
-	private final TextEditor frame;
-
 	private String fallBackBaseName;
 	private File curFile;
 	private File gitDirectory;
@@ -104,17 +102,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	/**
 	 * Constructor.
-	 *
-	 * @param frame TextEditor this {@link EditorPane} should belong to. Never
-	 *          <code>null</code>.
 	 */
-	public EditorPane(final TextEditor frame) {
-		if (frame == null) {
-			throw new IllegalArgumentException("frame cannot be null");
-		}
-
-		this.frame = frame;
-
+	public EditorPane() {
 		setLineWrap(false);
 		setTabSize(8);
 
