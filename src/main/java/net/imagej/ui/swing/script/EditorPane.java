@@ -243,8 +243,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 * Set the title according to whether the file was modified or not.
 	 */
 	protected void modified() {
-		checkForOutsideChanges();
-
 		if (undoInProgress) {
 			modifyCount--;
 		}
@@ -264,17 +262,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public boolean isNew() {
 		return !fileChanged() && curFile == null && fallBackBaseName == null &&
 			getDocument().getLength() == 0;
-	}
-
-	/**
-	 * Check whether the file was edited outside of this {@link EditorPane} and
-	 * ask the user whether to reload.
-	 */
-	public void checkForOutsideChanges() {
-		if (wasChangedOutside() &&
-			!frame.reload("The file " + curFile.getName() +
-				" was changed outside of the editor")) fileLastModified =
-			curFile.lastModified();
 	}
 
 	/**

@@ -600,8 +600,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 			@Override
 			public void windowGainedFocus(final WindowEvent e) {
-				final EditorPane editorPane = getEditorPane();
-				editorPane.checkForOutsideChanges();
+				checkForOutsideChanges();
 			}
 		});
 
@@ -663,6 +662,19 @@ public class TextEditor extends JFrame implements ActionListener,
 			catch (final Throwable t) {
 				log.warn("Could not register " + info.getLabel(), t);
 			}
+	}
+
+	/**
+	 * Check whether the file was edited outside of this {@link EditorPane} and
+	 * ask the user whether to reload.
+	 */
+	public void checkForOutsideChanges() {
+		EditorPane editorPane = getEditorPane();
+		if (editorPane.wasChangedOutside()) {
+			reload("The file " + editorPane.getFile().getName() +
+				"was changed outside of the editor");
+		}
+
 	}
 
 	/**
@@ -1203,10 +1215,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		final EditorPane editorPane = getEditorPane(index);
 		editorPane.requestFocus();
-		editorPane.checkForOutsideChanges();
+		checkForOutsideChanges();
 
 		toggleWhiteSpaceLabeling.setSelected(editorPane.isWhitespaceVisible());
-		
+
 		editorPane.setLanguageByFileName(editorPane.getFileName());
 		updateLanguageMenu(editorPane.getCurrentLanguage());
 
@@ -2362,11 +2374,13 @@ public class TextEditor extends JFrame implements ActionListener,
 	@Override
 	public void insertUpdate(DocumentEvent e) {
 		setTitle();
+		checkForOutsideChanges();
 	}
 
 	@Override
 	public void removeUpdate(DocumentEvent e) {
 		setTitle();
+		checkForOutsideChanges();
 	}
 
 	@Override
