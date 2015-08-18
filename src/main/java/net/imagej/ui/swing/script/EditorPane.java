@@ -578,39 +578,14 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 * @param line line to toggle the bookmark on.
 	 */
 	public void toggleBookmark(final int line) {
-		if (gutter != null) try {
-			gutter.toggleBookmark(line);
-		}
-		catch (final BadLocationException e) { /* ignore */}
-	}
-
-	public class Bookmark {
-
-		int tab;
-		GutterIconInfo info;
-
-		public Bookmark(final int tab, final GutterIconInfo info) {
-			this.tab = tab;
-			this.info = info;
-		}
-
-		public int getLineNumber() {
+		if (gutter != null) {
 			try {
-				return getLineOfOffset(info.getMarkedOffset());
+				gutter.toggleBookmark(line);
 			}
 			catch (final BadLocationException e) {
-				return -1;
+				/* ignore */
+				System.out.println("Cannot toggle bookmark at this location.");
 			}
-		}
-
-		public void setCaret() {
-			frame.switchTo(tab);
-			setCaretPosition(info.getMarkedOffset());
-		}
-
-		@Override
-		public String toString() {
-			return "Line " + (getLineNumber() + 1) + " (" + getFileName() + ")";
 		}
 	}
 
@@ -620,7 +595,9 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 * @param tab Tab index to set for added bookmarks.
 	 * @param result Collection to add the bookmarks to.
 	 */
-	public void getBookmarks(final int tab, final Collection<Bookmark> result) {
+	public void getBookmarks(final TextEditorTab tab,
+		final Collection<Bookmark> result)
+	{
 		if (gutter == null) return;
 
 		for (final GutterIconInfo info : gutter.getBookmarks())

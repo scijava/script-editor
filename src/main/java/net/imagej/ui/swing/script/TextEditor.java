@@ -1265,10 +1265,13 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public void listBookmarks() {
-		final Vector<EditorPane.Bookmark> bookmarks =
-			new Vector<EditorPane.Bookmark>();
-		for (int i = 0; i < tabbed.getTabCount(); i++)
-			getEditorPane(i).getBookmarks(i, bookmarks);
+		final Vector<Bookmark> bookmarks = new Vector<Bookmark>();
+
+		for (int i = 0; i < tabbed.getTabCount(); i++) {
+			TextEditorTab tab = (TextEditorTab) tabbed.getComponentAt(i);
+			tab.editorPane.getBookmarks(tab, bookmarks);
+		}
+		
 		final BookmarkDialog dialog = new BookmarkDialog(this, bookmarks);
 		dialog.setVisible(true);
 	}
