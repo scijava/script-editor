@@ -45,6 +45,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.Collection;
+import java.util.EventListener;
 import java.util.List;
 
 import javax.swing.JScrollPane;
@@ -243,7 +244,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 */
 	protected void modified() {
 		checkForOutsideChanges();
-		final boolean update = modifyCount == 0;
 
 		if (undoInProgress) {
 			modifyCount--;
@@ -254,12 +254,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		else {
 			// not possible to get back to clean state
 			modifyCount = Integer.MIN_VALUE;
-		}
-
-		if (update || modifyCount == 0) {
-			synchronized (this) {
-				frame.setTitle();
-			}
 		}
 	}
 
@@ -390,10 +384,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		updateGitDirectory();
 		
 		if (file != null) {
-			synchronized (this) {
-				frame.setTitle();
-			}
-			
 			setLanguageByFileName(file.getName());
 			fallBackBaseName = null;
 		}
@@ -509,11 +499,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		final String styleName =
 			"text/" + languageName.toLowerCase().replace(' ', '-');
 		setSyntaxEditingStyle(styleName);
-
-		synchronized (this) {
-			frame.setTitle();
-		}
-		frame.updateLanguageMenu(language);
 
 		// Add header text
 		if (header != null) {

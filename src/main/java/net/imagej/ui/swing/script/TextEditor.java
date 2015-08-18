@@ -94,6 +94,8 @@ import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Position;
 
@@ -147,7 +149,7 @@ import org.scijava.widget.FileWidget;
  */
 @SuppressWarnings("serial")
 public class TextEditor extends JFrame implements ActionListener,
-	ChangeListener, CloseConfirmable
+	ChangeListener, CloseConfirmable, DocumentListener
 {
 
 	private static final Set<String> TEMPLATE_PATHS = new HashSet<String>();
@@ -933,7 +935,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				setLanguage(language);
 			}
 			final String path = url.getPath();
-			setFileName(path.substring(path.lastIndexOf('/') + 1));
+			setEditorPaneFileName(path.substring(path.lastIndexOf('/') + 1));
 		}
 		catch (final Exception e) {
 			e.printStackTrace();
@@ -949,9 +951,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		open(null);
 		final EditorPane editorPane = getEditorPane();
 		editorPane.setText(text);
+		setEditorPaneFileName(title);
+		
 		editorPane.setLanguageByFileName(title);
-		setFileName(title);
-		setTitle();
+		updateLanguageMenu(editorPane.getCurrentLanguage());
 	}
 
 	/**
@@ -969,7 +972,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				handleException(e);
 			}
 			editorPane.setLanguageByFileName(file.getName());
-			setTitle();
+			updateLanguageMenu(editorPane.getCurrentLanguage());
 		}
 	}
 
@@ -1200,11 +1203,14 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		final EditorPane editorPane = getEditorPane(index);
 		editorPane.requestFocus();
-		setTitle();
 		editorPane.checkForOutsideChanges();
 
-		editorPane.setLanguageByFileName(editorPane.getFileName());
 		toggleWhiteSpaceLabeling.setSelected(editorPane.isWhitespaceVisible());
+		
+		editorPane.setLanguageByFileName(editorPane.getFileName());
+		updateLanguageMenu(editorPane.getCurrentLanguage());
+
+		setTitle();
 	}
 
 	public EditorPane getEditorPane(final int index) {
@@ -1260,10 +1266,12 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public boolean reload(final String message) {
-		final File file = getEditorPane().getFile();
+		final EditorPane editorPane = getEditorPane();
+		
+		final File file = editorPane.getFile();
 		if (file == null || !file.exists()) return true;
 
-		final boolean modified = getEditorPane().fileChanged();
+		final boolean modified = editorPane.fileChanged();
 		final String[] options = { "Reload", "Do not reload" };
 		if (modified) options[0] = "Reload (discarding changes)";
 		switch (JOptionPane.showOptionDialog(this, message, "Reload",
@@ -1271,12 +1279,14 @@ public class TextEditor extends JFrame implements ActionListener,
 			options[0])) {
 			case 0:
 				try {
-					getEditorPane().open(file);
+					editorPane.open(file);
 					return true;
 				}
 				catch (final IOException e) {
 					error("Could not reload " + file.getPath());
 				}
+
+				updateLanguageMenu(editorPane.getCurrentLanguage());
 				break;
 		}
 		return false;
@@ -1346,6 +1356,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				tab = new TextEditorTab(this);
 				context.inject(tab.editorPane);
 				tab.editorPane.loadPreferences();
+				tab.editorPane.getDocument().addDocumentListener(this);
 				addDefaultAccelerators(tab.editorPane);
 			}
 			synchronized (tab.editorPane) { // tab is never null at this location.
@@ -1360,7 +1371,7 @@ public class TextEditor extends JFrame implements ActionListener,
 					tabsMenuItems.add(addToMenu(tabsMenu, tab.editorPane.getFileName(),
 						0, 0));
 				}
-				setFileName(tab.editorPane.getFile());
+				setEditorPaneFileName(tab.editorPane.getFile());
 				try {
 					updateTabAndFontSize(true);
 				}
@@ -1370,6 +1381,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 			if (file != null) openRecent.add(file.getAbsolutePath());
 
+			updateLanguageMenu(tab.editorPane.getCurrentLanguage());
+			
 			return tab;
 		}
 		catch (final FileNotFoundException e) {
@@ -1407,16 +1420,22 @@ public class TextEditor extends JFrame implements ActionListener,
 			JOptionPane.showConfirmDialog(this, "Do you want to replace " + path +
 				"?", "Replace " + path + "?", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return false;
 		if (!write(file)) return false;
-		setFileName(file);
+		setEditorPaneFileName(file);
 		openRecent.add(path);
 		return true;
 	}
 
 	public boolean save() {
 		final File file = getEditorPane().getFile();
-		if (file == null) return saveAs();
-		if (!write(file)) return false;
+		if (file == null) {
+			return saveAs();
+		}
+		if (!write(file)) {
+			return false;
+		}
+		
 		setTitle();
+
 		return true;
 	}
 
@@ -1543,6 +1562,9 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	void setLanguage(final ScriptLanguage language, final boolean addHeader) {
 		getEditorPane().setLanguage(language, addHeader);
+		
+		setTitle();
+		updateLanguageMenu(language);
 		updateTabAndFontSize(true);
 	}
 
@@ -1638,19 +1660,23 @@ public class TextEditor extends JFrame implements ActionListener,
 		tabsEmulated.setState(pane.getTabsEmulated());
 	}
 
-	public void setFileName(final String baseName) {
+	public void setEditorPaneFileName(final String baseName) {
 		getEditorPane().setFileName(baseName);
 	}
 
-	public void setFileName(final File file) {
-		getEditorPane().setFileName(file);
+	public void setEditorPaneFileName(final File file) {
+		final EditorPane editorPane = getEditorPane();
+		editorPane.setFileName(file);
+		
+		// update language menu
+		updateLanguageMenu(editorPane.getCurrentLanguage());
 	}
 
-	synchronized void setTitle() {
-		final TextEditorTab tab = getTab();
+	void setTitle() {
+		final EditorPane editorPane = getEditorPane();
 
-		final boolean fileChanged = tab.editorPane.fileChanged();
-		final String fileName = tab.editorPane.getFileName();
+		final boolean fileChanged = editorPane.fileChanged();
+		final String fileName = editorPane.getFileName();
 		final String title =
 			(fileChanged ? "*" : "") + fileName +
 				(executingTasks.isEmpty() ? "" : " (Running)");
@@ -1808,7 +1834,6 @@ public class TextEditor extends JFrame implements ActionListener,
 				}
 			}
 			executingTasks.remove(this);
-			setTitle();
 		}
 
 		@Override
@@ -2332,6 +2357,21 @@ public class TextEditor extends JFrame implements ActionListener,
 			removeTab(index);
 		}
 		return true;
+	}
+
+	@Override
+	public void insertUpdate(DocumentEvent e) {
+		setTitle();
+	}
+
+	@Override
+	public void removeUpdate(DocumentEvent e) {
+		setTitle();
+	}
+
+	@Override
+	public void changedUpdate(DocumentEvent e) {
+		setTitle();
 	}
 
 }
