@@ -45,12 +45,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.Collection;
-import java.util.EventListener;
 import java.util.List;
 
 import javax.swing.JScrollPane;
 import javax.swing.JViewport;
-import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -371,22 +369,12 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 */
 	public void setFileName(final File file) {
 		curFile = file;
-		updateGitDirectory();
 
 		if (file != null) {
 			setLanguageByFileName(file.getName());
 			fallBackBaseName = null;
 		}
 		fileLastModified = file == null || !file.exists() ? 0 : file.lastModified();
-	}
-
-	/**
-	 * Update the git directory to the git directory of the current file.
-	 * 
-	 * @see #getGitDirectory()
-	 */
-	protected void updateGitDirectory() {
-		gitDirectory = new FileFunctions(frame).getGitDirectory(curFile);
 	}
 
 	/**
@@ -397,6 +385,15 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 */
 	public File getGitDirectory() {
 		return gitDirectory;
+	}
+
+	/**
+	 * Set this {@link EditorPane}s git directory.
+	 * 
+	 * @param dir directory to set the git directory to.
+	 */
+	public void setGitDirectory(File dir) {
+		gitDirectory = dir;
 	}
 
 	/**
@@ -475,7 +472,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			if (!defaultExtension.equals(ext)) {
 				name = name.substring(0, name.length() - ext.length());
 				curFile = new File(curFile.getParentFile(), name + defaultExtension);
-				updateGitDirectory();
 				modifyCount = Integer.MIN_VALUE;
 			}
 		}

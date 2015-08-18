@@ -1685,6 +1685,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		// update language menu
 		updateLanguageMenu(editorPane.getCurrentLanguage());
+		updateGitDirectory();
 	}
 
 	void setTitle() {
@@ -2214,6 +2215,17 @@ public class TextEditor extends JFrame implements ActionListener,
 			if (file != null && file.getName().equals(baseName)) return file;
 		}
 		return null;
+	}
+
+	/**
+	 * Update the git directory to the git directory of the current file.
+	 * 
+	 * @see #getGitDirectory()
+	 */
+	protected void updateGitDirectory() {
+		EditorPane editorPane = getEditorPane();
+		editorPane.setGitDirectory(new FileFunctions(this)
+			.getGitDirectory(editorPane.getFile()));
 	}
 
 	public void addImport(String className) {
