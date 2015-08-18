@@ -372,7 +372,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public void setFileName(final File file) {
 		curFile = file;
 		updateGitDirectory();
-		
+
 		if (file != null) {
 			setLanguageByFileName(file.getName());
 			fallBackBaseName = null;

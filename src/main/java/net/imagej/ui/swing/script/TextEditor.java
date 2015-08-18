@@ -964,7 +964,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final EditorPane editorPane = getEditorPane();
 		editorPane.setText(text);
 		setEditorPaneFileName(title);
-		
+
 		editorPane.setLanguageByFileName(title);
 		updateLanguageMenu(editorPane.getCurrentLanguage());
 	}
@@ -1279,7 +1279,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	public boolean reload(final String message) {
 		final EditorPane editorPane = getEditorPane();
-		
+
 		final File file = editorPane.getFile();
 		if (file == null || !file.exists()) return true;
 
@@ -1394,7 +1394,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			if (file != null) openRecent.add(file.getAbsolutePath());
 
 			updateLanguageMenu(tab.editorPane.getCurrentLanguage());
-			
+
 			return tab;
 		}
 		catch (final FileNotFoundException e) {
@@ -1445,7 +1445,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (!write(file)) {
 			return false;
 		}
-		
+
 		setTitle();
 
 		return true;
@@ -1574,7 +1574,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	void setLanguage(final ScriptLanguage language, final boolean addHeader) {
 		getEditorPane().setLanguage(language, addHeader);
-		
+
 		setTitle();
 		updateLanguageMenu(language);
 		updateTabAndFontSize(true);
@@ -1679,7 +1679,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	public void setEditorPaneFileName(final File file) {
 		final EditorPane editorPane = getEditorPane();
 		editorPane.setFileName(file);
-		
+
 		// update language menu
 		updateLanguageMenu(editorPane.getCurrentLanguage());
 	}
