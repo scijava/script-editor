@@ -41,36 +41,56 @@ import java.util.Stack;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 
-import org.scijava.util.Prefs;
+import org.scijava.prefs.PrefService;
 
 /**
- * TODO
+ * JMenu holding recently opened files (stored in the
+ * <code>"script.editor.recent"</code> preference).
  * 
  * @author Johannes Schindelin
+ * @author Jonathan Hale
  */
 public class RecentFilesMenuItem extends JMenu {
-	protected TextEditor editor;
-	protected int maxCount = 10, maxLength = 35;
-	protected LinkedList<String> list = new LinkedList<String>();
-	protected final static String prefsPrefix = "script.editor.recent";
 
-	public RecentFilesMenuItem(TextEditor editor) {
+	/** Constant for maximum amount of recent files shown in recent files menu */
+	protected final int maxCount = 10;
+
+	/** Constant for maximum length of a filepath shown in recent files menu */
+	protected final int maxLength = 35;
+
+	protected final LinkedList<String> recentFiles = new LinkedList<String>();
+
+	protected final static String RECENT_FILES_PREFS_PREFIX =
+		"script.editor.recent";
+
+	private final PrefService prefService;
+
+	private final TextEditor editor;
+
+	/**
+	 * Constructor.
+	 * 
+	 * @param prefService Service to use for managing the preferences.
+	 */
+	public RecentFilesMenuItem(final PrefService prefService,
+		final TextEditor editor)
+	{
 		super("Open Recent");
 		this.editor = editor;
+		this.prefService = prefService;
 
-		Stack<String> prefs = new Stack<String>();
+		// get up to 10 (maxCount) most recentently opened files
+		final Stack<String> prefs = new Stack<String>();
 		for (int i = 1; i <= maxCount; i++) {
-			String item = Prefs.get(getClass(), prefsPrefix + i, null);
-			if (item == null)
-				break;
+			final String item =
+				prefService.get(getClass(), RECENT_FILES_PREFS_PREFIX + i, null);
+			if (item == null) break;
 			prefs.push(item);
 		}
 
-		if (prefs.empty())
-			setEnabled(false);
-		else
-			while (!prefs.empty())
-				add(prefs.pop());
+		if (prefs.empty()) setEnabled(false);
+		else while (!prefs.empty())
+			add(prefs.pop());
 	}
 
 	@Override
@@ -79,41 +99,38 @@ public class RecentFilesMenuItem extends JMenu {
 
 		// remove identical entries, if any
 		int i = 0;
-		Iterator<String> iter = list.iterator();
+		final Iterator<String> iter = recentFiles.iterator();
 		while (iter.hasNext()) {
-			String item = iter.next();
+			final String item = iter.next();
 			if (item.equals(path)) {
-				if (i == 0)
-					return getItem(i);
+				if (i == 0) return getItem(i);
 				iter.remove();
 				remove(i);
 			}
-			else
-				i++;
+			else i++;
 		}
 
 		// keep the maximum count
-		if (list.size() + 1 >= maxCount) {
-			list.removeLast();
+		if (recentFiles.size() + 1 >= maxCount) {
+			recentFiles.removeLast(); // least recent
 			remove(maxCount - 2);
 		}
 
-		// add to the list
-		list.add(0, path);
+		recentFiles.add(0, path);
 
 		// persist
 		i = 1;
-		for (String item : list) {
-			Prefs.put(getClass(), prefsPrefix + i, item);
+		for (final String item : recentFiles) {
+			prefService.put(getClass(), RECENT_FILES_PREFS_PREFIX + i, item);
 			i++;
 		}
 
 		// add the menu item
 		String label = path;
-		if (path.length() > maxLength)
-			label = "..." + path.substring(path.length() - maxLength + 3);
+		if (path.length() > maxLength) label =
+			"..." + path.substring(path.length() - maxLength + 3);
 		insert(label, 0);
-		JMenuItem result = getItem(0);
+		final JMenuItem result = getItem(0);
 		result.addActionListener(new ActionListener() {
 
 			@Override
@@ -121,6 +138,7 @@ public class RecentFilesMenuItem extends JMenu {
 				editor.open(new File(path));
 			}
 		});
+
 		return result;
 	}
 }

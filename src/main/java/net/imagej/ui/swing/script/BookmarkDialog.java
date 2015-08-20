@@ -57,7 +57,7 @@ public class BookmarkDialog extends JDialog implements ActionListener {
 	JList list;
 	JButton okay, cancel;
 
-	public BookmarkDialog(final Frame owner, final Vector<EditorPane.Bookmark> bookmarks) {
+	public BookmarkDialog(final Frame owner, final Vector<Bookmark> bookmarks) {
 		super(owner, "Bookmarks", true);
 
 		getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
@@ -105,7 +105,7 @@ public class BookmarkDialog extends JDialog implements ActionListener {
 	}
 
 	public boolean jumpToSelectedBookmark() {
-		EditorPane.Bookmark bookmark = (EditorPane.Bookmark)list.getSelectedValue();
+		Bookmark bookmark = (Bookmark)list.getSelectedValue();
 		if (bookmark == null)
 			return false;
 		bookmark.setCaret();
