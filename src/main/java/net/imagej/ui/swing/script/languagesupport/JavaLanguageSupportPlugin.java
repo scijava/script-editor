@@ -16,7 +16,9 @@ import net.imagej.ui.swing.script.LanguageSupportService;
  * @see JavaLanguageSupport
  * @see LanguageSupportService
  */
-@Plugin(type = LanguageSupportPlugin.class)
+// This plugin is temporarily disabled pending a resolution for:
+//   https://github.com/bobbylight/RSTALanguageSupport/issues/26
+//@Plugin(type = LanguageSupportPlugin.class)
 public class JavaLanguageSupportPlugin extends JavaLanguageSupport implements
 	LanguageSupportPlugin
 {
