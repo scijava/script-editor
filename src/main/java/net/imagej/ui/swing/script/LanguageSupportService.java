@@ -34,7 +34,9 @@ public class LanguageSupportService extends
 		super.initialize();
 
 		for (PluginInfo<LanguageSupportPlugin> p : this.getPlugins()) {
-			languageSupportMap.put(p.getLabel().toLowerCase(), this.getInstance(p.getPluginClass()));
+			final String name = p.getName().toLowerCase();
+			LanguageSupportPlugin instance = this.getInstance(p.getPluginClass());
+			languageSupportMap.put(name, instance);
 		}
 	}
 

@@ -14,7 +14,7 @@ import org.scijava.plugin.Plugin;
  * @see JavaScriptLanguageSupport
  * @see LanguageSupportService
  */
-@Plugin(type = LanguageSupportPlugin.class, label = "javascript")
+@Plugin(type = LanguageSupportPlugin.class, name = "javascript")
 public class JavaScriptLanguageSupportPlugin extends JavaScriptLanguageSupport
 	implements LanguageSupportPlugin
 {

@@ -16,7 +16,7 @@ import org.scijava.plugin.Plugin;
  * @see JavaLanguageSupport
  * @see LanguageSupportService
  */
-@Plugin(type = LanguageSupportPlugin.class, label = "java")
+@Plugin(type = LanguageSupportPlugin.class, name = "java")
 public class JavaLanguageSupportPlugin extends JavaLanguageSupport
 	implements LanguageSupportPlugin
 {
