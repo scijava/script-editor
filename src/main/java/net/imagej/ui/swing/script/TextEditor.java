@@ -1006,7 +1006,8 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		switch (JOptionPane.showConfirmDialog(this, "Do you want to save changes?")) {
 			case JOptionPane.NO_OPTION:
-				return true;
+				// Compiled languages should not progress if their source is unsaved
+				return !beforeCompiling;
 			case JOptionPane.YES_OPTION:
 				if (save()) return true;
 		}
@@ -1897,6 +1898,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				return;
 			}
 			if (handleUnsavedChanges(true)) runScript();
+			else write("Compiled languages must be saved before they can be run.");
 			return;
 		}
 		final ScriptLanguage currentLanguage = getCurrentLanguage();
