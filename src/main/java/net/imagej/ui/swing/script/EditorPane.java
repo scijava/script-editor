@@ -347,7 +347,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		}
 
 		if (currentLanguage.getLanguageName().equals("Java")) {
-			new TokenFunctions(this).setClassName(baseName);
+			new TokenFunctions(this).setClassName(fallBackBaseName);
 		}
 	}
 
