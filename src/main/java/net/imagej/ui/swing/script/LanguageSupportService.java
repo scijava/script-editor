@@ -48,7 +48,7 @@ public class LanguageSupportService extends
 	 *         <code>null</code> if there was none or language was
 	 *         <code>null</code>.
 	 */
-	public LanguageSupport getCompletionProvider(ScriptLanguage language) {
+	public LanguageSupport getLanguageSupport(ScriptLanguage language) {
 		if (language == null) {
 			return null;
 		}

@@ -449,7 +449,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	{
 		// uninstall existing language support.
 		LanguageSupport support =
-			languageSupportService.getCompletionProvider(currentLanguage);
+			languageSupportService.getLanguageSupport(currentLanguage);
 		if (support != null) {
 			support.uninstall(this);
 		}
@@ -495,7 +495,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		}
 
 		// try to get language support for current language, may be null.
-		support = languageSupportService.getCompletionProvider(currentLanguage);
+		support = languageSupportService.getLanguageSupport(currentLanguage);
 
 		if (support != null) {
 			support.install(this);
