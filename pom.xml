@@ -36,6 +36,10 @@
 			<url>http://maven.imagej.net/content/groups/public</url>
 		</repository>
 	</repositories>
+	
+	<properties>
+		<fifesoft.version>2.5.7</fifesoft.version>
+	</properties>
 
 	<dependencies>
 		<!-- ImageJ dependencies -->
@@ -84,7 +88,17 @@
 		<dependency>
 			<groupId>com.fifesoft</groupId>
 			<artifactId>rsyntaxtextarea</artifactId>
-			<version>2.5.7</version>
+			<version>${fifesoft.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fifesoft</groupId>
+			<artifactId>autocomplete</artifactId>
+			<version>${fifesoft.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fifesoft</groupId>
+			<artifactId>languagesupport</artifactId>
+			<version>${fifesoft.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.miglayout</groupId>

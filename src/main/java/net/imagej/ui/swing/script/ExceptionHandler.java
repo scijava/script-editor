@@ -42,13 +42,14 @@ import org.scijava.log.LogService;
 
 /**
  * TODO
- * 
+ *
  * @author Johannes Schindelin
  */
 public class ExceptionHandler {
+
 	private static ExceptionHandler instance;
 	private final LogService log;
-	private Map<ThreadGroup, TextEditor> threadMap;
+	private final Map<ThreadGroup, TextEditor> threadMap;
 
 	// prevent instantiation from somewhere else
 	private ExceptionHandler(final LogService logService) {
@@ -59,25 +60,29 @@ public class ExceptionHandler {
 	public static ExceptionHandler getInstance(final LogService logService) {
 		if (instance == null) {
 			instance = new ExceptionHandler(logService);
-		} else if (instance.log != logService) {
-			throw new RuntimeException("Cannot have an ExceptionHandler with two different LogServices");
+		}
+		else if (instance.log != logService) {
+			throw new RuntimeException(
+				"Cannot have an ExceptionHandler with two different LogServices");
 		}
 		return instance;
 	}
 
-	public static void addThread(Thread thread, TextEditor editor) {
+	public static void addThread(final Thread thread, final TextEditor editor) {
 		addThreadGroup(thread.getThreadGroup(), editor);
 	}
 
-	public static void addThreadGroup(ThreadGroup group, TextEditor editor) {
-		ExceptionHandler handler = getInstance(editor.log);
+	public static void addThreadGroup(final ThreadGroup group,
+		final TextEditor editor)
+	{
+		final ExceptionHandler handler = getInstance(editor.log);
 		handler.threadMap.put(group, editor);
 	}
 
-	public void handle(Throwable t) {
+	public void handle(final Throwable t) {
 		ThreadGroup group = Thread.currentThread().getThreadGroup();
 		while (group != null) {
-			TextEditor editor = threadMap.get(group);
+			final TextEditor editor = threadMap.get(group);
 			if (editor != null) {
 				handle(t, editor);
 				return;
@@ -87,26 +92,27 @@ public class ExceptionHandler {
 		log.error(t);
 	}
 
-	public static void handle(Throwable t, TextEditor editor) {
-		JTextArea screen = editor.errorScreen;
+	public static void handle(Throwable t, final TextEditor editor) {
+		final JTextArea screen = editor.errorScreen;
 		editor.getTab().showErrors();
 
 		if (t instanceof InvocationTargetException) {
-			t = ((InvocationTargetException)t).getTargetException();
+			t = ((InvocationTargetException) t).getTargetException();
 		}
-		StackTraceElement[] trace = t.getStackTrace();
+		final StackTraceElement[] trace = t.getStackTrace();
 
-		screen.insert(t.getClass().getName() + ": "
-				+ t.getMessage() + "\n", screen.getDocument().getLength());
-		ErrorHandler handler = new ErrorHandler(screen);
+		screen.insert(t.getClass().getName() + ": " + t.getMessage() + "\n", screen
+			.getDocument().getLength());
+		final ErrorHandler handler = new ErrorHandler(screen);
 		for (int i = 0; i < trace.length; i++) {
-			String fileName = trace[i].getFileName();
-			int line = trace[i].getLineNumber();
-			String text = "\t at " + trace[i].getClassName()
-					+ "." + trace[i].getMethodName()
-					+ "(" + fileName + ":" + line + ")\n";
-			File file = editor.getFileForBasename(fileName);
-			handler.addError(file == null ? null : file.getAbsolutePath(), line, text);
+			final String fileName = trace[i].getFileName();
+			final int line = trace[i].getLineNumber();
+			final String text =
+				"\t at " + trace[i].getClassName() + "." + trace[i].getMethodName() +
+					"(" + fileName + ":" + line + ")\n";
+			final File file = editor.getFileForBasename(fileName);
+			handler
+				.addError(file == null ? null : file.getAbsolutePath(), line, text);
 		}
 
 		editor.errorHandler = handler;

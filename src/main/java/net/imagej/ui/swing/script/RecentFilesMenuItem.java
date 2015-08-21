@@ -46,7 +46,7 @@ import org.scijava.prefs.PrefService;
 /**
  * JMenu holding recently opened files (stored in the
  * <code>"script.editor.recent"</code> preference).
- * 
+ *
  * @author Johannes Schindelin
  * @author Jonathan Hale
  */
@@ -69,7 +69,7 @@ public class RecentFilesMenuItem extends JMenu {
 
 	/**
 	 * Constructor.
-	 * 
+	 *
 	 * @param prefService Service to use for managing the preferences.
 	 */
 	public RecentFilesMenuItem(final PrefService prefService,

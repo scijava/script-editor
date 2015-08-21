@@ -44,7 +44,7 @@ import org.scijava.log.LogService;
 
 /**
  * An output area for the scripting user interfaces.
- * 
+ *
  * @author Johannes Schindelin
  */
 public class OutputPane extends JTextArea {
@@ -55,7 +55,7 @@ public class OutputPane extends JTextArea {
 
 	public OutputPane(final LogService log) {
 		this.log = log;
-		Font font = new Font("Courier", Font.PLAIN, 12);
+		final Font font = new Font("Courier", Font.PLAIN, 12);
 		setFont(font);
 		setEditable(false);
 		setFocusable(true);
@@ -82,7 +82,8 @@ public class OutputPane extends JTextArea {
 				writer.close();
 				writer = null;
 			}
-		} catch (final Exception e) {
+		}
+		catch (final Exception e) {
 			log.error(e);
 		}
 	}

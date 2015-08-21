@@ -29,35 +29,32 @@
  * #L%
  */
 
-package net.imagej.ui.swing.script.commands;
+package net.imagej.ui.swing.script.languagesupport;
 
-import java.io.File;
+import net.imagej.ui.swing.script.LanguageSupportPlugin;
+import net.imagej.ui.swing.script.LanguageSupportService;
 
-import net.imagej.ui.swing.script.FileFunctions;
-import net.imagej.ui.swing.script.TextEditor;
-
-import org.scijava.command.Command;
-import org.scijava.plugin.Parameter;
+import org.fife.rsta.ac.js.JavaScriptLanguageSupport;
+import org.scijava.plugin.Plugin;
 
 /**
- * Calls <tt>git grep</tt> in a given directory.
+ * {@link LanguageSupportPlugin} for the javascript language.
  *
- * @author Johannes Schindelin
+ * @author Jonathan Hale
+ * @see JavaScriptLanguageSupport
+ * @see LanguageSupportService
  */
-public class GitGrep implements Command {
+@Plugin(type = LanguageSupportPlugin.class)
+public class JavaScriptLanguageSupportPlugin extends JavaScriptLanguageSupport
+	implements LanguageSupportPlugin
+{
 
-	@Parameter
-	private TextEditor editor;
-
-	@Parameter(columns = 20)
-	private String searchTerm;
-
-	@Parameter
-	private File searchRoot;
-
-	@Override
-	public void run() {
-		new FileFunctions(editor).gitGrep(searchTerm, searchRoot);
+	public JavaScriptLanguageSupportPlugin() {
+		super();
 	}
 
+	@Override
+	public String getLanguageName() {
+		return "javascript";
+	}
 }

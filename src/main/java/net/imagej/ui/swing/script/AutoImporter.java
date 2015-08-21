@@ -44,17 +44,17 @@ import org.scijava.plugin.SciJavaPlugin;
  * ImageJ 1.x classes without having to import them explicitly.
  * </p>
  * <p>
- * Nowadays, we support many more components than just the ImageJ 1.x classes, and
- * that feature is more a hindrance than a boon, but for backwards-compatibility,
- * we still support it. However, the script editor must not depend on ImageJ 1.x
- * any longer, hence we add support for AutoImporter plugins that report which
- * classes to auto-import.
+ * Nowadays, we support many more components than just the ImageJ 1.x classes,
+ * and that feature is more a hindrance than a boon, but for
+ * backwards-compatibility, we still support it. However, the script editor must
+ * not depend on ImageJ 1.x any longer, hence we add support for AutoImporter
+ * plugins that report which classes to auto-import.
  * </p>
- * 
+ *
  * @author Johannes Schindelin
  */
 public interface AutoImporter extends SciJavaPlugin {
 
-		Map<String, List<String>> getDefaultImports();
+	Map<String, List<String>> getDefaultImports();
 
 }

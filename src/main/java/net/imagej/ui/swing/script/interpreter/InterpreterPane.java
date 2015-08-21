@@ -57,7 +57,7 @@ import org.scijava.script.ScriptService;
 
 /**
  * A Swing UI pane for a language-specific script interpreter.
- * 
+ *
  * @author Curtis Rueden
  * @author Johannes Schindelin
  */
@@ -71,21 +71,22 @@ public class InterpreterPane {
 
 	/**
 	 * Constructs an interpreter UI pane for a specific scripting language.
-	 * 
+	 *
 	 * @param prefs service to use for persisting the history
 	 * @param scriptService service to use for scripting
 	 * @param language scripting language for which to construct a UI pane
 	 * @param log service to use for logging
 	 */
-	public InterpreterPane(final PrefService prefs, final ScriptService scriptService,
-		final ScriptLanguage language, final LogService log)
+	public InterpreterPane(final PrefService prefs,
+		final ScriptService scriptService, final ScriptLanguage language,
+		final LogService log)
 	{
 		this(createInterpreter(prefs, scriptService, language), log);
 	}
 
 	/**
 	 * Constructs an interpreter UI pane for a specific script interpreter.
-	 * 
+	 *
 	 * @param interpreter script interpreter to use for script execution
 	 * @param log service to use for logging
 	 */
@@ -109,6 +110,7 @@ public class InterpreterPane {
 		final JButton clearButton = new JButton("Clear");
 		clearButton.setToolTipText("Clears the text in the output pane.");
 		clearButton.addActionListener(new ActionListener() {
+
 			@Override
 			public void actionPerformed(final ActionEvent e) {
 				output.setText("");
@@ -122,17 +124,19 @@ public class InterpreterPane {
 		bottomPane.add(clearButton, "w pref!, h pref!, wrap");
 
 		final Object importGenerator =
-				DefaultAutoImporters.getImportGenerator(log.getContext(), interpreter.getLanguage());
+			DefaultAutoImporters.getImportGenerator(log.getContext(), interpreter
+				.getLanguage());
 		if (importGenerator != null) {
 			final JButton autoImportButton = new JButton("Auto-Import");
 			autoImportButton.setToolTipText("Auto-imports common classes.");
 			autoImportButton.addActionListener(new ActionListener() {
+
 				@Override
 				public void actionPerformed(final ActionEvent e) {
 					try {
 						interpreter.getEngine().eval(importGenerator.toString());
 					}
-					catch (ScriptException e1) {
+					catch (final ScriptException e1) {
 						e1.printStackTrace(new PrintWriter(output.getOutputWriter()));
 					}
 					autoImportButton.setEnabled(false);
@@ -164,20 +168,20 @@ public class InterpreterPane {
 	}
 
 	/** Print a message to the output panel */
-	public void print(String string) {
+	public void print(final String string) {
 		final Writer writer = output.getOutputWriter();
 		try {
 			writer.write(string + "\n");
 		}
-		catch (IOException e) {
+		catch (final IOException e) {
 			e.printStackTrace(new PrintWriter(writer));
 		}
 	}
 
 	// -- Utility methods --
 
-	public static ScriptInterpreter createInterpreter(
-		final PrefService prefs, final ScriptService scriptService, final ScriptLanguage language)
+	public static ScriptInterpreter createInterpreter(final PrefService prefs,
+		final ScriptService scriptService, final ScriptLanguage language)
 	{
 		return new DefaultScriptInterpreter(prefs, scriptService, language);
 	}

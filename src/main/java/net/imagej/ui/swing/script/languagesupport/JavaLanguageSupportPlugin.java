@@ -29,35 +29,38 @@
  * #L%
  */
 
-package net.imagej.ui.swing.script.commands;
+package net.imagej.ui.swing.script.languagesupport;
 
-import java.io.File;
+import java.io.IOException;
 
-import net.imagej.ui.swing.script.FileFunctions;
-import net.imagej.ui.swing.script.TextEditor;
+import net.imagej.ui.swing.script.LanguageSupportPlugin;
+import net.imagej.ui.swing.script.LanguageSupportService;
 
-import org.scijava.command.Command;
-import org.scijava.plugin.Parameter;
+import org.fife.rsta.ac.java.JavaLanguageSupport;
 
 /**
- * Calls <tt>git grep</tt> in a given directory.
+ * {@link LanguageSupportPlugin} for the java language.
  *
- * @author Johannes Schindelin
+ * @author Jonathan Hale
+ * @see JavaLanguageSupport
+ * @see LanguageSupportService
  */
-public class GitGrep implements Command {
+// This plugin is temporarily disabled pending a resolution for:
+//   https://github.com/bobbylight/RSTALanguageSupport/issues/26
+//@Plugin(type = LanguageSupportPlugin.class)
+public class JavaLanguageSupportPlugin extends JavaLanguageSupport implements
+	LanguageSupportPlugin
+{
 
-	@Parameter
-	private TextEditor editor;
+	public JavaLanguageSupportPlugin() throws IOException {
+		super();
 
-	@Parameter(columns = 20)
-	private String searchTerm;
-
-	@Parameter
-	private File searchRoot;
+		getJarManager().addCurrentJreClassFileSource();
+	}
 
 	@Override
-	public void run() {
-		new FileFunctions(editor).gitGrep(searchTerm, searchRoot);
+	public String getLanguageName() {
+		return "java";
 	}
 
 }

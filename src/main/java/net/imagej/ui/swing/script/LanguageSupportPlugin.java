@@ -29,35 +29,22 @@
  * #L%
  */
 
-package net.imagej.ui.swing.script.commands;
+package net.imagej.ui.swing.script;
 
-import java.io.File;
-
-import net.imagej.ui.swing.script.FileFunctions;
-import net.imagej.ui.swing.script.TextEditor;
-
-import org.scijava.command.Command;
-import org.scijava.plugin.Parameter;
+import org.fife.rsta.ac.LanguageSupport;
+import org.fife.ui.autocomplete.AutoCompletion;
+import org.scijava.plugin.SingletonPlugin;
 
 /**
- * Calls <tt>git grep</tt> in a given directory.
+ * Interface for {@link AutoCompletion} plugins.
  *
- * @author Johannes Schindelin
+ * @author Jonathan Hale
  */
-public class GitGrep implements Command {
+public interface LanguageSupportPlugin extends SingletonPlugin, LanguageSupport
+{
 
-	@Parameter
-	private TextEditor editor;
-
-	@Parameter(columns = 20)
-	private String searchTerm;
-
-	@Parameter
-	private File searchRoot;
-
-	@Override
-	public void run() {
-		new FileFunctions(editor).gitGrep(searchTerm, searchRoot);
-	}
-
+	/**
+	 * @return the name of the language this plugin adds support for.
+	 */
+	public String getLanguageName();
 }

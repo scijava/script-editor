@@ -53,7 +53,7 @@ import org.scijava.script.ScriptService;
 
 /**
  * The main interpreter window.
- * 
+ *
  * @author Curtis Rueden
  * @author Johannes Schindelin
  */
@@ -101,11 +101,13 @@ public class InterpreterWindow extends JFrame {
 	public void dispose() {
 		// write out interpreter histories, etc., when frame goes away
 		writeState();
-		for (final InterpreterPane tab : tabs) try {
-			tab.dispose();
-		} catch (final Exception e) {
-			e.printStackTrace();
-		}
+		for (final InterpreterPane tab : tabs)
+			try {
+				tab.dispose();
+			}
+			catch (final Exception e) {
+				e.printStackTrace();
+			}
 		super.dispose();
 	}
 
@@ -117,7 +119,9 @@ public class InterpreterWindow extends JFrame {
 			new ArrayList<ScriptLanguage>(scriptService.getLanguages());
 
 		// skip compiled languages (makes no sense to interpret them)
-		for (final Iterator<ScriptLanguage> iter = languages.iterator(); iter.hasNext(); ) {
+		for (final Iterator<ScriptLanguage> iter = languages.iterator(); iter
+			.hasNext();)
+		{
 			if (iter.next().isCompiledLanguage()) iter.remove();
 		}
 
@@ -135,6 +139,7 @@ public class InterpreterWindow extends JFrame {
 	/** Ensures that each tab's split pane stays sized the same. */
 	private void syncTabs() {
 		final PropertyChangeListener l = new PropertyChangeListener() {
+
 			@Override
 			public void propertyChange(final PropertyChangeEvent evt) {
 				final String prop = evt.getPropertyName();
@@ -197,7 +202,7 @@ public class InterpreterWindow extends JFrame {
 	}
 
 	/** Print a message to the current language's output panel */
-	public void print(String string) {
+	public void print(final String string) {
 		final int selected = tabbedPane.getSelectedIndex();
 		if (selected < 0) {
 			System.out.println(string);

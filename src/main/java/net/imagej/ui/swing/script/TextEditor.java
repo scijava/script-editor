@@ -8,13 +8,13 @@
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- *
+ * 
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- *
+ * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -227,7 +227,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	public TextEditor(final Context context) {
 		super("Script Editor");
 		context.inject(this);
-		initializeTokenMakers(pluginService, log);
+		initializeTokenMakers();
 		loadPreferences();
 
 		// Initialize menu
@@ -647,20 +647,18 @@ public class TextEditor extends JFrame implements ActionListener,
 		editorPane.requestFocus();
 	}
 
-	private synchronized static void initializeTokenMakers(
-		final PluginService pluginService, final LogService log)
-	{
+	private synchronized void initializeTokenMakers() {
 		if (tokenMakerFactory != null) return;
 		tokenMakerFactory =
 			(AbstractTokenMakerFactory) TokenMakerFactory.getDefaultInstance();
 		for (final PluginInfo<SyntaxHighlighter> info : pluginService
 			.getPluginsOfType(SyntaxHighlighter.class))
 			try {
-				tokenMakerFactory.putMapping("text/" + info.getLabel(), info
+				tokenMakerFactory.putMapping("text/" + info.getName(), info
 					.getClassName());
 			}
 			catch (final Throwable t) {
-				log.warn("Could not register " + info.getLabel(), t);
+				log.warn("Could not register " + info.getName(), t);
 			}
 	}
 
@@ -669,7 +667,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * ask the user whether to reload.
 	 */
 	public void checkForOutsideChanges() {
-		EditorPane editorPane = getEditorPane();
+		final EditorPane editorPane = getEditorPane();
 		if (editorPane.wasChangedOutside()) {
 			reload("The file " + editorPane.getFile().getName() +
 				"was changed outside of the editor");
@@ -1269,10 +1267,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		final Vector<Bookmark> bookmarks = new Vector<Bookmark>();
 
 		for (int i = 0; i < tabbed.getTabCount(); i++) {
-			TextEditorTab tab = (TextEditorTab) tabbed.getComponentAt(i);
+			final TextEditorTab tab = (TextEditorTab) tabbed.getComponentAt(i);
 			tab.editorPane.getBookmarks(tab, bookmarks);
 		}
-		
+
 		final BookmarkDialog dialog = new BookmarkDialog(this, bookmarks);
 		dialog.setVisible(true);
 	}
@@ -2221,16 +2219,16 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	/**
 	 * Update the git directory to the git directory of the current file.
-	 * 
+	 *
 	 * @see #getGitDirectory()
 	 */
 	protected void updateGitDirectory() {
-		EditorPane editorPane = getEditorPane();
+		final EditorPane editorPane = getEditorPane();
 		editorPane.setGitDirectory(new FileFunctions(this)
 			.getGitDirectory(editorPane.getFile()));
 	}
 
-	public void addImport(String className) {
+	public void addImport(final String className) {
 		if (className != null) {
 			new TokenFunctions(getTextArea()).addImport(className.trim());
 		}
@@ -2240,7 +2238,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		openHelp(className, true);
 	}
 
-	public void openHelp(String className, final boolean withFrames) {
+	public void openHelp(final String className, final boolean withFrames) {
 		if (className == null) {
 			// FIXME: This cannot be right.
 			getSelectedClassNameOrAsk();
@@ -2389,19 +2387,19 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	@Override
-	public void insertUpdate(DocumentEvent e) {
+	public void insertUpdate(final DocumentEvent e) {
 		setTitle();
 		checkForOutsideChanges();
 	}
 
 	@Override
-	public void removeUpdate(DocumentEvent e) {
+	public void removeUpdate(final DocumentEvent e) {
 		setTitle();
 		checkForOutsideChanges();
 	}
 
 	@Override
-	public void changedUpdate(DocumentEvent e) {
+	public void changedUpdate(final DocumentEvent e) {
 		setTitle();
 	}
 

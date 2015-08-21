@@ -8,13 +8,13 @@
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- *
+ * 
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- *
+ * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -55,6 +55,7 @@ import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultEditorKit;
 
+import org.fife.rsta.ac.LanguageSupport;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Style;
@@ -65,6 +66,7 @@ import org.fife.ui.rtextarea.IconGroup;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.RecordableTextAction;
+import org.scijava.Context;
 import org.scijava.plugin.Parameter;
 import org.scijava.prefs.PrefService;
 import org.scijava.script.ScriptHeaderService;
@@ -93,6 +95,10 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private boolean undoInProgress;
 	private boolean redoInProgress;
 
+	@Parameter
+	Context context;
+	@Parameter
+	private LanguageSupportService languageSupportService;
 	@Parameter
 	private ScriptService scriptService;
 	@Parameter
@@ -281,7 +287,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	/**
 	 * Load editor contents from given file.
-	 * 
+	 *
 	 * @param file file to load.
 	 * @throws IOException
 	 */
@@ -328,7 +334,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	/**
 	 * Set the name to use for new files. The file extension for the current
 	 * script language is added automatically.
-	 * 
+	 *
 	 * @param baseName the fallback base name.
 	 */
 	public void setFileName(final String baseName) {
@@ -353,7 +359,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	/**
 	 * TODO
-	 * 
+	 *
 	 * @param file
 	 */
 	public void setFileName(final File file) {
@@ -368,7 +374,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	/**
 	 * Get the directory of the git repository for the currently open file.
-	 * 
+	 *
 	 * @return the git repository directoy, or <code>null</code> is there is no
 	 *         such thing.
 	 */
@@ -378,10 +384,10 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	/**
 	 * Set this {@link EditorPane}s git directory.
-	 * 
+	 *
 	 * @param dir directory to set the git directory to.
 	 */
-	public void setGitDirectory(File dir) {
+	public void setGitDirectory(final File dir) {
 		gitDirectory = dir;
 	}
 
@@ -408,7 +414,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	/**
 	 * Get the language by filename extension.
-	 * 
+	 *
 	 * @param name the filename.
 	 * @see #setLanguage(ScriptLanguage)
 	 * @see #setLanguage(ScriptLanguage, boolean)
@@ -420,7 +426,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	/**
 	 * Set the language of this {@link EditorPane}.
-	 * 
+	 *
 	 * @param language {@link ScriptLanguage} to set the editors language to.
 	 * @see #setLanguageByFileName(String)
 	 * @see #setLanguage(ScriptLanguage, boolean)
@@ -432,7 +438,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	/**
 	 * Set the language of this {@link EditorPane}, optionally adding a header.
 	 * TODO: What is this header?
-	 * 
+	 *
 	 * @param language {@link ScriptLanguage} to set the editors language to.
 	 * @param addHeader set to <code>true</code> to add a header.
 	 * @see #setLanguageByFileName(String)
@@ -441,8 +447,16 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	protected void setLanguage(final ScriptLanguage language,
 		final boolean addHeader)
 	{
+		// uninstall existing language support.
+		LanguageSupport support =
+			languageSupportService.getLanguageSupport(currentLanguage);
+		if (support != null) {
+			support.uninstall(this);
+		}
+
 		String languageName;
 		String defaultExtension;
+
 		if (language == null) {
 			languageName = "None";
 			defaultExtension = ".txt";
@@ -479,6 +493,13 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		if (header != null) {
 			setText(header += getText());
 		}
+
+		// try to get language support for current language, may be null.
+		support = languageSupportService.getLanguageSupport(currentLanguage);
+
+		if (support != null) {
+			support.install(this);
+		}
 	}
 
 	/**
@@ -508,7 +529,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	/**
 	 * Set the font size for this editor.
-	 * 
+	 *
 	 * @param size the new font size.
 	 */
 	public void setFontSize(final float size) {
@@ -517,7 +538,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	/**
 	 * Increase font size of this editor by a given factor.
-	 * 
+	 *
 	 * @param factor Factor to increase font size.
 	 */
 	public void increaseFontSize(final float factor) {
@@ -559,7 +580,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	/**
 	 * Add/remove bookmark for a specific line.
-	 * 
+	 *
 	 * @param line line to toggle the bookmark on.
 	 */
 	public void toggleBookmark(final int line) {

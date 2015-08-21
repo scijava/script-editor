@@ -29,35 +29,33 @@
  * #L%
  */
 
-package net.imagej.ui.swing.script.commands;
+package net.imagej.ui.swing.script;
 
-import java.io.File;
+import net.imagej.ImageJService;
 
-import net.imagej.ui.swing.script.FileFunctions;
-import net.imagej.ui.swing.script.TextEditor;
-
-import org.scijava.command.Command;
-import org.scijava.plugin.Parameter;
+import org.fife.rsta.ac.LanguageSupport;
+import org.scijava.plugin.SingletonService;
+import org.scijava.script.ScriptLanguage;
 
 /**
- * Calls <tt>git grep</tt> in a given directory.
+ * Service which manages {@link LanguageSupportPlugin}s.
+ * {@link LanguageSupportPlugin}s provide features like code completion for
+ * example.
  *
- * @author Johannes Schindelin
+ * @author Jonathan Hale
  */
-public class GitGrep implements Command {
+public interface LanguageSupportService extends
+	SingletonService<LanguageSupportPlugin>, ImageJService
+{
 
-	@Parameter
-	private TextEditor editor;
-
-	@Parameter(columns = 20)
-	private String searchTerm;
-
-	@Parameter
-	private File searchRoot;
-
-	@Override
-	public void run() {
-		new FileFunctions(editor).gitGrep(searchTerm, searchRoot);
-	}
+	/**
+	 * Get a {@link LanguageSupport} for the given language.
+	 *
+	 * @param language Language to get support for.
+	 * @return a {@link LanguageSupport} matching the given language or the
+	 *         <code>null</code> if there was none or language was
+	 *         <code>null</code>.
+	 */
+	public abstract LanguageSupport getLanguageSupport(ScriptLanguage language);
 
 }

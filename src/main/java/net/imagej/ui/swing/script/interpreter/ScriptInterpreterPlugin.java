@@ -41,11 +41,11 @@ import org.scijava.plugin.Plugin;
 /**
  * A GUI for the script engines.
  * <p>
- * This plugin is modeled loosely after Fiji's scripting framework,
- * modulo the limitations caused by hardcoding the list of supported
- * languages as well as the auto-imports.
+ * This plugin is modeled loosely after Fiji's scripting framework, modulo the
+ * limitations caused by hardcoding the list of supported languages as well as
+ * the auto-imports.
  * </p>
- * 
+ *
  * @author Johannes Schindelin
  */
 @Plugin(type = Command.class, menuPath = "Plugins>Scripting>Script Interpreter")

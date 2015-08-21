@@ -43,7 +43,7 @@ import org.scijava.plugin.Parameter;
 
 /**
  * Kills a running script started in the given script editor.
- * 
+ *
  * @author Johannes Schindelin
  */
 public class KillScript extends DynamicCommand {
@@ -63,10 +63,11 @@ public class KillScript extends DynamicCommand {
 		if (killAll) {
 			final List<Executer> scripts = new ArrayList<Executer>();
 			scripts.addAll(editor.getExecutingTasks());
-			for (Executer job : scripts) {
+			for (final Executer job : scripts) {
 				editor.kill(job);
 			}
-		} else {
+		}
+		else {
 			editor.kill(script);
 		}
 	}

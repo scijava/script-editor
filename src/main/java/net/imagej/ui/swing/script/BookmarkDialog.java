@@ -50,25 +50,28 @@ import javax.swing.ListSelectionModel;
 
 /**
  * TODO
- * 
+ *
  * @author Johannes Schindelin
  */
 public class BookmarkDialog extends JDialog implements ActionListener {
+
 	JList list;
 	JButton okay, cancel;
 
 	public BookmarkDialog(final Frame owner, final Vector<Bookmark> bookmarks) {
 		super(owner, "Bookmarks", true);
 
-		getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
+		getContentPane().setLayout(
+			new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 
 		list = new JList(bookmarks);
 		list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		list.addMouseListener(new MouseAdapter() {
+
 			@Override
-			public void mouseClicked(MouseEvent e) {
+			public void mouseClicked(final MouseEvent e) {
 				if (e.getClickCount() == 2) {
-					int index = list.locationToIndex(e.getPoint());
+					final int index = list.locationToIndex(e.getPoint());
 					bookmarks.get(index).setCaret();
 					BookmarkDialog.this.dispose();
 				}
@@ -80,20 +83,20 @@ public class BookmarkDialog extends JDialog implements ActionListener {
 		okay.addActionListener(this);
 		cancel = new JButton("Cancel");
 		cancel.addActionListener(this);
-		JPanel panel = new JPanel();
+		final JPanel panel = new JPanel();
 		panel.add(okay);
 		panel.add(cancel);
 		getContentPane().add(panel);
 
-		KeyListener keyListener = new KeyAdapter() {
+		final KeyListener keyListener = new KeyAdapter() {
+
 			@Override
-			public void keyPressed(KeyEvent e) {
+			public void keyPressed(final KeyEvent e) {
 				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
 					jumpToSelectedBookmark();
 					dispose();
 				}
-				else if (e.getKeyCode() == KeyEvent.VK_ESCAPE)
-					dispose();
+				else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) dispose();
 			}
 		};
 		getContentPane().addKeyListener(keyListener);
@@ -105,18 +108,16 @@ public class BookmarkDialog extends JDialog implements ActionListener {
 	}
 
 	public boolean jumpToSelectedBookmark() {
-		Bookmark bookmark = (Bookmark)list.getSelectedValue();
-		if (bookmark == null)
-			return false;
+		final Bookmark bookmark = (Bookmark) list.getSelectedValue();
+		if (bookmark == null) return false;
 		bookmark.setCaret();
 		return true;
 	}
 
 	@Override
-	public void actionPerformed(ActionEvent e) {
-		Object source = e.getSource();
-		if (source == cancel)
-			dispose();
+	public void actionPerformed(final ActionEvent e) {
+		final Object source = e.getSource();
+		if (source == cancel) dispose();
 		else if (source == okay) {
 			jumpToSelectedBookmark();
 			dispose();

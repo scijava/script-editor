@@ -73,57 +73,60 @@ import org.scijava.util.ProcessUtils;
 
 /**
  * TODO
- * 
+ *
  * @author Johannes Schindelin
  */
 public class FileFunctions {
 
 	protected TextEditor parent;
 
-	public FileFunctions(TextEditor parent) {
+	public FileFunctions(final TextEditor parent) {
 		this.parent = parent;
 	}
 
-	public List<String> extractSourceJar(String path, File workspace) throws IOException {
+	public List<String> extractSourceJar(final String path, final File workspace)
+		throws IOException
+	{
 		String baseName = new File(path).getName();
 		if (baseName.endsWith(".jar") || baseName.endsWith(".zip")) baseName =
 			baseName.substring(0, baseName.length() - 4);
-		File baseDirectory = new File(workspace, baseName);
+		final File baseDirectory = new File(workspace, baseName);
 
-		List<String> result = new ArrayList<String>();
-		JarFile jar = new JarFile(path);
-		for (JarEntry entry : Collections.list(jar.entries())) {
-			String name = entry.getName();
+		final List<String> result = new ArrayList<String>();
+		final JarFile jar = new JarFile(path);
+		for (final JarEntry entry : Collections.list(jar.entries())) {
+			final String name = entry.getName();
 			if (name.endsWith(".class") || name.endsWith("/")) continue;
-			String destination = baseDirectory + name;
+			final String destination = baseDirectory + name;
 			copyTo(jar.getInputStream(entry), destination);
 			result.add(destination);
 		}
 		return result;
 	}
 
-	protected void copyTo(InputStream in, String destination)
-			throws IOException {
-		File file = new File(destination);
+	protected void copyTo(final InputStream in, final String destination)
+		throws IOException
+	{
+		final File file = new File(destination);
 		makeParentDirectories(file);
 		copyTo(in, new FileOutputStream(file));
 	}
 
-	protected void copyTo(InputStream in, OutputStream out)
-			throws IOException {
-		byte[] buffer = new byte[16384];
+	protected void copyTo(final InputStream in, final OutputStream out)
+		throws IOException
+	{
+		final byte[] buffer = new byte[16384];
 		for (;;) {
-			int count = in.read(buffer);
-			if (count < 0)
-				break;
+			final int count = in.read(buffer);
+			if (count < 0) break;
 			out.write(buffer, 0, count);
 		}
 		in.close();
 		out.close();
 	}
 
-	protected void makeParentDirectories(File file) {
-		File parent = file.getParentFile();
+	protected void makeParentDirectories(final File file) {
+		final File parent = file.getParentFile();
 		if (!parent.exists()) {
 			makeParentDirectories(parent);
 			parent.mkdir();
@@ -134,88 +137,84 @@ public class FileFunctions {
 	 * This just checks for a NUL in the first 1024 bytes.
 	 * Not the best test, but a pragmatic one.
 	 */
-	public boolean isBinaryFile(String path) {
+	public boolean isBinaryFile(final String path) {
 		try {
-			InputStream in = new FileInputStream(path);
-			byte[] buffer = new byte[1024];
+			final InputStream in = new FileInputStream(path);
+			final byte[] buffer = new byte[1024];
 			int offset = 0;
 			while (offset < buffer.length) {
-				int count = in.read(buffer, offset, buffer.length - offset);
+				final int count = in.read(buffer, offset, buffer.length - offset);
 				if (count < 0) break;
 				offset += count;
 			}
 			in.close();
 			while (offset > 0)
-				if (buffer[--offset] == 0)
-					return true;
-		} catch (IOException e) { }
+				if (buffer[--offset] == 0) return true;
+		}
+		catch (final IOException e) {}
 		return false;
 	}
 
 	/**
 	 * Make a sensible effort to get the path of the source for a class.
 	 */
-	public String getSourcePath(String className) throws ClassNotFoundException {
+	public String getSourcePath(final String className)
+		throws ClassNotFoundException
+	{
 		// move updater's stuff into ij-core and re-use here
 		throw new RuntimeException("TODO");
 	}
 
-	public String getSourceURL(String className) {
+	public String getSourceURL(final String className) {
 		return "http://fiji.sc/" + className.replace('.', '/') + ".java";
 	}
 
 	protected static Map<String, List<String>> class2source;
 
-	public String findSourcePath(String className, final File workspace) {
+	public String findSourcePath(final String className, final File workspace) {
 		if (class2source == null) {
-			if (JOptionPane.showConfirmDialog(parent,
-					"The class " + className + " was not found "
-					+ "in the CLASSPATH. Do you want me to search "
-					+ "for the source?",
-					"Question", JOptionPane.YES_OPTION)
-					!= JOptionPane.YES_OPTION)
-				return null;
+			if (JOptionPane.showConfirmDialog(parent, "The class " + className +
+				" was not found " + "in the CLASSPATH. Do you want me to search " +
+				"for the source?", "Question", JOptionPane.YES_OPTION) != JOptionPane.YES_OPTION) return null;
 			class2source = new HashMap<String, List<String>>();
 			findJavaPaths(workspace, "");
 		}
-		int dot = className.lastIndexOf('.');
-		String baseName = className.substring(dot + 1);
+		final int dot = className.lastIndexOf('.');
+		final String baseName = className.substring(dot + 1);
 		List<String> paths = class2source.get(baseName);
 		if (paths == null || paths.size() == 0) {
-			JOptionPane.showMessageDialog(parent, "No source for class '"
-					+ className + "' was not found!");
+			JOptionPane.showMessageDialog(parent, "No source for class '" +
+				className + "' was not found!");
 			return null;
 		}
 		if (dot >= 0) {
-			String suffix = "/" + className.replace('.', '/') + ".java";
+			final String suffix = "/" + className.replace('.', '/') + ".java";
 			paths = new ArrayList<String>(paths);
-			Iterator<String> iter = paths.iterator();
+			final Iterator<String> iter = paths.iterator();
 			while (iter.hasNext())
-				if (!iter.next().endsWith(suffix))
-					iter.remove();
+				if (!iter.next().endsWith(suffix)) iter.remove();
 			if (paths.size() == 0) {
-				JOptionPane.showMessageDialog(parent, "No source for class '"
-						+ className + "' was not found!");
+				JOptionPane.showMessageDialog(parent, "No source for class '" +
+					className + "' was not found!");
 				return null;
 			}
 		}
-		if (paths.size() == 1)
-			return new File(workspace, paths.get(0)).getAbsolutePath();
-		String[] names = paths.toArray(new String[paths.size()]);
-		JFileChooser chooser = new JFileChooser(workspace);
+		if (paths.size() == 1) return new File(workspace, paths.get(0))
+			.getAbsolutePath();
+		final String[] names = paths.toArray(new String[paths.size()]);
+		final JFileChooser chooser = new JFileChooser(workspace);
 		chooser.setDialogTitle("Choose path");
-		if (chooser.showOpenDialog(parent) !=  JFileChooser.APPROVE_OPTION) return null;
+		if (chooser.showOpenDialog(parent) != JFileChooser.APPROVE_OPTION) return null;
 		return chooser.getSelectedFile().getPath();
 	}
 
-	protected void findJavaPaths(File directory, String prefix) {
-		String[] files = directory.list();
-		if (files == null)
-			return;
+	protected void findJavaPaths(final File directory, final String prefix) {
+		final String[] files = directory.list();
+		if (files == null) return;
 		Arrays.sort(files);
 		for (int i = 0; i < files.length; i++)
 			if (files[i].endsWith(".java")) {
-				String baseName = files[i].substring(0, files[i].length() - 5);
+				final String baseName = files[i].substring(0, files[i].length() - 5);
 				List<String> list = class2source.get(baseName);
 				if (list == null) {
 					list = new ArrayList<String>();
@@ -224,29 +223,24 @@ public class FileFunctions {
 				list.add(prefix + "/" + files[i]);
 			}
 			else if ("".equals(prefix) &&
-					(files[i].equals("full-nightly-build") ||
-					 files[i].equals("livecd") ||
-					 files[i].equals("java") ||
-					 files[i].equals("nightly-build") ||
-					 files[i].equals("other") ||
-					 files[i].equals("work") ||
-					 files[i].startsWith("chroot-")))
-				// skip known non-source directories
-				continue;
+				(files[i].equals("full-nightly-build") || files[i].equals("livecd") ||
+					files[i].equals("java") || files[i].equals("nightly-build") ||
+					files[i].equals("other") || files[i].equals("work") || files[i]
+						.startsWith("chroot-")))
+			// skip known non-source directories
+			continue;
 			else {
-				File file = new File(directory, files[i]);
-				if (file.isDirectory())
-					findJavaPaths(file, prefix + "/" + files[i]);
+				final File file = new File(directory, files[i]);
+				if (file.isDirectory()) findJavaPaths(file, prefix + "/" + files[i]);
 			}
 	}
 
-	protected String readStream(InputStream in) throws IOException {
-		StringBuffer buf = new StringBuffer();
-		byte[] buffer = new byte[65536];
+	protected String readStream(final InputStream in) throws IOException {
+		final StringBuffer buf = new StringBuffer();
+		final byte[] buffer = new byte[65536];
 		for (;;) {
-			int count = in.read(buffer);
-			if (count < 0)
-				break;
+			final int count = in.read(buffer);
+			if (count < 0) break;
 			buf.append(new String(buffer, 0, count));
 		}
 		in.close();
@@ -256,47 +250,46 @@ public class FileFunctions {
 	/**
 	 * Get a list of files from a directory (recursively)
 	 */
-	public void listFilesRecursively(File directory, String prefix, List<String> result) {
-		if (!directory.exists())
-			return;
-		for (File file : directory.listFiles())
-			if (file.isDirectory())
-				listFilesRecursively(file, prefix + file.getName() + "/", result);
-			else if (file.isFile())
-				result.add(prefix + file.getName());
+	public void listFilesRecursively(final File directory, final String prefix,
+		final List<String> result)
+	{
+		if (!directory.exists()) return;
+		for (final File file : directory.listFiles())
+			if (file.isDirectory()) listFilesRecursively(file, prefix +
+				file.getName() + "/", result);
+			else if (file.isFile()) result.add(prefix + file.getName());
 	}
 
 	/**
-	 * Get a list of files from a directory or within a .jar file
-	 *
-	 * The returned items will only have the base path, to get at the
-	 * full URL you have to prefix the url passed to the function.
+	 * Get a list of files from a directory or within a .jar file The returned
+	 * items will only have the base path, to get at the full URL you have to
+	 * prefix the url passed to the function.
 	 */
 	public List<String> getResourceList(String url) {
-		List<String> result = new ArrayList<String>();
+		final List<String> result = new ArrayList<String>();
 
 		if (url.startsWith("jar:")) {
-			int bang = url.indexOf("!/");
+			final int bang = url.indexOf("!/");
 			String jarURL = url.substring(4, bang);
-			if (jarURL.startsWith("file:"))
-				jarURL = jarURL.substring(5);
-			String prefix = url.substring(bang + 2);
-			int prefixLength = prefix.length();
+			if (jarURL.startsWith("file:")) jarURL = jarURL.substring(5);
+			final String prefix = url.substring(bang + 2);
+			final int prefixLength = prefix.length();
 
 			try {
-				JarFile jar = new JarFile(jarURL);
-				Enumeration<JarEntry> e = jar.entries();
+				final JarFile jar = new JarFile(jarURL);
+				final Enumeration<JarEntry> e = jar.entries();
 				while (e.hasMoreElements()) {
-					JarEntry entry = e.nextElement();
-					if (entry.getName().startsWith(prefix))
-						result.add(entry.getName().substring(prefixLength));
+					final JarEntry entry = e.nextElement();
+					if (entry.getName().startsWith(prefix)) result.add(entry.getName()
+						.substring(prefixLength));
 				}
-			} catch (IOException e) {
+			}
+			catch (final IOException e) {
 				parent.handleException(e);
 			}
 		}
 		else {
-			String prefix = "file:";
+			final String prefix = "file:";
 			if (url.startsWith(prefix)) {
 				int skip = prefix.length();
 				if (url.startsWith(prefix + "//")) skip++;
@@ -308,64 +301,55 @@ public class FileFunctions {
 	}
 
 	public File getGitDirectory(File file) {
-		if (file == null)
-			return null;
+		if (file == null) return null;
 		for (;;) {
 			file = file.getParentFile();
-			if (file == null)
-				return null;
-			File git = new File(file, ".git");
-			if (git.isDirectory())
-				return git;
+			if (file == null) return null;
+			final File git = new File(file, ".git");
+			if (git.isDirectory()) return git;
 		}
 	}
 
 	public File getPluginRootDirectory(File file) {
-		if (file == null)
-			return null;
-		if (!file.isDirectory())
-			file = file.getParentFile();
-		if (file == null)
-			return null;
+		if (file == null) return null;
+		if (!file.isDirectory()) file = file.getParentFile();
+		if (file == null) return null;
 
 		File git = new File(file, ".git");
-		if (git.isDirectory())
-			return file;
+		if (git.isDirectory()) return file;
 
 		File backup = file;
 		for (;;) {
-			File parent = file.getParentFile();
-			if (parent == null)
-				return null;
+			final File parent = file.getParentFile();
+			if (parent == null) return null;
 			git = new File(parent, ".git");
-			if (git.isDirectory())
-				return file.getName().equals("src-plugins") ?
-					backup : file;
+			if (git.isDirectory()) return file.getName().equals("src-plugins")
+				? backup : file;
 			backup = file;
 			file = parent;
 		}
 	}
 
-	public String firstNLines(String text, int maxLineCount) {
+	public String firstNLines(final String text, int maxLineCount) {
 		int offset = -1;
 		while (maxLineCount-- > 0) {
 			offset = text.indexOf('\n', offset + 1);
-			if (offset < 0)
-				return text;
+			if (offset < 0) return text;
 		}
 		int count = 0, next = offset;
 		while ((next = text.indexOf('\n', next + 1)) > 0)
 			count++;
-		return count == 0 ? text : text.substring(0, offset + 1)
-			+ "(" + count + " more line" + (count > 1 ? "s" : "") + ")...\n";
+		return count == 0 ? text : text.substring(0, offset + 1) + "(" + count +
+			" more line" + (count > 1 ? "s" : "") + ")...\n";
 	}
 
 	public class LengthWarner implements DocumentListener {
+
 		protected int width;
 		protected JTextComponent component;
 		protected Color normal, warn;
 
-		public LengthWarner(int width, JTextComponent component) {
+		public LengthWarner(final int width, final JTextComponent component) {
 			this.width = width;
 			this.component = component;
 			normal = component.getForeground();
@@ -373,48 +357,48 @@ public class FileFunctions {
 		}
 
 		@Override
-		public void changedUpdate(DocumentEvent e) { }
+		public void changedUpdate(final DocumentEvent e) {}
 
 		@Override
-		public void insertUpdate(DocumentEvent e) {
+		public void insertUpdate(final DocumentEvent e) {
 			updateColor();
 		}
 
 		@Override
-		public void removeUpdate(DocumentEvent e) {
+		public void removeUpdate(final DocumentEvent e) {
 			updateColor();
 		}
 
 		public void updateColor() {
-			component.setForeground(component.getDocument().getLength() <= width ? normal : warn);
+			component.setForeground(component.getDocument().getLength() <= width
+				? normal : warn);
 		}
 	}
 
 	public class TextWrapper implements DocumentListener {
+
 		protected int width;
 
-		public TextWrapper(int width) {
+		public TextWrapper(final int width) {
 			this.width = width;
 		}
 
 		@Override
-		public void changedUpdate(DocumentEvent e) { }
+		public void changedUpdate(final DocumentEvent e) {}
+
 		@Override
-		public void insertUpdate(DocumentEvent e) {
+		public void insertUpdate(final DocumentEvent e) {
 			final Document document = e.getDocument();
-			int offset = e.getOffset() + e.getLength();
-			if (offset <= width)
-				return;
+			final int offset = e.getOffset() + e.getLength();
+			if (offset <= width) return;
 			try {
-				String text = document.getText(0, offset);
+				final String text = document.getText(0, offset);
 				int newLine = text.lastIndexOf('\n');
-				if (offset - newLine <= width)
-					return;
+				if (offset - newLine <= width) return;
 				while (offset - newLine > width) {
 					int remove = 0;
-					int space = text.lastIndexOf(' ', newLine + width);
-					if (space < newLine)
-						break;
+					final int space = text.lastIndexOf(' ', newLine + width);
+					if (space < newLine) break;
 					if (space > 0) {
 						int first = space;
 						while (first > newLine + 1 && text.charAt(first - 1) == ' ')
@@ -422,167 +406,179 @@ public class FileFunctions {
 						remove = space + 1 - first;
 						newLine = first;
 					}
-					else
-						newLine += width;
+					else newLine += width;
 
 					final int removeCount = remove, at = newLine;
 					SwingUtilities.invokeLater(new Runnable() {
+
 						@Override
 						public void run() {
 							try {
-								if (removeCount > 0)
-									document.remove(at, removeCount);
+								if (removeCount > 0) document.remove(at, removeCount);
 								document.insertString(at, "\n", null);
-							} catch (BadLocationException e2) { /* ignore */ }
+							}
+							catch (final BadLocationException e2) { /* ignore */}
 						}
 					});
 				}
-			} catch (BadLocationException e2) { /* ignore */ }
+			}
+			catch (final BadLocationException e2) { /* ignore */}
 		}
+
 		@Override
-		public void removeUpdate(DocumentEvent e) { }
+		public void removeUpdate(final DocumentEvent e) {}
 	}
 
 	public class ScreenOutputStream extends LineOutputStream {
+
 		@Override
-		public void println(String line) {
-			TextEditorTab tab = parent.getTab();
+		public void println(final String line) {
+			final TextEditorTab tab = parent.getTab();
 			tab.screen.insert(line + "\n", tab.screen.getDocument().getLength());
 		}
 	}
 
 	public static class GrepLineHandler extends LineOutputStream {
-		protected static Pattern pattern = Pattern.compile("([A-Za-z]:[^:]*|[^:]+):([1-9][0-9]*):.*", Pattern.DOTALL);
+
+		protected static Pattern pattern = Pattern.compile(
+			"([A-Za-z]:[^:]*|[^:]+):([1-9][0-9]*):.*", Pattern.DOTALL);
 
 		public ErrorHandler errorHandler;
 		protected String directory;
 
-		public GrepLineHandler(JTextArea textArea, String directory) {
+		public GrepLineHandler(final JTextArea textArea, String directory) {
 			errorHandler = new ErrorHandler(textArea);
-			if (!directory.endsWith("/"))
-				directory += "/";
+			if (!directory.endsWith("/")) directory += "/";
 			this.directory = directory;
 		}
 
 		@Override
-		public void println(String line) {
-			Matcher matcher = pattern.matcher(line);
-			if (matcher.matches())
-				errorHandler.addError(directory + matcher.group(1), Integer.parseInt(matcher.group(2)), line);
-			else
-				errorHandler.addError(null, -1, line);
+		public void println(final String line) {
+			final Matcher matcher = pattern.matcher(line);
+			if (matcher.matches()) errorHandler.addError(
+				directory + matcher.group(1), Integer.parseInt(matcher.group(2)), line);
+			else errorHandler.addError(null, -1, line);
 		}
 	}
 
-	public void gitGrep(String searchTerm, File directory) {
-		GrepLineHandler handler = new GrepLineHandler(parent.errorScreen, directory.getAbsolutePath());
-		PrintStream out = new PrintStream(handler);
+	public void gitGrep(final String searchTerm, final File directory) {
+		final GrepLineHandler handler =
+			new GrepLineHandler(parent.errorScreen, directory.getAbsolutePath());
+		final PrintStream out = new PrintStream(handler);
 		parent.getTab().showErrors();
 		try {
 			ProcessUtils.exec(directory, out, out, "git", "grep", "-n", searchTerm);
 			parent.errorHandler = handler.errorHandler;
-		} catch (RuntimeException e) {
+		}
+		catch (final RuntimeException e) {
 			parent.handleException(e);
 		}
 	}
 
-	public void openInGitweb(File file, File gitDirectory, int line) {
+	public void openInGitweb(final File file, final File gitDirectory,
+		final int line)
+	{
 		if (file == null || gitDirectory == null) {
 			error("No file or git directory");
 			return;
 		}
-		String url = getGitwebURL(file, gitDirectory, line);
-		if (url == null)
-			error("Could not get gitweb URL for " + file);
+		final String url = getGitwebURL(file, gitDirectory, line);
+		if (url == null) error("Could not get gitweb URL for " + file);
 		else try {
 			parent.platformService.open(new URL(url));
-		} catch (MalformedURLException e) {
+		}
+		catch (final MalformedURLException e) {
 			parent.handleException(e);
-		} catch (IOException e) {
+		}
+		catch (final IOException e) {
 			parent.handleException(e);
 		}
 	}
 
-	public String git(File gitDirectory, File workingDirectory, String... args) {
+	public String git(final File gitDirectory, final File workingDirectory,
+		String... args)
+	{
 		try {
-			args = append(gitDirectory == null ? new String[] { "git" } :
-				new String[] { "git", "--git-dir=" + gitDirectory.getAbsolutePath()}, args);
-			PrintStream out = new PrintStream(new ScreenOutputStream());
+			args =
+				append(gitDirectory == null ? new String[] { "git" } : new String[] {
+					"git", "--git-dir=" + gitDirectory.getAbsolutePath() }, args);
+			final PrintStream out = new PrintStream(new ScreenOutputStream());
 			return ProcessUtils.exec(workingDirectory, out, out, args);
-		} catch (RuntimeException e) {
+		}
+		catch (final RuntimeException e) {
 			parent.write(e.getMessage());
 		}
 		return null;
 	}
 
-	public String git(File gitDirectory, String... args) {
-		return git(gitDirectory, (File)null, args);
+	public String git(final File gitDirectory, final String... args) {
+		return git(gitDirectory, (File) null, args);
 	}
 
-	public String gitConfig(File gitDirectory, String key) {
+	public String gitConfig(final File gitDirectory, final String key) {
 		return git(gitDirectory, "config", key);
 	}
 
-	public String getGitwebURL(File file, File gitDirectory, int line) {
+	public String getGitwebURL(final File file, final File gitDirectory,
+		final int line)
+	{
 		String url = gitConfig(gitDirectory, "remote.origin.url");
 		if (url == null) {
-			String remote = gitConfig(gitDirectory, "branch.master.remote");
-			if (remote != null)
-				url = gitConfig(gitDirectory, "remote." + remote + ".url");
-			if (url == null)
-				return null;
+			final String remote = gitConfig(gitDirectory, "branch.master.remote");
+			if (remote != null) url =
+				gitConfig(gitDirectory, "remote." + remote + ".url");
+			if (url == null) return null;
 		}
 		if (url.startsWith("repo.or.cz:") || url.startsWith("ssh://repo.or.cz/")) {
-			int index = url.indexOf("/srv/git/") + "/srv/git/".length();
+			final int index = url.indexOf("/srv/git/") + "/srv/git/".length();
 			url = "http://repo.or.cz/w/" + url.substring(index);
 		}
-		else if (url.startsWith("git://repo.or.cz/"))
-			url = "http://repo.or.cz/w/" + url.substring("git://repo.or.cz/".length());
+		else if (url.startsWith("git://repo.or.cz/")) url =
+			"http://repo.or.cz/w/" + url.substring("git://repo.or.cz/".length());
 		else {
 			url = stripSuffix(url, "/");
 			int slash = url.lastIndexOf('/');
-			if (url.endsWith("/.git"))
-				slash = url.lastIndexOf('/', slash - 1);
+			if (url.endsWith("/.git")) slash = url.lastIndexOf('/', slash - 1);
 			String project = url.substring(slash + 1);
-			if (!project.endsWith(".git"))
-				project += "/.git";
-			if (project.equals("imageja.git"))
-				project = "ImageJA.git";
+			if (!project.endsWith(".git")) project += "/.git";
+			if (project.equals("imageja.git")) project = "ImageJA.git";
 			url = "http://fiji.sc/cgi-bin/gitweb.cgi?p=" + project;
 		}
-		String head = git(gitDirectory, "rev-parse", "--symbolic-full-name", "HEAD");
-		String path = git(null /* ls-files does not work with --git-dir */,
-			file.getParentFile(), "ls-files", "--full-name", file.getName());
-		if (url == null || head == null || path == null)
-			return null;
-		return url + ";a=blob;f=" + path + ";hb=" + head
-			+ (line < 0 ? "" : "#l" + line);
+		final String head =
+			git(gitDirectory, "rev-parse", "--symbolic-full-name", "HEAD");
+		final String path =
+			git(null /* ls-files does not work with --git-dir */, file
+				.getParentFile(), "ls-files", "--full-name", file.getName());
+		if (url == null || head == null || path == null) return null;
+		return url + ";a=blob;f=" + path + ";hb=" + head +
+			(line < 0 ? "" : "#l" + line);
 	}
 
-	protected String[] append(String[] array, String item) {
-		String[] result = new String[array.length + 1];
+	protected String[] append(final String[] array, final String item) {
+		final String[] result = new String[array.length + 1];
 		System.arraycopy(array, 0, result, 0, array.length);
 		result[array.length] = item;
 		return result;
 	}
 
-	protected String[] append(String[] array, String[] append ) {
-		String[] result = new String[array.length + append.length];
+	protected String[] append(final String[] array, final String[] append) {
+		final String[] result = new String[array.length + append.length];
 		System.arraycopy(array, 0, result, 0, array.length);
 		System.arraycopy(append, 0, result, array.length, append.length);
 		return result;
 	}
 
-	protected String stripSuffix(String string, String suffix) {
-		if (string.endsWith(suffix))
-			return string.substring(0, string.length() - suffix.length());
+	protected String stripSuffix(final String string, final String suffix) {
+		if (string.endsWith(suffix)) return string.substring(0, string.length() -
+			suffix.length());
 		return string;
 	}
 
-	protected boolean error(String message) {
+	protected boolean error(final String message) {
 		JOptionPane.showMessageDialog(parent, message);
 		return false;
 	}
+
 	/**
 	 * Finds {@link URL}s of resources known to ImageJ. Both JAR files and files
 	 * on disk are searched, according to the following mechanism:
@@ -605,7 +601,7 @@ public class FileFunctions {
 	 * inside JAR files by placing a resource of the same name within the
 	 * {@code pathPrefix} directory.
 	 * </p>
-	 * 
+	 *
 	 * @param regex The regex to use when matching resources, or null to match
 	 *          everything.
 	 * @param pathPrefix The path to search for resources.
@@ -625,7 +621,8 @@ public class FileFunctions {
 		}
 
 		// scan directory second; user can thus override resources from JARs
-		final File baseDirectory = AppUtils.getBaseDirectory("imagej.dir", FileFunctions.class, null);
+		final File baseDirectory =
+			AppUtils.getBaseDirectory("imagej.dir", FileFunctions.class, null);
 		if (baseDirectory != null) {
 			try {
 				urls.add(new File(baseDirectory, pathPrefix).toURI().toURL());
@@ -644,7 +641,7 @@ public class FileFunctions {
 	 * Each of the given {@link URL}s is recursively scanned using SciJava
 	 * Common's {@link FileUtils#listContents(URL)}, and anything matching the
 	 * given {@code regex} pattern is added to the output map.</li>
-	 * 
+	 *
 	 * @param regex The regex to use when matching resources, or null to match
 	 *          everything.
 	 * @param urls Paths to search for resources.

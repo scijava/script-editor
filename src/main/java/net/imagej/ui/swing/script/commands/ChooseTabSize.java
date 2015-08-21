@@ -39,7 +39,7 @@ import org.scijava.plugin.Parameter;
 
 /**
  * Sets the tab size in the current editor tab.
- * 
+ *
  * @author Johannes Schindelin
  */
 public class ChooseTabSize extends DynamicCommand {

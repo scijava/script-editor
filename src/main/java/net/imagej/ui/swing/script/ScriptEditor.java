@@ -39,7 +39,7 @@ import org.scijava.plugin.Plugin;
 
 /**
  * The Script Editor. As plugin.
- * 
+ *
  * @author Johannes Schindelin
  */
 @Plugin(type = Command.class, menu = { @Menu(label = "File"),
