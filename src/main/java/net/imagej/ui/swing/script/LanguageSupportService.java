@@ -43,10 +43,15 @@ public class LanguageSupportService extends
 	 * 
 	 * @param language
 	 * @return a {@link LanguageSupport} matching the given language or the
-	 *         <code>null</code> if there was none.
+	 *         <code>null</code> if there was none or language was
+	 *         <code>null</code>.
 	 */
 	public LanguageSupport getCompletionProvider(ScriptLanguage language) {
-		return languageSupportMap.get(language.getLanguageName().toLowerCase());
+		if (language == null) {
+			return null;
+		}
+		final String name = language.getLanguageName().toLowerCase();
+		return languageSupportMap.get(name);
 	}
 
 }

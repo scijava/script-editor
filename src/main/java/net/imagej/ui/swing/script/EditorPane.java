@@ -98,15 +98,13 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	@Parameter
 	Context context;
 	@Parameter
+	private LanguageSupportService languageSupportService;
+	@Parameter
 	private ScriptService scriptService;
 	@Parameter
 	private ScriptHeaderService scriptHeaderService;
 	@Parameter
 	private PrefService prefService;
-
-	private static LanguageSupportService autoCompleteService = null;
-	private LanguageSupport langSupport = null; // currently installed language
-																							// support
 
 	/**
 	 * Constructor.
@@ -449,8 +447,16 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	protected void setLanguage(final ScriptLanguage language,
 		final boolean addHeader)
 	{
+		// uninstall existing language support.
+		LanguageSupport support =
+			languageSupportService.getCompletionProvider(currentLanguage);
+		if (support != null) {
+			support.uninstall(this);
+		}
+
 		String languageName;
 		String defaultExtension;
+
 		if (language == null) {
 			languageName = "None";
 			defaultExtension = ".txt";
@@ -488,28 +494,11 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setText(header += getText());
 		}
 
-		// update language support (autocompletion)
-		if (currentLanguage != null) {
-			if (autoCompleteService == null) {
-				// manual first time lazy service creation.
-				autoCompleteService = new LanguageSupportService();
-				context.inject(autoCompleteService);
-				autoCompleteService.initialize();
-			}
+		// try to get language support for current language, may be null.
+		support = languageSupportService.getCompletionProvider(currentLanguage);
 
-			// try to get language support for current language, may be null.
-			LanguageSupport newLangSupport =
-				autoCompleteService.getCompletionProvider(currentLanguage);
-
-			if (langSupport != null) {
-				// uninstall existing language support.
-				langSupport.uninstall(this);
-			}
-			langSupport = newLangSupport;
-
-			if (newLangSupport != null) {
-				newLangSupport.install(this);
-			}
+		if (support != null) {
+			support.install(this);
 		}
 	}
 
