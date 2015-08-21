@@ -1,18 +1,20 @@
 
 package net.imagej.ui.swing.script;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.fife.rsta.ac.LanguageSupport;
 import org.scijava.plugin.AbstractSingletonService;
 import org.scijava.plugin.Plugin;
-import org.scijava.plugin.PluginInfo;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.service.Service;
 
 /**
  * Service which manages {@link LanguageSupportPlugin}s.
+ * {@link LanguageSupportPlugin}s provide features like code completion for
+ * example.
  * 
  * @author Jonathan Hale
  */
@@ -21,29 +23,14 @@ public class LanguageSupportService extends
 	AbstractSingletonService<LanguageSupportPlugin>
 {
 
-	final Map<String, LanguageSupportPlugin> languageSupportMap =
-		new HashMap<String, LanguageSupportPlugin>();
+	Map<String, LanguageSupport> languageSupports = null;
 
-	@Override
-	public Class<LanguageSupportPlugin> getPluginType() {
-		return LanguageSupportPlugin.class;
-	}
-
-	@Override
-	public void initialize() {
-		super.initialize();
-
-		for (PluginInfo<LanguageSupportPlugin> p : this.getPlugins()) {
-			final String name = p.getName().toLowerCase();
-			LanguageSupportPlugin instance = this.getInstance(p.getPluginClass());
-			languageSupportMap.put(name, instance);
-		}
-	}
-
+	// -- LanguageSupportService methods --
+	
 	/**
 	 * Get a {@link LanguageSupport} for the given language.
 	 * 
-	 * @param language
+	 * @param language Language to get support for.
 	 * @return a {@link LanguageSupport} matching the given language or the
 	 *         <code>null</code> if there was none or language was
 	 *         <code>null</code>.
@@ -53,7 +40,35 @@ public class LanguageSupportService extends
 			return null;
 		}
 		final String name = language.getLanguageName().toLowerCase();
-		return languageSupportMap.get(name);
+		return languageSupports().get(name);
+	}
+	
+	// -- SingletonService methods --
+
+	@Override
+	public Class<LanguageSupportPlugin> getPluginType() {
+		return LanguageSupportPlugin.class;
+	}
+
+	// -- Helper methods - lazy initialization --
+
+	/** Gets {@link #languageSupports}, initializing if necessary. */
+	private Map<String, LanguageSupport> languageSupports() {
+		if (languageSupports == null) initLanguageSupportPlugins();
+		return languageSupports;
+	}
+
+	/** Initializes {@link #languageSupports}. */
+	private synchronized void initLanguageSupportPlugins() {
+		if (languageSupports != null) return;
+		final HashMap<String, LanguageSupport> map =
+			new HashMap<String, LanguageSupport>();
+
+		for (LanguageSupportPlugin instance : getInstances()) {
+			map.put(instance.getLanguageName(), instance);
+		}
+
+		languageSupports = Collections.unmodifiableMap(map);
 	}
 
 }

@@ -13,5 +13,9 @@ import org.scijava.plugin.SingletonPlugin;
 public interface LanguageSupportPlugin extends SingletonPlugin,
 	LanguageSupport
 {
-	// NB: Marker interface.
+
+	/**
+	 * @return the name of the language this plugin adds support for.
+	 */
+	public String getLanguageName();
 }
