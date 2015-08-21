@@ -12,7 +12,7 @@ import org.scijava.plugin.Plugin;
  * @author Johannes Schindelin
  * @author Jonathan Hale
  */
-@Plugin(type = SyntaxHighlighter.class, label = "ecmascript")
+@Plugin(type = SyntaxHighlighter.class, name = "ecmascript")
 public class ECMAScriptHighlighter extends JavaScriptTokenMaker implements
 	SyntaxHighlighter
 {

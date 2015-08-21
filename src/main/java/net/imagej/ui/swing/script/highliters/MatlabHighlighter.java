@@ -11,7 +11,7 @@ import org.scijava.plugin.Plugin;
  * @author Johannes Schindelin
  * @author Jonathan Hale
  */
-@Plugin(type = SyntaxHighlighter.class, label = "matlab")
+@Plugin(type = SyntaxHighlighter.class, name = "matlab")
 public class MatlabHighlighter extends MatlabTokenMaker implements
 	SyntaxHighlighter
 {

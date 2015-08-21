@@ -11,7 +11,7 @@ import org.scijava.plugin.Plugin;
  * @author Johannes Schindelin
  * @author Jonathan Hale
  */
-@Plugin(type = SyntaxHighlighter.class, label = "ij1-macro")
+@Plugin(type = SyntaxHighlighter.class, name = "ij1-macro")
 public class IJ1MacroHighlighter extends ImageJMacroTokenMaker implements
 	SyntaxHighlighter
 {

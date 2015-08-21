@@ -12,7 +12,7 @@ import org.scijava.plugin.Plugin;
  * @author Johannes Schindelin
  * @author Jonathan Hale
  */
-@Plugin(type = SyntaxHighlighter.class, label = "beanshell")
+@Plugin(type = SyntaxHighlighter.class, name = "beanshell")
 public class BeanshellHighlighter extends JavaTokenMaker implements
 	SyntaxHighlighter
 {
