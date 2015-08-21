@@ -37,7 +37,7 @@ import org.scijava.plugin.Plugin;
 
 /**
  * SyntaxHighliter for matlab scripts.
- * 
+ *
  * @author Johannes Schindelin
  * @author Jonathan Hale
  */

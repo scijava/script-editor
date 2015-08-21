@@ -38,7 +38,7 @@ import org.scijava.plugin.Parameter;
 
 /**
  * Sets the font size in the current editor tab.
- * 
+ *
  * @author Johannes Schindelin
  */
 public class ChooseFontSize extends ContextCommand {

@@ -287,7 +287,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	/**
 	 * Load editor contents from given file.
-	 * 
+	 *
 	 * @param file file to load.
 	 * @throws IOException
 	 */
@@ -334,7 +334,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	/**
 	 * Set the name to use for new files. The file extension for the current
 	 * script language is added automatically.
-	 * 
+	 *
 	 * @param baseName the fallback base name.
 	 */
 	public void setFileName(final String baseName) {
@@ -359,7 +359,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	/**
 	 * TODO
-	 * 
+	 *
 	 * @param file
 	 */
 	public void setFileName(final File file) {
@@ -374,7 +374,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	/**
 	 * Get the directory of the git repository for the currently open file.
-	 * 
+	 *
 	 * @return the git repository directoy, or <code>null</code> is there is no
 	 *         such thing.
 	 */
@@ -384,10 +384,10 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	/**
 	 * Set this {@link EditorPane}s git directory.
-	 * 
+	 *
 	 * @param dir directory to set the git directory to.
 	 */
-	public void setGitDirectory(File dir) {
+	public void setGitDirectory(final File dir) {
 		gitDirectory = dir;
 	}
 
@@ -414,7 +414,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	/**
 	 * Get the language by filename extension.
-	 * 
+	 *
 	 * @param name the filename.
 	 * @see #setLanguage(ScriptLanguage)
 	 * @see #setLanguage(ScriptLanguage, boolean)
@@ -426,7 +426,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	/**
 	 * Set the language of this {@link EditorPane}.
-	 * 
+	 *
 	 * @param language {@link ScriptLanguage} to set the editors language to.
 	 * @see #setLanguageByFileName(String)
 	 * @see #setLanguage(ScriptLanguage, boolean)
@@ -438,7 +438,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	/**
 	 * Set the language of this {@link EditorPane}, optionally adding a header.
 	 * TODO: What is this header?
-	 * 
+	 *
 	 * @param language {@link ScriptLanguage} to set the editors language to.
 	 * @param addHeader set to <code>true</code> to add a header.
 	 * @see #setLanguageByFileName(String)
@@ -529,7 +529,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	/**
 	 * Set the font size for this editor.
-	 * 
+	 *
 	 * @param size the new font size.
 	 */
 	public void setFontSize(final float size) {
@@ -538,7 +538,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	/**
 	 * Increase font size of this editor by a given factor.
-	 * 
+	 *
 	 * @param factor Factor to increase font size.
 	 */
 	public void increaseFontSize(final float factor) {
@@ -580,7 +580,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	/**
 	 * Add/remove bookmark for a specific line.
-	 * 
+	 *
 	 * @param line line to toggle the bookmark on.
 	 */
 	public void toggleBookmark(final int line) {

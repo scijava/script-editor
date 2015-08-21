@@ -36,23 +36,24 @@ import java.net.URL;
 
 /**
  * TODO
- * 
+ *
  * @author Johannes Schindelin
  */
 public class MacroFunctions {
 
-	public final String MACRO_FUNCTIONS_URL = "http://imagej.net/developer/macro/functions.html";
+	public final String MACRO_FUNCTIONS_URL =
+		"http://imagej.net/developer/macro/functions.html";
 
-	private TextEditor editor;
+	private final TextEditor editor;
 
-	public MacroFunctions(TextEditor editor) {
+	public MacroFunctions(final TextEditor editor) {
 		this.editor = editor;
 	}
 
-	public void openHelp(String name) throws IOException {
+	public void openHelp(final String name) throws IOException {
 		String url = MACRO_FUNCTIONS_URL;
 		if (name != null) {
-			String functionName = startsWithIdentifier(name);
+			final String functionName = startsWithIdentifier(name);
 			if (functionName != null) {
 				url += "#" + functionName;
 			}
@@ -60,16 +61,13 @@ public class MacroFunctions {
 		editor.platformService.open(new URL(url));
 	}
 
-	protected String startsWithIdentifier(String text) {
-		if (text == null)
-			return null;
-		char[] array = text.toCharArray();
+	protected String startsWithIdentifier(final String text) {
+		if (text == null) return null;
+		final char[] array = text.toCharArray();
 		int start = 0;
 		while (start < array.length && Character.isWhitespace(array[start]))
 			start++;
-		if (start >= array.length ||
-				!Character.isJavaIdentifierStart(array[start]))
-			return null;
+		if (start >= array.length || !Character.isJavaIdentifierStart(array[start])) return null;
 		int end = start + 1;
 		while (end < array.length && Character.isJavaIdentifierPart(array[end]))
 			end++;

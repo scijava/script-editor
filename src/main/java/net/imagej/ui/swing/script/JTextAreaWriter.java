@@ -46,7 +46,7 @@ import org.scijava.log.LogService;
 
 /**
  * A {@link Writer} adapter for the output area of the script editor.
- * 
+ *
  * @author Johannes Schindelin
  */
 public class JTextAreaWriter extends Writer {
@@ -61,7 +61,8 @@ public class JTextAreaWriter extends Writer {
 	 * Creates a new output stream that prints every 400 ms to the textArea. When
 	 * done, call close() to clean up and finish printing any remaining text.
 	 */
-	public JTextAreaWriter(final JTextArea textArea, final LogService logService) {
+	public JTextAreaWriter(final JTextArea textArea, final LogService logService)
+	{
 		this.textArea = textArea;
 		log = logService;
 		updater.scheduleWithFixedDelay(new Runnable() {
@@ -73,7 +74,7 @@ public class JTextAreaWriter extends Writer {
 		}, 10, 400, TimeUnit.MILLISECONDS);
 	}
 
-	public void print(String line) {
+	public void print(final String line) {
 		write(line + "\n");
 	}
 

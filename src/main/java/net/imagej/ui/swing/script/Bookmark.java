@@ -37,7 +37,7 @@ import org.fife.ui.rtextarea.GutterIconInfo;
 
 /**
  * A "bookmark" is a stored location (line, file) in the text editor.
- * 
+ *
  * @author Johannes Schindelin
  * @author Jonathan Hale
  */
@@ -67,6 +67,7 @@ public class Bookmark {
 
 	@Override
 	public String toString() {
-		return "Line " + (getLineNumber() + 1) + " (" + tab.editorPane.getFileName() + ")";
+		return "Line " + (getLineNumber() + 1) + " (" +
+			tab.editorPane.getFileName() + ")";
 	}
 }

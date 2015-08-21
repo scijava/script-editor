@@ -38,7 +38,7 @@ import org.scijava.plugin.Plugin;
 
 /**
  * SyntaxHighliter for "ecmascript".
- * 
+ *
  * @author Johannes Schindelin
  * @author Jonathan Hale
  */

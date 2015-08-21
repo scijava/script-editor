@@ -54,15 +54,16 @@ import org.scijava.script.ScriptLanguage;
  * This class generates import statements for the deprecated auto-import feature
  * of the script editor and prefixes the {@link Reader} with those statements.
  * </p>
- * 
+ *
  * @author Johannes Schindelin
  */
 public class DefaultAutoImporters {
 
 	private static Collection<AutoImporter> importers;
 
-	static Reader prefixAutoImports(final Context context, final ScriptLanguage language,
-		final Reader reader, final Writer errors) throws ModuleException
+	static Reader prefixAutoImports(final Context context,
+		final ScriptLanguage language, final Reader reader, final Writer errors)
+		throws ModuleException
 	{
 		final Object generator = getImportGenerator(context, language);
 		if (generator == null) {
@@ -96,10 +97,12 @@ public class DefaultAutoImporters {
 		}
 	}
 
-	public static Object getImportGenerator(final Context context, final ScriptLanguage language)
+	public static Object getImportGenerator(final Context context,
+		final ScriptLanguage language)
 	{
 		if (importers == null) {
-			final PluginService pluginService = context.getService(PluginService.class);
+			final PluginService pluginService =
+				context.getService(PluginService.class);
 			importers = pluginService.createInstancesOfType(AutoImporter.class);
 		}
 

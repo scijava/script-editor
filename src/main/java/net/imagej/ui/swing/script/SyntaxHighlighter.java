@@ -41,7 +41,7 @@ import org.scijava.plugin.SciJavaPlugin;
  * editor by implementing this interface, extending the {@link TokenMaker} and
  * providing the lower-cased language name as {@code label}.
  * </p>
- * 
+ *
  * @author Johannes Schindelin
  */
 public interface SyntaxHighlighter extends SciJavaPlugin, TokenMaker {

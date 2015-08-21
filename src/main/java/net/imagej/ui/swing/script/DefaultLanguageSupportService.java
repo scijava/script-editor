@@ -43,30 +43,31 @@ import org.scijava.service.Service;
 
 /**
  * Default {@link LanguageSupportService} implementation.
- * 
+ *
  * @author Jonathan Hale
  */
 @Plugin(type = Service.class)
 public class DefaultLanguageSupportService extends
-	AbstractSingletonService<LanguageSupportPlugin> implements LanguageSupportService
+	AbstractSingletonService<LanguageSupportPlugin> implements
+	LanguageSupportService
 {
 
 	Map<String, LanguageSupport> languageSupports = null;
 
 	// -- LanguageSupportService methods --
-	
+
 	/* (non-Javadoc)
 	 * @see net.imagej.ui.swing.script.LanguageSupportService#getLanguageSupport(org.scijava.script.ScriptLanguage)
 	 */
 	@Override
-	public LanguageSupport getLanguageSupport(ScriptLanguage language) {
+	public LanguageSupport getLanguageSupport(final ScriptLanguage language) {
 		if (language == null) {
 			return null;
 		}
 		final String name = language.getLanguageName().toLowerCase();
 		return languageSupports().get(name);
 	}
-	
+
 	// -- SingletonService methods --
 
 	@Override
@@ -88,7 +89,7 @@ public class DefaultLanguageSupportService extends
 		final HashMap<String, LanguageSupport> map =
 			new HashMap<String, LanguageSupport>();
 
-		for (LanguageSupportPlugin instance : getInstances()) {
+		for (final LanguageSupportPlugin instance : getInstances()) {
 			map.put(instance.getLanguageName(), instance);
 		}
 

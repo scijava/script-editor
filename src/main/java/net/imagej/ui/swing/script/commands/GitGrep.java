@@ -41,7 +41,7 @@ import org.scijava.plugin.Parameter;
 
 /**
  * Calls <tt>git grep</tt> in a given directory.
- * 
+ *
  * @author Johannes Schindelin
  */
 public class GitGrep implements Command {

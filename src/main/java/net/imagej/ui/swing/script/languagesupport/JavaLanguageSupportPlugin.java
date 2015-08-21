@@ -33,15 +33,14 @@ package net.imagej.ui.swing.script.languagesupport;
 
 import java.io.IOException;
 
-import org.fife.rsta.ac.java.JavaLanguageSupport;
-import org.scijava.plugin.Plugin;
-
 import net.imagej.ui.swing.script.LanguageSupportPlugin;
 import net.imagej.ui.swing.script.LanguageSupportService;
 
+import org.fife.rsta.ac.java.JavaLanguageSupport;
+
 /**
  * {@link LanguageSupportPlugin} for the java language.
- * 
+ *
  * @author Jonathan Hale
  * @see JavaLanguageSupport
  * @see LanguageSupportService

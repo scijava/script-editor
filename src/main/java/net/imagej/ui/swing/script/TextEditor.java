@@ -667,7 +667,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * ask the user whether to reload.
 	 */
 	public void checkForOutsideChanges() {
-		EditorPane editorPane = getEditorPane();
+		final EditorPane editorPane = getEditorPane();
 		if (editorPane.wasChangedOutside()) {
 			reload("The file " + editorPane.getFile().getName() +
 				"was changed outside of the editor");
@@ -1267,10 +1267,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		final Vector<Bookmark> bookmarks = new Vector<Bookmark>();
 
 		for (int i = 0; i < tabbed.getTabCount(); i++) {
-			TextEditorTab tab = (TextEditorTab) tabbed.getComponentAt(i);
+			final TextEditorTab tab = (TextEditorTab) tabbed.getComponentAt(i);
 			tab.editorPane.getBookmarks(tab, bookmarks);
 		}
-		
+
 		final BookmarkDialog dialog = new BookmarkDialog(this, bookmarks);
 		dialog.setVisible(true);
 	}
@@ -2219,16 +2219,16 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	/**
 	 * Update the git directory to the git directory of the current file.
-	 * 
+	 *
 	 * @see #getGitDirectory()
 	 */
 	protected void updateGitDirectory() {
-		EditorPane editorPane = getEditorPane();
+		final EditorPane editorPane = getEditorPane();
 		editorPane.setGitDirectory(new FileFunctions(this)
 			.getGitDirectory(editorPane.getFile()));
 	}
 
-	public void addImport(String className) {
+	public void addImport(final String className) {
 		if (className != null) {
 			new TokenFunctions(getTextArea()).addImport(className.trim());
 		}
@@ -2238,7 +2238,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		openHelp(className, true);
 	}
 
-	public void openHelp(String className, final boolean withFrames) {
+	public void openHelp(final String className, final boolean withFrames) {
 		if (className == null) {
 			// FIXME: This cannot be right.
 			getSelectedClassNameOrAsk();
@@ -2387,19 +2387,19 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	@Override
-	public void insertUpdate(DocumentEvent e) {
+	public void insertUpdate(final DocumentEvent e) {
 		setTitle();
 		checkForOutsideChanges();
 	}
 
 	@Override
-	public void removeUpdate(DocumentEvent e) {
+	public void removeUpdate(final DocumentEvent e) {
 		setTitle();
 		checkForOutsideChanges();
 	}
 
 	@Override
-	public void changedUpdate(DocumentEvent e) {
+	public void changedUpdate(final DocumentEvent e) {
 		setTitle();
 	}
 

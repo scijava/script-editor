@@ -44,20 +44,24 @@ import javax.swing.text.BadLocationException;
 
 /**
  * TODO
- * 
+ *
  * @author Johannes Schindelin
  */
 public class JTextAreaOutputStream extends OutputStream {
+
 	JTextArea textArea;
 
 	ScheduledExecutorService updater = Executors.newScheduledThreadPool(1);
 	Vector<String> queue = new Vector<String>();
 
-	/** Creates a new output stream that prints every 400 ms to the textArea.
-	 *  When done, call shutdown() to clean up and finish printing any remaining text. */
+	/**
+	 * Creates a new output stream that prints every 400 ms to the textArea. When
+	 * done, call shutdown() to clean up and finish printing any remaining text.
+	 */
 	public JTextAreaOutputStream(final JTextArea textArea) {
 		this.textArea = textArea;
 		updater.scheduleWithFixedDelay(new Runnable() {
+
 			@Override
 			public void run() {
 				flushQueue();
@@ -66,17 +70,17 @@ public class JTextAreaOutputStream extends OutputStream {
 	}
 
 	@Override
-	public void write(int i) {
-		write(Character.toString((char)i));
+	public void write(final int i) {
+		write(Character.toString((char) i));
 	}
 
 	@Override
-	public void write(byte[] buffer) {
+	public void write(final byte[] buffer) {
 		write(new String(buffer));
 	}
 
 	@Override
-	public void write(byte[] buffer, int off, int len) {
+	public void write(final byte[] buffer, final int off, final int len) {
 		write(new String(buffer, off, len));
 	}
 
@@ -93,17 +97,20 @@ public class JTextAreaOutputStream extends OutputStream {
 			queue.clear();
 		}
 
-		StringBuilder sb = new StringBuilder();
-		for (String s : strings)
+		final StringBuilder sb = new StringBuilder();
+		for (final String s : strings)
 			sb.append(s);
 
 		synchronized (textArea) {
-			int lineCount = textArea.getLineCount();
+			final int lineCount = textArea.getLineCount();
 			// Eliminate the first 100 lines when reaching 1100 lines:
 			if (lineCount > 1100) try {
-				textArea.replaceRange("", 0,
-					textArea.getLineEndOffset(lineCount - 1000));
-			} catch (BadLocationException e) { e.printStackTrace(); }
+				textArea.replaceRange("", 0, textArea
+					.getLineEndOffset(lineCount - 1000));
+			}
+			catch (final BadLocationException e) {
+				e.printStackTrace();
+			}
 			textArea.append(sb.toString());
 			textArea.setCaretPosition(textArea.getDocument().getLength());
 		}
@@ -121,12 +128,14 @@ public class JTextAreaOutputStream extends OutputStream {
 		updater.shutdown();
 	}
 
-	/** Stop printing services, finishing to print any remaining tasks in the context of the calling thread. */
+	/**
+	 * Stop printing services, finishing to print any remaining tasks in the
+	 * context of the calling thread.
+	 */
 	public void shutdown() {
-		List<Runnable> tasks = updater.shutdownNow();
-		if (null == tasks)
-			return;
-		for (Runnable t : tasks)
+		final List<Runnable> tasks = updater.shutdownNow();
+		if (null == tasks) return;
+		for (final Runnable t : tasks)
 			t.run();
 	}
 

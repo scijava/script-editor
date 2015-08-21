@@ -37,7 +37,7 @@ import org.scijava.plugin.Plugin;
 
 /**
  * SyntaxHighliter for ij1-macros.
- * 
+ *
  * @author Johannes Schindelin
  * @author Jonathan Hale
  */

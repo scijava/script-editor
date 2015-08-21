@@ -50,7 +50,7 @@ import net.imagej.ui.swing.script.TextEditor.Executer;
 
 /**
  * Tab in a {@link TextEditor} containing an {@link EditorPane}.
- * 
+ *
  * @author Jonathan Hale
  */
 public class TextEditorTab extends JSplitPane {
@@ -246,7 +246,7 @@ public class TextEditorTab extends JSplitPane {
 		return executer;
 	}
 
-	public void setExecutor(Executer executer) {
+	public void setExecutor(final Executer executer) {
 		this.executer = executer;
 	}
 

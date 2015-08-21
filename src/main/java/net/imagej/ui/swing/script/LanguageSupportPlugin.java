@@ -37,11 +37,10 @@ import org.scijava.plugin.SingletonPlugin;
 
 /**
  * Interface for {@link AutoCompletion} plugins.
- * 
+ *
  * @author Jonathan Hale
  */
-public interface LanguageSupportPlugin extends SingletonPlugin,
-	LanguageSupport
+public interface LanguageSupportPlugin extends SingletonPlugin, LanguageSupport
 {
 
 	/**
