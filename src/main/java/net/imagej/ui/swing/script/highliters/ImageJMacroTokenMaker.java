@@ -2706,149 +2706,145 @@ public class ImageJMacroTokenMaker extends AbstractJFlexCTokenMaker {
 			zzMarkedPos = zzMarkedPosL;
 
 			switch (zzAction < 0 ? zzAction : ZZ_ACTION[zzAction]) {
-				case 5: {
+				case 5:
 					addNullToken();
 					return firstToken;
-				}
 				case 27:
 					break;
-				case 23: {
+				case 23:
 					addToken(TokenTypes.LITERAL_CHAR);
-				}
+					break;
 				case 28:
 					break;
-				case 19: {
+				case 19:
 					start = zzMarkedPos - 2;
 					yybegin(MLC);
-				}
+					break;
 				case 29:
 					break;
-				case 7: {
+				case 7:
 					addToken(TokenTypes.WHITESPACE);
-				}
+					break;
 				case 30:
 					break;
-				case 15: {
+				case 15:
 					addToken(TokenTypes.LITERAL_NUMBER_HEXADECIMAL);
-				}
+					break;
 				case 31:
 					break;
-				case 24: {
+				case 24:
 					addToken(TokenTypes.ERROR_STRING_DOUBLE);
-				}
+					break;
 				case 32:
 					break;
-				case 14: {
+				case 14:
 					addToken(TokenTypes.LITERAL_NUMBER_FLOAT);
-				}
+					break;
 				case 33:
 					break;
-				case 20: {
+				case 20:
 					addToken(TokenTypes.RESERVED_WORD);
-				}
+					break;
 				case 34:
 					break;
-				case 9: {
+				case 9:
 					addToken(TokenTypes.SEPARATOR);
-				}
+					break;
 				case 35:
 					break;
-				case 2: {
+				case 2:
 					addToken(TokenTypes.IDENTIFIER);
-				}
+					break;
 				case 36:
 					break;
-				case 12: {
+				case 12:
 					addToken(start, zzStartRead - 1, TokenTypes.COMMENT_EOL);
 					addNullToken();
 					return firstToken;
-				}
 				case 37:
 					break;
-				case 18: {
+				case 18:
 					start = zzMarkedPos - 2;
 					yybegin(EOL_COMMENT);
-				}
+					break;
 				case 38:
 					break;
-				case 21: {
+				case 21:
 					addToken(TokenTypes.FUNCTION);
-				}
+					break;
 				case 39:
 					break;
-				case 4: {
+				case 4:
 					addToken(TokenTypes.ERROR_CHAR);
 					addNullToken();
 					return firstToken;
-				}
 				case 40:
 					break;
-				case 6: {
+				case 6:
 					addToken(TokenTypes.ERROR_STRING_DOUBLE);
 					addNullToken();
 					return firstToken;
-				}
 				case 41:
 					break;
-				case 1: {
+				case 1:
 					addToken(TokenTypes.ERROR_IDENTIFIER);
-				}
+					break;
 				case 42:
 					break;
-				case 22: {
+				case 22:
 					yybegin(YYINITIAL);
 					addToken(start, zzStartRead + 2 - 1, TokenTypes.COMMENT_MULTILINE);
-				}
+					break;
 				case 43:
 					break;
-				case 16: {
+				case 16:
 					addToken(TokenTypes.ERROR_CHAR);
-				}
+					break;
 				case 44:
 					break;
-				case 17: {
+				case 17:
 					addToken(TokenTypes.LITERAL_STRING_DOUBLE_QUOTE);
-				}
+					break;
 				case 45:
 					break;
-				case 26: {
-					final int temp = zzStartRead;
+				case 26:
+					final int t26 = zzStartRead;
 					addToken(start, zzStartRead - 1, TokenTypes.COMMENT_EOL);
-					addHyperlinkToken(temp, zzMarkedPos - 1, TokenTypes.COMMENT_EOL);
+					addHyperlinkToken(t26, zzMarkedPos - 1, TokenTypes.COMMENT_EOL);
 					start = zzMarkedPos;
-				}
+					break;
 				case 46:
 					break;
-				case 25: {
-					final int temp = zzStartRead;
+				case 25:
+					final int t25 = zzStartRead;
 					addToken(start, zzStartRead - 1, TokenTypes.COMMENT_MULTILINE);
-					addHyperlinkToken(temp, zzMarkedPos - 1, TokenTypes.COMMENT_MULTILINE);
+					addHyperlinkToken(t25, zzMarkedPos - 1, TokenTypes.COMMENT_MULTILINE);
 					start = zzMarkedPos;
-				}
+					break;
 				case 47:
 					break;
-				case 13: {
+				case 13:
 					addToken(TokenTypes.ERROR_NUMBER_FORMAT);
-				}
+					break;
 				case 48:
 					break;
-				case 3: {
+				case 3:
 					addToken(TokenTypes.LITERAL_NUMBER_DECIMAL_INT);
-				}
+					break;
 				case 49:
 					break;
-				case 8: {
+				case 8:
 					addToken(TokenTypes.OPERATOR);
-				}
+					break;
 				case 50:
 					break;
-				case 10: {}
+				case 10:
+					break;
 				case 51:
 					break;
-				case 11: {
+				case 11:
 					addToken(start, zzStartRead - 1, TokenTypes.COMMENT_MULTILINE);
 					return firstToken;
-				}
 				case 52:
 					break;
 				default:
