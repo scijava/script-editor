@@ -58,7 +58,7 @@ public class MacroFunctions {
 				url += "#" + functionName;
 			}
 		}
-		editor.platformService.open(new URL(url));
+		editor.getPlatformService().open(new URL(url));
 	}
 
 	protected String startsWithIdentifier(final String text) {

@@ -169,8 +169,8 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private static AbstractTokenMakerFactory tokenMakerFactory = null;
 
-	protected JTabbedPane tabbed;
-	protected JMenuItem newFile, open, save, saveas, compileAndRun, compile,
+	private JTabbedPane tabbed;
+	private JMenuItem newFile, open, save, saveas, compileAndRun, compile,
 			close, undo, redo, cut, copy, paste, find, replace, selectAll, kill,
 			gotoLine, makeJar, makeJarWithSource, removeUnusedImports, sortImports,
 			removeTrailingWhitespace, findNext, findPrevious, openHelp, addImport,
@@ -181,48 +181,48 @@ public class TextEditor extends JFrame implements ActionListener,
 			chooseTabSize, gitGrep, openInGitweb, replaceTabsWithSpaces,
 			replaceSpacesWithTabs, toggleWhiteSpaceLabeling, zapGremlins,
 			savePreferences;
-	protected RecentFilesMenuItem openRecent;
-	protected JMenu gitMenu, tabsMenu, fontSizeMenu, tabSizeMenu, toolsMenu,
+	private RecentFilesMenuItem openRecent;
+	private JMenu gitMenu, tabsMenu, fontSizeMenu, tabSizeMenu, toolsMenu,
 			runMenu, whiteSpaceMenu;
-	protected int tabsMenuTabsStart;
-	protected Set<JMenuItem> tabsMenuItems;
-	protected FindAndReplaceDialog findDialog;
-	protected JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport;
-	protected JTextArea errorScreen = new JTextArea();
+	private int tabsMenuTabsStart;
+	private Set<JMenuItem> tabsMenuItems;
+	private FindAndReplaceDialog findDialog;
+	private JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport;
+	private JTextArea errorScreen = new JTextArea();
 
-	protected final String templateFolder = "templates/";
+	private final String templateFolder = "templates/";
 
-	protected int compileStartOffset;
-	protected Position compileStartPosition;
-	protected ErrorHandler errorHandler;
+	private int compileStartOffset;
+	private Position compileStartPosition;
+	private ErrorHandler errorHandler;
 
-	protected boolean respectAutoImports;
+	private boolean respectAutoImports;
 
 	@Parameter
-	protected Context context;
+	private Context context;
 	@Parameter
-	protected LogService log;
+	private LogService log;
 	@Parameter
-	protected ModuleService moduleService;
+	private ModuleService moduleService;
 	@Parameter
-	protected PlatformService platformService;
+	private PlatformService platformService;
 	@Parameter
-	protected IOService ioService;
+	private IOService ioService;
 	@Parameter
-	protected CommandService commandService;
+	private CommandService commandService;
 	@Parameter
-	protected ScriptService scriptService;
+	private ScriptService scriptService;
 	@Parameter
-	protected PluginService pluginService;
+	private PluginService pluginService;
 	@Parameter
-	protected ScriptHeaderService scriptHeaderService;
+	private ScriptHeaderService scriptHeaderService;
 	@Parameter
 	private UIService uiService;
 	@Parameter
-	protected PrefService prefService;
+	private PrefService prefService;
 
-	protected Map<ScriptLanguage, JRadioButtonMenuItem> languageMenuItems;
-	protected JRadioButtonMenuItem noneLanguageItem;
+	private Map<ScriptLanguage, JRadioButtonMenuItem> languageMenuItems;
+	private JRadioButtonMenuItem noneLanguageItem;
 
 	public TextEditor(final Context context) {
 		super("Script Editor");
@@ -647,6 +647,17 @@ public class TextEditor extends JFrame implements ActionListener,
 		editorPane.requestFocus();
 	}
 
+	public LogService log() { return log; }
+	public PlatformService getPlatformService() { return platformService; }
+	public JTextArea getErrorScreen() { return errorScreen; }
+	public void setErrorScreen(final JTextArea errorScreen) {
+		this.errorScreen = errorScreen;
+	}
+	public ErrorHandler getErrorHandler() { return errorHandler; }
+	public void setErrorHandler(final ErrorHandler errorHandler) {
+		this.errorHandler = errorHandler;
+	}
+
 	private synchronized void initializeTokenMakers() {
 		if (tokenMakerFactory != null) return;
 		tokenMakerFactory =
@@ -835,7 +846,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				triplet.modifiers);
 	}
 
-	protected JMenu getMenu(final JMenu root, final String menuItemPath,
+	private JMenu getMenu(final JMenu root, final String menuItemPath,
 		final boolean createIfNecessary)
 	{
 		final int gt = menuItemPath.indexOf('>');
@@ -1013,7 +1024,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		return false;
 	}
 
-	protected void grabFocus(final int laterCount) {
+	private void grabFocus(final int laterCount) {
 		if (laterCount == 0) {
 			toFront();
 			return;
@@ -2084,7 +2095,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		return className;
 	}
 
-	protected static void append(final JTextArea textArea, final String text) {
+	private static void append(final JTextArea textArea, final String text) {
 		final int length = textArea.getDocument().getLength();
 		textArea.insert(text, length);
 		textArea.setCaretPosition(length);
@@ -2174,7 +2185,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		tabbed.setSelectedIndex(index);
 	}
 
-	protected void switchTabRelative(final int delta) {
+	private void switchTabRelative(final int delta) {
 		final int count = tabbed.getTabCount();
 		int index = ((tabbed.getSelectedIndex() + delta) % count);
 		if (index < 0) {
@@ -2184,7 +2195,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		switchTo(index);
 	}
 
-	protected void removeTab(final int index) {
+	private void removeTab(final int index) {
 		final int menuItemIndex = index + tabsMenuTabsStart;
 
 		tabbed.remove(index);
@@ -2222,7 +2233,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	 *
 	 * @see #getGitDirectory()
 	 */
-	protected void updateGitDirectory() {
+	private void updateGitDirectory() {
 		final EditorPane editorPane = getEditorPane();
 		editorPane.setGitDirectory(new FileFunctions(this)
 			.getGitDirectory(editorPane.getFile()));
@@ -2273,7 +2284,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	/* extensionMustMatch == false means extension must not match */
-	protected File openWithDialog(final File defaultDir) {
+	private File openWithDialog(final File defaultDir) {
 		return uiService.chooseFile(defaultDir, FileWidget.OPEN_STYLE);
 	}
 
@@ -2294,11 +2305,11 @@ public class TextEditor extends JFrame implements ActionListener,
 		errorScreen.insert(message, errorScreen.getDocument().getLength());
 	}
 
-	protected void error(final String message) {
+	private void error(final String message) {
 		JOptionPane.showMessageDialog(this, message);
 	}
 
-	protected void handleException(final Throwable e) {
+	public void handleException(final Throwable e) {
 		handleException(e, errorScreen);
 		getTab().showErrors();
 	}

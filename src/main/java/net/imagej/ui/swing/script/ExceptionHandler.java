@@ -75,7 +75,7 @@ public class ExceptionHandler {
 	public static void addThreadGroup(final ThreadGroup group,
 		final TextEditor editor)
 	{
-		final ExceptionHandler handler = getInstance(editor.log);
+		final ExceptionHandler handler = getInstance(editor.log());
 		handler.threadMap.put(group, editor);
 	}
 
@@ -93,7 +93,7 @@ public class ExceptionHandler {
 	}
 
 	public static void handle(Throwable t, final TextEditor editor) {
-		final JTextArea screen = editor.errorScreen;
+		final JTextArea screen = editor.getErrorScreen();
 		editor.getTab().showErrors();
 
 		if (t instanceof InvocationTargetException) {
@@ -115,6 +115,6 @@ public class ExceptionHandler {
 				.addError(file == null ? null : file.getAbsolutePath(), line, text);
 		}
 
-		editor.errorHandler = handler;
+		editor.setErrorHandler(handler);
 	}
 }
