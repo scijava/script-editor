@@ -190,8 +190,6 @@ public class TextEditor extends JFrame implements ActionListener,
 	private JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport;
 	private JTextArea errorScreen = new JTextArea();
 
-	private final String templateFolder = "templates/";
-
 	private int compileStartOffset;
 	private Position compileStartPosition;
 	private ErrorHandler errorHandler;
@@ -1025,21 +1023,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		return false;
 	}
 
-	private void grabFocus(final int laterCount) {
-		if (laterCount == 0) {
-			toFront();
-			return;
-		}
-
-		SwingUtilities.invokeLater(new Thread() {
-
-			@Override
-			public void run() {
-				grabFocus(laterCount - 1);
-			}
-		});
-	}
-
 	@Override
 	public void actionPerformed(final ActionEvent ae) {
 		final Object source = ae.getSource();
@@ -1506,6 +1489,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 	}
 
+	/**
+	 * @throws IOException
+	 */
 	public void makeJar(final File file, final boolean includeSources)
 		throws IOException
 	{
@@ -2229,11 +2215,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		return null;
 	}
 
-	/**
-	 * Update the git directory to the git directory of the current file.
-	 *
-	 * @see #getGitDirectory()
-	 */
+	/** Updates the git directory to the git directory of the current file. */
 	private void updateGitDirectory() {
 		final EditorPane editorPane = getEditorPane();
 		editorPane.setGitDirectory(new FileFunctions(this)
@@ -2250,6 +2232,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		openHelp(className, true);
 	}
 
+	/**
+	 * @param className
+	 * @param withFrames
+	 */
 	public void openHelp(final String className, final boolean withFrames) {
 		if (className == null) {
 			// FIXME: This cannot be right.
@@ -2354,8 +2340,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	private Reader evalScript(final String filename, Reader reader,
-		final Writer output, final Writer errors) throws FileNotFoundException,
-		ModuleException
+		final Writer output, final Writer errors) throws ModuleException
 	{
 		final ScriptLanguage language = getCurrentLanguage();
 		if (respectAutoImports) {
