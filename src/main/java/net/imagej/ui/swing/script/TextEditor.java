@@ -169,8 +169,8 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private static AbstractTokenMakerFactory tokenMakerFactory = null;
 
-	protected JTabbedPane tabbed;
-	protected JMenuItem newFile, open, save, saveas, compileAndRun, compile,
+	private JTabbedPane tabbed;
+	private JMenuItem newFile, open, save, saveas, compileAndRun, compile,
 			close, undo, redo, cut, copy, paste, find, replace, selectAll, kill,
 			gotoLine, makeJar, makeJarWithSource, removeUnusedImports, sortImports,
 			removeTrailingWhitespace, findNext, findPrevious, openHelp, addImport,
@@ -181,48 +181,46 @@ public class TextEditor extends JFrame implements ActionListener,
 			chooseTabSize, gitGrep, openInGitweb, replaceTabsWithSpaces,
 			replaceSpacesWithTabs, toggleWhiteSpaceLabeling, zapGremlins,
 			savePreferences;
-	protected RecentFilesMenuItem openRecent;
-	protected JMenu gitMenu, tabsMenu, fontSizeMenu, tabSizeMenu, toolsMenu,
+	private RecentFilesMenuItem openRecent;
+	private JMenu gitMenu, tabsMenu, fontSizeMenu, tabSizeMenu, toolsMenu,
 			runMenu, whiteSpaceMenu;
-	protected int tabsMenuTabsStart;
-	protected Set<JMenuItem> tabsMenuItems;
-	protected FindAndReplaceDialog findDialog;
-	protected JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport;
-	protected JTextArea errorScreen = new JTextArea();
+	private int tabsMenuTabsStart;
+	private Set<JMenuItem> tabsMenuItems;
+	private FindAndReplaceDialog findDialog;
+	private JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport;
+	private JTextArea errorScreen = new JTextArea();
 
-	protected final String templateFolder = "templates/";
+	private int compileStartOffset;
+	private Position compileStartPosition;
+	private ErrorHandler errorHandler;
 
-	protected int compileStartOffset;
-	protected Position compileStartPosition;
-	protected ErrorHandler errorHandler;
-
-	protected boolean respectAutoImports;
+	private boolean respectAutoImports;
 
 	@Parameter
-	protected Context context;
+	private Context context;
 	@Parameter
-	protected LogService log;
+	private LogService log;
 	@Parameter
-	protected ModuleService moduleService;
+	private ModuleService moduleService;
 	@Parameter
-	protected PlatformService platformService;
+	private PlatformService platformService;
 	@Parameter
-	protected IOService ioService;
+	private IOService ioService;
 	@Parameter
-	protected CommandService commandService;
+	private CommandService commandService;
 	@Parameter
-	protected ScriptService scriptService;
+	private ScriptService scriptService;
 	@Parameter
-	protected PluginService pluginService;
+	private PluginService pluginService;
 	@Parameter
-	protected ScriptHeaderService scriptHeaderService;
+	private ScriptHeaderService scriptHeaderService;
 	@Parameter
 	private UIService uiService;
 	@Parameter
-	protected PrefService prefService;
+	private PrefService prefService;
 
-	protected Map<ScriptLanguage, JRadioButtonMenuItem> languageMenuItems;
-	protected JRadioButtonMenuItem noneLanguageItem;
+	private Map<ScriptLanguage, JRadioButtonMenuItem> languageMenuItems;
+	private JRadioButtonMenuItem noneLanguageItem;
 
 	public TextEditor(final Context context) {
 		super("Script Editor");
@@ -487,7 +485,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		final JMenu templates = new JMenu("Templates");
 		templates.setMnemonic(KeyEvent.VK_T);
-		addTemplates(templates, languageMap);
+		addTemplates(templates);
 		mbar.add(templates);
 
 		runMenu = new JMenu("Run");
@@ -645,6 +643,17 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		final EditorPane editorPane = getEditorPane();
 		editorPane.requestFocus();
+	}
+
+	public LogService log() { return log; }
+	public PlatformService getPlatformService() { return platformService; }
+	public JTextArea getErrorScreen() { return errorScreen; }
+	public void setErrorScreen(final JTextArea errorScreen) {
+		this.errorScreen = errorScreen;
+	}
+	public ErrorHandler getErrorHandler() { return errorHandler; }
+	public void setErrorHandler(final ErrorHandler errorHandler) {
+		this.errorHandler = errorHandler;
 	}
 
 	private synchronized void initializeTokenMakers() {
@@ -835,18 +844,19 @@ public class TextEditor extends JFrame implements ActionListener,
 				triplet.modifiers);
 	}
 
-	protected JMenu getMenu(final JMenu root, final String menuItemPath,
+	private JMenu getMenu(final JMenu root, final String menuItemPath,
 		final boolean createIfNecessary)
 	{
-		final int gt = menuItemPath.indexOf('>');
-		if (gt < 0) return root;
+		final int slash = menuItemPath.indexOf('/');
+		if (slash < 0) return root;
 
-		final String menuLabel = menuItemPath.substring(0, gt);
-		final String rest = menuItemPath.substring(gt + 1);
+		final String menuLabel = menuItemPath.substring(0, slash);
+		final String rest = menuItemPath.substring(slash + 1);
 		for (int i = 0; i < root.getItemCount(); i++) {
 			final JMenuItem item = root.getItem(i);
-			if ((item instanceof JMenu) && menuLabel.equals(item.getText())) return getMenu(
-				(JMenu) item, rest, createIfNecessary);
+			if (item instanceof JMenu && menuLabel.equals(item.getText())) {
+				return getMenu((JMenu) item, rest, createIfNecessary);
+			}
 		}
 		if (!createIfNecessary) return null;
 		final JMenu subMenu = new JMenu(menuLabel);
@@ -857,43 +867,27 @@ public class TextEditor extends JFrame implements ActionListener,
 	/**
 	 * Initializes the template menu.
 	 * <p>
-	 * Third-party components can add templates simply by providing
-	 * language-specific files in their resources, identified by a path of the
-	 * form {@code /script-templates/<language>/menu label}.
-	 * </p>
-	 * <p>
-	 * The sub menus of the template menu correspond to language names; Entries
-	 * for languages unknown to the script service will be discarded quietly.
+	 * Other components can add templates simply by providing scripts in their
+	 * resources, identified by a path of the form
+	 * {@code /script_templates/<menu path>/<menu label>}.
 	 * </p>
 	 *
 	 * @param templatesMenu the top-level menu to populate
-	 * @param languageMap the known languages
 	 */
-	protected void addTemplates(final JMenu templatesMenu,
-		final Map<String, ScriptLanguage> languageMap)
-	{
+	private void addTemplates(final JMenu templatesMenu) {
 		for (final String templatePath : TEMPLATE_PATHS) {
 			for (final Map.Entry<String, URL> entry : new TreeMap<String, URL>(
 				FileFunctions.findResources(null, templatePath)).entrySet())
 			{
-				final String path = entry.getKey().replace('/', '>').replace('_', ' ');
-				final int gt = path.indexOf('>');
-				if (gt < 1) {
-					log.warn("Ignoring invalid editor template: " + entry.getValue());
-					continue;
-				}
-				final String language = path.substring(0, gt);
-				if (!languageMap.containsKey(language)) {
-					log.debug("Ignoring editor template for language " + language + ": " +
-						entry.getValue());
-					continue;
-				}
-				final ScriptLanguage engine = languageMap.get(language);
+				final String path = entry.getKey().replace('_', ' ');
+				final String ext = FileUtils.getExtension(path);
+
 				final JMenu menu = getMenu(templatesMenu, path, true);
 
-				String label = path.substring(path.lastIndexOf('>') + 1);
-				final int dot = label.lastIndexOf('.');
-				if (dot > 0) label = label.substring(0, dot);
+				final int labelIndex = path.lastIndexOf('/') + 1;
+				final String label = ext.isEmpty() ? path.substring(labelIndex) :
+					path.substring(labelIndex, path.length() - ext.length() - 1);
+
 				final JMenuItem item = new JMenuItem(label);
 				menu.add(item);
 				final URL url = entry.getValue();
@@ -901,7 +895,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 					@Override
 					public void actionPerformed(final ActionEvent e) {
-						loadTemplate(url, engine);
+						loadTemplate(url);
 					}
 				});
 			}
@@ -925,11 +919,9 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	public void loadTemplate(final URL url) {
 		final String path = url.getPath();
-		final int dot = path.lastIndexOf('.');
-		ScriptLanguage language = null;
-		if (dot > 0) {
-			language = scriptService.getLanguageByExtension(path.substring(dot + 1));
-		}
+		final String ext = FileUtils.getExtension(path);
+		final ScriptLanguage language =
+			ext.isEmpty() ? null : scriptService.getLanguageByExtension(ext);
 		loadTemplate(url, language);
 	}
 
@@ -1011,21 +1003,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 
 		return false;
-	}
-
-	protected void grabFocus(final int laterCount) {
-		if (laterCount == 0) {
-			toFront();
-			return;
-		}
-
-		SwingUtilities.invokeLater(new Thread() {
-
-			@Override
-			public void run() {
-				grabFocus(laterCount - 1);
-			}
-		});
 	}
 
 	@Override
@@ -1494,6 +1471,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 	}
 
+	/**
+	 * @throws IOException
+	 */
 	public void makeJar(final File file, final boolean includeSources)
 		throws IOException
 	{
@@ -2084,7 +2064,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		return className;
 	}
 
-	protected static void append(final JTextArea textArea, final String text) {
+	private static void append(final JTextArea textArea, final String text) {
 		final int length = textArea.getDocument().getLength();
 		textArea.insert(text, length);
 		textArea.setCaretPosition(length);
@@ -2174,7 +2154,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		tabbed.setSelectedIndex(index);
 	}
 
-	protected void switchTabRelative(final int delta) {
+	private void switchTabRelative(final int delta) {
 		final int count = tabbed.getTabCount();
 		int index = ((tabbed.getSelectedIndex() + delta) % count);
 		if (index < 0) {
@@ -2184,7 +2164,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		switchTo(index);
 	}
 
-	protected void removeTab(final int index) {
+	private void removeTab(final int index) {
 		final int menuItemIndex = index + tabsMenuTabsStart;
 
 		tabbed.remove(index);
@@ -2217,12 +2197,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		return null;
 	}
 
-	/**
-	 * Update the git directory to the git directory of the current file.
-	 *
-	 * @see #getGitDirectory()
-	 */
-	protected void updateGitDirectory() {
+	/** Updates the git directory to the git directory of the current file. */
+	private void updateGitDirectory() {
 		final EditorPane editorPane = getEditorPane();
 		editorPane.setGitDirectory(new FileFunctions(this)
 			.getGitDirectory(editorPane.getFile()));
@@ -2238,6 +2214,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		openHelp(className, true);
 	}
 
+	/**
+	 * @param className
+	 * @param withFrames
+	 */
 	public void openHelp(final String className, final boolean withFrames) {
 		if (className == null) {
 			// FIXME: This cannot be right.
@@ -2273,7 +2253,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	/* extensionMustMatch == false means extension must not match */
-	protected File openWithDialog(final File defaultDir) {
+	private File openWithDialog(final File defaultDir) {
 		return uiService.chooseFile(defaultDir, FileWidget.OPEN_STYLE);
 	}
 
@@ -2294,11 +2274,11 @@ public class TextEditor extends JFrame implements ActionListener,
 		errorScreen.insert(message, errorScreen.getDocument().getLength());
 	}
 
-	protected void error(final String message) {
+	private void error(final String message) {
 		JOptionPane.showMessageDialog(this, message);
 	}
 
-	protected void handleException(final Throwable e) {
+	public void handleException(final Throwable e) {
 		handleException(e, errorScreen);
 		getTab().showErrors();
 	}
@@ -2342,8 +2322,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	private Reader evalScript(final String filename, Reader reader,
-		final Writer output, final Writer errors) throws FileNotFoundException,
-		ModuleException
+		final Writer output, final Writer errors) throws ModuleException
 	{
 		final ScriptLanguage language = getCurrentLanguage();
 		if (respectAutoImports) {

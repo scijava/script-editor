@@ -463,12 +463,12 @@ public class FileFunctions {
 
 	public void gitGrep(final String searchTerm, final File directory) {
 		final GrepLineHandler handler =
-			new GrepLineHandler(parent.errorScreen, directory.getAbsolutePath());
+			new GrepLineHandler(parent.getErrorScreen(), directory.getAbsolutePath());
 		final PrintStream out = new PrintStream(handler);
 		parent.getTab().showErrors();
 		try {
 			ProcessUtils.exec(directory, out, out, "git", "grep", "-n", searchTerm);
-			parent.errorHandler = handler.errorHandler;
+			parent.setErrorHandler(handler.errorHandler);
 		}
 		catch (final RuntimeException e) {
 			parent.handleException(e);
@@ -485,7 +485,7 @@ public class FileFunctions {
 		final String url = getGitwebURL(file, gitDirectory, line);
 		if (url == null) error("Could not get gitweb URL for " + file);
 		else try {
-			parent.platformService.open(new URL(url));
+			parent.getPlatformService().open(new URL(url));
 		}
 		catch (final MalformedURLException e) {
 			parent.handleException(e);

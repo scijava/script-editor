@@ -183,7 +183,7 @@ public class TextEditorTab extends JSplitPane {
 		showingErrors = !showingErrors;
 		if (showingErrors) {
 			toggleErrors.setText("Show Output");
-			scroll.setViewportView(textEditor.errorScreen);
+			scroll.setViewportView(textEditor.getErrorScreen());
 		}
 		else {
 			toggleErrors.setText("Show Errors");
@@ -193,8 +193,9 @@ public class TextEditorTab extends JSplitPane {
 
 	public void showErrors() {
 		if (!showingErrors) toggleErrors();
-		else if (scroll.getViewport().getView() == null) scroll
-			.setViewportView(textEditor.errorScreen);
+		else if (scroll.getViewport().getView() == null) {
+			scroll.setViewportView(textEditor.getErrorScreen());
+		}
 	}
 
 	public void showOutput() {
@@ -202,7 +203,7 @@ public class TextEditorTab extends JSplitPane {
 	}
 
 	public JTextArea getScreen() {
-		return showingErrors ? textEditor.errorScreen : screen;
+		return showingErrors ? textEditor.getErrorScreen() : screen;
 	}
 
 	boolean isExecuting() {
