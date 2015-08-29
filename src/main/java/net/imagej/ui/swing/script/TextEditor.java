@@ -847,11 +847,11 @@ public class TextEditor extends JFrame implements ActionListener,
 	private JMenu getMenu(final JMenu root, final String menuItemPath,
 		final boolean createIfNecessary)
 	{
-		final int gt = menuItemPath.indexOf('>');
-		if (gt < 0) return root;
+		final int slash = menuItemPath.indexOf('/');
+		if (slash < 0) return root;
 
-		final String menuLabel = menuItemPath.substring(0, gt);
-		final String rest = menuItemPath.substring(gt + 1);
+		final String menuLabel = menuItemPath.substring(0, slash);
+		final String rest = menuItemPath.substring(slash + 1);
 		for (int i = 0; i < root.getItemCount(); i++) {
 			final JMenuItem item = root.getItem(i);
 			if (item instanceof JMenu && menuLabel.equals(item.getText())) {
@@ -867,13 +867,9 @@ public class TextEditor extends JFrame implements ActionListener,
 	/**
 	 * Initializes the template menu.
 	 * <p>
-	 * Third-party components can add templates simply by providing
-	 * language-specific files in their resources, identified by a path of the
-	 * form {@code /script-templates/<language>/menu label}.
-	 * </p>
-	 * <p>
-	 * The sub menus of the template menu correspond to language names; Entries
-	 * for languages unknown to the script service will be discarded quietly.
+	 * Other components can add templates simply by providing scripts in their
+	 * resources, identified by a path of the form
+	 * {@code /script_templates/<menu path>/<menu label>}.
 	 * </p>
 	 *
 	 * @param templatesMenu the top-level menu to populate
@@ -886,24 +882,15 @@ public class TextEditor extends JFrame implements ActionListener,
 			for (final Map.Entry<String, URL> entry : new TreeMap<String, URL>(
 				FileFunctions.findResources(null, templatePath)).entrySet())
 			{
-				final String path = entry.getKey().replace('/', '>').replace('_', ' ');
-				final int gt = path.indexOf('>');
-				if (gt < 1) {
-					log.warn("Ignoring invalid editor template: " + entry.getValue());
-					continue;
-				}
-				final String languageName = path.substring(0, gt);
-				if (!languageMap.containsKey(languageName)) {
-					log.debug("Ignoring editor template for language " + languageName +
-						": " + entry.getValue());
-					continue;
-				}
-				final ScriptLanguage language = languageMap.get(languageName);
+				final String path = entry.getKey().replace('_', ' ');
+				final String ext = FileUtils.getExtension(path);
+
 				final JMenu menu = getMenu(templatesMenu, path, true);
 
-				String label = path.substring(path.lastIndexOf('>') + 1);
-				final int dot = label.lastIndexOf('.');
-				if (dot > 0) label = label.substring(0, dot);
+				final int labelIndex = path.lastIndexOf('/') + 1;
+				final String label = ext.isEmpty() ? path.substring(labelIndex) :
+					path.substring(labelIndex, path.length() - ext.length() - 1);
+
 				final JMenuItem item = new JMenuItem(label);
 				menu.add(item);
 				final URL url = entry.getValue();
@@ -911,7 +898,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 					@Override
 					public void actionPerformed(final ActionEvent e) {
-						loadTemplate(url, language);
+						loadTemplate(url);
 					}
 				});
 			}
