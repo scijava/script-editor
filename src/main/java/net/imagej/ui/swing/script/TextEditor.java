@@ -894,13 +894,13 @@ public class TextEditor extends JFrame implements ActionListener,
 					log.warn("Ignoring invalid editor template: " + entry.getValue());
 					continue;
 				}
-				final String language = path.substring(0, gt);
-				if (!languageMap.containsKey(language)) {
-					log.debug("Ignoring editor template for language " + language + ": " +
-						entry.getValue());
+				final String languageName = path.substring(0, gt);
+				if (!languageMap.containsKey(languageName)) {
+					log.debug("Ignoring editor template for language " + languageName +
+						": " + entry.getValue());
 					continue;
 				}
-				final ScriptLanguage engine = languageMap.get(language);
+				final ScriptLanguage language = languageMap.get(languageName);
 				final JMenu menu = getMenu(templatesMenu, path, true);
 
 				String label = path.substring(path.lastIndexOf('>') + 1);
@@ -913,7 +913,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 					@Override
 					public void actionPerformed(final ActionEvent e) {
-						loadTemplate(url, engine);
+						loadTemplate(url, language);
 					}
 				});
 			}
