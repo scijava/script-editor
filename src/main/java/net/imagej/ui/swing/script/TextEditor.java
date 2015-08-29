@@ -919,11 +919,9 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	public void loadTemplate(final URL url) {
 		final String path = url.getPath();
-		final int dot = path.lastIndexOf('.');
-		ScriptLanguage language = null;
-		if (dot > 0) {
-			language = scriptService.getLanguageByExtension(path.substring(dot + 1));
-		}
+		final String ext = FileUtils.getExtension(path);
+		final ScriptLanguage language =
+			ext.isEmpty() ? null : scriptService.getLanguageByExtension(ext);
 		loadTemplate(url, language);
 	}
 
