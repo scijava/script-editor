@@ -485,7 +485,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		final JMenu templates = new JMenu("Templates");
 		templates.setMnemonic(KeyEvent.VK_T);
-		addTemplates(templates, languageMap);
+		addTemplates(templates);
 		mbar.add(templates);
 
 		runMenu = new JMenu("Run");
@@ -873,11 +873,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * </p>
 	 *
 	 * @param templatesMenu the top-level menu to populate
-	 * @param languageMap the known languages
 	 */
-	protected void addTemplates(final JMenu templatesMenu,
-		final Map<String, ScriptLanguage> languageMap)
-	{
+	private void addTemplates(final JMenu templatesMenu) {
 		for (final String templatePath : TEMPLATE_PATHS) {
 			for (final Map.Entry<String, URL> entry : new TreeMap<String, URL>(
 				FileFunctions.findResources(null, templatePath)).entrySet())
