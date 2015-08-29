@@ -856,8 +856,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		final String rest = menuItemPath.substring(gt + 1);
 		for (int i = 0; i < root.getItemCount(); i++) {
 			final JMenuItem item = root.getItem(i);
-			if ((item instanceof JMenu) && menuLabel.equals(item.getText())) return getMenu(
-				(JMenu) item, rest, createIfNecessary);
+			if (item instanceof JMenu && menuLabel.equals(item.getText())) {
+				return getMenu((JMenu) item, rest, createIfNecessary);
+			}
 		}
 		if (!createIfNecessary) return null;
 		final JMenu subMenu = new JMenu(menuLabel);
