@@ -742,7 +742,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * @return The currently selected tab. Never null.
 	 */
 	public TextEditorTab getTab() {
-		final int index = tabbed.getSelectedIndex();
+		int index = tabbed.getSelectedIndex();
 		if (index < 0) {
 			// should not happen, but safety first.
 			if (tabbed.getTabCount() == 0) {
@@ -750,7 +750,10 @@ public class TextEditor extends JFrame implements ActionListener,
 				createNewDocument();
 			}
 
+			// Ensure the new document is returned - otherwise we would pass
+			// the negative index to the getComponentAt call below.
 			tabbed.setSelectedIndex(0);
+			index = 0;
 		}
 		return (TextEditorTab) tabbed.getComponentAt(index);
 	}
