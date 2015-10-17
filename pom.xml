@@ -37,10 +37,6 @@
 		</repository>
 	</repositories>
 	
-	<properties>
-		<fifesoft.version>2.5.7</fifesoft.version>
-	</properties>
-
 	<dependencies>
 		<!-- ImageJ dependencies -->
 		<dependency>
@@ -88,17 +84,14 @@
 		<dependency>
 			<groupId>com.fifesoft</groupId>
 			<artifactId>rsyntaxtextarea</artifactId>
-			<version>${fifesoft.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fifesoft</groupId>
 			<artifactId>autocomplete</artifactId>
-			<version>${fifesoft.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fifesoft</groupId>
 			<artifactId>languagesupport</artifactId>
-			<version>${fifesoft.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.miglayout</groupId>
