@@ -67,6 +67,7 @@ import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.RecordableTextAction;
 import org.scijava.Context;
+import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.prefs.PrefService;
 import org.scijava.script.ScriptHeaderService;
@@ -105,6 +106,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private ScriptHeaderService scriptHeaderService;
 	@Parameter
 	private PrefService prefService;
+	@Parameter
+	private LogService log;
 
 	/**
 	 * Constructor.
@@ -487,7 +490,14 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 		final String styleName =
 			"text/" + languageName.toLowerCase().replace(' ', '-');
-		setSyntaxEditingStyle(styleName);
+		try {
+			setSyntaxEditingStyle(styleName);
+		}
+		catch (final NullPointerException exc) {
+			// NB: Avoid possible NPEs in RSyntaxTextArea code.
+			// See: http://fiji.sc/bugzilla/show_bug.cgi?id=1181
+			log.debug(exc);
+		}
 
 		// Add header text
 		if (header != null) {
