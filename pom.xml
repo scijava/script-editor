@@ -15,6 +15,101 @@
 	<name>ImageJ UI: Swing</name>
 	<description>ImageJ UI for Java Swing.</description>
 
+	<developers>
+		<developer>
+			<id>ctrueden</id>
+			<name>Curtis Rueden</name>
+			<email>ctrueden@wisc.edu</email>
+			<url>http://loci.wisc.edu/people/curtis-rueden</url>
+			<organization>UW-Madison LOCI</organization>
+			<organizationUrl>http://loci.wisc.edu/</organizationUrl>
+			<roles>
+				<role>founder</role>
+				<role>lead</role>
+				<role>developer</role>
+				<role>debugger</role>
+				<role>reviewer</role>
+				<role>support</role>
+				<role>maintainer</role>
+			</roles>
+			<timezone>-6</timezone>
+		</developer>
+		<developer>
+			<id>hinerm</id>
+			<name>Mark Hiner</name>
+			<email>hiner@wisc.edu</email>
+			<url>http://loci.wisc.edu/people/mark-hiner</url>
+			<organization>UW-Madison LOCI</organization>
+			<organizationUrl>http://loci.wisc.edu/</organizationUrl>
+			<roles>
+				<role>lead</role>
+				<role>developer</role>
+				<role>debugger</role>
+				<role>reviewer</role>
+				<role>support</role>
+				<role>maintainer</role>
+			</roles>
+			<timezone>-6</timezone>
+		</developer>
+	</developers>
+	<contributors>
+		<contributor>
+			<name>Grant Harris</name>
+			<url>http://imagej.net/User:Harris</url>
+			<roles><role>founder</role></roles>
+			<properties><id>tnargsirrah</id></properties>
+		</contributor>
+		<contributor>
+			<name>Johannes Schindelin</name>
+			<url>http://imagej.net/User:Schindelin</url>
+			<properties><id>dscho</id></properties>
+		</contributor>
+		<contributor>
+			<name>Barry DeZonia</name>
+			<url>http://imagej.net/User:Bdezonia</url>
+			<properties><id>bdezonia</id></properties>
+		</contributor>
+		<contributor>
+			<name>Jonathan Hale</name>
+			<properties><id>Squareys</id></properties>
+		</contributor>
+		<contributor>
+			<name>Lee Kamentsky</name>
+			<url>http://imagej.net/User:Leek</url>
+			<properties><id>LeeKamentsky</id></properties>
+		</contributor>
+		<contributor>
+			<name>Jan Eglinger</name>
+			<url>http://imagej.net/User:Eglinger</url>
+			<properties><id>imagejan</id></properties>
+		</contributor>
+		<contributor>
+			<name>Aivar Grislis</name>
+			<url>http://loci.wisc.edu/people/aivar-grislis</url>
+			<properties><id>grislis</id></properties>
+		</contributor>
+		<contributor>
+			<name>Samuel Inverso</name>
+			<url>http://imagej.net/User:Sinverso</url>
+			<properties><id>sinverso</id></properties>
+		</contributor>
+		<contributor>
+			<name>Benjamin Nanes</name>
+			<url>http://imagej.net/User:Bnanes</url>
+			<properties><id>bnanes</id></properties>
+		</contributor>
+		<contributor>
+			<name>David Pinto</name>
+			<url>http://imagej.net/User:Carandraug</url>
+			<properties><id>carandraug</id></properties>
+		</contributor>
+		<contributor>
+			<name>Luke Stuyvenberg</name>
+			<url>http://imagej.net/User:Stuyvenberg</url>
+			<properties><id>stuyvenberg</id></properties>
+		</contributor>
+	</contributors>
+
 	<scm>
 		<connection>scm:git:git://github.com/imagej/imagej-ui-swing</connection>
 		<developerConnection>scm:git:git@github.com:imagej/imagej-ui-swing</developerConnection>
