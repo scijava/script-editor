@@ -55,7 +55,7 @@ import javax.swing.ListSelectionModel;
  */
 public class BookmarkDialog extends JDialog implements ActionListener {
 
-	JList list;
+	JList<Bookmark> list;
 	JButton okay, cancel;
 
 	public BookmarkDialog(final Frame owner, final Vector<Bookmark> bookmarks) {
@@ -64,7 +64,7 @@ public class BookmarkDialog extends JDialog implements ActionListener {
 		getContentPane().setLayout(
 			new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 
-		list = new JList(bookmarks);
+		list = new JList<>(bookmarks);
 		list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		list.addMouseListener(new MouseAdapter() {
 
@@ -108,7 +108,7 @@ public class BookmarkDialog extends JDialog implements ActionListener {
 	}
 
 	public boolean jumpToSelectedBookmark() {
-		final Bookmark bookmark = (Bookmark) list.getSelectedValue();
+		final Bookmark bookmark = list.getSelectedValue();
 		if (bookmark == null) return false;
 		bookmark.setCaret();
 		return true;
