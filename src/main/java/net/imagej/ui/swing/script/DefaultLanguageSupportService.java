@@ -87,7 +87,7 @@ public class DefaultLanguageSupportService extends
 	private synchronized void initLanguageSupportPlugins() {
 		if (languageSupports != null) return;
 		final HashMap<String, LanguageSupport> map =
-			new HashMap<String, LanguageSupport>();
+			new HashMap<>();
 
 		for (final LanguageSupportPlugin instance : getInstances()) {
 			map.put(instance.getLanguageName(), instance);

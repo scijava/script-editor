@@ -209,7 +209,7 @@ public class TokenFunctions implements Iterable<Token> {
 	public final char[] importChars = { 'i', 'm', 'p', 'o', 'r', 't' };
 
 	public List<Import> getImports() {
-		final List<Import> result = new ArrayList<Import>();
+		final List<Import> result = new ArrayList<>();
 
 		final TokenIterator iter = new TokenIterator();
 		while (iter.hasNext()) {
@@ -345,7 +345,7 @@ public class TokenFunctions implements Iterable<Token> {
 	}
 
 	public Set<String> getAllUsedIdentifiers() {
-		final Set<String> result = new HashSet<String>();
+		final Set<String> result = new HashSet<>();
 		boolean classSeen = false;
 		String className = null;
 		for (final Token token : this)

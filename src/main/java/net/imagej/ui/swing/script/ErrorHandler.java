@@ -50,7 +50,7 @@ import org.scijava.script.ScriptLanguage;
  */
 public class ErrorHandler {
 
-	protected List<Error> list = new ArrayList<Error>();
+	protected List<Error> list = new ArrayList<>();
 	protected int current = -1;
 	protected JTextArea textArea;
 	protected int currentOffset;

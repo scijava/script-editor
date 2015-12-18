@@ -152,7 +152,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	ChangeListener, CloseConfirmable, DocumentListener
 {
 
-	private static final Set<String> TEMPLATE_PATHS = new HashSet<String>();
+	private static final Set<String> TEMPLATE_PATHS = new HashSet<>();
 	public static final String AUTO_IMPORT_PREFS = "script.editor.AutoImport";
 	public static final String WINDOW_HEIGHT = "script.editor.height";
 	public static final String WINDOW_WIDTH = "script.editor.width";
@@ -425,15 +425,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		edit.add(whiteSpaceMenu);
 
 		languageMenuItems =
-			new LinkedHashMap<ScriptLanguage, JRadioButtonMenuItem>();
-		final Set<Integer> usedShortcuts = new HashSet<Integer>();
+			new LinkedHashMap<>();
+		final Set<Integer> usedShortcuts = new HashSet<>();
 		final JMenu languages = new JMenu("Language");
 		languages.setMnemonic(KeyEvent.VK_L);
 		final ButtonGroup group = new ButtonGroup();
 
 		// get list of languages, and sort them by name
 		final ArrayList<ScriptLanguage> list =
-			new ArrayList<ScriptLanguage>(scriptService.getLanguages());
+			new ArrayList<>(scriptService.getLanguages());
 		Collections.sort(list, new Comparator<ScriptLanguage>() {
 
 			@Override
@@ -446,7 +446,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		list.add(null);
 
 		final Map<String, ScriptLanguage> languageMap =
-			new HashMap<String, ScriptLanguage>();
+			new HashMap<>();
 		for (final ScriptLanguage language : list) {
 			final String name =
 				language == null ? "None" : language.getLanguageName();
@@ -563,7 +563,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		previousTab.setMnemonic(KeyEvent.VK_P);
 		tabsMenu.addSeparator();
 		tabsMenuTabsStart = tabsMenu.getItemCount();
-		tabsMenuItems = new HashSet<JMenuItem>();
+		tabsMenuItems = new HashSet<>();
 		mbar.add(tabsMenu);
 
 		// Add the editor and output area
@@ -802,7 +802,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	protected List<AcceleratorTriplet> defaultAccelerators =
-		new ArrayList<AcceleratorTriplet>();
+		new ArrayList<>();
 
 	public void addAccelerator(final JMenuItem component, final int key,
 		final int modifiers)
@@ -879,7 +879,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	 */
 	private void addTemplates(final JMenu templatesMenu) {
 		for (final String templatePath : TEMPLATE_PATHS) {
-			for (final Map.Entry<String, URL> entry : new TreeMap<String, URL>(
+			for (final Map.Entry<String, URL> entry : new TreeMap<>(
 				FileFunctions.findResources(null, templatePath)).entrySet())
 			{
 				final String path = entry.getKey().replace('_', ' ');
@@ -1244,7 +1244,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public void listBookmarks() {
-		final Vector<Bookmark> bookmarks = new Vector<Bookmark>();
+		final Vector<Bookmark> bookmarks = new Vector<>();
 
 		for (int i = 0; i < tabbed.getTabCount(); i++) {
 			final TextEditorTab tab = (TextEditorTab) tabbed.getComponentAt(i);
@@ -1701,7 +1701,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 	}
 
-	private final ArrayList<Executer> executingTasks = new ArrayList<Executer>();
+	private final ArrayList<Executer> executingTasks = new ArrayList<>();
 
 	/**
 	 * Generic Thread that keeps a starting time stamp, sets the priority to
@@ -1784,7 +1784,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		/** Fetch a list of all threads from all thread subgroups, recursively. */
 		List<Thread> getAllThreads() {
-			final ArrayList<Thread> threads = new ArrayList<Thread>();
+			final ArrayList<Thread> threads = new ArrayList<>();
 			// From all subgroups:
 			final ThreadGroup[] tgs = new ThreadGroup[activeGroupCount() * 2 + 100];
 			this.enumerate(tgs, true);

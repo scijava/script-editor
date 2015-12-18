@@ -58,7 +58,7 @@ public class RecentFilesMenuItem extends JMenu {
 	/** Constant for maximum length of a filepath shown in recent files menu */
 	protected final int maxLength = 35;
 
-	protected final LinkedList<String> recentFiles = new LinkedList<String>();
+	protected final LinkedList<String> recentFiles = new LinkedList<>();
 
 	protected final static String RECENT_FILES_PREFS_PREFIX =
 		"script.editor.recent";
@@ -80,7 +80,7 @@ public class RecentFilesMenuItem extends JMenu {
 		this.prefService = prefService;
 
 		// get up to 10 (maxCount) most recentently opened files
-		final Stack<String> prefs = new Stack<String>();
+		final Stack<String> prefs = new Stack<>();
 		for (int i = 1; i <= maxCount; i++) {
 			final String item =
 				prefService.get(getClass(), RECENT_FILES_PREFS_PREFIX + i, null);

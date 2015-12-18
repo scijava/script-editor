@@ -61,7 +61,7 @@ public class KillScript extends DynamicCommand {
 	@Override
 	public void run() {
 		if (killAll) {
-			final List<Executer> scripts = new ArrayList<Executer>();
+			final List<Executer> scripts = new ArrayList<>();
 			scripts.addAll(editor.getExecutingTasks());
 			for (final Executer job : scripts) {
 				editor.kill(job);

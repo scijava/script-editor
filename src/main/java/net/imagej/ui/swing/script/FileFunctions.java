@@ -92,7 +92,7 @@ public class FileFunctions {
 			baseName.substring(0, baseName.length() - 4);
 		final File baseDirectory = new File(workspace, baseName);
 
-		final List<String> result = new ArrayList<String>();
+		final List<String> result = new ArrayList<>();
 		final JarFile jar = new JarFile(path);
 		for (final JarEntry entry : Collections.list(jar.entries())) {
 			final String name = entry.getName();
@@ -176,7 +176,7 @@ public class FileFunctions {
 			if (JOptionPane.showConfirmDialog(parent, "The class " + className +
 				" was not found " + "in the CLASSPATH. Do you want me to search " +
 				"for the source?", "Question", JOptionPane.YES_OPTION) != JOptionPane.YES_OPTION) return null;
-			class2source = new HashMap<String, List<String>>();
+			class2source = new HashMap<>();
 			findJavaPaths(workspace, "");
 		}
 		final int dot = className.lastIndexOf('.');
@@ -189,7 +189,7 @@ public class FileFunctions {
 		}
 		if (dot >= 0) {
 			final String suffix = "/" + className.replace('.', '/') + ".java";
-			paths = new ArrayList<String>(paths);
+			paths = new ArrayList<>(paths);
 			final Iterator<String> iter = paths.iterator();
 			while (iter.hasNext())
 				if (!iter.next().endsWith(suffix)) iter.remove();
@@ -217,7 +217,7 @@ public class FileFunctions {
 				final String baseName = files[i].substring(0, files[i].length() - 5);
 				List<String> list = class2source.get(baseName);
 				if (list == null) {
-					list = new ArrayList<String>();
+					list = new ArrayList<>();
 					class2source.put(baseName, list);
 				}
 				list.add(prefix + "/" + files[i]);
@@ -266,7 +266,7 @@ public class FileFunctions {
 	 * prefix the url passed to the function.
 	 */
 	public List<String> getResourceList(String url) {
-		final List<String> result = new ArrayList<String>();
+		final List<String> result = new ArrayList<>();
 
 		if (url.startsWith("jar:")) {
 			final int bang = url.indexOf("!/");
@@ -612,7 +612,7 @@ public class FileFunctions {
 	{
 		// scan URL resource paths first
 		final ClassLoader loader = Thread.currentThread().getContextClassLoader();
-		final ArrayList<URL> urls = new ArrayList<URL>();
+		final ArrayList<URL> urls = new ArrayList<>();
 		try {
 			urls.addAll(Collections.list(loader.getResources(pathPrefix + "/")));
 		}
@@ -650,7 +650,7 @@ public class FileFunctions {
 	public static Map<String, URL> findResources(final String regex,
 		final Iterable<URL> urls)
 	{
-		final HashMap<String, URL> result = new HashMap<String, URL>();
+		final HashMap<String, URL> result = new HashMap<>();
 		final Pattern pattern = regex == null ? null : Pattern.compile(regex);
 		for (final URL url : urls) {
 			getResources(pattern, result, url);

@@ -68,7 +68,7 @@ public class InterpreterWindow extends JFrame {
 	@Parameter
 	private LogService log;
 
-	private final List<InterpreterPane> tabs = new ArrayList<InterpreterPane>();
+	private final List<InterpreterPane> tabs = new ArrayList<>();
 	private final JTabbedPane tabbedPane;
 
 	/** Constructs the scripting interpreter window. */
@@ -116,7 +116,7 @@ public class InterpreterWindow extends JFrame {
 	/** Gets the list of available scripting languages, sorted by name. */
 	private List<ScriptLanguage> languages() {
 		final List<ScriptLanguage> languages =
-			new ArrayList<ScriptLanguage>(scriptService.getLanguages());
+			new ArrayList<>(scriptService.getLanguages());
 
 		// skip compiled languages (makes no sense to interpret them)
 		for (final Iterator<ScriptLanguage> iter = languages.iterator(); iter

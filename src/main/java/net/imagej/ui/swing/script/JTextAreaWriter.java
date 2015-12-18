@@ -55,7 +55,7 @@ public class JTextAreaWriter extends Writer {
 	protected final LogService log;
 
 	ScheduledExecutorService updater = Executors.newScheduledThreadPool(1);
-	Vector<String> queue = new Vector<String>();
+	Vector<String> queue = new Vector<>();
 
 	/**
 	 * Creates a new output stream that prints every 400 ms to the textArea. When
@@ -102,7 +102,7 @@ public class JTextAreaWriter extends Writer {
 		ArrayList<String> strings;
 		synchronized (queue) {
 			if (0 == queue.size()) return;
-			strings = new ArrayList<String>();
+			strings = new ArrayList<>();
 			strings.addAll(queue);
 			queue.clear();
 		}

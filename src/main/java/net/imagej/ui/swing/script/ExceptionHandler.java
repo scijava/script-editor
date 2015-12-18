@@ -54,7 +54,7 @@ public class ExceptionHandler {
 	// prevent instantiation from somewhere else
 	private ExceptionHandler(final LogService logService) {
 		this.log = logService;
-		threadMap = new WeakHashMap<ThreadGroup, TextEditor>();
+		threadMap = new WeakHashMap<>();
 	}
 
 	public static ExceptionHandler getInstance(final LogService logService) {
