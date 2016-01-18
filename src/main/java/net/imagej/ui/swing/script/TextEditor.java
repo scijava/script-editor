@@ -885,22 +885,23 @@ public class TextEditor extends JFrame implements ActionListener,
 				final String path = entry.getKey().replace('_', ' ');
 				final String ext = FileUtils.getExtension(path);
 
-				final JMenu menu = getMenu(templatesMenu, path, true);
-
+				// create a human-readable label
 				final int labelIndex = path.lastIndexOf('/') + 1;
 				final String label = ext.isEmpty() ? path.substring(labelIndex) :
 					path.substring(labelIndex, path.length() - ext.length() - 1);
 
-				final JMenuItem item = new JMenuItem(label);
-				menu.add(item);
-				final URL url = entry.getValue();
-				item.addActionListener(new ActionListener() {
-
+				final ActionListener menuListener = new ActionListener() {
 					@Override
 					public void actionPerformed(final ActionEvent e) {
-						loadTemplate(url);
+						loadTemplate(entry.getValue());
 					}
-				});
+				};
+
+				// add script to the Templates menu structure
+				final JMenu menu = getMenu(templatesMenu, path, true);
+				final JMenuItem item = new JMenuItem(label);
+				menu.add(item);
+				item.addActionListener(menuListener);
 			}
 		}
 	}
