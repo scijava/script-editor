@@ -1290,8 +1290,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (file == null) return false;
 		// heuristic: read the first up to 8000 bytes, and say that it is binary if
 		// it contains a NUL
-		try {
-			final FileInputStream in = new FileInputStream(file);
+		try (final FileInputStream in = new FileInputStream(file)) {
 			int left = 8000;
 			final byte[] buffer = new byte[left];
 			while (left > 0) {
@@ -1304,7 +1303,6 @@ public class TextEditor extends JFrame implements ActionListener,
 					}
 				left -= count;
 			}
-			in.close();
 			return false;
 		}
 		catch (final IOException e) {
@@ -1539,11 +1537,11 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	static byte[] readFile(final String fileName) throws IOException {
 		final File file = new File(fileName);
-		final InputStream in = new FileInputStream(file);
-		final byte[] buffer = new byte[(int) file.length()];
-		in.read(buffer);
-		in.close();
-		return buffer;
+		try (final InputStream in = new FileInputStream(file)) {
+			final byte[] buffer = new byte[(int) file.length()];
+			in.read(buffer);
+			return buffer;
+		}
 	}
 
 	static void deleteRecursively(final File directory) {
@@ -1966,16 +1964,10 @@ public class TextEditor extends JFrame implements ActionListener,
 
 				@Override
 				public void run() {
-					final PrintWriter pw = new PrintWriter(po);
-					pw.write(text);
-					pw.flush(); // will lock and wait in some cases
-					try {
-						po.close();
+					try (final PrintWriter pw = new PrintWriter(po)) {
+						pw.write(text);
+						pw.flush(); // will lock and wait in some cases
 					}
-					catch (final Throwable tt) {
-						tt.printStackTrace();
-					}
-					pw.close();
 				}
 			}.start();
 		}
@@ -2001,28 +1993,15 @@ public class TextEditor extends JFrame implements ActionListener,
 
 			@Override
 			public void execute() {
-				Reader reader = null;
-				try {
-					reader =
-						evalScript(getEditorPane().getFile().getPath(),
-							new FileReader(file), output, errors);
-
+				try (final Reader reader = evalScript(getEditorPane().getFile()
+					.getPath(), new FileReader(file), output, errors))
+				{
 					output.flush();
 					errors.flush();
 					markCompileEnd();
 				}
 				catch (final Throwable e) {
 					handleException(e);
-				}
-				finally {
-					if (reader != null) {
-						try {
-							reader.close();
-						}
-						catch (final IOException exc) {
-							handleException(exc);
-						}
-					}
 				}
 			}
 		};
@@ -2290,15 +2269,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		handleException(final Throwable e, final JTextArea textArea)
 	{
 		final CharArrayWriter writer = new CharArrayWriter();
-		final PrintWriter out = new PrintWriter(writer);
-		e.printStackTrace(out);
-		for (Throwable cause = e.getCause(); cause != null; cause =
-			cause.getCause())
-		{
-			out.write("Caused by: ");
-			cause.printStackTrace(out);
+		try (final PrintWriter out = new PrintWriter(writer)) {
+			e.printStackTrace(out);
+			for (Throwable cause = e.getCause(); cause != null; cause =
+					cause.getCause())
+			{
+				out.write("Caused by: ");
+				cause.printStackTrace(out);
+			}
 		}
-		out.close();
 		textArea.append(writer.toString());
 	}
 
