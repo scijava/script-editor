@@ -882,25 +882,42 @@ public class TextEditor extends JFrame implements ActionListener,
 			for (final Map.Entry<String, URL> entry : new TreeMap<>(
 				FileFunctions.findResources(null, templatePath)).entrySet())
 			{
-				final String path = entry.getKey().replace('_', ' ');
-				final String ext = FileUtils.getExtension(path);
+				final String ext = FileUtils.getExtension(entry.getKey());
 
-				final JMenu menu = getMenu(templatesMenu, path, true);
+				// try to determine the scripting language
+				final ScriptLanguage lang = ext.isEmpty() ? null :
+					scriptService.getLanguageByExtension(ext);
+				final String langName = lang == null ? null : lang.getLanguageName();
+				final String langSuffix = lang == null ? null : " (" + langName + ")";
 
+				final String path = adjustPath(entry.getKey(), langName);
+
+				// create a human-readable label
 				final int labelIndex = path.lastIndexOf('/') + 1;
 				final String label = ext.isEmpty() ? path.substring(labelIndex) :
 					path.substring(labelIndex, path.length() - ext.length() - 1);
 
-				final JMenuItem item = new JMenuItem(label);
-				menu.add(item);
-				final URL url = entry.getValue();
-				item.addActionListener(new ActionListener() {
-
+				final ActionListener menuListener = new ActionListener() {
 					@Override
 					public void actionPerformed(final ActionEvent e) {
-						loadTemplate(url);
+						loadTemplate(entry.getValue());
 					}
-				});
+				};
+
+				// add script to the secondary language-sorted menu structure
+				if (langName != null) {
+					final String langPath = "[by language]/" + langName + "/" + path;
+					final JMenu langMenu = getMenu(templatesMenu, langPath, true);
+					final JMenuItem langItem = new JMenuItem(label);
+					langMenu.add(langItem);
+					langItem.addActionListener(menuListener);
+				}
+
+				// add script to the primary Templates menu structure
+				final JMenu menu = getMenu(templatesMenu, path, true);
+				final JMenuItem item = new JMenuItem(label + langSuffix);
+				menu.add(item);
+				item.addActionListener(menuListener);
 			}
 		}
 	}
@@ -1290,8 +1307,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (file == null) return false;
 		// heuristic: read the first up to 8000 bytes, and say that it is binary if
 		// it contains a NUL
-		try {
-			final FileInputStream in = new FileInputStream(file);
+		try (final FileInputStream in = new FileInputStream(file)) {
 			int left = 8000;
 			final byte[] buffer = new byte[left];
 			while (left > 0) {
@@ -1304,7 +1320,6 @@ public class TextEditor extends JFrame implements ActionListener,
 					}
 				left -= count;
 			}
-			in.close();
 			return false;
 		}
 		catch (final IOException e) {
@@ -1539,11 +1554,11 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	static byte[] readFile(final String fileName) throws IOException {
 		final File file = new File(fileName);
-		final InputStream in = new FileInputStream(file);
-		final byte[] buffer = new byte[(int) file.length()];
-		in.read(buffer);
-		in.close();
-		return buffer;
+		try (final InputStream in = new FileInputStream(file)) {
+			final byte[] buffer = new byte[(int) file.length()];
+			in.read(buffer);
+			return buffer;
+		}
 	}
 
 	static void deleteRecursively(final File directory) {
@@ -1966,16 +1981,10 @@ public class TextEditor extends JFrame implements ActionListener,
 
 				@Override
 				public void run() {
-					final PrintWriter pw = new PrintWriter(po);
-					pw.write(text);
-					pw.flush(); // will lock and wait in some cases
-					try {
-						po.close();
+					try (final PrintWriter pw = new PrintWriter(po)) {
+						pw.write(text);
+						pw.flush(); // will lock and wait in some cases
 					}
-					catch (final Throwable tt) {
-						tt.printStackTrace();
-					}
-					pw.close();
 				}
 			}.start();
 		}
@@ -2001,28 +2010,15 @@ public class TextEditor extends JFrame implements ActionListener,
 
 			@Override
 			public void execute() {
-				Reader reader = null;
-				try {
-					reader =
-						evalScript(getEditorPane().getFile().getPath(),
-							new FileReader(file), output, errors);
-
+				try (final Reader reader = evalScript(getEditorPane().getFile()
+					.getPath(), new FileReader(file), output, errors))
+				{
 					output.flush();
 					errors.flush();
 					markCompileEnd();
 				}
 				catch (final Throwable e) {
 					handleException(e);
-				}
-				finally {
-					if (reader != null) {
-						try {
-							reader.close();
-						}
-						catch (final IOException exc) {
-							handleException(exc);
-						}
-					}
 				}
 			}
 		};
@@ -2290,15 +2286,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		handleException(final Throwable e, final JTextArea textArea)
 	{
 		final CharArrayWriter writer = new CharArrayWriter();
-		final PrintWriter out = new PrintWriter(writer);
-		e.printStackTrace(out);
-		for (Throwable cause = e.getCause(); cause != null; cause =
-			cause.getCause())
-		{
-			out.write("Caused by: ");
-			cause.printStackTrace(out);
+		try (final PrintWriter out = new PrintWriter(writer)) {
+			e.printStackTrace(out);
+			for (Throwable cause = e.getCause(); cause != null; cause =
+					cause.getCause())
+			{
+				out.write("Caused by: ");
+				cause.printStackTrace(out);
+			}
 		}
-		out.close();
 		textArea.append(writer.toString());
 	}
 
@@ -2356,6 +2352,39 @@ public class TextEditor extends JFrame implements ActionListener,
 			log.error(e);
 		}
 		return reader;
+	}
+
+	private String adjustPath(final String path, final String langName) {
+		String result = path.replace('_', ' ');
+
+		// HACK: For templates nested beneath their language name,
+		// place them in a folder called "Simple" instead. This avoids
+		// menu redundancy when existing script templates are populated
+		// under the new Templates menu structure.
+		//
+		// For example, a script at script_templates/BeanShell/Greeting.bsh
+		// was previously placed in:
+		//
+		//    Templates > BeanShell > Greeting
+		//
+		// but under the current approach will be placed at:
+		//
+		//    Templates > [by language] > BeanShell > BeanShell > Greeting
+		//    Templates > BeanShell > Greeting (BeanShell)
+		//
+		// both of which are redundant and annoying.
+		//
+		// This hack instead places that script at:
+		//
+		//    Templates > Simple > Greeting (BeanShell)
+		//    Templates > [by language] > BeanShell > Simple > Greeting
+		if (langName != null &&
+			path.toLowerCase().startsWith(langName.toLowerCase() + "/"))
+		{
+			result = "Simple" + result.substring(langName.length());
+		}
+
+		return result;
 	}
 
 	@Override
