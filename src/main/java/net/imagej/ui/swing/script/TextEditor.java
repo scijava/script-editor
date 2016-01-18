@@ -882,14 +882,15 @@ public class TextEditor extends JFrame implements ActionListener,
 			for (final Map.Entry<String, URL> entry : new TreeMap<>(
 				FileFunctions.findResources(null, templatePath)).entrySet())
 			{
-				final String path = entry.getKey().replace('_', ' ');
-				final String ext = FileUtils.getExtension(path);
+				final String ext = FileUtils.getExtension(entry.getKey());
 
 				// try to determine the scripting language
 				final ScriptLanguage lang = ext.isEmpty() ? null :
 					scriptService.getLanguageByExtension(ext);
 				final String langName = lang == null ? null : lang.getLanguageName();
 				final String langSuffix = lang == null ? null : " (" + langName + ")";
+
+				final String path = adjustPath(entry.getKey());
 
 				// create a human-readable label
 				final int labelIndex = path.lastIndexOf('/') + 1;
@@ -2351,6 +2352,10 @@ public class TextEditor extends JFrame implements ActionListener,
 			log.error(e);
 		}
 		return reader;
+	}
+
+	private String adjustPath(final String path) {
+		return path.replace('_', ' ');
 	}
 
 	@Override
