@@ -890,7 +890,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				final String langName = lang == null ? null : lang.getLanguageName();
 				final String langSuffix = lang == null ? null : " (" + langName + ")";
 
-				final String path = adjustPath(entry.getKey());
+				final String path = adjustPath(entry.getKey(), langName);
 
 				// create a human-readable label
 				final int labelIndex = path.lastIndexOf('/') + 1;
@@ -2354,8 +2354,37 @@ public class TextEditor extends JFrame implements ActionListener,
 		return reader;
 	}
 
-	private String adjustPath(final String path) {
-		return path.replace('_', ' ');
+	private String adjustPath(final String path, final String langName) {
+		String result = path.replace('_', ' ');
+
+		// HACK: For templates nested beneath their language name,
+		// place them in a folder called "Simple" instead. This avoids
+		// menu redundancy when existing script templates are populated
+		// under the new Templates menu structure.
+		//
+		// For example, a script at script_templates/BeanShell/Greeting.bsh
+		// was previously placed in:
+		//
+		//    Templates > BeanShell > Greeting
+		//
+		// but under the current approach will be placed at:
+		//
+		//    Templates > [by language] > BeanShell > BeanShell > Greeting
+		//    Templates > BeanShell > Greeting (BeanShell)
+		//
+		// both of which are redundant and annoying.
+		//
+		// This hack instead places that script at:
+		//
+		//    Templates > Simple > Greeting (BeanShell)
+		//    Templates > [by language] > BeanShell > Simple > Greeting
+		if (langName != null &&
+			path.toLowerCase().startsWith(langName.toLowerCase() + "/"))
+		{
+			result = "Simple" + result.substring(langName.length());
+		}
+
+		return result;
 	}
 
 	@Override
