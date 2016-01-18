@@ -885,6 +885,12 @@ public class TextEditor extends JFrame implements ActionListener,
 				final String path = entry.getKey().replace('_', ' ');
 				final String ext = FileUtils.getExtension(path);
 
+				// try to determine the scripting language
+				final ScriptLanguage lang = ext.isEmpty() ? null :
+					scriptService.getLanguageByExtension(ext);
+				final String langName = lang == null ? null : lang.getLanguageName();
+				final String langSuffix = lang == null ? null : " (" + langName + ")";
+
 				// create a human-readable label
 				final int labelIndex = path.lastIndexOf('/') + 1;
 				final String label = ext.isEmpty() ? path.substring(labelIndex) :
@@ -897,9 +903,18 @@ public class TextEditor extends JFrame implements ActionListener,
 					}
 				};
 
-				// add script to the Templates menu structure
+				// add script to the secondary language-sorted menu structure
+				if (langName != null) {
+					final String langPath = "[by language]/" + langName + "/" + path;
+					final JMenu langMenu = getMenu(templatesMenu, langPath, true);
+					final JMenuItem langItem = new JMenuItem(label);
+					langMenu.add(langItem);
+					langItem.addActionListener(menuListener);
+				}
+
+				// add script to the primary Templates menu structure
 				final JMenu menu = getMenu(templatesMenu, path, true);
-				final JMenuItem item = new JMenuItem(label);
+				final JMenuItem item = new JMenuItem(label + langSuffix);
 				menu.add(item);
 				item.addActionListener(menuListener);
 			}
