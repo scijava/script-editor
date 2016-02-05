@@ -39,29 +39,30 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.PrintStream;
 
-import javax.script.ScriptException;
 import javax.swing.JTextArea;
 import javax.swing.text.BadLocationException;
 
-import org.scijava.script.ScriptInterpreter;
+import org.scijava.script.ScriptREPL;
+import org.scijava.widget.UIComponent;
 
 /**
- * The prompt for the script interpreter.
+ * The prompt for the script REPL.
  *
  * @author Johannes Schindelin
+ * @author Curtis Rueden
  */
-public class PromptPane extends JTextArea {
+public abstract class PromptPane implements UIComponent<JTextArea> {
 
-	private final ScriptInterpreter interpreter;
+	private final ScriptREPL repl;
+	private final TextArea textArea;
 	private final OutputPane output;
 
-	public PromptPane(final ScriptInterpreter interpreter, final OutputPane output)
-	{
-		super(3, 2);
-		setLineWrap(true);
-		this.interpreter = interpreter;
+	public PromptPane(final ScriptREPL repl, final OutputPane output) {
+		textArea = new TextArea(3, 2);
+		textArea.setLineWrap(true);
+		this.repl = repl;
 		this.output = output;
-		addKeyListener(new KeyAdapter() {
+		textArea.addKeyListener(new KeyAdapter() {
 
 			@Override
 			public void keyPressed(final KeyEvent event) {
@@ -70,11 +71,12 @@ public class PromptPane extends JTextArea {
 					case VK_ENTER:
 						if (event.isShiftDown()) {
 							// multi-line input
-							insert("\n", getCaretPosition());
+							textArea.insert("\n", textArea.getCaretPosition());
 						}
 						else {
-							execute();
+							final boolean result = execute();
 							event.consume();
+							if (!result) quit();
 						}
 						break;
 					case VK_DOWN:
@@ -95,13 +97,33 @@ public class PromptPane extends JTextArea {
 		});
 	}
 
+	// -- PromptPane methods --
+
+	/** A callback method which is invoked when the REPL quits. */
+	public abstract void quit();
+
+	// -- UIComponent methods --
+
+	@Override
+	public JTextArea getComponent() {
+		return textArea;
+	}
+
+	@Override
+	public Class<JTextArea> getComponentType() {
+		return JTextArea.class;
+	}
+
+	// -- Helper methods --
+
 	private boolean isInRow(final int row) {
 		try {
-			final int rowHeight = getRowHeight();
-			final Rectangle rect = modelToView(getCaretPosition());
+			final int rowHeight = textArea.getRowHeight();
+			final Rectangle rect = textArea.modelToView(textArea.getCaretPosition());
 			int rowTop = row * rowHeight;
 			if (rowTop < 0) {
-				final Rectangle lastRect = modelToView(getDocument().getLength());
+				final Rectangle lastRect = textArea.modelToView(
+					textArea.getDocument().getLength());
 				rowTop += lastRect.y + lastRect.height;
 			}
 			return rect.y == rowTop;
@@ -113,25 +135,40 @@ public class PromptPane extends JTextArea {
 	}
 
 	private void up() {
-		setText(interpreter.walkHistory(getText(), false));
+		walk(false);
 	}
 
 	private void down() {
-		setText(interpreter.walkHistory(getText(), true));
+		walk(true);
 	}
 
-	private synchronized void execute() {
-		final String text = getText();
+	private void walk(boolean forward) {
+		textArea.setText(repl.getInterpreter().walkHistory(textArea.getText(),
+			forward));
+	}
+
+	private synchronized boolean execute() {
+		final String text = textArea.getText();
 		output.append(">>> " + text + "\n");
-		try {
-			interpreter.eval(text);
-		}
-		catch (final ScriptException e) {
-			e.printStackTrace(new PrintStream(output.getOutputStream()));
-		}
-		finally {
-			setText("");
-		}
+		final boolean result = repl.evaluate(text);
+		textArea.setText("");
+		return result;
 	}
 
+	// -- Helper classes --
+
+	/**
+	 * Trivial extension of {@link JTextArea} to expose its {@code getRowHeight()}
+	 * method.
+	 */
+	public class TextArea extends JTextArea {
+		public TextArea(int rows, int columns) {
+			super(rows, columns);
+		}
+
+		@Override
+		public int getRowHeight() {
+			return super.getRowHeight();
+		}
+	}
 }

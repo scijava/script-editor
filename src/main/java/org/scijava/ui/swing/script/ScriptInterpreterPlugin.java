@@ -41,6 +41,7 @@ import org.scijava.plugin.Plugin;
  * A GUI for the script engines.
  *
  * @author Johannes Schindelin
+ * @author Curtis Rueden
  */
 @Plugin(type = Command.class, menuPath = "Plugins>Scripting>Script Interpreter")
 public class ScriptInterpreterPlugin implements Command {
