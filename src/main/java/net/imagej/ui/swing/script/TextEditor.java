@@ -2358,7 +2358,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		String result = path.replace('_', ' ');
 
 		// HACK: For templates nested beneath their language name,
-		// place them in a folder called "Simple" instead. This avoids
+		// place them in a folder called "Uncategorized" instead. This avoids
 		// menu redundancy when existing script templates are populated
 		// under the new Templates menu structure.
 		//
@@ -2376,12 +2376,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		//
 		// This hack instead places that script at:
 		//
-		//    Templates > Simple > Greeting (BeanShell)
-		//    Templates > [by language] > BeanShell > Simple > Greeting
+		//    Templates > Uncategorized > Greeting (BeanShell)
+		//    Templates > [by language] > BeanShell > Uncategorized > Greeting
 		if (langName != null &&
 			path.toLowerCase().startsWith(langName.toLowerCase() + "/"))
 		{
-			result = "Simple" + result.substring(langName.length());
+			result = "Uncategorized" + result.substring(langName.length());
 		}
 
 		return result;
