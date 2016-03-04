@@ -679,7 +679,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final EditorPane editorPane = getEditorPane();
 		if (editorPane.wasChangedOutside()) {
 			reload("The file " + editorPane.getFile().getName() +
-				"was changed outside of the editor");
+				" was changed outside of the editor");
 		}
 
 	}
