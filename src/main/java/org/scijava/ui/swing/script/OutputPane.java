@@ -2,7 +2,7 @@
  * #%L
  * SciJava UI components for Java Swing.
  * %%
- * Copyright (C) 2010 - 2015 Board of Regents of the University of
+ * Copyright (C) 2010 - 2016 Board of Regents of the University of
  * Wisconsin-Madison.
  * %%
  * Redistribution and use in source and binary forms, with or without
