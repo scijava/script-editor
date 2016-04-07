@@ -57,7 +57,9 @@ public abstract class PromptPane implements UIComponent<JTextArea> {
 	private final TextArea textArea;
 	private final OutputPane output;
 
-	public PromptPane(final ScriptREPL repl, final OutputPane output) {
+	public PromptPane(final ScriptREPL repl, final VarsPane vars,
+		final OutputPane output)
+	{
 		textArea = new TextArea(3, 2);
 		textArea.setLineWrap(true);
 		this.repl = repl;
@@ -77,6 +79,7 @@ public abstract class PromptPane implements UIComponent<JTextArea> {
 							final boolean result = execute();
 							event.consume();
 							if (!result) quit();
+							vars.update();
 						}
 						break;
 					case VK_DOWN:

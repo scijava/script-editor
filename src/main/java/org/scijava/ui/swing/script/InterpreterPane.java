@@ -44,6 +44,7 @@ import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
+import javax.swing.border.EmptyBorder;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -63,9 +64,11 @@ public class InterpreterPane implements UIComponent<JComponent> {
 
 	private final ScriptREPL repl;
 
-	private final JSplitPane splitPane;
+	private final JSplitPane mainPane;
+
 	private final OutputPane output;
 	private final PromptPane prompt;
+	private final VarsPane vars;
 
 	@Parameter(required = false)
 	private LogService log;
@@ -89,7 +92,10 @@ public class InterpreterPane implements UIComponent<JComponent> {
 		ctx.setErrorWriter(writer);
 		ctx.setWriter(writer);
 
-		prompt = new PromptPane(repl, output) {
+		vars = new VarsPane(context, repl);
+		vars.setBorder(new EmptyBorder(0, 0, 8, 0));
+
+		prompt = new PromptPane(repl, vars, output) {
 			@Override
 			public void quit() {
 				dispose();
@@ -135,9 +141,13 @@ public class InterpreterPane implements UIComponent<JComponent> {
 			bottomPane.add(autoImportButton, "w pref!, h pref!, wrap");
 		}
 
-		splitPane =
+		final JSplitPane outputAndPromptPane =
 			new JSplitPane(JSplitPane.VERTICAL_SPLIT, outputScroll, bottomPane);
-		splitPane.setResizeWeight(1);
+		outputAndPromptPane.setResizeWeight(1);
+
+		mainPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, vars,
+			outputAndPromptPane);
+		mainPane.setDividerLocation(300);
 	}
 
 	// -- InterpreterPane methods --
@@ -166,7 +176,7 @@ public class InterpreterPane implements UIComponent<JComponent> {
 
 	@Override
 	public JComponent getComponent() {
-		return splitPane;
+		return mainPane;
 	}
 
 	@Override
