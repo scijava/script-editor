@@ -72,7 +72,7 @@ public class InterpreterWindow extends JFrame {
 
 	/** Constructs the scripting interpreter window. */
 	public InterpreterWindow(final Context context) {
-		super("Scripting Interpreter");
+		super("Script Interpreter");
 		context.inject(this);
 
 		tabbedPane = new JTabbedPane();
