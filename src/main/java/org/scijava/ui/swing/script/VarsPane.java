@@ -76,7 +76,13 @@ public class VarsPane extends JPanel {
 			public void actionPerformed(final ActionEvent e) {
 				final ScriptLanguage lang = (ScriptLanguage) langBox.getSelectedItem();
 				if (lang == repl.getInterpreter().getLanguage()) return; // no change
-				repl.lang(lang.getLanguageName());
+				try {
+					repl.lang(lang.getLanguageName());
+				}
+				catch (final RuntimeException exc) {
+					// Something went wrong...
+					// TODO: Issue the exception to the log via the LogService.
+				}
 				update();
 			}
 		});
@@ -124,8 +130,14 @@ public class VarsPane extends JPanel {
 
 		public void update() {
 			varNames.clear();
-			varNames.addAll(repl.getInterpreter().getBindings().keySet());
-			Collections.sort(varNames);
+			try {
+				varNames.addAll(repl.getInterpreter().getBindings().keySet());
+				Collections.sort(varNames);
+			}
+			catch (final RuntimeException exc) {
+				// Something went wrong. Leave the variables list empty.
+				// TODO: Issue the exception to the log via the LogService.
+			}
 			fireTableDataChanged();
 		}
 
@@ -160,6 +172,7 @@ public class VarsPane extends JPanel {
 
 		@Override
 		public Object getValueAt(final int rowIndex, final int columnIndex) {
+			if (rowIndex >= varNames.size()) return null;
 			final String varName = varNames.get(rowIndex);
 			switch (columnIndex) {
 				case 0:
