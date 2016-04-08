@@ -34,6 +34,7 @@ import org.scijava.Context;
 import org.scijava.command.Command;
 import org.scijava.event.ContextDisposingEvent;
 import org.scijava.event.EventHandler;
+import org.scijava.plugin.Menu;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
@@ -43,7 +44,11 @@ import org.scijava.plugin.Plugin;
  * @author Johannes Schindelin
  * @author Curtis Rueden
  */
-@Plugin(type = Command.class, menuPath = "Plugins>Scripting>Script Interpreter")
+@Plugin(type = Command.class, menu = { //
+	@Menu(label = "Plugins"), //
+	@Menu(label = "Scripting"), //
+	@Menu(label = "Script Interpreter", accelerator = "shift open_bracket") //
+})
 public class ScriptInterpreterPlugin implements Command {
 
 	@Parameter
