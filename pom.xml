@@ -10,7 +10,7 @@
 	</parent>
 
 	<artifactId>scijava-ui-swing</artifactId>
-	<version>0.7.3-SNAPSHOT</version>
+	<version>0.8.1-SNAPSHOT</version>
 
 	<name>SciJava UI: Swing</name>
 	<description>SciJava user interface components for Java Swing.</description>
