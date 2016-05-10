@@ -882,7 +882,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			for (final Map.Entry<String, URL> entry : new TreeMap<>(
 				FileFunctions.findResources(null, templatePath)).entrySet())
 			{
-				final String ext = FileUtils.getExtension(entry.getKey());
+				final String key = entry.getKey();
+				final String ext = FileUtils.getExtension(key);
 
 				// try to determine the scripting language
 				final ScriptLanguage lang = ext.isEmpty() ? null :
@@ -890,7 +891,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				final String langName = lang == null ? null : lang.getLanguageName();
 				final String langSuffix = lang == null ? null : " (" + langName + ")";
 
-				final String path = adjustPath(entry.getKey(), langName);
+				final String path = adjustPath(key, langName);
 
 				// create a human-readable label
 				final int labelIndex = path.lastIndexOf('/') + 1;
