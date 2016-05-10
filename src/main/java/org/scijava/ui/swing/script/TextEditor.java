@@ -868,7 +868,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	/**
-	 * Initializes the template menu.
+	 * Initializes the Templates menu.
 	 * <p>
 	 * Other components can add templates simply by providing scripts in their
 	 * resources, identified by a path of the form
