@@ -878,9 +878,11 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * @param templatesMenu the top-level menu to populate
 	 */
 	private void addTemplates(final JMenu templatesMenu) {
+		final File baseDir = appService.getApp().getBaseDirectory();
+
 		for (final String templatePath : TEMPLATE_PATHS) {
 			for (final Map.Entry<String, URL> entry : new TreeMap<>(
-				FileFunctions.findResources(null, templatePath)).entrySet())
+				FileUtils.findResources(null, templatePath, baseDir)).entrySet())
 			{
 				final String key = entry.getKey();
 				final String ext = FileUtils.getExtension(key);
