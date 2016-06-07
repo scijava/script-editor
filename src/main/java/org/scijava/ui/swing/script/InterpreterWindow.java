@@ -37,6 +37,8 @@ import org.scijava.Context;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.prefs.PrefService;
+import org.scijava.script.ScriptInterpreter;
+import org.scijava.script.ScriptREPL;
 import org.scijava.script.ScriptService;
 
 /**
@@ -75,6 +77,20 @@ public class InterpreterWindow extends JFrame {
 		pack();
 
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+	}
+
+	/** Gets the window's associated {@link ScriptREPL}. */
+	public ScriptREPL getREPL() {
+		return pane.getREPL();
+	}
+
+	/**
+	 * Gets the associated REPL's active {@link ScriptInterpreter}.
+	 *
+	 * @see #getREPL()
+	 */
+	public ScriptInterpreter getInterpreter() {
+		return pane.getREPL().getInterpreter();
 	}
 
 	@Override
