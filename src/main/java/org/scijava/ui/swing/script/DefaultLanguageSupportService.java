@@ -56,9 +56,6 @@ public class DefaultLanguageSupportService extends
 
 	// -- LanguageSupportService methods --
 
-	/* (non-Javadoc)
-	 * @see net.imagej.ui.swing.script.LanguageSupportService#getLanguageSupport(org.scijava.script.ScriptLanguage)
-	 */
 	@Override
 	public LanguageSupport getLanguageSupport(final ScriptLanguage language) {
 		if (language == null) {
