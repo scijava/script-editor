@@ -580,15 +580,15 @@ public class FileFunctions {
 	}
 
 	/**
-	 * Finds {@link URL}s of resources known to ImageJ. Both JAR files and files
-	 * on disk are searched, according to the following mechanism:
+	 * Finds {@link URL}s of resources known to the system. Both JAR files and
+	 * files on disk are searched, according to the following mechanism:
 	 * <ol>
 	 * <li>Resources at the given {@code pathPrefix} are discovered using
 	 * {@link ClassLoader#getResources(String)} with the current thread's context
 	 * class loader. In particular, this invocation discovers resources in JAR
 	 * files beneath the given {@code pathPrefix}.</li>
-	 * <li>The directory named {@code pathPrefix} beneath the
-	 * {@link AppUtils#getBaseDirectory() ImageJ application base directory}.</li>
+	 * <li>The directory named {@code pathPrefix} beneath the application base
+	 * directory.</li>
 	 * </ol>
 	 * <p>
 	 * In both cases, resources are then recursively scanned using SciJava
@@ -636,7 +636,7 @@ public class FileFunctions {
 	}
 
 	/**
-	 * Finds {@link URL}s of resources known to ImageJ.
+	 * Finds {@link URL}s of resources known to the system.
 	 * <p>
 	 * Each of the given {@link URL}s is recursively scanned using SciJava
 	 * Common's {@link FileUtils#listContents(URL)}, and anything matching the

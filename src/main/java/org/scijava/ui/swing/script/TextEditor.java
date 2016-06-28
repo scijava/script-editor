@@ -133,7 +133,7 @@ import org.scijava.util.MiscUtils;
 import org.scijava.widget.FileWidget;
 
 /**
- * A versatile script editor for ImageJ.
+ * A versatile script editor for SciJava applications.
  * <p>
  * Based on the powerful SciJava scripting framework and the <a
  * href="http://fifesoft.com/rsyntaxtextarea/">RSyntaxTextArea</a> library, this
