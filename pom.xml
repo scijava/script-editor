@@ -3,26 +3,30 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>net.imagej</groupId>
-		<artifactId>pom-imagej</artifactId>
-		<version>14.5.0</version>
+		<groupId>org.scijava</groupId>
+		<artifactId>pom-scijava</artifactId>
+		<version>10.1.0</version>
 		<relativePath />
 	</parent>
 
 	<artifactId>imagej-ui-swing</artifactId>
 	<version>0.18.0-SNAPSHOT</version>
 
-	<name>ImageJ UI: Swing</name>
-	<description>ImageJ UI for Java Swing.</description>
+	<name>SciJava UI: Swing</name>
+	<description>SciJava user interface components for Java Swing.</description>
+	<inceptionYear>2010</inceptionYear>
+	<licenses>
+		<license>
+			<name>Simplified BSD License</name>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
 
 	<developers>
 		<developer>
 			<id>ctrueden</id>
 			<name>Curtis Rueden</name>
-			<email>ctrueden@wisc.edu</email>
-			<url>http://loci.wisc.edu/people/curtis-rueden</url>
-			<organization>UW-Madison LOCI</organization>
-			<organizationUrl>http://loci.wisc.edu/</organizationUrl>
+			<url>http://imagej.net/User:Rueden</url>
 			<roles>
 				<role>founder</role>
 				<role>lead</role>
@@ -32,32 +36,13 @@
 				<role>support</role>
 				<role>maintainer</role>
 			</roles>
-			<timezone>-6</timezone>
-		</developer>
-		<developer>
-			<id>hinerm</id>
-			<name>Mark Hiner</name>
-			<email>hiner@wisc.edu</email>
-			<url>http://loci.wisc.edu/people/mark-hiner</url>
-			<organization>UW-Madison LOCI</organization>
-			<organizationUrl>http://loci.wisc.edu/</organizationUrl>
-			<roles>
-				<role>lead</role>
-				<role>developer</role>
-				<role>debugger</role>
-				<role>reviewer</role>
-				<role>support</role>
-				<role>maintainer</role>
-			</roles>
-			<timezone>-6</timezone>
 		</developer>
 	</developers>
 	<contributors>
 		<contributor>
-			<name>Grant Harris</name>
-			<url>http://imagej.net/User:Harris</url>
-			<roles><role>founder</role></roles>
-			<properties><id>tnargsirrah</id></properties>
+			<name>Mark Hiner</name>
+			<url>http://imagej.net/User:Hinerm</url>
+			<properties><id>hinerm</id></properties>
 		</contributor>
 		<contributor>
 			<name>Johannes Schindelin</name>
@@ -65,69 +50,30 @@
 			<properties><id>dscho</id></properties>
 		</contributor>
 		<contributor>
-			<name>Barry DeZonia</name>
-			<url>http://imagej.net/User:Bdezonia</url>
-			<properties><id>bdezonia</id></properties>
+			<name>Ulrik Günther</name>
+			<properties><id>skalarproduktraum</id></properties>
 		</contributor>
 		<contributor>
-			<name>Jonathan Hale</name>
-			<properties><id>Squareys</id></properties>
-		</contributor>
-		<contributor>
-			<name>Lee Kamentsky</name>
-			<url>http://imagej.net/User:Leek</url>
-			<properties><id>LeeKamentsky</id></properties>
-		</contributor>
-		<contributor>
-			<name>Jan Eglinger</name>
-			<url>http://imagej.net/User:Eglinger</url>
-			<properties><id>imagejan</id></properties>
-		</contributor>
-		<contributor>
-			<name>Aivar Grislis</name>
-			<url>http://loci.wisc.edu/people/aivar-grislis</url>
-			<properties><id>grislis</id></properties>
-		</contributor>
-		<contributor>
-			<name>Samuel Inverso</name>
-			<url>http://imagej.net/User:Sinverso</url>
-			<properties><id>sinverso</id></properties>
-		</contributor>
-		<contributor>
-			<name>Benjamin Nanes</name>
-			<url>http://imagej.net/User:Bnanes</url>
-			<properties><id>bnanes</id></properties>
-		</contributor>
-		<contributor>
-			<name>David Pinto</name>
-			<url>http://imagej.net/User:Carandraug</url>
-			<properties><id>carandraug</id></properties>
-		</contributor>
-		<contributor>
-			<name>Luke Stuyvenberg</name>
-			<url>http://imagej.net/User:Stuyvenberg</url>
-			<properties><id>stuyvenberg</id></properties>
+			<name>Stephan Saalfeld</name>
+			<url>http://imagej.net/User:Saalfeld</url>
+			<properties><id>axtimwalde</id></properties>
 		</contributor>
 	</contributors>
 
 	<scm>
-		<connection>scm:git:git://github.com/imagej/imagej-ui-swing</connection>
-		<developerConnection>scm:git:git@github.com:imagej/imagej-ui-swing</developerConnection>
+		<connection>scm:git:git://github.com/scijava/scijava-ui-swing</connection>
+		<developerConnection>scm:git:git@github.com:scijava/scijava-ui-swing</developerConnection>
 		<tag>HEAD</tag>
-		<url>https://github.com/imagej/imagej-ui-swing</url>
+		<url>https://github.com/scijava/scijava-ui-swing</url>
 	</scm>
 	<issueManagement>
 		<system>GitHub Issues</system>
-		<url>https://github.com/imagej/imagej-ui-swing/issues</url>
+		<url>http://github.com/scijava/scijava-ui-swing/issues</url>
 	</issueManagement>
 	<ciManagement>
 		<system>Jenkins</system>
-		<url>http://jenkins.imagej.net/job/ImageJ-UI-Swing/</url>
+		<url>http://jenkins.imagej.net/job/SciJava-UI-Swing/</url>
 	</ciManagement>
-
-	<properties>
-		<scijava.jvm.version>1.8</scijava.jvm.version>
-	</properties>
 
 	<repositories>
 		<repository>
@@ -137,34 +83,6 @@
 	</repositories>
 
 	<dependencies>
-		<!-- ImageJ dependencies -->
-		<dependency>
-			<groupId>net.imagej</groupId>
-			<artifactId>imagej-common</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>net.imagej</groupId>
-			<artifactId>imagej-deprecated</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>net.imagej</groupId>
-			<artifactId>imagej-ops</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>net.imagej</groupId>
-			<artifactId>imagej-updater</artifactId>
-		</dependency>
-
-		<!-- ImgLib2 dependencies -->
-		<dependency>
-			<groupId>net.imglib2</groupId>
-			<artifactId>imglib2</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>net.imglib2</groupId>
-			<artifactId>imglib2-roi</artifactId>
-		</dependency>
-
 		<!-- SciJava dependencies -->
 		<dependency>
 			<groupId>org.scijava</groupId>
@@ -176,25 +94,14 @@
 		</dependency>
 		<dependency>
 			<groupId>org.scijava</groupId>
-			<artifactId>scijava-ui-swing</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.scijava</groupId>
-			<artifactId>scripting-java</artifactId>
+			<artifactId>swing-checkbox-tree</artifactId>
 		</dependency>
 
 		<!-- Third-party dependencies -->
 		<dependency>
-			<groupId>com.fifesoft</groupId>
-			<artifactId>rsyntaxtextarea</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.fifesoft</groupId>
-			<artifactId>autocomplete</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.fifesoft</groupId>
-			<artifactId>languagesupport</artifactId>
+			<groupId>com.github.sbridges.object-inspector</groupId>
+			<artifactId>object-inspector</artifactId>
+			<version>0.1</version>
 		</dependency>
 		<dependency>
 			<groupId>com.miglayout</groupId>
@@ -202,32 +109,15 @@
 			<classifier>swing</classifier>
 		</dependency>
 		<dependency>
-			<groupId>org.jfree</groupId>
-			<artifactId>jfreechart</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.jhotdraw</groupId>
-			<artifactId>jhotdraw</artifactId>
-			<version>7.6.0</version>
+			<groupId>net.sourceforge.jdatepicker</groupId>
+			<artifactId>jdatepicker</artifactId>
+			<version>1.3.2</version>
 		</dependency>
 
-		<!-- Runtime ImageJ dependencies -->
+		<!-- Test scope dependencies -->
 		<dependency>
-			<groupId>net.imagej</groupId>
-			<artifactId>imagej-ui-awt</artifactId>
-			<scope>runtime</scope>
-		</dependency>
-
-		<!-- Test dependencies -->
-		<dependency>
-			<groupId>org.scijava</groupId>
-			<artifactId>scripting-beanshell</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.scijava</groupId>
-			<artifactId>scripting-javascript</artifactId>
-			<scope>test</scope>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
 		</dependency>
 	</dependencies>
 
@@ -238,9 +128,19 @@
 				<configuration>
 					<archive>
 						<manifest>
-							<packageName>net.imagej.ui.swing</packageName>
+							<packageName>org.scijava.ui.swing</packageName>
 						</manifest>
 					</archive>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>license-maven-plugin</artifactId>
+				<configuration>
+					<licenseName>bsd_2</licenseName>
+					<organizationName>Board of Regents of the University of
+Wisconsin-Madison.</organizationName>
+					<projectName>SciJava UI components for Java Swing.</projectName>
 				</configuration>
 			</plugin>
 		</plugins>

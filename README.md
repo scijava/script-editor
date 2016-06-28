@@ -1,6 +1,6 @@
-[![](http://jenkins.imagej.net/job/ImageJ-UI-Swing/lastBuild/badge/icon)](http://jenkins.imagej.net/job/ImageJ-UI-Swing/)
+[![](http://jenkins.imagej.net/job/SciJava-UI-Swing/lastBuild/badge/icon)](http://jenkins.imagej.net/job/SciJava-UI-Swing/)
 
-ImageJ Swing UI
----------------
+SciJava Swing UI components
+---------------------------
 
-ImageJ user interface using Java Swing.
+SciJava user interface components using Java Swing.
