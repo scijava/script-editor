@@ -1,6 +1,6 @@
-[![](http://jenkins.imagej.net/job/SciJava-UI-Swing/lastBuild/badge/icon)](http://jenkins.imagej.net/job/SciJava-UI-Swing/)
+[![](http://jenkins.imagej.net/job/script-editor/lastBuild/badge/icon)](http://jenkins.imagej.net/job/script-editor/)
 
-SciJava Swing UI components
----------------------------
+SciJava Script Editor
+---------------------
 
-SciJava user interface components using Java Swing.
+Script Editor and Interpreter for SciJava script languages.
