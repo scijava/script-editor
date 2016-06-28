@@ -1,10 +1,10 @@
 /*
  * #%L
- * ImageJ software for multidimensional image processing and analysis.
+ * Script Editor and Interpreter for SciJava script languages.
  * %%
  * Copyright (C) 2009 - 2016 Board of Regents of the University of
- * Wisconsin-Madison, Broad Institute of MIT and Harvard, and Max Planck
- * Institute of Molecular Cell Biology and Genetics.
+ * Wisconsin-Madison, Max Planck Institute of Molecular Cell Biology and Genetics,
+ * and others.
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
