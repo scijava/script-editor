@@ -31,11 +31,10 @@
 
 package net.imagej.ui.swing.script;
 
-import net.imagej.ImageJService;
-
 import org.fife.rsta.ac.LanguageSupport;
 import org.scijava.plugin.SingletonService;
 import org.scijava.script.ScriptLanguage;
+import org.scijava.service.SciJavaService;
 
 /**
  * Service which manages {@link LanguageSupportPlugin}s.
@@ -45,7 +44,7 @@ import org.scijava.script.ScriptLanguage;
  * @author Jonathan Hale
  */
 public interface LanguageSupportService extends
-	SingletonService<LanguageSupportPlugin>, ImageJService
+	SingletonService<LanguageSupportPlugin>, SciJavaService
 {
 
 	/**

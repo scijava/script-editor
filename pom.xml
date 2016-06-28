@@ -5,16 +5,16 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>10.1.0</version>
+		<version>10.5.0</version>
 		<relativePath />
 	</parent>
 
-	<artifactId>imagej-ui-swing</artifactId>
-	<version>0.18.0-SNAPSHOT</version>
+	<artifactId>script-editor</artifactId>
+	<version>0.1.0-SNAPSHOT</version>
 
-	<name>SciJava UI: Swing</name>
-	<description>SciJava user interface components for Java Swing.</description>
-	<inceptionYear>2010</inceptionYear>
+	<name>SciJava Script Editor</name>
+	<description>Script Editor and Interpreter for SciJava script languages.</description>
+	<inceptionYear>2009</inceptionYear>
 	<licenses>
 		<license>
 			<name>Simplified BSD License</name>
@@ -40,40 +40,91 @@
 	</developers>
 	<contributors>
 		<contributor>
-			<name>Mark Hiner</name>
-			<url>http://imagej.net/User:Hinerm</url>
-			<properties><id>hinerm</id></properties>
-		</contributor>
-		<contributor>
 			<name>Johannes Schindelin</name>
 			<url>http://imagej.net/User:Schindelin</url>
+			<roles><role>founder</role></roles>
 			<properties><id>dscho</id></properties>
+		</contributor>
+		<contributor>
+			<name>Sumit Dubey</name>
+			<roles><role>founder</role></roles>
+		</contributor>
+		<contributor>
+			<name>Albert Cardona</name>
+			<url>http://imagej.net/User:Albertcardona</url>
+			<properties><id>acardona</id></properties>
+		</contributor>
+		<contributor>
+			<name>Jan Eglinger</name>
+			<url>http://imagej.net/User:Eglinger</url>
+			<properties><id>imagejan</id></properties>
 		</contributor>
 		<contributor>
 			<name>Ulrik Günther</name>
 			<properties><id>skalarproduktraum</id></properties>
 		</contributor>
 		<contributor>
-			<name>Stephan Saalfeld</name>
-			<url>http://imagej.net/User:Saalfeld</url>
-			<properties><id>axtimwalde</id></properties>
+			<name>Jonathan Hale</name>
+			<properties><id>Squareys</id></properties>
+		</contributor>
+		<contributor>
+			<name>Stefan Helfrich</name>
+			<url>http://imagej.net/User:Stelfrich</url>
+			<properties><id>stelfrich</id></properties>
+		</contributor>
+		<contributor>
+			<name>Mark Hiner</name>
+			<url>http://imagej.net/User:Hinerm</url>
+			<properties><id>hinerm</id></properties>
+		</contributor>
+		<contributor>
+			<name>Samuel Inverso</name>
+			<url>http://imagej.net/User:Sinverso</url>
+			<properties><id>sinverso</id></properties>
+		</contributor>
+		<contributor>
+			<name>Tom Kazimiers</name>
+			<url>http://imagej.net/User:Kazimiers</url>
+			<properties><id>tomka</id></properties>
+		</contributor>
+		<contributor>
+			<name>Jacques Pecreaux</name>
+		</contributor>
+		<contributor>
+			<name>Luke Stuyvenberg</name>
+			<url>http://imagej.net/User:Stuyvenberg</url>
+			<properties><id>stuyvenberg</id></properties>
+		</contributor>
+		<contributor>
+			<name>Jean-Yves Tinevez</name>
+			<url>http://imagej.net/User:JeanYvesTinevez</url>
+			<properties><id>tinevez</id></properties>
+		</contributor>
+		<contributor>
+			<name>Yili Zhao</name>
+			<url>http://imagej.net/User:Panovr</url>
+			<properties><id>panovr</id></properties>
 		</contributor>
 	</contributors>
 
 	<scm>
-		<connection>scm:git:git://github.com/scijava/scijava-ui-swing</connection>
-		<developerConnection>scm:git:git@github.com:scijava/scijava-ui-swing</developerConnection>
+		<connection>scm:git:git://github.com/scijava/script-editor</connection>
+		<developerConnection>scm:git:git@github.com:scijava/script-editor</developerConnection>
 		<tag>HEAD</tag>
-		<url>https://github.com/scijava/scijava-ui-swing</url>
+		<url>https://github.com/scijava/script-editor</url>
 	</scm>
 	<issueManagement>
 		<system>GitHub Issues</system>
-		<url>http://github.com/scijava/scijava-ui-swing/issues</url>
+		<url>http://github.com/scijava/script-editor/issues</url>
 	</issueManagement>
 	<ciManagement>
 		<system>Jenkins</system>
-		<url>http://jenkins.imagej.net/job/SciJava-UI-Swing/</url>
+		<url>http://jenkins.imagej.net/job/script-editor/</url>
 	</ciManagement>
+
+	<properties>
+		<scijava.jvm.version>1.8</scijava.jvm.version>
+	</properties>
 
 	<repositories>
 		<repository>
@@ -90,28 +141,26 @@
 		</dependency>
 		<dependency>
 			<groupId>org.scijava</groupId>
-			<artifactId>scijava-ui-awt</artifactId>
+			<artifactId>scijava-expression-parser</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.scijava</groupId>
-			<artifactId>swing-checkbox-tree</artifactId>
+			<artifactId>scripting-java</artifactId>
 		</dependency>
 
 		<!-- Third-party dependencies -->
 		<dependency>
-			<groupId>com.github.sbridges.object-inspector</groupId>
-			<artifactId>object-inspector</artifactId>
-			<version>0.1</version>
+			<groupId>com.fifesoft</groupId>
+			<artifactId>rsyntaxtextarea</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.fifesoft</groupId>
+			<artifactId>languagesupport</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>com.miglayout</groupId>
 			<artifactId>miglayout</artifactId>
 			<classifier>swing</classifier>
-		</dependency>
-		<dependency>
-			<groupId>net.sourceforge.jdatepicker</groupId>
-			<artifactId>jdatepicker</artifactId>
-			<version>1.3.2</version>
 		</dependency>
 
 		<!-- Test scope dependencies -->
@@ -139,8 +188,8 @@
 				<configuration>
 					<licenseName>bsd_2</licenseName>
 					<organizationName>Board of Regents of the University of
-Wisconsin-Madison.</organizationName>
-					<projectName>SciJava UI components for Java Swing.</projectName>
+Wisconsin-Madison, Max Planck Institute of Molecular Cell Biology and Genetics,
+and others.</organizationName>
 				</configuration>
 			</plugin>
 		</plugins>
