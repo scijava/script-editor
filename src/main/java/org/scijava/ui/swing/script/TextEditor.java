@@ -103,6 +103,7 @@ import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
 import org.scijava.Context;
+import org.scijava.app.AppService;
 import org.scijava.command.CommandService;
 import org.scijava.event.ContextDisposingEvent;
 import org.scijava.event.EventHandler;
@@ -127,7 +128,6 @@ import org.scijava.ui.swing.script.commands.ChooseFontSize;
 import org.scijava.ui.swing.script.commands.ChooseTabSize;
 import org.scijava.ui.swing.script.commands.GitGrep;
 import org.scijava.ui.swing.script.commands.KillScript;
-import org.scijava.util.AppUtils;
 import org.scijava.util.FileUtils;
 import org.scijava.util.MiscUtils;
 import org.scijava.widget.FileWidget;
@@ -217,6 +217,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	private UIService uiService;
 	@Parameter
 	private PrefService prefService;
+	@Parameter
+	private AppService appService;
 
 	private Map<ScriptLanguage, JRadioButtonMenuItem> languageMenuItems;
 	private JRadioButtonMenuItem noneLanguageItem;
@@ -1032,7 +1034,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			final EditorPane editorPane = getEditorPane();
 			final File defaultDir =
 				editorPane.getFile() != null ? editorPane.getFile().getParentFile()
-					: AppUtils.getBaseDirectory("imagej.dir", TextEditor.class, null);
+					: appService.getApp().getBaseDirectory();
 			final File file = openWithDialog(defaultDir);
 			if (file != null) new Thread() {
 
@@ -1408,8 +1410,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final EditorPane editorPane = getEditorPane();
 		File file = editorPane.getFile();
 		if (file == null) {
-			final File ijDir =
-				AppUtils.getBaseDirectory("imagej.dir", TextEditor.class, null);
+			final File ijDir = appService.getApp().getBaseDirectory();
 			file = new File(ijDir, editorPane.getFileName());
 		}
 		final File fileToSave = uiService.chooseFile(file, FileWidget.SAVE_STYLE);
