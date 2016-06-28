@@ -164,7 +164,7 @@ public class DefaultAutoImporters {
 		{
 			this.prefix = prefix;
 			this.suffix = suffix;
-			exclude = new HashSet<String>(Arrays.asList(classNamesToExclude));
+			exclude = new HashSet<>(Arrays.asList(classNamesToExclude));
 		}
 
 		@Override
