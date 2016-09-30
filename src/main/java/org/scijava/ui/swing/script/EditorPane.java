@@ -279,6 +279,13 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 * @throws IOException
 	 */
 	public void write(final File file) throws IOException {
+		final File dir = file.getParentFile();
+		if (dir != null && !dir.exists()) {
+			// create needed parent directories
+			if (!dir.mkdirs()) {
+				throw new IOException("Cannot create directory: " + dir);
+			}
+		}
 		final BufferedWriter outFile =
 			new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file),
 				"UTF-8"));
