@@ -3,8 +3,8 @@
  * Script Editor and Interpreter for SciJava script languages.
  * %%
  * Copyright (C) 2009 - 2016 Board of Regents of the University of
- * Wisconsin-Madison, Max Planck Institute of Molecular Cell Biology and Genetics,
- * and others.
+ * Wisconsin-Madison, Max Planck Institute of Molecular Cell Biology and
+ * Genetics, and others.
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -123,7 +123,7 @@ public class VarsPane extends JPanel {
 	/** Helper class for the table of variables. */
 	private class VarsTableModel extends AbstractTableModel {
 
-		private final ArrayList<String> varNames = new ArrayList<String>();
+		private final ArrayList<String> varNames = new ArrayList<>();
 
 		private boolean showTypes;
 

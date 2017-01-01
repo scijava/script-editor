@@ -3,8 +3,8 @@
  * Script Editor and Interpreter for SciJava script languages.
  * %%
  * Copyright (C) 2009 - 2016 Board of Regents of the University of
- * Wisconsin-Madison, Max Planck Institute of Molecular Cell Biology and Genetics,
- * and others.
+ * Wisconsin-Madison, Max Planck Institute of Molecular Cell Biology and
+ * Genetics, and others.
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -813,118 +813,115 @@ public class MatlabTokenMaker extends AbstractJFlexTokenMaker {
 			zzMarkedPos = zzMarkedPosL;
 
 			switch (zzAction < 0 ? zzAction : ZZ_ACTION[zzAction]) {
-				case 7: {
+				case 7:
 					addNullToken();
 					return firstToken;
-				}
 				case 22:
 					break;
-				case 20: {
+				case 20:
 					yybegin(YYINITIAL);
 					addToken(start, zzStartRead + 1, TokenTypes.COMMENT_MULTILINE);
-				}
+					break;
 				case 23:
 					break;
-				case 15: {
+				case 15:
 					start = zzMarkedPos - 2;
 					yybegin(MLC);
-				}
+					break;
 				case 24:
 					break;
-				case 9: {
+				case 9:
 					addToken(TokenTypes.WHITESPACE);
-				}
+					break;
 				case 25:
 					break;
-				case 18: {
+				case 18:
 					addToken(TokenTypes.LITERAL_NUMBER_HEXADECIMAL);
-				}
+					break;
 				case 26:
 					break;
-				case 17: {
+				case 17:
 					addToken(TokenTypes.LITERAL_NUMBER_FLOAT);
-				}
+					break;
 				case 27:
 					break;
-				case 19: {
+				case 19:
 					addToken(TokenTypes.RESERVED_WORD);
-				}
+					break;
 				case 28:
 					break;
-				case 3: {
+				case 3:
 					addToken(TokenTypes.SEPARATOR);
-				}
+					break;
 				case 29:
 					break;
-				case 5: {
+				case 5:
 					addToken(TokenTypes.IDENTIFIER);
-				}
+					break;
 				case 30:
 					break;
-				case 14: {
+				case 14:
 					addToken(start, zzStartRead - 1, TokenTypes.COMMENT_EOL);
 					addNullToken();
 					return firstToken;
-				}
 				case 31:
 					break;
-				case 1: {
+				case 1:
 					addToken(TokenTypes.ERROR_IDENTIFIER);
-				}
+					break;
 				case 32:
 					break;
-				case 21: {
+				case 21:
 					addToken(TokenTypes.LITERAL_BOOLEAN);
-				}
+					break;
 				case 33:
 					break;
-				case 12: {
+				case 12:
 					addToken(start, zzStartRead - 1,
 						TokenTypes.LITERAL_STRING_DOUBLE_QUOTE);
 					return firstToken;
-				}
 				case 34:
 					break;
-				case 16: {
+				case 16:
 					addToken(TokenTypes.ERROR_NUMBER_FORMAT);
-				}
+					break;
 				case 35:
 					break;
-				case 6: {
+				case 6:
 					start = zzMarkedPos - 1;
 					yybegin(STRING);
-				}
+					break;
 				case 36:
 					break;
-				case 2: {
+				case 2:
 					start = zzMarkedPos - 1;
 					yybegin(EOL_COMMENT);
-				}
+					break;
 				case 37:
 					break;
-				case 4: {
+				case 4:
 					addToken(TokenTypes.LITERAL_NUMBER_DECIMAL_INT);
-				}
+					break;
 				case 38:
 					break;
-				case 8: {
+				case 8:
 					addToken(TokenTypes.OPERATOR);
-				}
+					break;
 				case 39:
 					break;
-				case 11: {
+				case 11:
 					yybegin(YYINITIAL);
 					addToken(start, zzStartRead, TokenTypes.LITERAL_STRING_DOUBLE_QUOTE);
-				}
+					break;
 				case 40:
 					break;
-				case 10: {}
+				case 10:
+					break;
 				case 41:
 					break;
-				case 13: {
+				case 13:
 					addToken(start, zzStartRead - 1, TokenTypes.COMMENT_MULTILINE);
 					return firstToken;
-				}
 				case 42:
 					break;
 				default:

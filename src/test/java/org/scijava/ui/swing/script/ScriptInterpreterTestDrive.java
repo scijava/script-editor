@@ -3,8 +3,8 @@
  * Script Editor and Interpreter for SciJava script languages.
  * %%
  * Copyright (C) 2009 - 2016 Board of Regents of the University of
- * Wisconsin-Madison, Max Planck Institute of Molecular Cell Biology and Genetics,
- * and others.
+ * Wisconsin-Madison, Max Planck Institute of Molecular Cell Biology and
+ * Genetics, and others.
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -72,7 +72,7 @@ public class ScriptInterpreterTestDrive {
 			final String base = name.substring(dot + 1);
 			interpreter.print("Imported " + base + "; Try:\n\n\tprint(" + base + ".NAME);");
 
-			final Map<String, List<String>> map = new HashMap<String, List<String>>();
+			final Map<String, List<String>> map = new HashMap<>();
 			map.put(name.substring(0, dot), Arrays.asList(base));
 			return map;
 		}

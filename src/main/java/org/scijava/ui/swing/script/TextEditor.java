@@ -3,8 +3,8 @@
  * Script Editor and Interpreter for SciJava script languages.
  * %%
  * Copyright (C) 2009 - 2016 Board of Regents of the University of
- * Wisconsin-Madison, Max Planck Institute of Molecular Cell Biology and Genetics,
- * and others.
+ * Wisconsin-Madison, Max Planck Institute of Molecular Cell Biology and
+ * Genetics, and others.
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -868,7 +868,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	/**
-	 * Initializes the template menu.
+	 * Initializes the Templates menu.
 	 * <p>
 	 * Other components can add templates simply by providing scripts in their
 	 * resources, identified by a path of the form
@@ -878,11 +878,14 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * @param templatesMenu the top-level menu to populate
 	 */
 	private void addTemplates(final JMenu templatesMenu) {
+		final File baseDir = appService.getApp().getBaseDirectory();
+
 		for (final String templatePath : TEMPLATE_PATHS) {
 			for (final Map.Entry<String, URL> entry : new TreeMap<>(
-				FileFunctions.findResources(null, templatePath)).entrySet())
+				FileUtils.findResources(null, templatePath, baseDir)).entrySet())
 			{
-				final String ext = FileUtils.getExtension(entry.getKey());
+				final String key = entry.getKey();
+				final String ext = FileUtils.getExtension(key);
 
 				// try to determine the scripting language
 				final ScriptLanguage lang = ext.isEmpty() ? null :
@@ -890,7 +893,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				final String langName = lang == null ? null : lang.getLanguageName();
 				final String langSuffix = lang == null ? null : " (" + langName + ")";
 
-				final String path = adjustPath(entry.getKey(), langName);
+				final String path = adjustPath(key, langName);
 
 				// create a human-readable label
 				final int labelIndex = path.lastIndexOf('/') + 1;
