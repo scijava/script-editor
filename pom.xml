@@ -5,16 +5,22 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>10.5.0</version>
+		<version>12.0.0</version>
 		<relativePath />
 	</parent>
 
+	<groupId>org.scijava</groupId>
 	<artifactId>script-editor</artifactId>
 	<version>0.1.1-SNAPSHOT</version>
 
 	<name>SciJava Script Editor</name>
 	<description>Script Editor and Interpreter for SciJava script languages.</description>
+	<url>http://scijava.org/</url>
 	<inceptionYear>2009</inceptionYear>
+	<organization>
+		<name>SciJava</name>
+		<url>http://scijava.org/</url>
+	</organization>
 	<licenses>
 		<license>
 			<name>Simplified BSD License</name>
@@ -107,6 +113,16 @@
 		</contributor>
 	</contributors>
 
+	<mailingLists>
+		<mailingList>
+			<name>SciJava</name>
+			<subscribe>https://groups.google.com/group/scijava</subscribe>
+			<unsubscribe>https://groups.google.com/group/scijava</unsubscribe>
+			<post>scijava.com</post>
+			<archive>https://groups.google.com/group/scijava</archive>
+		</mailingList>
+	</mailingLists>
+
 	<scm>
 		<connection>scm:git:git://github.com/scijava/script-editor</connection>
 		<developerConnection>scm:git:git@github.com:scijava/script-editor</developerConnection>
@@ -123,7 +139,11 @@
 	</ciManagement>
 
 	<properties>
-		<scijava.jvm.version>1.8</scijava.jvm.version>
+		<package-name>org.scijava.ui.swing.script</package-name>
+		<license.licenseName>bsd_2</license.licenseName>
+		<license.copyrightOwners>Board of Regents of the University of
+Wisconsin-Madison, Max Planck Institute of Molecular Cell Biology and
+Genetics, and others.</license.copyrightOwners>
 	</properties>
 
 	<repositories>
@@ -169,29 +189,4 @@
 			<artifactId>junit</artifactId>
 		</dependency>
 	</dependencies>
-
-	<build>
-		<plugins>
-			<plugin>
-				<artifactId>maven-jar-plugin</artifactId>
-				<configuration>
-					<archive>
-						<manifest>
-							<packageName>org.scijava.ui.swing</packageName>
-						</manifest>
-					</archive>
-				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>license-maven-plugin</artifactId>
-				<configuration>
-					<licenseName>bsd_2</licenseName>
-					<organizationName>Board of Regents of the University of
-Wisconsin-Madison, Max Planck Institute of Molecular Cell Biology and Genetics,
-and others.</organizationName>
-				</configuration>
-			</plugin>
-		</plugins>
-	</build>
 </project>
