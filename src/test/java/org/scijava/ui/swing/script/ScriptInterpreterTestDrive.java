@@ -72,7 +72,7 @@ public class ScriptInterpreterTestDrive {
 			final String base = name.substring(dot + 1);
 			interpreter.print("Imported " + base + "; Try:\n\n\tprint(" + base + ".NAME);");
 
-			final Map<String, List<String>> map = new HashMap<String, List<String>>();
+			final Map<String, List<String>> map = new HashMap<>();
 			map.put(name.substring(0, dot), Arrays.asList(base));
 			return map;
 		}

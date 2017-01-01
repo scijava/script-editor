@@ -123,7 +123,7 @@ public class VarsPane extends JPanel {
 	/** Helper class for the table of variables. */
 	private class VarsTableModel extends AbstractTableModel {
 
-		private final ArrayList<String> varNames = new ArrayList<String>();
+		private final ArrayList<String> varNames = new ArrayList<>();
 
 		private boolean showTypes;
 
