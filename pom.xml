@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>12.0.0</version>
+		<version>13.2.0</version>
 		<relativePath />
 	</parent>
 
@@ -160,10 +160,6 @@ Genetics, and others.</license.copyrightOwners>
 		</dependency>
 		<dependency>
 			<groupId>org.scijava</groupId>
-			<artifactId>scijava-expression-parser</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.scijava</groupId>
 			<artifactId>scripting-java</artifactId>
 		</dependency>
 
@@ -186,6 +182,12 @@ Genetics, and others.</license.copyrightOwners>
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.scijava</groupId>
+			<artifactId>parsington</artifactId>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 </project>

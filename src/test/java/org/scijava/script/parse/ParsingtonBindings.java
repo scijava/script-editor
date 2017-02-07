@@ -29,7 +29,7 @@
  * #L%
  */
 
-package org.scijava.script.sjep;
+package org.scijava.script.parse;
 
 import java.lang.reflect.Field;
 import java.util.Collection;
@@ -38,22 +38,22 @@ import java.util.Set;
 
 import javax.script.Bindings;
 
-import org.scijava.sjep.eval.AbstractEvaluator;
-import org.scijava.sjep.eval.Evaluator;
+import org.scijava.parse.eval.AbstractEvaluator;
+import org.scijava.parse.eval.Evaluator;
 
 /**
- * Script bindings for the {@link SJEPScriptEngine}.
+ * Script bindings for the {@link ParsingtonScriptEngine}.
  * <p>
  * Some operations are not yet implemented!
  * </p>
  * 
  * @author Curtis Rueden
  */
-public class SJEPBindings implements Bindings {
+public class ParsingtonBindings implements Bindings {
 
 	private final Evaluator e;
 
-	public SJEPBindings(final Evaluator e) {
+	public ParsingtonBindings(final Evaluator e) {
 		this.e = e;
 	}
 

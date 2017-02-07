@@ -29,32 +29,32 @@
  * #L%
  */
 
-package org.scijava.script.sjep;
+package org.scijava.script.parse;
 
 import java.io.IOException;
 import java.io.Reader;
 
 import javax.script.ScriptException;
 
+import org.scijava.parse.eval.DefaultEvaluator;
+import org.scijava.parse.eval.Evaluator;
 import org.scijava.script.AbstractScriptEngine;
-import org.scijava.sjep.eval.DefaultEvaluator;
-import org.scijava.sjep.eval.Evaluator;
 
 /**
- * Script engine for the {@link SJEPScriptLanguage}.
+ * Script engine for the {@link ParsingtonScriptLanguage}.
  * 
  * @author Curtis Rueden
  */
-public class SJEPScriptEngine extends AbstractScriptEngine {
+public class ParsingtonScriptEngine extends AbstractScriptEngine {
 
 	private final Evaluator e;
 
-	public SJEPScriptEngine() {
+	public ParsingtonScriptEngine() {
 		this(new DefaultEvaluator());
-		engineScopeBindings = new SJEPBindings(e);
+		engineScopeBindings = new ParsingtonBindings(e);
 	}
 
-	public SJEPScriptEngine(final Evaluator e) {
+	public ParsingtonScriptEngine(final Evaluator e) {
 		this.e = e;
 	}
 

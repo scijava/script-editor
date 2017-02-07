@@ -29,7 +29,7 @@
  * #L%
  */
 
-package org.scijava.script.sjep;
+package org.scijava.script.parse;
 
 import java.util.Collections;
 import java.util.List;
@@ -41,23 +41,23 @@ import org.scijava.script.AbstractScriptLanguage;
 import org.scijava.script.ScriptLanguage;
 
 /**
- * Simple script language built on the {@link org.scijava.sjep.eval} package.
+ * Simple script language built on the {@link org.scijava.parse.eval} package.
  * 
  * @author Curtis Rueden
  */
 @Plugin(type = ScriptLanguage.class)
-public class SJEPScriptLanguage extends AbstractScriptLanguage {
+public class ParsingtonScriptLanguage extends AbstractScriptLanguage {
 
 	// -- ScriptEngineFactory methods --
 
 	@Override
 	public List<String> getExtensions() {
-		return Collections.singletonList("sjep");
+		return Collections.singletonList("parsington");
 	}
 
 	@Override
 	public ScriptEngine getScriptEngine() {
-		return new SJEPScriptEngine();
+		return new ParsingtonScriptEngine();
 	}
 
 }
