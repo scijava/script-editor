@@ -133,8 +133,8 @@
 		<url>http://github.com/scijava/script-editor/issues</url>
 	</issueManagement>
 	<ciManagement>
-		<system>Jenkins</system>
-		<url>http://jenkins.imagej.net/job/script-editor/</url>
+		<system>Travis CI</system>
+		<url>https://travis-ci.org/scijava/script-editor</url>
 	</ciManagement>
 
 	<properties>
