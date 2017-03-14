@@ -43,7 +43,10 @@ import java.io.PrintStream;
 import javax.swing.JTextArea;
 import javax.swing.text.BadLocationException;
 
+import org.scijava.Context;
 import org.scijava.script.ScriptREPL;
+import org.scijava.thread.ThreadService;
+import org.scijava.util.ClassUtils;
 import org.scijava.widget.UIComponent;
 
 /**
@@ -55,8 +58,11 @@ import org.scijava.widget.UIComponent;
 public abstract class PromptPane implements UIComponent<JTextArea> {
 
 	private final ScriptREPL repl;
+	private final VarsPane vars;
 	private final TextArea textArea;
 	private final OutputPane output;
+
+	private boolean executing;
 
 	public PromptPane(final ScriptREPL repl, final VarsPane vars,
 		final OutputPane output)
@@ -64,6 +70,7 @@ public abstract class PromptPane implements UIComponent<JTextArea> {
 		textArea = new TextArea(3, 2);
 		textArea.setLineWrap(true);
 		this.repl = repl;
+		this.vars = vars;
 		this.output = output;
 		textArea.addKeyListener(new KeyAdapter() {
 
@@ -72,15 +79,18 @@ public abstract class PromptPane implements UIComponent<JTextArea> {
 				final int code = event.getKeyCode();
 				switch (code) {
 					case VK_ENTER:
+						if (executing) {
+							// ignore enter key while executing
+							event.consume();
+							return;
+						}
 						if (event.isShiftDown()) {
 							// multi-line input
 							textArea.insert("\n", textArea.getCaretPosition());
 						}
 						else {
-							final boolean result = execute();
+							execute();
 							event.consume();
-							if (!result) quit();
-							vars.update();
 						}
 						break;
 					case VK_DOWN:
@@ -151,12 +161,36 @@ public abstract class PromptPane implements UIComponent<JTextArea> {
 			forward));
 	}
 
-	private synchronized boolean execute() {
+	private void execute() {
 		final String text = textArea.getText();
+
 		output.append(">>> " + text + "\n");
-		final boolean result = repl.evaluate(text);
 		textArea.setText("");
-		return result;
+		executing = true;
+
+		threadService().run(new Runnable() {
+
+			@Override
+			public void run() {
+				final boolean result = repl.evaluate(text);
+				threadService().queue(new Runnable() {
+					@Override
+					public void run() {
+						executing = false;
+						if (!result) quit();
+						vars.update();
+					}
+				});
+			}
+		});
+	}
+
+	private ThreadService threadService() {
+		// HACK: Get the SciJava context from the REPL.
+		// This can be fixed if/when the REPL offers a getter for it.
+		final Context ctx = (Context) ClassUtils.getValue(//
+			ClassUtils.getField(repl.getClass(), "context"), repl);
+		return ctx.service(ThreadService.class);
 	}
 
 	// -- Helper classes --
