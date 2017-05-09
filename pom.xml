@@ -186,6 +186,11 @@ Genetics, and others.</license.copyrightOwners>
 		</dependency>
 		<dependency>
 			<groupId>org.scijava</groupId>
+			<artifactId>scijava-ui-swing</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.scijava</groupId>
 			<artifactId>parsington</artifactId>
 			<scope>test</scope>
 		</dependency>
