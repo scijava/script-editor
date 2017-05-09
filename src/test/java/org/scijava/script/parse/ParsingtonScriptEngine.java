@@ -33,9 +33,14 @@ package org.scijava.script.parse;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Collection;
 
 import javax.script.ScriptException;
 
+import org.scijava.parse.Variable;
 import org.scijava.parse.eval.DefaultEvaluator;
 import org.scijava.parse.eval.Evaluator;
 import org.scijava.script.AbstractScriptEngine;
@@ -49,8 +54,68 @@ public class ParsingtonScriptEngine extends AbstractScriptEngine {
 
 	private final Evaluator e;
 
+	/** Data structure for {@code foo.bar} pairs. */
+	private static class MethodCall {
+
+		private final Object object;
+		private final String methodName;
+
+		private MethodCall(final Object o, final String name) {
+			object = o;
+			methodName = name;
+		}
+
+		public Object invoke(final Object args) {
+			final Object[] methodArgs;
+			if (args instanceof Object[]) {
+				methodArgs = (Object[]) args;
+			}
+			else if (args instanceof Collection) {
+				methodArgs = ((Collection<?>) args).toArray();
+			}
+			else {
+				// assume singleton argument
+				methodArgs = new Object[] { args };
+			}
+			final Class<?>[] argTypes = //
+				Arrays.stream(methodArgs).map(a -> a.getClass()).toArray(Class[]::new);
+			// TODO: arg type detection is brittle. Need SJC Types matcher!
+			// Should bake method sig matching into a method of Types, actually.
+			try {
+				final Method m = object.getClass().getMethod(methodName, argTypes);
+				return m.invoke(object, methodArgs);
+			}
+			catch (final NoSuchMethodException | IllegalAccessException
+					| InvocationTargetException exc)
+			{
+				exc.printStackTrace();
+				return null;
+			}
+		}
+	}
+
 	public ParsingtonScriptEngine() {
-		this(new DefaultEvaluator());
+		// NB: Create a default evaluator, but extended to support method calls.
+		// This is a first-cut hack, just for fun -- fields are not supported yet.
+		this(new DefaultEvaluator() {
+
+			@Override
+			public Object dot(final Object a, final Object b) {
+				if (b instanceof Variable) {
+					return new MethodCall(value(a), ((Variable) b).getToken());
+				}
+				return super.dot(a, b);
+			}
+
+			@Override
+			public Object function(final Object a, final Object b) {
+				System.out.println("function: a=" + a + ", b=" + b);
+				if (a instanceof MethodCall) {
+					return ((MethodCall) a).invoke(b);
+				}
+				return super.function(a, b);
+			}
+		});
 		engineScopeBindings = new ParsingtonBindings(e);
 	}
 
