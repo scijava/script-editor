@@ -51,8 +51,8 @@ public class ScriptEditorTestDrive {
 		final Context context = new Context();
 		final TextEditor editor = new TextEditor(context);
 		final ScriptService scriptService = context.getService(ScriptService.class);
-		final ScriptLanguage beanshell = scriptService.getLanguageByName("Beanshell");
-		editor.setLanguage(beanshell);
+		final ScriptLanguage lang = scriptService.getLanguageByName("Groovy");
+		editor.setLanguage(lang);
 		editor.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosed(final WindowEvent e) {
