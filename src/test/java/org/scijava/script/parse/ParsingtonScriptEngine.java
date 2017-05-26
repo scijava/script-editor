@@ -109,7 +109,6 @@ public class ParsingtonScriptEngine extends AbstractScriptEngine {
 
 			@Override
 			public Object function(final Object a, final Object b) {
-				System.out.println("function: a=" + a + ", b=" + b);
 				if (a instanceof MethodCall) {
 					return ((MethodCall) a).invoke(b);
 				}
