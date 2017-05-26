@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>14.0.0</version>
+		<version>16.1.0</version>
 		<relativePath />
 	</parent>
 
@@ -143,9 +143,6 @@
 		<license.copyrightOwners>Board of Regents of the University of
 Wisconsin-Madison, Max Planck Institute of Molecular Cell Biology and
 Genetics, and others.</license.copyrightOwners>
-		<!-- TEMP: Until pom-scijava 15.0.0 is released. -->
-		<languagesupport.version>2.6.0</languagesupport.version>
-		<rsyntaxtextarea.version>2.6.1</rsyntaxtextarea.version>
 	</properties>
 
 	<repositories>
@@ -174,8 +171,6 @@ Genetics, and others.</license.copyrightOwners>
 		<dependency>
 			<groupId>com.fifesoft</groupId>
 			<artifactId>languagesupport</artifactId>
-			<!-- TEMP: Until pom-scijava 15.0.0 is released. -->
-			<version>${languagesupport.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.miglayout</groupId>
