@@ -31,9 +31,11 @@
 
 package org.scijava.ui.swing.script.commands;
 
+import org.scijava.command.Command;
 import org.scijava.command.DynamicCommand;
 import org.scijava.module.MutableModuleItem;
 import org.scijava.plugin.Parameter;
+import org.scijava.plugin.Plugin;
 import org.scijava.ui.swing.script.TextEditor;
 
 /**
@@ -41,6 +43,7 @@ import org.scijava.ui.swing.script.TextEditor;
  *
  * @author Johannes Schindelin
  */
+@Plugin(type=Command.class)
 public class ChooseTabSize extends DynamicCommand {
 
 	@Parameter
