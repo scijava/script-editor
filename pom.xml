@@ -143,6 +143,9 @@
 		<license.copyrightOwners>Board of Regents of the University of
 Wisconsin-Madison, Max Planck Institute of Molecular Cell Biology and
 Genetics, and others.</license.copyrightOwners>
+
+		<!-- NB: Deploy releases to the ImageJ Maven repository. -->
+		<releaseProfiles>deploy-to-imagej</releaseProfiles>
 	</properties>
 
 	<repositories>
