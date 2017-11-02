@@ -6,7 +6,6 @@ branches:
   - "/.*-[0-9]+\\..*/"
 install: true
 script: ".travis/build.sh"
-env:
-  global:
-  - secure: P/yAl3TwCQN5SAR5Qe1TvO9HDEq9UChlX5qnQkvPgsKlP54HqELLTEhtp7+3osrz7/dm9X4lBh0zUyxBBUpvE66qF9+TW/PnPS7gBApi/fudtagOVrtRdSOX3PLkqt15+ny8B6Wz1gLnd0cHXXV1osLpXUkCPPbIQJt5XfabInU=
-  - secure: lbaHYcEHOLE42JUS51jNyY4y67rWgN0fFGnFtOZh+vGJ4UU9Z64Noh5zo3V3nxPSzmkOo9zGCLqqYZYa9K89+a/k9VSc6kMqF9sweUGINUcAa+mppXAunLEvZXk3uija6Dxx3ImXxNsVTX7nv1JOeGRaIUFYKWcWkr4aWDyNtwg=
+cache:
+  directories:
+  - "~/.m2/repository"
