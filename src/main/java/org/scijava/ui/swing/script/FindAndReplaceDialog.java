@@ -203,7 +203,7 @@ public class FindAndReplaceDialog extends JDialog implements ActionListener {
 		else if (source == replaceAll) {
 			final int replace =
 				SearchEngine.replaceAll(getTextArea(), getSearchContext(true))
-					.getMarkedCount();
+					.getCount();
 			JOptionPane.showMessageDialog(this, replace + " replacements made!");
 		}
 	}
