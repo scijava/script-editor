@@ -56,6 +56,7 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintWriter;
 import java.io.Reader;
+import java.io.StringReader;
 import java.io.Writer;
 import java.net.URL;
 import java.util.ArrayList;
@@ -104,6 +105,7 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
 import org.scijava.Context;
 import org.scijava.app.AppService;
+import org.scijava.batch.BatchService;
 import org.scijava.command.CommandService;
 import org.scijava.event.ContextDisposingEvent;
 import org.scijava.event.EventHandler;
@@ -218,6 +220,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	private PrefService prefService;
 	@Parameter
 	private AppService appService;
+	@Parameter
+	private BatchService batchService;
 
 	private Map<ScriptLanguage, JRadioButtonMenuItem> languageMenuItems;
 	private JRadioButtonMenuItem noneLanguageItem;
@@ -1915,6 +1919,18 @@ public class TextEditor extends JFrame implements ActionListener,
 		catch (final Throwable t) {
 			t.printStackTrace();
 		}
+	}
+
+	/**
+	 * Run current script with the batch processor
+	 */
+	public void runBatch() {
+		// get script from current tab
+		String script = getTab().getEditorPane().getText();
+		ScriptInfo scriptInfo = new ScriptInfo(context, "dummy."
+				+ getCurrentLanguage().getExtensions().get(0),
+				new StringReader(script));
+		batchService.run(scriptInfo);
 	}
 
 	/** Invoke in the context of the event dispatch thread. */

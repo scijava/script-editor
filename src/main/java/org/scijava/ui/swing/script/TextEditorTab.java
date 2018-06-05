@@ -60,7 +60,7 @@ public class TextEditorTab extends JSplitPane {
 	protected final JScrollPane scroll;
 	protected boolean showingErrors;
 	private Executer executer;
-	private final JButton runit, killit, toggleErrors;
+	private final JButton runit, batchit, killit, toggleErrors;
 
 	private final TextEditor textEditor;
 
@@ -96,6 +96,17 @@ public class TextEditorTab extends JSplitPane {
 		bottom.add(runit, bc);
 
 		bc.gridx = 1;
+		batchit = new JButton("Batch");
+		batchit.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(final ActionEvent ae) {
+				textEditor.runBatch();
+			}
+		});
+		bottom.add(batchit, bc);
+
+		bc.gridx = 2;
 		killit = new JButton("Kill");
 		killit.setEnabled(false);
 		killit.addActionListener(new ActionListener() {
@@ -107,12 +118,12 @@ public class TextEditorTab extends JSplitPane {
 		});
 		bottom.add(killit, bc);
 
-		bc.gridx = 2;
+		bc.gridx = 3;
 		bc.fill = GridBagConstraints.HORIZONTAL;
 		bc.weightx = 1;
 		bottom.add(new JPanel(), bc);
 
-		bc.gridx = 3;
+		bc.gridx = 4;
 		bc.fill = GridBagConstraints.NONE;
 		bc.weightx = 0;
 		bc.anchor = GridBagConstraints.NORTHEAST;
@@ -126,7 +137,7 @@ public class TextEditorTab extends JSplitPane {
 		});
 		bottom.add(toggleErrors, bc);
 
-		bc.gridx = 4;
+		bc.gridx = 5;
 		bc.fill = GridBagConstraints.NONE;
 		bc.weightx = 0;
 		bc.anchor = GridBagConstraints.NORTHEAST;
@@ -146,7 +157,7 @@ public class TextEditorTab extends JSplitPane {
 		bc.fill = GridBagConstraints.BOTH;
 		bc.weightx = 1;
 		bc.weighty = 1;
-		bc.gridwidth = 5;
+		bc.gridwidth = 6;
 		screen.setEditable(false);
 		screen.setLineWrap(true);
 		final Font font = new Font("Courier", Font.PLAIN, 12);

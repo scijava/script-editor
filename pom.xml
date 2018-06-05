@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>17.1.1</version>
+		<version>22.3.0</version>
 		<relativePath />
 	</parent>
 
@@ -179,6 +179,10 @@ Genetics, and others.</license.copyrightOwners>
 			<groupId>com.miglayout</groupId>
 			<artifactId>miglayout</artifactId>
 			<classifier>swing</classifier>
+		</dependency>
+		<dependency>
+			<groupId>org.scijava</groupId>
+			<artifactId>batch-processor</artifactId>
 		</dependency>
 
 		<!-- Test scope dependencies -->
