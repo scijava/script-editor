@@ -1925,12 +1925,25 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * Run current script with the batch processor
 	 */
 	public void runBatch() {
-		// get script from current tab
-		String script = getTab().getEditorPane().getText();
-		ScriptInfo scriptInfo = new ScriptInfo(context, "dummy."
-				+ getCurrentLanguage().getExtensions().get(0),
-				new StringReader(script));
-		batchService.run(scriptInfo);
+		final TextEditorTab tab = getTab();
+		tab.prepare();
+		final String script = getTab().getEditorPane().getText();
+		tab.setExecutor(new Executer(null, null) {
+
+			@Override
+			public void execute() {
+				// get script from current tab
+				ScriptInfo scriptInfo = new ScriptInfo(context, "batch."
+						+ getCurrentLanguage().getExtensions().get(0),
+						new StringReader(script));
+				try {
+					batchService.run(scriptInfo);
+				}
+				catch (final Throwable e) {
+					handleException(e);
+				}
+			}
+		});
 	}
 
 	/** Invoke in the context of the event dispatch thread. */
@@ -2024,7 +2037,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final JTextAreaWriter errors = new JTextAreaWriter(errorScreen, log);
 
 		final File file = getEditorPane().getFile();
-		new TextEditor.Executer(output, errors) {
+		new Executer(output, errors) {
 
 			@Override
 			public void execute() {
