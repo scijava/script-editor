@@ -36,6 +36,8 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -44,12 +46,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import javax.swing.JScrollPane;
-import javax.swing.JViewport;
-import javax.swing.ToolTipManager;
+import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
@@ -516,6 +517,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 		if (support != null && autoCompletionEnabled) {
 			support.install(this);
+
 		}
 	}
 
