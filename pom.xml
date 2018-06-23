@@ -146,6 +146,7 @@ Genetics, and others.</license.copyrightOwners>
 
 		<!-- NB: Deploy releases to the ImageJ Maven repository. -->
 		<releaseProfiles>deploy-to-imagej</releaseProfiles>
+		<imagej.app.directory>C:/programs/fiji-win64/Fiji.app/</imagej.app.directory>
 	</properties>
 
 	<repositories>
