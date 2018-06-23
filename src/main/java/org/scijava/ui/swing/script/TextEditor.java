@@ -180,7 +180,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			openMacroFunctions, decreaseFontSize, increaseFontSize, chooseFontSize,
 			chooseTabSize, gitGrep, openInGitweb, replaceTabsWithSpaces,
 			replaceSpacesWithTabs, toggleWhiteSpaceLabeling, zapGremlins,
-			savePreferences;
+			savePreferences, toggleAutoCompletion;
 	private RecentFilesMenuItem openRecent;
 	private JMenu gitMenu, tabsMenu, fontSizeMenu, tabSizeMenu, toolsMenu,
 			runMenu, whiteSpaceMenu;
@@ -372,6 +372,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		});
 		edit.add(tabsEmulated);
+
+		toggleAutoCompletion = addToMenu(edit, "Auto completion", 0, 0);
 
 		savePreferences = addToMenu(edit, "Save Preferences", 0, 0);
 
@@ -1121,6 +1123,9 @@ public class TextEditor extends JFrame implements ActionListener,
 			getTab().getScreen().setText("");
 		}
 		else if (source == zapGremlins) zapGremlins();
+		else if (source == toggleAutoCompletion) {
+			toggleAutoCompletionAction();
+		}
 		else if (source == savePreferences) {
 			getEditorPane().savePreferences();
 		}
@@ -1195,6 +1200,14 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == nextTab) switchTabRelative(1);
 		else if (source == previousTab) switchTabRelative(-1);
 		else if (handleTabsMenu(source)) return;
+	}
+
+	private void toggleAutoCompletionAction() {
+		toggleAutoCompletion.setSelected(!toggleAutoCompletion.isSelected());
+		for (int i = 0; i < tabbed.getTabCount(); i++) {
+			final EditorPane editorPane = getEditorPane(i);
+			editorPane.setAutoCompletionEnabled(toggleAutoCompletion.isSelected());
+		}
 	}
 
 	protected boolean handleTabsMenu(final Object source) {
