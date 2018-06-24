@@ -1212,7 +1212,6 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	private void toggleAutoCompletion() {
-		//toggleAutoCompletionMenu.setSelected(!toggleAutoCompletionMenu.isSelected());
 		for (int i = 0; i < tabbed.getTabCount(); i++) {
 			final EditorPane editorPane = getEditorPane(i);
 			editorPane.setAutoCompletionEnabled(toggleAutoCompletionMenu.isSelected());
