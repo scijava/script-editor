@@ -180,7 +180,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			openMacroFunctions, decreaseFontSize, increaseFontSize, chooseFontSize,
 			chooseTabSize, gitGrep, openInGitweb, replaceTabsWithSpaces,
 			replaceSpacesWithTabs, toggleWhiteSpaceLabeling, zapGremlins,
-			savePreferences;
+			savePreferences, toggleAutoCompletionMenu;
 	private RecentFilesMenuItem openRecent;
 	private JMenu gitMenu, tabsMenu, fontSizeMenu, tabSizeMenu, toolsMenu,
 			runMenu, whiteSpaceMenu;
@@ -372,6 +372,17 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		});
 		edit.add(tabsEmulated);
+
+		toggleAutoCompletionMenu = new JCheckBoxMenuItem("Auto completion");
+		toggleAutoCompletionMenu.setSelected(prefService.getBoolean(TextEditor.class, "autoComplete", true));
+		toggleAutoCompletionMenu.addChangeListener(new ChangeListener() {
+
+			@Override
+			public void stateChanged(final ChangeEvent e) {
+				toggleAutoCompletion();
+			}
+		});
+		edit.add(toggleAutoCompletionMenu);
 
 		savePreferences = addToMenu(edit, "Save Preferences", 0, 0);
 
@@ -1121,6 +1132,9 @@ public class TextEditor extends JFrame implements ActionListener,
 			getTab().getScreen().setText("");
 		}
 		else if (source == zapGremlins) zapGremlins();
+		else if (source == toggleAutoCompletionMenu) {
+			toggleAutoCompletion();
+		}
 		else if (source == savePreferences) {
 			getEditorPane().savePreferences();
 		}
@@ -1195,6 +1209,14 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == nextTab) switchTabRelative(1);
 		else if (source == previousTab) switchTabRelative(-1);
 		else if (handleTabsMenu(source)) return;
+	}
+
+	private void toggleAutoCompletion() {
+		for (int i = 0; i < tabbed.getTabCount(); i++) {
+			final EditorPane editorPane = getEditorPane(i);
+			editorPane.setAutoCompletionEnabled(toggleAutoCompletionMenu.isSelected());
+		}
+		prefService.put(TextEditor.class, "autoComplete", toggleAutoCompletionMenu.isSelected());
 	}
 
 	protected boolean handleTabsMenu(final Object source) {
