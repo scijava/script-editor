@@ -87,7 +87,7 @@ public class DefaultLanguageSupportService extends
 			new HashMap<>();
 
 		for (final LanguageSupportPlugin instance : getInstances()) {
-			map.put(instance.getLanguageName(), instance);
+			map.put(instance.getLanguageName().toLowerCase(), instance);
 		}
 
 		languageSupports = Collections.unmodifiableMap(map);

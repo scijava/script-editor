@@ -514,9 +514,15 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		// try to get language support for current language, may be null.
 		support = languageSupportService.getLanguageSupport(currentLanguage);
 
-		if (support != null) {
+		if (support != null && autoCompletionEnabled) {
 			support.install(this);
 		}
+	}
+
+	private boolean autoCompletionEnabled = true;
+	public void setAutoCompletionEnabled(boolean value) {
+		autoCompletionEnabled = value;
+		setLanguage(currentLanguage);
 	}
 
 	/**
