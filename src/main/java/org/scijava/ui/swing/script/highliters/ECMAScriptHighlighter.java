@@ -2,7 +2,7 @@
  * #%L
  * Script Editor and Interpreter for SciJava script languages.
  * %%
- * Copyright (C) 2009 - 2016 Board of Regents of the University of
+ * Copyright (C) 2009 - 2018 Board of Regents of the University of
  * Wisconsin-Madison, Max Planck Institute of Molecular Cell Biology and
  * Genetics, and others.
  * %%
