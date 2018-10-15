@@ -34,6 +34,7 @@ package org.scijava.ui.swing.script.languagesupport;
 import java.io.IOException;
 
 import org.fife.rsta.ac.java.JavaLanguageSupport;
+import org.scijava.plugin.Plugin;
 import org.scijava.ui.swing.script.LanguageSupportPlugin;
 import org.scijava.ui.swing.script.LanguageSupportService;
 
@@ -44,9 +45,7 @@ import org.scijava.ui.swing.script.LanguageSupportService;
  * @see JavaLanguageSupport
  * @see LanguageSupportService
  */
-// This plugin is temporarily disabled pending a resolution for:
-//   https://github.com/bobbylight/RSTALanguageSupport/issues/26
-//@Plugin(type = LanguageSupportPlugin.class)
+@Plugin(type = LanguageSupportPlugin.class)
 public class JavaLanguageSupportPlugin extends JavaLanguageSupport implements
 	LanguageSupportPlugin
 {
