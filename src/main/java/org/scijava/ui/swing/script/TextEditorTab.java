@@ -217,6 +217,10 @@ public class TextEditorTab extends JSplitPane {
 		return showingErrors ? textEditor.getErrorScreen() : screen;
 	}
 
+	public JTextArea getScreenInstance() {
+		return screen;
+	}
+
 	boolean isExecuting() {
 		return null != getExecuter();
 	}
