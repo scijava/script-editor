@@ -31,6 +31,8 @@
 
 package org.scijava.ui.swing.script.commands;
 
+import javax.swing.JTextArea;
+
 import org.scijava.command.ContextCommand;
 import org.scijava.plugin.Parameter;
 import org.scijava.ui.swing.script.TextEditor;
@@ -51,7 +53,14 @@ public class ChooseFontSize extends ContextCommand {
 	@Override
 	public void run() {
 		editor.getEditorPane().setFontSize(fontSize);
+		final float size = editor.getEditorPane().getFontSize();
+		changeFontSize(editor.getErrorScreen(), size);
+		changeFontSize(editor.getTab().getScreenInstance(), size);
 		editor.updateTabAndFontSize(false);
+	}
+
+	private void changeFontSize(final JTextArea a, final float size) {
+		a.setFont(a.getFont().deriveFont(size));
 	}
 
 	protected void initializeChoice() {

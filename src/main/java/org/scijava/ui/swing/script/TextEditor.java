@@ -305,8 +305,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 				@Override
 				public void actionPerformed(final ActionEvent event) {
-					getEditorPane().setFontSize(size);
-					updateTabAndFontSize(false);
+					setFontSize(size);
 				}
 			});
 			for (final char c : ("" + size).toCharArray()) {
@@ -1204,7 +1203,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == increaseFontSize || source == decreaseFontSize) {
 			getEditorPane().increaseFontSize(
 				(float) (source == increaseFontSize ? 1.2 : 1 / 1.2));
-			updateTabAndFontSize(false);
+			setFontSize(getEditorPane().getFontSize());
 		}
 		else if (source == nextTab) switchTabRelative(1);
 		else if (source == previousTab) switchTabRelative(-1);
@@ -2454,4 +2453,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		setTitle();
 	}
 
+	public void setFontSize(final float size) {
+		if (getEditorPane().getFontSize() != size)
+			getEditorPane().setFontSize(size);
+		changeFontSize(errorScreen, size);
+		changeFontSize(getTab().screen, size);
+		updateTabAndFontSize(false);
+	}
+
+	private void changeFontSize(final JTextArea a, final float size) {
+		a.setFont(a.getFont().deriveFont(size));
+	}
 }
