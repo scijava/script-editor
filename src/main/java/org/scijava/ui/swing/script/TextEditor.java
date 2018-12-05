@@ -2419,6 +2419,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			|| (this.incremental && null == this.scriptInfo)
 		    || language.isCompiledLanguage()
 		    || (null != this.scriptInfo
+		        && null != this.scriptInfo.getLanguage()
 		        && this.scriptInfo.getLanguage().getLanguageName()
 		           != getCurrentLanguage().getLanguageName()))
 		{
@@ -2462,6 +2463,12 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 	
 	public void setIncremental(final boolean incremental) {
+		
+		if (null == getCurrentLanguage()) {
+			error("Select a language first!");
+			return;
+		}
+		
 		this.incremental = incremental;
 		
 		final JTextArea prompt = this.getTab().getPrompt();
@@ -2476,26 +2483,34 @@ public class TextEditor extends JFrame implements ActionListener,
 					if (KeyEvent.VK_ENTER == keyCode) {
 						if (0 != ke.getModifiers()) return;
 						final String text = prompt.getText();
-						if (null == text || "" == text.trim()) return;
+						if (null == text || 0 == text.trim().length()) return;
 						if ('\\' == text.charAt(text.length() -1)) {
 							// Allow writing the line break when the last character is a backslash
 							return;
 						}
-						commands.add(text);
-						index = commands.size() - 1;
 						try {
-							getTab().getScreen().append(">" + text + "\n");
+							getTab().showOutput();
+							getTab().screen.append("> " + text + "\n");
+							commands.add(text);
+							index = commands.size() - 1;
 							markCompileStart(false); // weird method name, execute will call markCompileEnd
 							execute(getTab(), text);
+							prompt.setText("");
 						} catch (Throwable t) {
 							log.error(t);
 						}
 						ke.consume(); // avoid writing the line break
 					} else if (KeyEvent.VK_PAGE_UP == keyCode) {
-						if (index > 0) prompt.setText(commands.get(--index));
+						if (index > -1) {
+							if (index >= commands.size()) index = commands.size() -1;
+							prompt.setText(commands.get(index--));
+						}
 						ke.consume();
 					} else if (KeyEvent.VK_PAGE_DOWN == keyCode) {
-						if (index < commands.size() -1) prompt.setText(commands.get(++index));
+						if (commands.size() > 0 && index < 0) index = 0;
+						if (index < commands.size() -1) {
+							prompt.setText(commands.get(++index));
+						}
 						else prompt.setText("");
 						ke.consume();
 					}
