@@ -2485,7 +2485,10 @@ public class TextEditor extends JFrame implements ActionListener,
 					if (KeyEvent.VK_ENTER == keyCode) {
 						if (0 != ke.getModifiers()) return;
 						final String text = prompt.getText();
-						if (null == text || 0 == text.trim().length()) return;
+						if (null == text || 0 == text.trim().length()) {
+							ke.consume(); // avoid writing the line break
+							return;
+						}
 						if ('\\' == text.charAt(text.length() -1)) {
 							// Allow writing the line break when the last character is a backslash
 							return;
