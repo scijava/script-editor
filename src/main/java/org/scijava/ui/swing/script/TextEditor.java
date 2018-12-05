@@ -40,11 +40,12 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.CharArrayWriter;
 import java.io.File;
 import java.io.FileInputStream;
@@ -90,6 +91,7 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JRadioButtonMenuItem;
+import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.KeyStroke;
@@ -1964,7 +1966,25 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	/** Invoke in the context of the event dispatch thread. */
 	private void execute(final boolean selectionOnly) throws IOException {
+		final String text;
 		final TextEditorTab tab = getTab();
+		if (selectionOnly) {
+			final String selected = tab.getEditorPane().getSelectedText();
+			if (selected == null) {
+				error("Selection required!");
+				text = null;
+			}
+			else text = selected + "\n"; // Ensure code blocks are terminated
+		}
+		else {
+			text = tab.getEditorPane().getText();
+		}
+		
+		execute(tab, text);
+	}
+	
+	/** Invoke in the context of the event dispatch thread. */
+	private void execute(final TextEditorTab tab, final String text) throws IOException {
 
 		tab.prepare();
 
@@ -2008,18 +2028,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		// Write into PipedOutputStream
 		// from another Thread
 		try {
-			final String text;
-			if (selectionOnly) {
-				final String selected = tab.getEditorPane().getSelectedText();
-				if (selected == null) {
-					error("Selection required!");
-					text = null;
-				}
-				else text = selected + "\n"; // Ensure code blocks are terminated
-			}
-			else {
-				text = tab.getEditorPane().getText();
-			}
 			new Thread() {
 
 				{
@@ -2115,15 +2123,21 @@ public class TextEditor extends JFrame implements ActionListener,
 		textArea.insert(text, length);
 		textArea.setCaretPosition(length);
 	}
-
+	
 	public void markCompileStart() {
+		markCompileStart(true);
+	}
+
+	public void markCompileStart(final boolean with_timestamp) {
 		errorHandler = null;
 
-		final String started =
-			"Started " + getEditorPane().getFileName() + " at " + new Date() + "\n";
+		if (with_timestamp) {
+			final String started =
+					"Started " + getEditorPane().getFileName() + " at " + new Date() + "\n";
+			append(errorScreen, started);
+			append(getTab().screen, started);
+		}
 		final int offset = errorScreen.getDocument().getLength();
-		append(errorScreen, started);
-		append(getTab().screen, started);
 		compileStartOffset = errorScreen.getDocument().getLength();
 		try {
 			compileStartPosition = errorScreen.getDocument().createPosition(offset);
@@ -2448,6 +2462,52 @@ public class TextEditor extends JFrame implements ActionListener,
 	
 	public void setIncremental(final boolean incremental) {
 		this.incremental = incremental;
+		
+		final JTextArea prompt = this.getTab().getPrompt();
+		if (incremental) {
+			getTab().getScreenAndPromptSplit().setDividerLocation(0.5);
+			prompt.addKeyListener(new KeyAdapter() {
+				private final ArrayList<String> commands = new ArrayList<String>();
+				private int index = -1;
+				@Override
+				public void keyPressed(final KeyEvent ke) {
+					final int keyCode = ke.getKeyCode();
+					if (KeyEvent.VK_ENTER == keyCode) {
+						if (0 != ke.getModifiers()) return;
+						final String text = prompt.getText();
+						if (null == text || "" == text.trim()) return;
+						if ('\\' == text.charAt(text.length() -1)) {
+							// Allow writing the line break when the last character is a backslash
+							return;
+						}
+						commands.add(text);
+						index = commands.size() - 1;
+						try {
+							getTab().getScreen().append(">" + text + "\n");
+							markCompileStart(false); // weird method name, execute will call markCompileEnd
+							execute(getTab(), text);
+						} catch (Throwable t) {
+							log.error(t);
+						}
+						ke.consume(); // avoid writing the line break
+					} else if (KeyEvent.VK_PAGE_UP == keyCode) {
+						if (index > 0) prompt.setText(commands.get(--index));
+						ke.consume();
+					} else if (KeyEvent.VK_PAGE_DOWN == keyCode) {
+						if (index < commands.size() -1) prompt.setText(commands.get(++index));
+						else prompt.setText("");
+						ke.consume();
+					}
+				}
+			});
+		} else {
+			prompt.setText(""); // clear
+			prompt.setEnabled(false);
+			for (final KeyListener kl : prompt.getKeyListeners()) {
+				prompt.removeKeyListener(kl);
+			}
+			getTab().getScreenAndPromptSplit().setDividerLocation(0.0);
+		}
 	}
 
 	private String adjustPath(final String path, final String langName) {
