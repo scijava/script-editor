@@ -2490,13 +2490,15 @@ public class TextEditor extends JFrame implements ActionListener,
 							return;
 						}
 						try {
+							final JTextArea screen = getTab().screen;
 							getTab().showOutput();
-							getTab().screen.append("> " + text + "\n");
+							screen.append("> " + text + "\n");
 							commands.add(text);
 							index = commands.size() - 1;
 							markCompileStart(false); // weird method name, execute will call markCompileEnd
 							execute(getTab(), text);
 							prompt.setText("");
+							screen.scrollRectToVisible(screen.modelToView(screen.getDocument().getLength()));
 						} catch (Throwable t) {
 							log.error(t);
 						}
