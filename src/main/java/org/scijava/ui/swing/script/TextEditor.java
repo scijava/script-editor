@@ -44,6 +44,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.CharArrayWriter;
 import java.io.File;
 import java.io.FileInputStream;
@@ -225,6 +226,10 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private Map<ScriptLanguage, JRadioButtonMenuItem> languageMenuItems;
 	private JRadioButtonMenuItem noneLanguageItem;
+	
+	private EditableScriptInfo scriptInfo;
+	private ScriptModule module;
+	private boolean incremental = false;
 
 	public TextEditor(final Context context) {
 		super("Script Editor");
@@ -1600,6 +1605,9 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	void setLanguage(final ScriptLanguage language, final boolean addHeader) {
+		if (null != this.getCurrentLanguage() && this.getCurrentLanguage().getLanguageName() != language.getLanguageName()) {
+			this.scriptInfo = null;
+		}
 		getEditorPane().setLanguage(language, addHeader);
 
 		setTitle();
@@ -2358,27 +2366,72 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (language == null) return false;
 		return language.isCompiledLanguage();
 	}
+	
+	private final class EditableScriptInfo extends ScriptInfo
+	{	
+		private String script;
+		
+		public EditableScriptInfo(final Context context, final String path, final Reader reader) {
+			super(context, path, reader);
+		}
+		
+		public void setScript(final Reader reader) throws IOException {
+			final char[] buffer = new char[8192];
+			final StringBuilder builder = new StringBuilder();
+
+			int read;
+			while ((read = reader.read(buffer)) != -1) {
+				builder.append(buffer, 0, read);
+			}
+
+			this.script = builder.toString();
+		}
+		
+		@Override
+		public String getProcessedScript() {
+			return null == this.script ? super.getProcessedScript() : this.script;
+		}
+	}
 
 	private Reader evalScript(final String filename, Reader reader,
 		final Writer output, final Writer errors) throws ModuleException
 	{
 		final ScriptLanguage language = getCurrentLanguage();
-		if (respectAutoImports) {
-			reader =
-				DefaultAutoImporters.prefixAutoImports(context, language, reader,
-					errors);
+		
+		// If there's no engine or the language has changed or the language is compiled from a file
+		// then create the engine and module anew
+		if (!this.incremental
+			|| (this.incremental && null == this.scriptInfo)
+		    || language.isCompiledLanguage()
+		    || (null != this.scriptInfo
+		        && this.scriptInfo.getLanguage().getLanguageName()
+		           != getCurrentLanguage().getLanguageName()))
+		{
+			if (respectAutoImports) {
+				reader =
+						DefaultAutoImporters.prefixAutoImports(context, language, reader,
+								errors);
+			}
+			// create script module for execution
+			this.scriptInfo = new EditableScriptInfo(context, filename, reader);
+
+			// use the currently selected language to execute the script
+			this.scriptInfo.setLanguage(language);
+			
+			this.module = this.scriptInfo.createModule();
+			context.inject(this.module);
+		} else {
+			try {
+				// Same engine, with persistent state
+				this.scriptInfo.setScript( reader );
+			} catch (IOException e) {
+				log.error(e);
+			}
 		}
-		// create script module for execution
-		final ScriptInfo info = new ScriptInfo(context, filename, reader);
-		final ScriptModule module = info.createModule();
-		context.inject(module);
-
-		// use the currently selected language to execute the script
-		info.setLanguage(language);
-
+		
 		// map stdout and stderr to the UI
-		module.setOutputWriter(output);
-		module.setErrorWriter(errors);
+		this.module.setOutputWriter(output);
+		this.module.setErrorWriter(errors);
 
 		// execute the script
 		try {
@@ -2391,6 +2444,10 @@ public class TextEditor extends JFrame implements ActionListener,
 			log.error(e);
 		}
 		return reader;
+	}
+	
+	public void setIncremental(final boolean incremental) {
+		this.incremental = incremental;
 	}
 
 	private String adjustPath(final String path, final String langName) {

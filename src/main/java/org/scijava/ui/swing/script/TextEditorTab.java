@@ -39,6 +39,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
@@ -62,6 +63,7 @@ public class TextEditorTab extends JSplitPane {
 	protected boolean showingErrors;
 	private Executer executer;
 	private final JButton runit, batchit, killit, toggleErrors;
+	private final JCheckBox incremental;
 
 	private final TextEditor textEditor;
 
@@ -118,13 +120,25 @@ public class TextEditorTab extends JSplitPane {
 			}
 		});
 		bottom.add(killit, bc);
-
+		
 		bc.gridx = 3;
+		incremental = new JCheckBox("persistent");
+		incremental.setEnabled(true);
+		incremental.setSelected(false);
+		incremental.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(final ActionEvent ae) {
+				textEditor.setIncremental(incremental.isSelected());
+			}
+		});
+		bottom.add(incremental, bc);
+
+		bc.gridx = 4;
 		bc.fill = GridBagConstraints.HORIZONTAL;
 		bc.weightx = 1;
 		bottom.add(new JPanel(), bc);
 
-		bc.gridx = 4;
+		bc.gridx = 5;
 		bc.fill = GridBagConstraints.NONE;
 		bc.weightx = 0;
 		bc.anchor = GridBagConstraints.NORTHEAST;
@@ -138,7 +152,7 @@ public class TextEditorTab extends JSplitPane {
 		});
 		bottom.add(toggleErrors, bc);
 
-		bc.gridx = 5;
+		bc.gridx = 6;
 		bc.fill = GridBagConstraints.NONE;
 		bc.weightx = 0;
 		bc.anchor = GridBagConstraints.NORTHEAST;
@@ -158,7 +172,7 @@ public class TextEditorTab extends JSplitPane {
 		bc.fill = GridBagConstraints.BOTH;
 		bc.weightx = 1;
 		bc.weighty = 1;
-		bc.gridwidth = 6;
+		bc.gridwidth = 7;
 		screen.setEditable(false);
 		screen.setLineWrap(true);
 		final Font font = new Font("Courier", Font.PLAIN, 12);
