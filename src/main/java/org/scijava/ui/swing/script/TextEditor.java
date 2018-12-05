@@ -665,6 +665,8 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		final EditorPane editorPane = getEditorPane();
 		editorPane.requestFocus();
+		
+		getTab().getScreenAndPromptSplit().setDividerLocation(1.0);
 	}
 
 	public LogService log() { return log; }
@@ -2522,7 +2524,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			for (final KeyListener kl : prompt.getKeyListeners()) {
 				prompt.removeKeyListener(kl);
 			}
-			getTab().getScreenAndPromptSplit().setDividerLocation(0.0);
+			getTab().getScreenAndPromptSplit().setDividerLocation(1.0);
 		}
 	}
 
