@@ -40,6 +40,7 @@ import java.awt.event.ActionListener;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
@@ -70,7 +71,7 @@ public class TextEditorTab extends JSplitPane {
 	private final TextEditor textEditor;
 
 	public TextEditorTab(final TextEditor textEditor) {
-		super(JSplitPane.VERTICAL_SPLIT);
+		super(JSplitPane.HORIZONTAL_SPLIT);
 		super.setResizeWeight(350.0 / 430.0);
 
 		this.textEditor = textEditor;
@@ -130,6 +131,11 @@ public class TextEditorTab extends JSplitPane {
 		incremental.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(final ActionEvent ae) {
+				if (incremental.isSelected() && null == textEditor.getCurrentLanguage()) {
+					incremental.setSelected(false);
+					JOptionPane.showMessageDialog(TextEditorTab.this, "Select a language first!");
+					return;
+				}
 				textEditor.setIncremental(incremental.isSelected());
 				prompt.setEnabled(incremental.isSelected());
 			}
@@ -181,16 +187,17 @@ public class TextEditorTab extends JSplitPane {
 		final Font font = new Font("Courier", Font.PLAIN, 12);
 		screen.setFont(font);
 		scroll = new JScrollPane(screen);
-		scroll.setPreferredSize(new Dimension(600, 80));
+		scroll.setPreferredSize(new Dimension(400, 600));
 		bottom.add(scroll, bc);
 		
 		prompt.setEnabled(false);
 		
-		screenAndPromptSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, prompt, bottom);
-		screenAndPromptSplit.setDividerLocation(0.0); // prompt collapsed by default
+		screenAndPromptSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, bottom, prompt);
 		
-		super.setTopComponent(editorPane.wrappedInScrollbars());
-		super.setBottomComponent(screenAndPromptSplit);
+		super.setLeftComponent(editorPane.wrappedInScrollbars());
+		super.setRightComponent(screenAndPromptSplit);
+		screenAndPromptSplit.setDividerLocation(600);
+		screenAndPromptSplit.setDividerLocation(1.0);
 	}
 	
 	// Package-private
