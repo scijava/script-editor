@@ -2374,7 +2374,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		context.inject(module);
 
 		// use the currently selected language to execute the script
-		module.setLanguage(language);
+		info.setLanguage(language);
 
 		// map stdout and stderr to the UI
 		module.setOutputWriter(output);
