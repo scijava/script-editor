@@ -59,11 +59,13 @@ public class TextEditorTab extends JSplitPane {
 
 	protected final EditorPane editorPane;
 	protected final JTextArea screen = new JTextArea();
+	protected final JTextArea prompt = new JTextArea();
 	protected final JScrollPane scroll;
 	protected boolean showingErrors;
 	private Executer executer;
 	private final JButton runit, batchit, killit, toggleErrors;
 	private final JCheckBox incremental;
+	private final JSplitPane screenAndPromptSplit;
 
 	private final TextEditor textEditor;
 
@@ -129,6 +131,7 @@ public class TextEditorTab extends JSplitPane {
 			@Override
 			public void actionPerformed(final ActionEvent ae) {
 				textEditor.setIncremental(incremental.isSelected());
+				prompt.setEnabled(incremental.isSelected());
 			}
 		});
 		bottom.add(incremental, bc);
@@ -180,9 +183,19 @@ public class TextEditorTab extends JSplitPane {
 		scroll = new JScrollPane(screen);
 		scroll.setPreferredSize(new Dimension(600, 80));
 		bottom.add(scroll, bc);
-
+		
+		prompt.setEnabled(false);
+		
+		screenAndPromptSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, prompt, bottom);
+		screenAndPromptSplit.setDividerLocation(0.0); // prompt collapsed by default
+		
 		super.setTopComponent(editorPane.wrappedInScrollbars());
-		super.setBottomComponent(bottom);
+		super.setBottomComponent(screenAndPromptSplit);
+	}
+	
+	// Package-private
+	JSplitPane getScreenAndPromptSplit() {
+		return screenAndPromptSplit;
 	}
 
 	/** Invoke in the context of the event dispatch thread. */
@@ -230,6 +243,10 @@ public class TextEditorTab extends JSplitPane {
 
 	public JTextArea getScreen() {
 		return showingErrors ? textEditor.getErrorScreen() : screen;
+	}
+	
+	public JTextArea getPrompt() {
+		return prompt;
 	}
 
 	boolean isExecuting() {
