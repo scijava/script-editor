@@ -31,7 +31,6 @@
 
 package org.scijava.ui.swing.script;
 
-import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -187,7 +186,6 @@ public class TextEditorTab extends JSplitPane {
 		final Font font = new Font("Courier", Font.PLAIN, 12);
 		screen.setFont(font);
 		scroll = new JScrollPane(screen);
-		scroll.setPreferredSize(new Dimension(400, 600));
 		bottom.add(scroll, bc);
 		
 		prompt.setEnabled(false);

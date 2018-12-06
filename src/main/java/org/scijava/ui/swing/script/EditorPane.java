@@ -46,6 +46,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.JScrollPane;
 import javax.swing.JViewport;
@@ -711,6 +712,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public static final String LINE_WRAP_PREFS = "script.editor.WrapLines";
 	public static final String TAB_SIZE_PREFS = "script.editor.TabSize";
 	public static final String TABS_EMULATED_PREFS = "script.editor.TabsEmulated";
+	public static final String FOLDERS_PREFS = "script.editor.folders";
 
 	public static final int DEFAULT_TAB_SIZE = 4;
 
@@ -724,15 +726,20 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		setTabsEmulated(prefService.getBoolean(TABS_EMULATED_PREFS,
 			getTabsEmulated()));
 	}
+	
+	public String loadFolders() {
+		return prefService.get(FOLDERS_PREFS, System.getProperty("user.home"));
+	}
 
 	/**
 	 * Retrieves and saves the preferences to the persistent store
 	 */
-	public void savePreferences() {
+	public void savePreferences(final String top_folders) {
 		prefService.put(TAB_SIZE_PREFS, getTabSize());
 		prefService.put(FONT_SIZE_PREFS, getFontSize());
 		prefService.put(LINE_WRAP_PREFS, getLineWrap());
 		prefService.put(TABS_EMULATED_PREFS, getTabsEmulated());
+		if (null != top_folders) prefService.put(FOLDERS_PREFS, top_folders);
 	}
 
 	/**

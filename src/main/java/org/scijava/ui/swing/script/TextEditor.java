@@ -31,8 +31,11 @@
 
 package org.scijava.ui.swing.script;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -84,13 +87,17 @@ import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
+import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.JRadioButtonMenuItem;
+import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
@@ -102,6 +109,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Position;
+import javax.swing.tree.TreePath;
 
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
@@ -192,6 +200,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	private FindAndReplaceDialog findDialog;
 	private JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport;
 	private JTextArea errorScreen = new JTextArea();
+	
+	private final FileSystemTree tree;
 
 	private int compileStartOffset;
 	private Position compileStartPosition;
@@ -595,7 +605,93 @@ public class TextEditor extends JFrame implements ActionListener,
 		tabbed.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
 		getContentPane().setLayout(
 			new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
-		getContentPane().add(tabbed);
+		
+		final JPanel tree_panel = new JPanel();
+		final JButton add_directory = new JButton("(+)");
+		add_directory.setToolTipText("Add a directory");
+		final JButton remove_directory = new JButton("(-)");
+		remove_directory.setToolTipText("Remove a top-level directory");
+		tree = new FileSystemTree();
+		tree.setMinimumSize(new Dimension(200, 600));
+		tree.addLeafListener(new FileSystemTree.LeafListener() {
+			@Override
+			public void leafDoubleClicked(final File file) {
+				final String name = file.getName();
+				final int idot = name.lastIndexOf('.');
+				if (idot > -1) {
+					final String ext = name.substring(idot + 1);
+					final ScriptLanguage lang = scriptService.getLanguageByExtension(ext);
+					if (null != lang) {
+						open(file);
+						return;
+					}
+				}
+				// Ask:
+				final int choice = JOptionPane.showConfirmDialog(TextEditor.this,
+						"Really try to open file " + name + " ?", "Confirm", JOptionPane.OK_CANCEL_OPTION);
+				if (JOptionPane.OK_OPTION == choice) {
+					open(file);
+				}
+			}
+		});
+		add_directory.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				final JFileChooser c = new JFileChooser("Choose a directory");
+				c.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				c.setFileHidingEnabled(true); // hide hidden files
+				if (JFileChooser.APPROVE_OPTION == c.showOpenDialog(getContentPane())) {
+					final File file = c.getSelectedFile();
+					if (file.isDirectory()) tree.addRootDirectory(file.getAbsolutePath(), false);
+				}
+			}
+		});
+		remove_directory.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				final TreePath p = tree.getSelectionPath();
+				if (null == p) {
+					JOptionPane.showMessageDialog(TextEditor.this, "Select a top-level folder first.");
+					return;
+				}
+				if (2 == p.getPathCount()) {
+					// Is a child of the root, so it's a top-level folder
+					tree.getModel().removeNodeFromParent((FileSystemTree.Node)p.getLastPathComponent());
+				} else {
+					JOptionPane.showMessageDialog(TextEditor.this, "Can only remove top-level folders.");
+				}
+			}
+		});
+		
+		// Restore top-level directories
+		tree.addTopLevelFoldersFrom(getEditorPane().loadFolders());
+
+		final GridBagLayout g = new GridBagLayout();
+		tree_panel.setLayout(g);
+		final GridBagConstraints bc = new GridBagConstraints();
+		bc.gridx = 0;
+		bc.gridy = 0;
+		bc.weightx = 0;
+		bc.weighty = 0;
+		bc.anchor = GridBagConstraints.NORTHWEST;
+		bc.fill = GridBagConstraints.NONE;
+		tree_panel.add(add_directory, bc);
+		bc.gridx = 1;
+		tree_panel.add(remove_directory, bc);
+		bc.gridx = 0;
+		bc.gridwidth = 2;
+		bc.gridy = 1;
+		bc.weightx = 1.0;
+		bc.weighty = 1.0;
+		bc.fill = GridBagConstraints.BOTH;
+		tree_panel.add(tree, bc);
+		final JScrollPane scrolltree = new JScrollPane(tree_panel);
+		scrolltree.setBackground(Color.white);
+		scrolltree.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(0,5,0,5)));
+		scrolltree.setPreferredSize(new Dimension(200, 600));
+		final JSplitPane body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrolltree, tabbed);
+		body.setOneTouchExpandable(true);
+		getContentPane().add(body);
 
 		// for Eclipse and MS Visual Studio lovers
 		addAccelerator(compileAndRun, KeyEvent.VK_F11, 0, true);
@@ -665,6 +761,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final EditorPane editorPane = getEditorPane();
 		editorPane.requestFocus();
 		
+		body.setDividerLocation(0.2);
 		getTab().getScreenAndPromptSplit().setDividerLocation(1.0);
 	}
 
@@ -1144,7 +1241,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			toggleAutoCompletion();
 		}
 		else if (source == savePreferences) {
-			getEditorPane().savePreferences();
+			getEditorPane().savePreferences(tree.getTopLevelFoldersString());
 		}
 		else if (source == openHelp) openHelp(null);
 		else if (source == openHelpWithoutFrames) openHelp(null, false);
