@@ -607,9 +607,9 @@ public class TextEditor extends JFrame implements ActionListener,
 			new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 		
 		final JPanel tree_panel = new JPanel();
-		final JButton add_directory = new JButton("(+)");
+		final JButton add_directory = new JButton("[+]");
 		add_directory.setToolTipText("Add a directory");
-		final JButton remove_directory = new JButton("(-)");
+		final JButton remove_directory = new JButton("[-]");
 		remove_directory.setToolTipText("Remove a top-level directory");
 		tree = new FileSystemTree();
 		tree.setMinimumSize(new Dimension(200, 600));
@@ -703,7 +703,6 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		// make sure that the window is not closed by accident
 		addWindowListener(new WindowAdapter() {
-
 			@Override
 			public void windowClosing(final WindowEvent e) {
 				if (!confirmClose()) return;
