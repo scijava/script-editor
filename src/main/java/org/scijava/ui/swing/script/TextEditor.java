@@ -2694,6 +2694,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			getEditorPane().setFontSize(size);
 		changeFontSize(errorScreen, size);
 		changeFontSize(getTab().screen, size);
+		changeFontSize(getTab().prompt, size);
 		updateTabAndFontSize(false);
 	}
 
