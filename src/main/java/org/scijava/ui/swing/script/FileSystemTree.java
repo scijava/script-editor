@@ -93,7 +93,6 @@ public class FileSystemTree extends JTree
 		
 		/**
 		 * If it's a directory, add a Node for each of its visible files.
-		 * @param model
 		 */
 		public void populateChildren() {
 			try {

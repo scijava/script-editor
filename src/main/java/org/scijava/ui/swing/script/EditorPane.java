@@ -277,7 +277,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 * Write the contents of this {@link EditorPane} to given file.
 	 *
 	 * @param file File to write the contents of this editor to.
-	 * @throws IOException
+	 * @throws IOException Thrown when a parent directory could not be created.
 	 */
 	public void write(final File file) throws IOException {
 		final File dir = file.getParentFile();
@@ -300,7 +300,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 * Load editor contents from given file.
 	 *
 	 * @param file file to load.
-	 * @throws IOException
+	 * @throws IOException Thrown if the canonical file path couldn't be obtained for the file. 
 	 */
 	public void open(final File file) throws IOException {
 		final File oldFile = curFile;
@@ -371,7 +371,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	/**
 	 * TODO
 	 *
-	 * @param file
+	 * @param file The file to edit in this {@link EditorPane}.
 	 */
 	public void setFileName(final File file) {
 		curFile = file;
