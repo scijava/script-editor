@@ -2671,7 +2671,10 @@ public class TextEditor extends JFrame implements ActionListener,
 			getTab().getScreenAndPromptSplit().setDividerLocation(0.5);
 			prompt.addKeyListener(new KeyAdapter() {
 				private final ArrayList<String> commands = loadPromptLog(getCurrentLanguage());
-				private int index = commands.size() > 0 ? commands.size() : -1;
+				private int index = commands.size();
+				{
+					commands.add(""); // the current prompt text
+				}
 				private String unexecuted_command = "";
 				@Override
 				public void keyPressed(final KeyEvent ke) {
@@ -2687,16 +2690,16 @@ public class TextEditor extends JFrame implements ActionListener,
 							ke.consume(); // avoid writing the line break
 							return;
 						}
-						if ('\\' == text.charAt(text.length() -1)) {
-							// Allow writing the line break when the last character is a backslash
-							return;
-						}
 						try {
 							final JTextArea screen = getTab().screen;
 							getTab().showOutput();
 							screen.append("> " + text + "\n");
-							commands.add(text);
+							// Update the last command in the history
+							commands.set(commands.size() -1, prompt.getText());
+							// Set the next command
+							commands.add("");
 							index = commands.size() - 1;
+							// Execute
 							markCompileStart(false); // weird method name, execute will call markCompileEnd
 							execute(getTab(), text, true);
 							prompt.setText("");
@@ -2710,37 +2713,53 @@ public class TextEditor extends JFrame implements ActionListener,
 					
 					// If using arrows for navigating history
 					if (getTab().updownarrows.isSelected()) {
+						// Only if no modifiers are down
+						if (!(ke.isShiftDown() || ke.isControlDown() || ke.isAltDown() || ke.isMetaDown())) {
+							switch(keyCode) {
+							case KeyEvent.VK_UP:
+								keyCode = KeyEvent.VK_PAGE_UP;
+								break;
+							case KeyEvent.VK_DOWN:
+								keyCode = KeyEvent.VK_PAGE_DOWN;
+								break;
+							}
+						}
+					}
+					
+					// control+p and control+n for navigating history
+					if (ke.isControlDown()) {
 						switch(keyCode) {
-						case KeyEvent.VK_UP:
+						case KeyEvent.VK_P:
 							keyCode = KeyEvent.VK_PAGE_UP;
 							break;
-						case KeyEvent.VK_DOWN:
+						case KeyEvent.VK_N:
 							keyCode = KeyEvent.VK_PAGE_DOWN;
 							break;
 						}
 					}
 					
 					if (KeyEvent.VK_PAGE_UP == keyCode) {
-						if (commands.size() == index || commands.isEmpty()) {
-							unexecuted_command = prompt.getText(); // store
+						// If last, update the stored command
+						if (commands.size() -1 == index) {
+							commands.set(commands.size() -1, prompt.getText());
 						}
-						if (index > -1) {
-							if (index >= commands.size()) {
-								index = commands.size() -1;
-							}
-							prompt.setText(commands.get(index--));
+						if (index > 0) {
+							prompt.setText(commands.get(--index));
 						}
 						ke.consume();
+						return;
 					} else if (KeyEvent.VK_PAGE_DOWN == keyCode) {
-						if (commands.size() > 0 && index < 0) index = 0;
 						if (index < commands.size() -1) {
 							prompt.setText(commands.get(++index));
 						}
-						else {
-							prompt.setText(unexecuted_command); // restore
-							unexecuted_command = "";
-						}
 						ke.consume();
+						return;
+					}
+					
+					// Update index and current command when editing an earlier command
+					if (commands.size() -1 != index) {
+						index = commands.size() -1;
+						commands.set(commands.size() -1, prompt.getText());
 					}
 				}
 			});
