@@ -67,7 +67,6 @@ import java.io.Writer;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
@@ -820,7 +819,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		TEMPLATE_PATHS.add(path);
 	}
 
-	@SuppressWarnings("unused")
 	@EventHandler
 	private void onEvent(final ContextDisposingEvent e) {
 		if (isDisplayable()) dispose();
