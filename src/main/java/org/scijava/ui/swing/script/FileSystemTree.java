@@ -242,7 +242,7 @@ public class FileSystemTree extends JTree
 	 * Add a directory as a top-level root.
 	 * 
 	 * @param dir The directory to add as a top-level root
-	 * @param checkIfChild If true, and the {@param dir} is a child of an existing root,
+	 * @param checkIfChild If true, and the {@code dir} is a child of an existing root,
 	 *                     then merely expand it and don't add it as a root.
 	 */
 	public void addRootDirectory(final String dir, final boolean checkIfChild) {
