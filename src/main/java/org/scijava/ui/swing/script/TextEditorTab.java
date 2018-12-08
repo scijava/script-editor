@@ -226,12 +226,12 @@ public class TextEditorTab extends JSplitPane {
 				final String msg = "This REPL (read-evaluate-print-loop) parses " + textEditor.getCurrentLanguage().getLanguageName() + " code.\n\n"
 						+ "Key bindings:\n"
 						+ "* enter: evaluate code\n"
-						+ "* shift-enter: add line break (also alt-enter and meta-enter)\n"
-						+ "* page UP: show previous entry in the history\n"
-						+ "* page DOWN: show next entry in the history\n"
+						+ "* shift+enter: add line break (also alt-enter and meta-enter)\n"
+						+ "* page UP or ctrl+p: show previous entry in the history\n"
+						+ "* page DOWN or ctrl+n: show next entry in the history\n"
 						+ "\n"
 						+ "If 'Use arrow keys' is checked, then up/down arrows work like page UP/DOWN,\n"
-						+ "and shift + up/down arrow work like arrow keys before for caret movement\n"
+						+ "and shift+up/down arrow work like arrow keys before for caret movement\n"
 						+ "within a multi-line prompt."
 						;
 				JOptionPane.showMessageDialog(textEditor, msg, "REPL help", JOptionPane.INFORMATION_MESSAGE);
