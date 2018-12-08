@@ -37,6 +37,18 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Toolkit;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DragGestureEvent;
+import java.awt.dnd.DragGestureListener;
+import java.awt.dnd.DragSource;
+import java.awt.dnd.DragSourceDragEvent;
+import java.awt.dnd.DragSourceDropEvent;
+import java.awt.dnd.DragSourceEvent;
+import java.awt.dnd.DragSourceListener;
+import java.awt.dnd.DropTarget;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
@@ -248,9 +260,16 @@ public class TextEditor extends JFrame implements ActionListener,
 	private EditableScriptInfo scriptInfo;
 	private ScriptModule module;
 	private boolean incremental = false;
+	private DragSource dragSource;
+	private DropTarget dropTarget;
+	
+	static public final ArrayList<TextEditor> instances = new ArrayList<TextEditor>();
+	static public final ArrayList<Context> contexts = new ArrayList<Context>();
 
 	public TextEditor(final Context context) {
 		super("Script Editor");
+		instances.add(this);
+		contexts.add(context);
 		context.inject(this);
 		initializeTokenMakers();
 		loadPreferences();
@@ -618,6 +637,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		final JButton remove_directory = new JButton("[-]");
 		remove_directory.setToolTipText("Remove a top-level directory");
 		tree = new FileSystemTree();
+		dragSource = new DragSource();
+		final DragAndDrop dnd = new DragAndDrop();
+		dragSource.createDefaultDragGestureRecognizer(tree, DnDConstants.ACTION_COPY, dnd);
 		tree.setMinimumSize(new Dimension(200, 600));
 		tree.addLeafListener(new FileSystemTree.LeafListener() {
 			@Override
@@ -631,6 +653,17 @@ public class TextEditor extends JFrame implements ActionListener,
 						open(file);
 						return;
 					}
+				}
+				if (isBinary(file)) {
+					// Open the image in Fiji with one of:
+					//   sc.fiji.compat.FijiService
+					//   sc.fiji.compat.DefaultFijiService
+					//   io.scif.SCIFIOService
+					//   io.scif.img.DefaultImgUtilityService
+					//   io.scif.formats.tiff.DefaultTiffService or similar in org.scijava.service.AbstractService
+					//   maybe also net.imagej.display.DefaultImageDisplayService
+					// most promising: fiji.DefaultFijiService
+					//context.getService()
 				}
 				// Ask:
 				final int choice = JOptionPane.showConfirmDialog(TextEditor.this,
@@ -712,6 +745,12 @@ public class TextEditor extends JFrame implements ActionListener,
 			@Override
 			public void windowClosing(final WindowEvent e) {
 				if (!confirmClose()) return;
+				// Necessary to prevent memory leaks
+				for (final DragSourceListener l : dragSource.getDragSourceListeners()) {
+					dragSource.removeDragSourceListener(l);
+				}
+				dragSource = null;
+				getTab().destroy();
 				dispose();
 			}
 		});
@@ -732,17 +771,19 @@ public class TextEditor extends JFrame implements ActionListener,
 		setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 
 		try {
+			final Runnable ui_task = new Runnable() {
+				@Override
+				public void run() {
+					pack();
+					body.setDividerLocation(0.2);
+					getTab().getScreenAndPromptSplit().setDividerLocation(1.0);
+				}
+			};
 			if (SwingUtilities.isEventDispatchThread()) {
-				pack();
+				ui_task.run();
 			}
 			else {
-				SwingUtilities.invokeAndWait(new Runnable() {
-
-					@Override
-					public void run() {
-						pack();
-					}
-				});
+				SwingUtilities.invokeAndWait(ui_task);
 			}
 		}
 		catch (final Exception ie) {
@@ -765,9 +806,59 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		final EditorPane editorPane = getEditorPane();
 		editorPane.requestFocus();
-		
-		body.setDividerLocation(0.2);
-		getTab().getScreenAndPromptSplit().setDividerLocation(1.0);
+	}
+	
+	private class DragAndDrop implements DragSourceListener, DragGestureListener {
+		@Override
+		public void dragDropEnd(DragSourceDropEvent dsde) {}
+
+		@Override
+		public void dragEnter(DragSourceDragEvent dsde) {
+			dsde.getDragSourceContext().setCursor(DragSource.DefaultMoveNoDrop);
+		}
+
+		@Override
+		public void dragGestureRecognized(DragGestureEvent dge) {
+			TreePath path = tree.getSelectionPath();
+			final String filepath = (String)((FileSystemTree.Node) path.getLastPathComponent()).getUserObject();
+			dragSource.startDrag(dge, DragSource.DefaultCopyDrop, new Transferable() {
+				@Override
+				public boolean isDataFlavorSupported(final DataFlavor flavor) {
+					return DataFlavor.javaFileListFlavor == flavor;
+				}
+				
+				@Override
+				public DataFlavor[] getTransferDataFlavors() {
+					return new DataFlavor[]{ DataFlavor.javaFileListFlavor };
+				}
+				
+				@Override
+				public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
+					if (isDataFlavorSupported(flavor))
+						return Arrays.asList(new String[]{filepath});
+					return null;
+				}
+			}, this);
+		}
+
+		@Override
+		public void dragExit(DragSourceEvent dse) {
+			dse.getDragSourceContext().setCursor(DragSource.DefaultMoveNoDrop);
+		}
+
+		@Override
+		public void dragOver(DragSourceDragEvent dsde) {
+			if (tree == dsde.getSource()) {
+				dsde.getDragSourceContext().setCursor(DragSource.DefaultCopyNoDrop);
+			} else if (dsde.getDropAction() == DnDConstants.ACTION_COPY) {
+				dsde.getDragSourceContext().setCursor(DragSource.DefaultCopyDrop);
+			} else {
+				dsde.getDragSourceContext().setCursor(DragSource.DefaultCopyNoDrop);
+			}
+		}
+
+		@Override
+		public void dropActionChanged(DragSourceDragEvent dsde) {}
 	}
 
 	public LogService log() { return log; }

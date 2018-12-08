@@ -34,8 +34,18 @@ package org.scijava.ui.swing.script;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
+import java.awt.dnd.DropTargetEvent;
+import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
+import java.util.List;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -71,6 +81,8 @@ public class TextEditorTab extends JSplitPane {
 	private final JSplitPane screenAndPromptSplit;
 
 	private final TextEditor textEditor;
+	private DropTarget dropTarget;
+	private DropTargetListener dropTargetListener;
 
 	public TextEditorTab(final TextEditor textEditor) {
 		super(JSplitPane.HORIZONTAL_SPLIT);
@@ -79,6 +91,51 @@ public class TextEditorTab extends JSplitPane {
 
 		this.textEditor = textEditor;
 		editorPane = new EditorPane();
+		dropTargetListener = new DropTargetListener() {
+			@Override
+			public void dropActionChanged(DropTargetDragEvent arg0) {}
+			
+			@Override
+			public void drop(DropTargetDropEvent e) {
+				if (e.getDropAction() != DnDConstants.ACTION_COPY) {
+					e.rejectDrop();
+					return;
+				}
+				Transferable t = e.getTransferable();
+				if (!t.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) return;
+				try {
+					final Object o = t.getTransferData(DataFlavor.javaFileListFlavor);
+					if (!(o instanceof List)) return;
+					final List list = (List)o;
+					if (list.isEmpty()) return;
+					String path;
+					Object first = list.get(0);
+					if (first instanceof String) path = (String) first;
+					else if (first instanceof File) path = ((File) first).getAbsolutePath();
+					else return;
+					// If I knew how to get the current caret index under Point p, it could be inserted there with:
+					// Point p = e.getLocation();
+					// ... but it is more predictable (less surprising) to insert where the caret is:
+					editorPane.getRSyntaxDocument().insertString(editorPane.getCaretPosition(), path, null);
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+			}
+			
+			@Override
+			public void dragOver(DropTargetDragEvent e) {
+				if (e.getDropAction() != DnDConstants.ACTION_COPY) e.rejectDrag();
+			}
+			
+			@Override
+			public void dragExit(DropTargetEvent e) {}
+			
+			@Override
+			public void dragEnter(DropTargetDragEvent e) {
+				if (e.getDropAction() != DnDConstants.ACTION_COPY) e.rejectDrag();
+			}
+		};
+		dropTarget = new DropTarget(editorPane, DnDConstants.ACTION_COPY, dropTargetListener);
 
 		screen.setEditable(false);
 		screen.setLineWrap(true);
@@ -260,6 +317,13 @@ public class TextEditorTab extends JSplitPane {
 	// Package-private
 	JSplitPane getScreenAndPromptSplit() {
 		return screenAndPromptSplit;
+	}
+	
+	// Package private
+	void destroy() {
+		dropTarget.removeDropTargetListener(dropTargetListener);
+		dropTarget = null;
+		dropTargetListener = null;
 	}
 
 	/** Invoke in the context of the event dispatch thread. */
