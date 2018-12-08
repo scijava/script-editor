@@ -75,6 +75,7 @@ public class TextEditorTab extends JSplitPane {
 	public TextEditorTab(final TextEditor textEditor) {
 		super(JSplitPane.HORIZONTAL_SPLIT);
 		super.setResizeWeight(350.0 / 430.0);
+		this.setOneTouchExpandable(true);
 
 		this.textEditor = textEditor;
 		editorPane = new EditorPane();
