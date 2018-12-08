@@ -39,6 +39,7 @@ import java.awt.event.ActionListener;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -60,6 +61,8 @@ public class TextEditorTab extends JSplitPane {
 	protected final EditorPane editorPane;
 	protected final JTextArea screen = new JTextArea();
 	protected final JTextArea prompt = new JTextArea();
+	private final JLabel prompt_title = new JLabel();
+	protected final JCheckBox updownarrows = new JCheckBox("Use arrow keys");
 	protected final JScrollPane scroll;
 	protected boolean showingErrors;
 	private Executer executer;
@@ -136,6 +139,7 @@ public class TextEditorTab extends JSplitPane {
 					return;
 				}
 				textEditor.setIncremental(incremental.isSelected());
+				prompt_title.setText(incremental.isSelected() ? "REPL: " + textEditor.getCurrentLanguage().getLanguageName() : "");
 				prompt.setEnabled(incremental.isSelected());
 			}
 		});
@@ -190,7 +194,61 @@ public class TextEditorTab extends JSplitPane {
 		
 		prompt.setEnabled(false);
 		
-		screenAndPromptSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, bottom, prompt);
+		final JPanel prompt_panel = new JPanel();
+		prompt_panel.setLayout(new GridBagLayout());
+		
+		bc.gridx = 0;
+		bc.gridy = 0;
+		bc.anchor = GridBagConstraints.NORTHWEST;
+		bc.fill = GridBagConstraints.NONE;
+		bc.weightx = 0;
+		bc.weighty = 0;
+		bc.gridwidth = 1;
+		bc.gridheight = 1;
+		prompt_panel.add(prompt_title, bc);
+		
+		bc.gridx = 1;
+		bc.fill = GridBagConstraints.HORIZONTAL;
+		bc.weightx = 1;
+		prompt_panel.add(new JPanel(), bc);
+		
+		bc.gridx = 2;
+		bc.anchor = GridBagConstraints.NORTHEAST;
+		bc.weightx = 0;
+		bc.fill = GridBagConstraints.NONE;
+		prompt_panel.add(updownarrows, bc);
+		
+		bc.gridx = 3;
+		final JButton prompt_help = new JButton("?");
+		prompt_help.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent a) {
+				final String msg = "This REPL (read-evaluate-print-loop) parses " + textEditor.getCurrentLanguage().getLanguageName() + " code.\n\n"
+						+ "Key bindings:\n"
+						+ "* enter: evaluate code\n"
+						+ "* shift-enter: add line break (also alt-enter and meta-enter)\n"
+						+ "* page UP: show previous entry in the history\n"
+						+ "* page DOWN: show next entry in the history\n"
+						+ "\n"
+						+ "If 'Use arrow keys' is checked, then up/down arrows work like page UP/DOWN,\n"
+						+ "and shift + up/down arrow work like arrow keys before for caret movement\n"
+						+ "within a multi-line prompt."
+						;
+				JOptionPane.showMessageDialog(textEditor, msg, "REPL help", JOptionPane.INFORMATION_MESSAGE);
+			}
+		});
+		prompt_panel.add(prompt_help, bc);
+		
+		bc.gridx = 0;
+		bc.gridy = 1;
+		bc.anchor = GridBagConstraints.NORTHWEST;
+		bc.fill = GridBagConstraints.BOTH;
+		bc.weightx = 1;
+		bc.weighty = 1;
+		bc.gridwidth = 4;
+		prompt_panel.add(prompt, bc);
+		
+		screenAndPromptSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, bottom, prompt_panel);
 		
 		super.setLeftComponent(editorPane.wrappedInScrollbars());
 		super.setRightComponent(screenAndPromptSplit);
