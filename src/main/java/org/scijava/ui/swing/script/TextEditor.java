@@ -60,11 +60,18 @@ import java.io.InputStreamReader;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintWriter;
+import java.io.RandomAccessFile;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.Writer;
 import java.net.URL;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.OpenOption;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -2078,11 +2085,18 @@ public class TextEditor extends JFrame implements ActionListener,
 			text = tab.getEditorPane().getText();
 		}
 		
-		execute(tab, text);
+		execute(tab, text, false);
 	}
 	
-	/** Invoke in the context of the event dispatch thread. */
-	private void execute(final TextEditorTab tab, final String text) throws IOException {
+	/**
+	 * Invoke in the context of the event dispatch thread.
+	 * 
+	 * @param tab The {@link TextEditorTab} that is the source of the program to run.
+	 * @param text The text expressing the program to run.
+	 * @param writeCommandLog Whether to append the {@code text} to a log file for the appropriate language.
+	 * @throws IOException Whether there was an issue with piping the command to the executer.
+	 */
+	private void execute(final TextEditorTab tab, final String text, final boolean writeCommandLog) throws IOException {
 
 		tab.prepare();
 
@@ -2104,6 +2118,10 @@ public class TextEditor extends JFrame implements ActionListener,
 					output.flush();
 					errors.flush();
 					markCompileEnd();
+					// For executions from the prompt
+					if (writeCommandLog && null != text && text.trim().length() > 0) {
+						writePromptLog(getEditorPane().getCurrentLanguage(), text);
+					}
 				}
 				catch (final Throwable t) {
 					output.flush();
@@ -2148,6 +2166,88 @@ public class TextEditor extends JFrame implements ActionListener,
 			// Re-enable when all text to send has been sent
 			tab.getEditorPane().setEditable(true);
 		}
+	}
+	
+	private String getPromptCommandsFilename(final ScriptLanguage language) {
+		final String name = language.getLanguageName().replace('/', '_');
+		return System.getProperty("user.home").replace('\\', '/') + "/.scijava/" + name + ".command.log";
+	}
+	
+	/**
+	 * Append the executed prompt command to the end of the language-specific log file,
+	 * and then append a separator.
+	 * 
+	 * @param language The language used, to choose the right log file.
+	 * @param text The command to append at the end of the log.
+	 */
+	private void writePromptLog(final ScriptLanguage language, final String text) {
+		final String path = getPromptCommandsFilename(language);
+		final File file = new File(path);
+		try {
+			boolean exists = file.exists();
+			if (!exists) {
+				// Ensure parent directories exist
+				file.getParentFile().mkdirs();
+				file.createNewFile(); // atomic
+			}
+			Files.write(Paths.get(path), Arrays.asList(new String[]{text, "#"}), Charset.forName("UTF-8"),
+					StandardOpenOption.APPEND, StandardOpenOption.DSYNC);
+		} catch (IOException e) {
+			System.out.println("Failed to write executed prompt command to file " + path);
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Parse the prompt command log for the given language and return the last 1000 lines.
+	 * If the log is longer than 1000 lines, crop it.
+	 * 
+	 * @param language The language used, to choose the right log file.
+	 * @return
+	 */
+	private ArrayList<String> loadPromptLog(final ScriptLanguage language) {
+		final String path = getPromptCommandsFilename(language);
+		final File file = new File(path);
+		final ArrayList<String> lines = new ArrayList<String>();
+		if (!file.exists()) return lines;
+		RandomAccessFile ra = null;
+		List<String> commands = new ArrayList<String>();
+		try {
+			ra = new RandomAccessFile(path, "r");
+			final byte[] bytes = new byte[(int)ra.length()];
+			ra.readFully(bytes);
+			final String sep = System.getProperty("line.separator"); // used fy Files.write above
+			commands.addAll(Arrays.asList(new String(bytes, Charset.forName("UTF-8")).split(sep + "#" + sep)));
+			if (0 == commands.get(commands.size()-1).length()) commands.remove(commands.size() -1); // last entry is empty
+		} catch (IOException e) {
+			System.out.println("Failed to read history of prompt commands from file " + path);
+			e.printStackTrace();
+			return lines;
+		} finally {
+			try { if (null != ra) ra.close(); } catch (IOException e) { e.printStackTrace(); }
+		}
+		if (commands.size() > 1000) {
+			commands = commands.subList(commands.size() - 1000, commands.size());
+			// Crop the log: otherwise would grow unbounded
+			final ArrayList<String> croppedLog = new ArrayList<String>();
+			for (final String c : commands) {
+				croppedLog.add(c);
+				croppedLog.add("#");
+			}
+			try {
+				Files.write(Paths.get(path + "-tmp"), croppedLog, Charset.forName("UTF-8"),
+						StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.DSYNC);
+				if (!new File(path + "-tmp").renameTo(new File(path))) {
+					System.out.println("Could not rename command log file " + path + "-tmp to " + path);
+				}
+			} catch (Exception e) {
+				System.out.println("Failed to crop history of prompt commands file " + path);
+				e.printStackTrace();
+			}
+		}
+		lines.addAll(commands);
+
+		return lines;
 	}
 
 	public void runScript() {
@@ -2572,8 +2672,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (incremental) {
 			getTab().getScreenAndPromptSplit().setDividerLocation(0.5);
 			prompt.addKeyListener(new KeyAdapter() {
-				private final ArrayList<String> commands = new ArrayList<String>();
-				private int index = -1;
+				private final ArrayList<String> commands = loadPromptLog(getCurrentLanguage());
+				private int index = commands.size() > 0 ? commands.size() : -1;
 				@Override
 				public void keyPressed(final KeyEvent ke) {
 					final int keyCode = ke.getKeyCode();
@@ -2595,7 +2695,7 @@ public class TextEditor extends JFrame implements ActionListener,
 							commands.add(text);
 							index = commands.size() - 1;
 							markCompileStart(false); // weird method name, execute will call markCompileEnd
-							execute(getTab(), text);
+							execute(getTab(), text, true);
 							prompt.setText("");
 							screen.scrollRectToVisible(screen.modelToView(screen.getDocument().getLength()));
 						} catch (Throwable t) {
