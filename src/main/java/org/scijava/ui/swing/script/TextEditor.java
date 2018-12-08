@@ -2674,11 +2674,16 @@ public class TextEditor extends JFrame implements ActionListener,
 			prompt.addKeyListener(new KeyAdapter() {
 				private final ArrayList<String> commands = loadPromptLog(getCurrentLanguage());
 				private int index = commands.size() > 0 ? commands.size() : -1;
+				private String unexecuted_command = "";
 				@Override
 				public void keyPressed(final KeyEvent ke) {
-					final int keyCode = ke.getKeyCode();
+					int keyCode = ke.getKeyCode();
 					if (KeyEvent.VK_ENTER == keyCode) {
-						if (0 != ke.getModifiers()) return;
+						if (ke.isShiftDown() || ke.isAltDown() || ke.isAltGraphDown() || ke.isMetaDown() || ke.isControlDown()) {
+							prompt.insert("\n", prompt.getCaretPosition());
+							ke.consume();
+							return;
+						}
 						final String text = prompt.getText();
 						if (null == text || 0 == text.trim().length()) {
 							ke.consume(); // avoid writing the line break
@@ -2702,9 +2707,29 @@ public class TextEditor extends JFrame implements ActionListener,
 							log.error(t);
 						}
 						ke.consume(); // avoid writing the line break
-					} else if (KeyEvent.VK_PAGE_UP == keyCode) {
+						return;
+					}
+					
+					// If using arrows for navigating history
+					if (getTab().updownarrows.isSelected()) {
+						switch(keyCode) {
+						case KeyEvent.VK_UP:
+							keyCode = KeyEvent.VK_PAGE_UP;
+							break;
+						case KeyEvent.VK_DOWN:
+							keyCode = KeyEvent.VK_PAGE_DOWN;
+							break;
+						}
+					}
+					
+					if (KeyEvent.VK_PAGE_UP == keyCode) {
+						if (commands.size() == index || commands.isEmpty()) {
+							unexecuted_command = prompt.getText(); // store
+						}
 						if (index > -1) {
-							if (index >= commands.size()) index = commands.size() -1;
+							if (index >= commands.size()) {
+								index = commands.size() -1;
+							}
 							prompt.setText(commands.get(index--));
 						}
 						ke.consume();
@@ -2713,7 +2738,10 @@ public class TextEditor extends JFrame implements ActionListener,
 						if (index < commands.size() -1) {
 							prompt.setText(commands.get(++index));
 						}
-						else prompt.setText("");
+						else {
+							prompt.setText(unexecuted_command); // restore
+							unexecuted_command = "";
+						}
 						ke.consume();
 					}
 				}
