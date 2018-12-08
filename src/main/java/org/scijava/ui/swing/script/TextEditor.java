@@ -2931,6 +2931,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		changeFontSize(getTab().screen, size);
 		changeFontSize(getTab().prompt, size);
 		updateTabAndFontSize(false);
+		tree.setFont(tree.getFont().deriveFont(size));
 	}
 
 	private void changeFontSize(final JTextArea a, final float size) {
