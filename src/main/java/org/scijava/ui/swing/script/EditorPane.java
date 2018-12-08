@@ -46,7 +46,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 import javax.swing.JScrollPane;
 import javax.swing.JViewport;
@@ -83,6 +82,7 @@ import org.scijava.util.FileUtils;
  * @author Johannes Schindelin
  * @author Jonathan Hale
  */
+@SuppressWarnings("serial")
 public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	private String fallBackBaseName;
