@@ -166,6 +166,11 @@ public class FileSystemTree extends JTree
 		public Icon getIcon() {
 			return this.icon;
 		}
+		
+		@Override
+		public Object getUserObject() {
+			return this.path;
+		}
 	}
 	
 	public interface LeafListener {
