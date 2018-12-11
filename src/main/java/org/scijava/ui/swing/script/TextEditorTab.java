@@ -76,7 +76,7 @@ public class TextEditorTab extends JSplitPane {
 	protected final JScrollPane scroll;
 	protected boolean showingErrors;
 	private Executer executer;
-	private final JButton runit, batchit, killit, toggleErrors;
+	private final JButton runit, batchit, killit, toggleErrors, switchSplit;
 	private final JCheckBox incremental;
 	private final JSplitPane screenAndPromptSplit;
 
@@ -229,13 +229,37 @@ public class TextEditorTab extends JSplitPane {
 		bc.anchor = GridBagConstraints.NORTHEAST;
 		final JButton clear = new JButton("Clear");
 		clear.addActionListener(new ActionListener() {
-
 			@Override
 			public void actionPerformed(final ActionEvent ae) {
 				getScreen().setText("");
 			}
 		});
 		bottom.add(clear, bc);
+		
+		bc.gridx = 7;
+		switchSplit = new JButton("▼");
+		switchSplit.setToolTipText("Switch location");
+		switchSplit.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (switchSplit.getText() == "▼") {
+					TextEditorTab.this.setOrientation(JSplitPane.VERTICAL_SPLIT);
+					switchSplit.setText("▶");
+				} else {
+					TextEditorTab.this.setOrientation(JSplitPane.HORIZONTAL_SPLIT);
+					switchSplit.setText("▼");
+				}
+				// Keep prompt collapsed if not in use
+				if (!incremental.isSelected()) {
+					SwingUtilities.invokeLater(new Runnable() {
+						public void run() {
+							screenAndPromptSplit.setDividerLocation(1.0);
+						}
+					});
+				}
+			}
+		});
+		bottom.add(switchSplit, bc);
 
 		bc.gridx = 0;
 		bc.gridy = 1;
@@ -243,7 +267,7 @@ public class TextEditorTab extends JSplitPane {
 		bc.fill = GridBagConstraints.BOTH;
 		bc.weightx = 1;
 		bc.weighty = 1;
-		bc.gridwidth = 7;
+		bc.gridwidth = 8;
 		screen.setEditable(false);
 		screen.setLineWrap(true);
 		final Font font = new Font("Courier", Font.PLAIN, 12);
