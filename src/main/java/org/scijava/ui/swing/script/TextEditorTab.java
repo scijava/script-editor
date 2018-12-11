@@ -152,6 +152,7 @@ public class TextEditorTab extends JSplitPane {
 		bc.anchor = GridBagConstraints.NORTHWEST;
 		bc.fill = GridBagConstraints.NONE;
 		runit = new JButton("Run");
+		runit.setToolTipText("control + R");
 		runit.addActionListener(new ActionListener() {
 
 			@Override
