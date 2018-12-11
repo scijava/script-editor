@@ -648,22 +648,26 @@ public class TextEditor extends JFrame implements ActionListener,
 				final int idot = name.lastIndexOf('.');
 				if (idot > -1) {
 					final String ext = name.substring(idot + 1);
+					System.out.println("extension: " + ext);
 					final ScriptLanguage lang = scriptService.getLanguageByExtension(ext);
 					if (null != lang) {
+						System.out.println("Language: " + lang);
 						open(file);
 						return;
 					}
 				}
 				if (isBinary(file)) {
-					// Open the image in Fiji with one of:
-					//   sc.fiji.compat.FijiService
-					//   sc.fiji.compat.DefaultFijiService
-					//   io.scif.SCIFIOService
-					//   io.scif.img.DefaultImgUtilityService
-					//   io.scif.formats.tiff.DefaultTiffService or similar in org.scijava.service.AbstractService
-					//   maybe also net.imagej.display.DefaultImageDisplayService
-					// most promising: fiji.DefaultFijiService
-					//context.getService()
+					System.out.println("isBinary: " + true);
+					try {
+						final Object o = ioService.open(file.getAbsolutePath());
+						// Open in whatever way possible
+						if ( null != o ) uiService.show(o);
+						else JOptionPane.showMessageDialog(TextEditor.this, "Could not open the file at: " + file.getAbsolutePath());
+						return;
+					} catch (Exception e) {
+						error("Could not open image at " + file);
+						e.printStackTrace();
+					}
 				}
 				// Ask:
 				final int choice = JOptionPane.showConfirmDialog(TextEditor.this,
