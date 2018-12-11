@@ -648,10 +648,8 @@ public class TextEditor extends JFrame implements ActionListener,
 				final int idot = name.lastIndexOf('.');
 				if (idot > -1) {
 					final String ext = name.substring(idot + 1);
-					System.out.println("extension: " + ext);
 					final ScriptLanguage lang = scriptService.getLanguageByExtension(ext);
 					if (null != lang) {
-						System.out.println("Language: " + lang);
 						open(file);
 						return;
 					}
@@ -671,7 +669,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				}
 				// Ask:
 				final int choice = JOptionPane.showConfirmDialog(TextEditor.this,
-						"Really try to open file " + name + " ?", "Confirm", JOptionPane.OK_CANCEL_OPTION);
+						"Really try to open file " + name + " in a tab?", "Confirm", JOptionPane.OK_CANCEL_OPTION);
 				if (JOptionPane.OK_OPTION == choice) {
 					open(file);
 				}
@@ -1586,9 +1584,12 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	public TextEditorTab open(final File file) {
 		if (isBinary(file)) {
-			// TODO!
-			throw new RuntimeException("TODO: open image using IJ2");
-			// return null;
+			try {
+				uiService.show(ioService.open(file.getAbsolutePath()));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			return null;
 		}
 
 		try {
