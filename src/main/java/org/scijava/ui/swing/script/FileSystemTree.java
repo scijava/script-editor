@@ -28,9 +28,7 @@ import javax.swing.tree.TreeSelectionModel;
  */
 @SuppressWarnings("serial")
 public class FileSystemTree extends JTree
-{
-	static public final ArrayList<FileSystemTree> trees = new ArrayList<>();
-	
+{	
 	static private String withSlash(String path) {
 		path = path.replace('\\', '/'); // compatible with Windows
 		return '/' == path.charAt(path.length()-1) ? path : path + "/";
@@ -226,9 +224,6 @@ public class FileSystemTree extends JTree
 			}
 		});
 		setVisible(true);
-		
-		// DEBUG
-		trees.add(this);
 	}
 	
 	synchronized public void addLeafListener(final LeafListener l) {
