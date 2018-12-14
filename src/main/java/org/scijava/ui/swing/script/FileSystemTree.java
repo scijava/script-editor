@@ -7,6 +7,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileFilter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -15,9 +16,12 @@ import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
+import javax.swing.event.TreeExpansionEvent;
+import javax.swing.event.TreeWillExpandListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.ExpandVetoException;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
@@ -76,38 +80,47 @@ public class FileSystemTree extends JTree
 	static public class Node extends DefaultMutableTreeNode
 	{
 		final private String path;
-		final private boolean is_directory;
-		private boolean loaded = false;
 		private Icon icon = null;
 		
 		public Node(final String path) {
 			this.path = withSlash(path);
-			this.is_directory = new File(this.path).isDirectory();
 		}
 		
 		public boolean isDirectory() {
-			return this.is_directory;
+			return new File(this.path).isDirectory();
+		}
+		
+		public File[] updatedChildrenFiles(final boolean sort) {
+			final File file = new File(this.path);
+			if (!file.isDirectory()) {
+				return new File[0];
+			}
+			final File[] files = file.listFiles(new FileFilter() {
+				@Override
+				public boolean accept(final File file) {
+					return !file.isHidden() && !file.getName().endsWith("~");
+				}
+			});
+			if (sort) Arrays.sort(files);
+			return files;
 		}
 		
 		/**
 		 * If it's a directory, add a Node for each of its visible files.
 		 */
-		public void populateChildren() {
+		public void populateChildren(final DefaultTreeModel model) {
 			try {
-				if (!isDirectory()) return;
-				if (loaded) removeAllChildren();
-				loaded = true; // early, so that getChildCount() invoked by add(Node) doesn't call populateChildren()
-				final File[] files = new File(this.path).listFiles();
-				Arrays.sort(files);
-				if (null == files) return; // could happen if a former directory gets deleted and added as a regular file
-				for (final File file : files) {
-					if (file.isHidden() || file.getName().endsWith("~")) continue;
-					add(new Node(file.getAbsolutePath()));
+				if (isLeaf()) return;
+				int index = 0;
+				for (final File file : updatedChildrenFiles(true)) {
+					// Can't use add: would try to insert at getChildCount(), which is the wrong value here
+					model.insertNodeInto(new Node(file.getAbsolutePath()), this, index++);
 				}
+				icon = null;
 			} catch (Throwable t) {
-				loaded = true;
 				icon = ICON_ERROR;
 				System.out.println("Failed to populate folder " + this.path);
+				t.printStackTrace();
 			}
 		}
 		
@@ -143,16 +156,11 @@ public class FileSystemTree extends JTree
 		public String toString() {
 			return this.path;
 		}
-		
-		/**
-		 * Dynamically loads children if not yet loaded
-		 */
+
 		@Override
 		public int getChildCount() {
 			if (isRoot()) return super.getChildCount();
-			if (!isDirectory()) return 0;
-			if (!loaded) populateChildren();
-			return super.getChildCount();
+			return new File(this.path).isDirectory() ? updatedChildrenFiles(false).length : 0;
 		}
 		
 		@Override
@@ -169,6 +177,18 @@ public class FileSystemTree extends JTree
 		public Object getUserObject() {
 			return this.path;
 		}
+		
+		@Override
+		public boolean isLeaf() {
+			return !isRoot() && !this.isDirectory();
+		}
+		
+		public void removeAllChildren(final DefaultTreeModel model) {
+			for (int i=super.getChildCount() -1; i>-1; --i) {
+				// Can't use DefaultMutableTreeNode.removeAllChildren or .remove(int): the model is not notified
+				model.removeNodeFromParent((Node)super.getChildAt(i));
+			}
+		}
 	}
 	
 	public interface LeafListener {
@@ -177,13 +197,28 @@ public class FileSystemTree extends JTree
 	
 	private ArrayList<LeafListener> leaf_listeners = new ArrayList<>();
 
+	static public ArrayList<FileSystemTree> trees = new ArrayList<>();
+	
 	public FileSystemTree()
 	{
+		trees.add(this);
 		setModel(new DefaultTreeModel(new Node("#root#")));
-		setRootVisible(false);
+		setRootVisible(true);
 		getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
 		setAutoscrolls(true);
 		setScrollsOnExpand(true);
+		addTreeWillExpandListener(new TreeWillExpandListener() {			
+			@Override
+			public void treeWillExpand(TreeExpansionEvent event) throws ExpandVetoException {
+				final Node node = ((Node)event.getPath().getLastPathComponent());
+				node.populateChildren(getModel());
+			}
+			
+			@Override
+			public void treeWillCollapse(TreeExpansionEvent event) throws ExpandVetoException {
+				((Node)event.getPath().getLastPathComponent()).removeAllChildren(getModel());
+			}
+		});
 		addMouseListener(new MouseAdapter() {
 			@Override
 			public void mousePressed(final MouseEvent me) {
@@ -209,7 +244,7 @@ public class FileSystemTree extends JTree
 			@Override
 			public Component getTreeCellRendererComponent(final JTree tree, final Object value, final boolean selected,
 					final boolean expanded, final boolean leaf, final int row, final boolean hasFocus) {
-		        super.getTreeCellRendererComponent(tree, value, selected,expanded, leaf, row, hasFocus);
+		        super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
 				final Node node = (Node) value;
 				setText(new File(node.path).getName());
 				if (node.isDirectory()) {
