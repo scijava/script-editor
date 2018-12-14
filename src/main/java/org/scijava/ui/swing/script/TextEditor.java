@@ -48,7 +48,6 @@ import java.awt.dnd.DragSourceDragEvent;
 import java.awt.dnd.DragSourceDropEvent;
 import java.awt.dnd.DragSourceEvent;
 import java.awt.dnd.DragSourceListener;
-import java.awt.dnd.DropTarget;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
@@ -261,7 +260,6 @@ public class TextEditor extends JFrame implements ActionListener,
 	private ScriptModule module;
 	private boolean incremental = false;
 	private DragSource dragSource;
-	private DropTarget dropTarget;
 	
 	static public final ArrayList<TextEditor> instances = new ArrayList<TextEditor>();
 	static public final ArrayList<Context> contexts = new ArrayList<Context>();
@@ -638,8 +636,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		remove_directory.setToolTipText("Remove a top-level directory");
 		tree = new FileSystemTree();
 		dragSource = new DragSource();
-		final DragAndDrop dnd = new DragAndDrop();
-		dragSource.createDefaultDragGestureRecognizer(tree, DnDConstants.ACTION_COPY, dnd);
+		dragSource.createDefaultDragGestureRecognizer(tree, DnDConstants.ACTION_COPY, new DragAndDrop());
 		tree.setMinimumSize(new Dimension(200, 600));
 		tree.addLeafListener(new FileSystemTree.LeafListener() {
 			@Override
