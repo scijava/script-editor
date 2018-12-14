@@ -744,6 +744,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			@Override
 			public void windowClosing(final WindowEvent e) {
 				if (!confirmClose()) return;
+				tree.destroy();
 				// Necessary to prevent memory leaks
 				for (final DragSourceListener l : dragSource.getDragSourceListeners()) {
 					dragSource.removeDragSourceListener(l);

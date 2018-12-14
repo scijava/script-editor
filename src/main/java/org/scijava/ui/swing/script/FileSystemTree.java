@@ -8,9 +8,20 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileFilter;
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Map;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -108,7 +119,7 @@ public class FileSystemTree extends JTree
 		/**
 		 * If it's a directory, add a Node for each of its visible files.
 		 */
-		public void populateChildren(final DefaultTreeModel model) {
+		public synchronized void populateChildren(final DefaultTreeModel model) {
 			try {
 				if (isLeaf()) return;
 				int index = 0;
@@ -158,13 +169,13 @@ public class FileSystemTree extends JTree
 		}
 
 		@Override
-		public int getChildCount() {
+		public synchronized int getChildCount() {
 			if (isRoot()) return super.getChildCount();
 			return new File(this.path).isDirectory() ? updatedChildrenFiles(false).length : 0;
 		}
 		
 		@Override
-		public Node getChildAt(final int index) {
+		public synchronized Node getChildAt(final int index) {
 			if (0 == getChildCount()) return null;
 			return (Node) super.getChildAt(index);
 		}
@@ -183,11 +194,16 @@ public class FileSystemTree extends JTree
 			return !isRoot() && !this.isDirectory();
 		}
 		
-		public void removeAllChildren(final DefaultTreeModel model) {
+		public synchronized void removeAllChildren(final DefaultTreeModel model) {
 			for (int i=super.getChildCount() -1; i>-1; --i) {
 				// Can't use DefaultMutableTreeNode.removeAllChildren or .remove(int): the model is not notified
 				model.removeNodeFromParent((Node)super.getChildAt(i));
 			}
+		}
+		
+		public synchronized void updateChildrenList(final DefaultTreeModel model) {
+			removeAllChildren(model);
+			populateChildren(model);
 		}
 	}
 	
@@ -197,26 +213,28 @@ public class FileSystemTree extends JTree
 	
 	private ArrayList<LeafListener> leaf_listeners = new ArrayList<>();
 
-	static public ArrayList<FileSystemTree> trees = new ArrayList<>();
+	private final DirectoryWatcher dir_watcher = new DirectoryWatcher();
 	
 	public FileSystemTree()
 	{
-		trees.add(this);
 		setModel(new DefaultTreeModel(new Node("#root#")));
-		setRootVisible(true);
+		setRootVisible(false);
 		getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
 		setAutoscrolls(true);
 		setScrollsOnExpand(true);
-		addTreeWillExpandListener(new TreeWillExpandListener() {			
+		addTreeWillExpandListener(new TreeWillExpandListener() {
 			@Override
 			public void treeWillExpand(TreeExpansionEvent event) throws ExpandVetoException {
 				final Node node = ((Node)event.getPath().getLastPathComponent());
 				node.populateChildren(getModel());
+				dir_watcher.register(node);
 			}
 			
 			@Override
 			public void treeWillCollapse(TreeExpansionEvent event) throws ExpandVetoException {
-				((Node)event.getPath().getLastPathComponent()).removeAllChildren(getModel());
+				final Node node = ((Node)event.getPath().getLastPathComponent());
+				node.removeAllChildren(getModel());
+				dir_watcher.unregister(node);
 			}
 		});
 		addMouseListener(new MouseAdapter() {
@@ -345,6 +363,114 @@ public class FileSystemTree extends JTree
 			final File file = new File(path);
 			if (file.exists() && file.isDirectory()) {
 				addRootDirectory(file.getAbsolutePath(), false);
+			}
+		}
+	}
+	
+	public void destroy() {
+		dir_watcher.interrupt();
+	}
+	
+	private class DirectoryWatcher extends Thread {
+		
+		private WatchService watcher;
+		private final HashMap<WatchKey, Path> keys = new HashMap<>();
+		private final HashMap<Path, Node> map = new HashMap<>();
+		
+		DirectoryWatcher() {
+			try {
+				this.watcher = FileSystems.getDefault().newWatchService();
+				this.start();
+			} catch (IOException e) {
+				System.out.println("Failed to start filesystem watching.");
+				e.printStackTrace();
+			}
+		}
+		
+		void register(final Node node) {
+			if (null == watcher) {
+				System.out.println("Filesystem watching is not running.");
+				return;
+			}
+			synchronized (keys) {
+				try {
+					final Path path = new File(node.path).toPath();
+					final WatchKey key = path.register(watcher,
+							StandardWatchEventKinds.ENTRY_CREATE,
+							StandardWatchEventKinds.ENTRY_MODIFY,
+							StandardWatchEventKinds.ENTRY_DELETE);
+					keys.put(key, path);
+					map.put(path, node);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		
+		void unregister(final Node node) {
+			synchronized (keys) {
+				final Iterator<Map.Entry<Path, Node>> it = map.entrySet().iterator();
+				Path path = null;
+				while (it.hasNext()) {
+					final Map.Entry<Path, Node> e = it.next();
+					if ( e.getValue() == node ) {
+						path = e.getKey();
+						it.remove();
+						break;
+					}
+				}
+				if (null == path) return;
+				final Iterator<Path> itp = keys.values().iterator();
+				while (itp.hasNext()) {
+					if (itp.next().equals(path)) {
+						itp.remove();
+						return;
+					}
+				}
+			}
+		}
+		
+		@Override
+		public void run() {
+			while (true) {
+				if (isInterrupted()) return;
+				WatchKey key;
+	            try {
+	                key = watcher.take();
+	            } catch (InterruptedException x) {
+	                return;
+	            }
+
+	            final Path dir = keys.get(key);
+	            if (null == dir) {
+	            	System.out.println("Unrecognized WatchKey: " + key);
+	            	continue;
+	            }
+	            
+	            final HashSet<Node> nodes = new HashSet<>();
+	            
+	            for (final WatchEvent<?> event: key.pollEvents()) {
+	                final WatchEvent.Kind<?> kind = event.kind();
+	                if (StandardWatchEventKinds.OVERFLOW == kind) {
+	                	continue;
+	                }
+	                
+	                @SuppressWarnings("unchecked")
+	                final Path child = dir.resolve(((WatchEvent<Path>) event).context());
+	                final Node node = map.get(child.getParent());
+	                if (null != node) nodes.add(node);
+	            }
+	            
+	            for (final Node node : nodes) {
+	            	node.updateChildrenList(FileSystemTree.this.getModel());
+	            	FileSystemTree.this.expandPath(new TreePath(node.getPath()));
+	            }
+	            
+	            boolean valid = key.reset();
+	            if (!valid) {
+	                final Path path = keys.remove(key);
+	                if (null != path) map.remove(path);
+	            }
 			}
 		}
 	}
