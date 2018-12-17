@@ -1592,6 +1592,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		try {
 			TextEditorTab tab = (tabbed.getTabCount() == 0) ? null : getTab();
+			TextEditorTab prior = tab;
 			final boolean wasNew = tab != null && tab.editorPane.isNew();
 			float font_size = 0; // to set the new editor's font like the last active one, if any
 			if (!wasNew) {
@@ -1618,6 +1619,10 @@ public class TextEditor extends JFrame implements ActionListener,
 				try {
 					updateTabAndFontSize(true);
 					if (font_size > 0) setFontSize(font_size);
+					if (null != prior) {
+						tab.setOrientation(prior.getOrientation());
+						tab.setDividerLocation(prior.getDividerLocation());
+					}
 				}
 				catch (final NullPointerException e) {
 					/* ignore */
