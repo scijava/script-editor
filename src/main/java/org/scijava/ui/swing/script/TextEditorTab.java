@@ -85,7 +85,7 @@ public class TextEditorTab extends JSplitPane {
 	private DropTargetListener dropTargetListener;
 
 	public TextEditorTab(final TextEditor textEditor) {
-		super(JSplitPane.HORIZONTAL_SPLIT);
+		super(JSplitPane.VERTICAL_SPLIT);
 		super.setResizeWeight(350.0 / 430.0);
 		this.setOneTouchExpandable(true);
 
@@ -237,7 +237,7 @@ public class TextEditorTab extends JSplitPane {
 		bottom.add(clear, bc);
 		
 		bc.gridx = 7;
-		switchSplit = new JButton("▼");
+		switchSplit = new JButton("▶");
 		switchSplit.setToolTipText("Switch location");
 		switchSplit.addActionListener(new ActionListener() {
 			@Override
