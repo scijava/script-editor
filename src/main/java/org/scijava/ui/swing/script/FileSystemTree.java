@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -88,7 +89,7 @@ public class FileSystemTree extends JTree
 	
 	static public final Icon ICON_ERROR = makeErrorIcon();
 	
-	static public class Node extends DefaultMutableTreeNode
+	public class Node extends DefaultMutableTreeNode
 	{
 		final private String path;
 		private Icon icon = null;
@@ -109,7 +110,8 @@ public class FileSystemTree extends JTree
 			final File[] files = file.listFiles(new FileFilter() {
 				@Override
 				public boolean accept(final File file) {
-					return !file.isHidden() && !file.getName().endsWith("~");
+					return !file.isHidden() && !file.getName().endsWith("~")
+							&& !re_ignored_extensions.matcher(file.getName()).matches();
 				}
 			});
 			if (sort) Arrays.sort(files);
@@ -215,6 +217,9 @@ public class FileSystemTree extends JTree
 
 	private final DirectoryWatcher dir_watcher = new DirectoryWatcher();
 	
+	private final HashSet<String> ignored_extensions = new HashSet<>();
+	private Pattern re_ignored_extensions = Pattern.compile("^.*$", Pattern.CASE_INSENSITIVE); // match all
+	
 	public FileSystemTree()
 	{
 		setModel(new DefaultTreeModel(new Node("#root#")));
@@ -277,6 +282,45 @@ public class FileSystemTree extends JTree
 			}
 		});
 		setVisible(true);
+	}
+	
+	/**
+	 * Add a file name extension to ignore, without the dot, for example "class".
+	 * Files whose name have this extension will not be listed as leaves in the tree.
+	 * 
+	 * @param extension The file name extension to ignore, e.g. "class".
+	 * @return true if the extension wasn't there already.
+	 */
+	public boolean ignoreExtension(final String extension) {
+		if (this.ignored_extensions.add(extension)) {
+			updateIgnoreExtensionPattern();
+			return true;
+		}
+		return false;
+	}
+	
+	/** Opposite of {@link #ignoreExtension(String)}.
+	 * 
+	 * @param extension The file name extension to stop ignoring, e.g. "class".
+	 * @return true if the extension wasn't there already.
+	 */
+	public boolean showExtension(final String extension) {
+		if (this.ignored_extensions.remove(extension)) {
+			updateIgnoreExtensionPattern();
+			return true;
+		}
+		return false;
+	}
+	
+	private void updateIgnoreExtensionPattern() {
+		if (this.ignored_extensions.isEmpty()) {
+			this.re_ignored_extensions = Pattern.compile("^.*$", Pattern.CASE_INSENSITIVE);
+		} else {
+			StringBuilder s = new StringBuilder("^.*\\.(");
+			s.append(String.join("|", this.ignored_extensions.toArray(new String[this.ignored_extensions.size()])));
+			s.append(")$");
+			this.re_ignored_extensions = Pattern.compile(s.toString(), Pattern.CASE_INSENSITIVE);
+		}
 	}
 	
 	synchronized public void addLeafListener(final LeafListener l) {
