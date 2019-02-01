@@ -635,6 +635,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final JButton remove_directory = new JButton("[-]");
 		remove_directory.setToolTipText("Remove a top-level directory");
 		tree = new FileSystemTree();
+		tree.ignoreExtension("class");
 		dragSource = new DragSource();
 		dragSource.createDefaultDragGestureRecognizer(tree, DnDConstants.ACTION_COPY, new DragAndDrop());
 		tree.setMinimumSize(new Dimension(200, 600));
