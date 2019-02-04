@@ -272,11 +272,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		initializeTokenMakers();
 		loadPreferences();
 
+		// -- BEGIN MENUS --
+
 		// Initialize menu
 		final int ctrl = Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
 		final int shift = ActionEvent.SHIFT_MASK;
 		final JMenuBar mbar = new JMenuBar();
 		setJMenuBar(mbar);
+
+		// -- File menu --
 
 		final JMenu file = new JMenu("File");
 		file.setMnemonic(KeyEvent.VK_F);
@@ -300,6 +304,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		close = addToMenu(file, "Close", KeyEvent.VK_W, ctrl);
 
 		mbar.add(file);
+
+		// -- Edit menu --
 
 		final JMenu edit = new JMenu("Edit");
 		edit.setMnemonic(KeyEvent.VK_E);
@@ -350,7 +356,6 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		});
 		edit.add(autoImport);
-		mbar.add(edit);
 
 		whiteSpaceMenu = new JMenu("Whitespace");
 		whiteSpaceMenu.setMnemonic(KeyEvent.VK_W);
@@ -376,6 +381,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		whiteSpaceMenu.add(toggleWhiteSpaceLabeling);
 
 		edit.add(whiteSpaceMenu);
+
+		mbar.add(edit);
+
+		// -- Language menu --
 
 		languageMenuItems =
 			new LinkedHashMap<>();
@@ -436,10 +445,14 @@ public class TextEditor extends JFrame implements ActionListener,
 		noneLanguageItem.setSelected(true);
 		mbar.add(languages);
 
+		// -- Templates menu --
+
 		final JMenu templates = new JMenu("Templates");
 		templates.setMnemonic(KeyEvent.VK_T);
 		addTemplates(templates);
 		mbar.add(templates);
+
+		// -- Run menu --
 
 		runMenu = new JMenu("Run");
 		runMenu.setMnemonic(KeyEvent.VK_R);
@@ -470,6 +483,8 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		mbar.add(runMenu);
 
+		// -- Tools menu --
+
 		toolsMenu = new JMenu("Tools");
 		toolsMenu.setMnemonic(KeyEvent.VK_O);
 		openHelpWithoutFrames =
@@ -491,6 +506,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		openSourceForMenuItem.setMnemonic(KeyEvent.VK_M);
 		mbar.add(toolsMenu);
 
+		// -- Git menu --
+
 		gitMenu = new JMenu("Git");
 		gitMenu.setMnemonic(KeyEvent.VK_G);
 		/*
@@ -507,6 +524,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		openInGitweb.setMnemonic(KeyEvent.VK_W);
 		mbar.add(gitMenu);
 
+		// -- Tabs menu --
+
 		tabsMenu = new JMenu("Tabs");
 		tabsMenu.setMnemonic(KeyEvent.VK_A);
 		nextTab = addToMenu(tabsMenu, "Next Tab", KeyEvent.VK_PAGE_DOWN, ctrl);
@@ -518,6 +537,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		tabsMenuTabsStart = tabsMenu.getItemCount();
 		tabsMenuItems = new HashSet<>();
 		mbar.add(tabsMenu);
+
+		// -- Options menu --
 
 		final JMenu options = new JMenu("Options");
 		options.setMnemonic(KeyEvent.VK_O);
@@ -623,6 +644,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		savePreferences = addToMenu(options, "Save Preferences", 0, 0);
 
 		mbar.add(options);
+
+		// -- END MENUS --
 
 		// Add the editor and output area
 		tabbed = new JTabbedPane();
