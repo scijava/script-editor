@@ -49,59 +49,59 @@ public class FileSystemTree extends JTree
 		path = path.replace('\\', '/'); // compatible with Windows
 		return '/' == path.charAt(path.length()-1) ? path : path + "/";
 	}
-	
+
 	static private final Icon makeErrorIcon() {
 		final int[] pixels = new int[]{16777215, 16777215, 16777215, 16777215, 16777215, 16776958, 16772075, 16761281, 16751001, 16744833, 16744833,
-				16751001, 16761281, 16772075, 16776958, 16777215, 16777215, 16777215, 16777215, 16777215, 16777215, 16777215, 16777215, 16777215,
-				16772075, 16749973, 16728128, 16726586, 16734553, 16742520, 16742520, 16734553, 16726586, 16728128, 16749973, 16772075, 16777215,
-				16777215, 16777215, 16777215, 16777215, 16777215, 16776958, 16764365, 16731212, 16728385, 16754599, 16770790, 16774902, 16774131,
-				16774131, 16774131, 16770790, 16754599, 16728385, 16731212, 16764365, 16776958, 16777215, 16777215, 16777215, 16777215, 16764365,
-				16726072, 16739436, 16770276, 16777215, 16777215, 16757169, 16727871, 16727614, 16747660, 16776958, 16777215, 16770276, 16739436,
-				16726072, 16764365, 16777215, 16777215, 16777215, 16772075, 16731212, 16739436, 16773874, 16777215, 16777215, 16777215, 16750744,
-				16711937, 16711680, 16738151, 16776958, 16777215, 16777215, 16773874, 16739436, 16731212, 16772075, 16777215, 16776958, 16749973,
-				16728385, 16770276, 16777215, 16777215, 16777215, 16777215, 16750744, 16711937, 16711680, 16738151, 16776958, 16777215, 16777215,
-				16777215, 16770276, 16728385, 16749973, 16776958, 16772075, 16728128, 16754599, 16777215, 16777215, 16777215, 16777215, 16777215,
-				16750744, 16711937, 16711680, 16738151, 16776958, 16777215, 16777215, 16777215, 16777215, 16754599, 16728128, 16772075, 16761281,
-				16726586, 16770790, 16777215, 16777215, 16777215, 16777215, 16777215, 16750744, 16711937, 16711680, 16738151, 16776958, 16777215,
-				16777215, 16777215, 16777215, 16770790, 16726586, 16761281, 16751001, 16734553, 16775930, 16777215, 16777215, 16777215, 16777215,
-				16777215, 16750744, 16711937, 16711680, 16738151, 16776958, 16777215, 16777215, 16777215, 16777215, 16775930, 16734553, 16751001,
-				16744833, 16742520, 16777215, 16777215, 16777215, 16777215, 16777215, 16777215, 16750744, 16711937, 16711680, 16738151, 16776958,
-				16777215, 16777215, 16777215, 16777215, 16777215, 16742520, 16744833, 16744833, 16742520, 16777215, 16777215, 16777215, 16777215,
-				16777215, 16777215, 16750744, 16711937, 16711680, 16738151, 16776958, 16777215, 16777215, 16777215, 16777215, 16777215, 16742520,
-				16744833, 16751001, 16734553, 16775930, 16777215, 16777215, 16777215, 16777215, 16777215, 16750744, 16711937, 16711680, 16738151,
-				16776958, 16777215, 16777215, 16777215, 16777215, 16775930, 16734553, 16751001, 16761281, 16726586, 16770790, 16777215, 16777215,
-				16777215, 16777215, 16777215, 16751772, 16715021, 16714507, 16739950, 16776958, 16777215, 16777215, 16777215, 16777215, 16770790,
-				16726586, 16761281, 16772075, 16728128, 16754599, 16777215, 16777215, 16777215, 16777215, 16777215, 16770790, 16760767, 16760510,
-				16767706, 16777215, 16777215, 16777215, 16777215, 16777215, 16754599, 16728128, 16772075, 16776958, 16749973, 16728385, 16770276, 
-				16777215, 16777215, 16777215, 16777215, 16773360, 16745604, 16738665, 16767192, 16777215, 16777215, 16777215, 16777215, 16770276, 
-				16728385, 16749973, 16776958, 16777215, 16772075, 16731212, 16739436, 16773874, 16777215, 16777215, 16777215, 16759996, 16714764, 
-				16711937, 16743291, 16776958, 16777215, 16777215, 16773874, 16739436, 16731212, 16772075, 16777215, 16777215, 16777215, 16764365, 
-				16726072, 16739436, 16770276, 16777215, 16777215, 16766164, 16723502, 16717848, 16753571, 16777215, 16777215, 16770276, 16739436, 
-				16726072, 16764365, 16777215, 16777215, 16777215, 16777215, 16776958, 16764365, 16731212, 16728385, 16754599, 16770790, 16775416, 
-				16767963, 16764879, 16774131, 16770790, 16754599, 16728385, 16731212, 16764365, 16776958, 16777215, 16777215, 16777215, 16777215, 
-				16777215, 16777215, 16772075, 16749973, 16728128, 16726586, 16734553, 16742520, 16742520, 16734553, 16726586, 16728128, 16749973, 
-				16772075, 16777215, 16777215, 16777215, 16777215, 16777215, 16777215, 16777215, 16777215, 16777215, 16776958, 16772075, 16761281, 
-				16751001, 16744833, 16744833, 16751001, 16761281, 16772075, 16776958, 16777215, 16777215, 16777215, 16777215, 16777215};
+			16751001, 16761281, 16772075, 16776958, 16777215, 16777215, 16777215, 16777215, 16777215, 16777215, 16777215, 16777215, 16777215,
+			16772075, 16749973, 16728128, 16726586, 16734553, 16742520, 16742520, 16734553, 16726586, 16728128, 16749973, 16772075, 16777215,
+			16777215, 16777215, 16777215, 16777215, 16777215, 16776958, 16764365, 16731212, 16728385, 16754599, 16770790, 16774902, 16774131,
+			16774131, 16774131, 16770790, 16754599, 16728385, 16731212, 16764365, 16776958, 16777215, 16777215, 16777215, 16777215, 16764365,
+			16726072, 16739436, 16770276, 16777215, 16777215, 16757169, 16727871, 16727614, 16747660, 16776958, 16777215, 16770276, 16739436,
+			16726072, 16764365, 16777215, 16777215, 16777215, 16772075, 16731212, 16739436, 16773874, 16777215, 16777215, 16777215, 16750744,
+			16711937, 16711680, 16738151, 16776958, 16777215, 16777215, 16773874, 16739436, 16731212, 16772075, 16777215, 16776958, 16749973,
+			16728385, 16770276, 16777215, 16777215, 16777215, 16777215, 16750744, 16711937, 16711680, 16738151, 16776958, 16777215, 16777215,
+			16777215, 16770276, 16728385, 16749973, 16776958, 16772075, 16728128, 16754599, 16777215, 16777215, 16777215, 16777215, 16777215,
+			16750744, 16711937, 16711680, 16738151, 16776958, 16777215, 16777215, 16777215, 16777215, 16754599, 16728128, 16772075, 16761281,
+			16726586, 16770790, 16777215, 16777215, 16777215, 16777215, 16777215, 16750744, 16711937, 16711680, 16738151, 16776958, 16777215,
+			16777215, 16777215, 16777215, 16770790, 16726586, 16761281, 16751001, 16734553, 16775930, 16777215, 16777215, 16777215, 16777215,
+			16777215, 16750744, 16711937, 16711680, 16738151, 16776958, 16777215, 16777215, 16777215, 16777215, 16775930, 16734553, 16751001,
+			16744833, 16742520, 16777215, 16777215, 16777215, 16777215, 16777215, 16777215, 16750744, 16711937, 16711680, 16738151, 16776958,
+			16777215, 16777215, 16777215, 16777215, 16777215, 16742520, 16744833, 16744833, 16742520, 16777215, 16777215, 16777215, 16777215,
+			16777215, 16777215, 16750744, 16711937, 16711680, 16738151, 16776958, 16777215, 16777215, 16777215, 16777215, 16777215, 16742520,
+			16744833, 16751001, 16734553, 16775930, 16777215, 16777215, 16777215, 16777215, 16777215, 16750744, 16711937, 16711680, 16738151,
+			16776958, 16777215, 16777215, 16777215, 16777215, 16775930, 16734553, 16751001, 16761281, 16726586, 16770790, 16777215, 16777215,
+			16777215, 16777215, 16777215, 16751772, 16715021, 16714507, 16739950, 16776958, 16777215, 16777215, 16777215, 16777215, 16770790,
+			16726586, 16761281, 16772075, 16728128, 16754599, 16777215, 16777215, 16777215, 16777215, 16777215, 16770790, 16760767, 16760510,
+			16767706, 16777215, 16777215, 16777215, 16777215, 16777215, 16754599, 16728128, 16772075, 16776958, 16749973, 16728385, 16770276,
+			16777215, 16777215, 16777215, 16777215, 16773360, 16745604, 16738665, 16767192, 16777215, 16777215, 16777215, 16777215, 16770276,
+			16728385, 16749973, 16776958, 16777215, 16772075, 16731212, 16739436, 16773874, 16777215, 16777215, 16777215, 16759996, 16714764,
+			16711937, 16743291, 16776958, 16777215, 16777215, 16773874, 16739436, 16731212, 16772075, 16777215, 16777215, 16777215, 16764365,
+			16726072, 16739436, 16770276, 16777215, 16777215, 16766164, 16723502, 16717848, 16753571, 16777215, 16777215, 16770276, 16739436,
+			16726072, 16764365, 16777215, 16777215, 16777215, 16777215, 16776958, 16764365, 16731212, 16728385, 16754599, 16770790, 16775416,
+			16767963, 16764879, 16774131, 16770790, 16754599, 16728385, 16731212, 16764365, 16776958, 16777215, 16777215, 16777215, 16777215,
+			16777215, 16777215, 16772075, 16749973, 16728128, 16726586, 16734553, 16742520, 16742520, 16734553, 16726586, 16728128, 16749973,
+			16772075, 16777215, 16777215, 16777215, 16777215, 16777215, 16777215, 16777215, 16777215, 16777215, 16776958, 16772075, 16761281,
+			16751001, 16744833, 16744833, 16751001, 16761281, 16772075, 16776958, 16777215, 16777215, 16777215, 16777215, 16777215};
 		final BufferedImage image = new BufferedImage(20, 20, BufferedImage.TYPE_INT_ARGB);
-        image.setRGB(0, 0, 20, 20, pixels, 0, 20);
-        return new ImageIcon(image);
+		image.setRGB(0, 0, 20, 20, pixels, 0, 20);
+		return new ImageIcon(image);
 	}
-	
+
 	static public final Icon ICON_ERROR = makeErrorIcon();
-	
+
 	public class Node extends DefaultMutableTreeNode
 	{
 		final private String path;
 		private Icon icon = null;
-		
+
 		public Node(final String path) {
 			this.path = withSlash(path);
 		}
-		
+
 		public boolean isDirectory() {
 			return new File(this.path).isDirectory();
 		}
-		
+
 		public File[] updatedChildrenFiles(final boolean sort) {
 			final File file = new File(this.path);
 			if (!file.isDirectory()) {
@@ -117,7 +117,7 @@ public class FileSystemTree extends JTree
 			if (sort) Arrays.sort(files);
 			return files;
 		}
-		
+
 		/**
 		 * If it's a directory, add a Node for each of its visible files.
 		 */
@@ -136,7 +136,7 @@ public class FileSystemTree extends JTree
 				t.printStackTrace();
 			}
 		}
-		
+
 		/**
 		 * Recursive expansion until opening the final element of the path
 		 * @param path The absolute file path.
@@ -164,7 +164,7 @@ public class FileSystemTree extends JTree
 				}
 			}
 		}
-		
+
 		@Override
 		public String toString() {
 			return this.path;
@@ -175,51 +175,51 @@ public class FileSystemTree extends JTree
 			if (isRoot()) return super.getChildCount();
 			return new File(this.path).isDirectory() ? updatedChildrenFiles(false).length : 0;
 		}
-		
+
 		@Override
 		public synchronized Node getChildAt(final int index) {
 			if (0 == getChildCount()) return null;
 			return (Node) super.getChildAt(index);
 		}
-		
+
 		public Icon getIcon() {
 			return this.icon;
 		}
-		
+
 		@Override
 		public Object getUserObject() {
 			return this.path;
 		}
-		
+
 		@Override
 		public boolean isLeaf() {
 			return !isRoot() && !this.isDirectory();
 		}
-		
+
 		public synchronized void removeAllChildren(final DefaultTreeModel model) {
 			for (int i=super.getChildCount() -1; i>-1; --i) {
 				// Can't use DefaultMutableTreeNode.removeAllChildren or .remove(int): the model is not notified
 				model.removeNodeFromParent((Node)super.getChildAt(i));
 			}
 		}
-		
+
 		public synchronized void updateChildrenList(final DefaultTreeModel model) {
 			removeAllChildren(model);
 			populateChildren(model);
 		}
 	}
-	
+
 	public interface LeafListener {
 		public void leafDoubleClicked(final File file);
 	}
-	
+
 	private ArrayList<LeafListener> leaf_listeners = new ArrayList<>();
 
 	private final DirectoryWatcher dir_watcher = new DirectoryWatcher();
-	
+
 	private final HashSet<String> ignored_extensions = new HashSet<>();
 	private Pattern re_ignored_extensions = Pattern.compile("^.*$", Pattern.CASE_INSENSITIVE); // match all
-	
+
 	public FileSystemTree()
 	{
 		setModel(new DefaultTreeModel(new Node("#root#")));
@@ -234,7 +234,7 @@ public class FileSystemTree extends JTree
 				node.populateChildren(getModel());
 				dir_watcher.register(node);
 			}
-			
+
 			@Override
 			public void treeWillCollapse(TreeExpansionEvent event) throws ExpandVetoException {
 				final Node node = ((Node)event.getPath().getLastPathComponent());
@@ -266,8 +266,8 @@ public class FileSystemTree extends JTree
 		setCellRenderer(new DefaultTreeCellRenderer() {
 			@Override
 			public Component getTreeCellRendererComponent(final JTree tree, final Object value, final boolean selected,
-					final boolean expanded, final boolean leaf, final int row, final boolean hasFocus) {
-		        super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
+				final boolean expanded, final boolean leaf, final int row, final boolean hasFocus) {
+				super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
 				final Node node = (Node) value;
 				setText(new File(node.path).getName());
 				if (node.isDirectory()) {
@@ -283,7 +283,7 @@ public class FileSystemTree extends JTree
 		});
 		setVisible(true);
 	}
-	
+
 	/**
 	 * Add a file name extension to ignore, without the dot, for example "class".
 	 * Files whose name have this extension will not be listed as leaves in the tree.
@@ -298,7 +298,7 @@ public class FileSystemTree extends JTree
 		}
 		return false;
 	}
-	
+
 	/** Opposite of {@link #ignoreExtension(String)}.
 	 * 
 	 * @param extension The file name extension to stop ignoring, e.g. "class".
@@ -311,7 +311,7 @@ public class FileSystemTree extends JTree
 		}
 		return false;
 	}
-	
+
 	private void updateIgnoreExtensionPattern() {
 		if (this.ignored_extensions.isEmpty()) {
 			this.re_ignored_extensions = Pattern.compile("^.*$", Pattern.CASE_INSENSITIVE);
@@ -322,19 +322,19 @@ public class FileSystemTree extends JTree
 			this.re_ignored_extensions = Pattern.compile(s.toString(), Pattern.CASE_INSENSITIVE);
 		}
 	}
-	
+
 	synchronized public void addLeafListener(final LeafListener l) {
 		this.leaf_listeners.add(l);
 	}
-	
+
 	synchronized public void removeLeafListener(final LeafListener l) {
 		this.leaf_listeners.remove(l);
 	}
-	
+
 	synchronized public ArrayList<LeafListener> getLeafListeners() {
 		return new ArrayList<LeafListener>(this.leaf_listeners);
 	}
-	
+
 	/**
 	 * Add a directory as a top-level root.
 	 * 
@@ -347,7 +347,7 @@ public class FileSystemTree extends JTree
 		if (!file.isDirectory()) return;
 		final String dirPath = withSlash(file.getAbsolutePath());
 		final Node root = (Node) getModel().getRoot();
-		
+
 		if (checkIfChild) {
 			// If dir is a subdirectory of an existing root, expand recursively to show it
 			for (int i=0; i<root.getChildCount(); ++i) {
@@ -368,12 +368,12 @@ public class FileSystemTree extends JTree
 		getModel().insertNodeInto(new Node(dirPath), root, root.getChildCount());
 		getModel().reload();
 	}
-	
+
 	@Override
 	public DefaultTreeModel getModel() {
 		return (DefaultTreeModel) super.getModel();
 	}
-	
+
 	public void updateUILater() {
 		SwingUtilities.invokeLater(new Runnable() {
 			@Override
@@ -382,7 +382,7 @@ public class FileSystemTree extends JTree
 			}
 		});
 	}
-	
+
 	/**
 	 * For persistence.
 	 * @return A String with the absolute file paths of all top-level folders
@@ -397,7 +397,7 @@ public class FileSystemTree extends JTree
 		}
 		return sb.toString();
 	}
-	
+
 	/**
 	 * For restoring state. Only those paths that are directories and exist will be added.
 	 * @param folders A String generated from {@code FileSystemTree#getTopLevelFoldersString()}.
@@ -410,17 +410,17 @@ public class FileSystemTree extends JTree
 			}
 		}
 	}
-	
+
 	public void destroy() {
 		dir_watcher.interrupt();
 	}
-	
+
 	private class DirectoryWatcher extends Thread {
-		
+
 		private WatchService watcher;
 		private final HashMap<WatchKey, Path> keys = new HashMap<>();
 		private final HashMap<Path, Node> map = new HashMap<>();
-		
+
 		DirectoryWatcher() {
 			try {
 				this.watcher = FileSystems.getDefault().newWatchService();
@@ -430,7 +430,7 @@ public class FileSystemTree extends JTree
 				e.printStackTrace();
 			}
 		}
-		
+
 		void register(final Node node) {
 			if (null == watcher) {
 				System.out.println("Filesystem watching is not running.");
@@ -440,9 +440,9 @@ public class FileSystemTree extends JTree
 				try {
 					final Path path = new File(node.path).toPath();
 					final WatchKey key = path.register(watcher,
-							StandardWatchEventKinds.ENTRY_CREATE,
-							StandardWatchEventKinds.ENTRY_MODIFY,
-							StandardWatchEventKinds.ENTRY_DELETE);
+						StandardWatchEventKinds.ENTRY_CREATE,
+						StandardWatchEventKinds.ENTRY_MODIFY,
+						StandardWatchEventKinds.ENTRY_DELETE);
 					keys.put(key, path);
 					map.put(path, node);
 				} catch (IOException e) {
@@ -450,7 +450,7 @@ public class FileSystemTree extends JTree
 				}
 			}
 		}
-		
+
 		void unregister(final Node node) {
 			synchronized (keys) {
 				final Iterator<Map.Entry<Path, Node>> it = map.entrySet().iterator();
@@ -473,48 +473,48 @@ public class FileSystemTree extends JTree
 				}
 			}
 		}
-		
+
 		@Override
 		public void run() {
 			while (true) {
 				if (isInterrupted()) return;
 				WatchKey key;
-	            try {
-	                key = watcher.take();
-	            } catch (InterruptedException x) {
-	                return;
-	            }
+				try {
+					key = watcher.take();
+				} catch (InterruptedException x) {
+					return;
+				}
 
-	            final Path dir = keys.get(key);
-	            if (null == dir) {
-	            	System.out.println("Unrecognized WatchKey: " + key);
-	            	continue;
-	            }
-	            
-	            final HashSet<Node> nodes = new HashSet<>();
-	            
-	            for (final WatchEvent<?> event: key.pollEvents()) {
-	                final WatchEvent.Kind<?> kind = event.kind();
-	                if (StandardWatchEventKinds.OVERFLOW == kind) {
-	                	continue;
-	                }
-	                
-	                @SuppressWarnings("unchecked")
-	                final Path child = dir.resolve(((WatchEvent<Path>) event).context());
-	                final Node node = map.get(child.getParent());
-	                if (null != node) nodes.add(node);
-	            }
-	            
-	            for (final Node node : nodes) {
-	            	node.updateChildrenList(FileSystemTree.this.getModel());
-	            	FileSystemTree.this.expandPath(new TreePath(node.getPath()));
-	            }
-	            
-	            boolean valid = key.reset();
-	            if (!valid) {
-	                final Path path = keys.remove(key);
-	                if (null != path) map.remove(path);
-	            }
+				final Path dir = keys.get(key);
+				if (null == dir) {
+					System.out.println("Unrecognized WatchKey: " + key);
+					continue;
+				}
+
+				final HashSet<Node> nodes = new HashSet<>();
+
+				for (final WatchEvent<?> event: key.pollEvents()) {
+					final WatchEvent.Kind<?> kind = event.kind();
+					if (StandardWatchEventKinds.OVERFLOW == kind) {
+						continue;
+					}
+
+					@SuppressWarnings("unchecked")
+					final Path child = dir.resolve(((WatchEvent<Path>) event).context());
+					final Node node = map.get(child.getParent());
+					if (null != node) nodes.add(node);
+				}
+
+				for (final Node node : nodes) {
+					node.updateChildrenList(FileSystemTree.this.getModel());
+					FileSystemTree.this.expandPath(new TreePath(node.getPath()));
+				}
+
+				boolean valid = key.reset();
+				if (!valid) {
+					final Path path = keys.remove(key);
+					if (null != path) map.remove(path);
+				}
 			}
 		}
 	}
