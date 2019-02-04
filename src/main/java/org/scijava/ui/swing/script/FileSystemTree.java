@@ -37,6 +37,8 @@ import javax.swing.tree.ExpandVetoException;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
+import org.scijava.log.Logger;
+
 /**
  * 
  * @author Albert Cardona
@@ -132,8 +134,7 @@ public class FileSystemTree extends JTree
 				icon = null;
 			} catch (Throwable t) {
 				icon = ICON_ERROR;
-				System.out.println("Failed to populate folder " + this.path);
-				t.printStackTrace();
+				log.error("Failed to populate folder " + this.path, t);
 			}
 		}
 
@@ -213,6 +214,8 @@ public class FileSystemTree extends JTree
 		public void leafDoubleClicked(final File file);
 	}
 
+	private final Logger log;
+
 	private ArrayList<LeafListener> leaf_listeners = new ArrayList<>();
 
 	private final DirectoryWatcher dir_watcher = new DirectoryWatcher();
@@ -220,8 +223,9 @@ public class FileSystemTree extends JTree
 	private final HashSet<String> ignored_extensions = new HashSet<>();
 	private Pattern re_ignored_extensions = Pattern.compile("^.*$", Pattern.CASE_INSENSITIVE); // match all
 
-	public FileSystemTree()
+	public FileSystemTree(final Logger log)
 	{
+		this.log = log;
 		setModel(new DefaultTreeModel(new Node("#root#")));
 		setRootVisible(false);
 		getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
@@ -426,14 +430,13 @@ public class FileSystemTree extends JTree
 				this.watcher = FileSystems.getDefault().newWatchService();
 				this.start();
 			} catch (IOException e) {
-				System.out.println("Failed to start filesystem watching.");
-				e.printStackTrace();
+				log.error("Failed to start filesystem watching.", e);
 			}
 		}
 
 		void register(final Node node) {
 			if (null == watcher) {
-				System.out.println("Filesystem watching is not running.");
+				log.error("Filesystem watching is not running.");
 				return;
 			}
 			synchronized (keys) {
@@ -446,7 +449,7 @@ public class FileSystemTree extends JTree
 					keys.put(key, path);
 					map.put(path, node);
 				} catch (IOException e) {
-					e.printStackTrace();
+					log.error(e);
 				}
 			}
 		}
@@ -487,7 +490,7 @@ public class FileSystemTree extends JTree
 
 				final Path dir = keys.get(key);
 				if (null == dir) {
-					System.out.println("Unrecognized WatchKey: " + key);
+					log.error("Unrecognized WatchKey: " + key);
 					continue;
 				}
 

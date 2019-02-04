@@ -614,7 +614,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			}
 			catch (final BadLocationException e) {
 				/* ignore */
-				System.out.println("Cannot toggle bookmark at this location.");
+				log.error("Cannot toggle bookmark at this location.");
 			}
 		}
 	}
@@ -670,7 +670,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 				setText(new String(chars));
 			}
 			catch (final Throwable t) {
-				t.printStackTrace();
+				log.error(t);
 			}
 			finally {
 				endAtomicEdit();
@@ -686,7 +686,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			super.convertTabsToSpaces();
 		}
 		catch (final Throwable t) {
-			t.printStackTrace();
+			log.error(t);
 		}
 		finally {
 			endAtomicEdit();
@@ -700,7 +700,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			super.convertSpacesToTabs();
 		}
 		catch (final Throwable t) {
-			t.printStackTrace();
+			log.error(t);
 		}
 		finally {
 			endAtomicEdit();

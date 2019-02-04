@@ -634,7 +634,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		add_directory.setToolTipText("Add a directory");
 		final JButton remove_directory = new JButton("[-]");
 		remove_directory.setToolTipText("Remove a top-level directory");
-		tree = new FileSystemTree();
+		tree = new FileSystemTree(log);
 		tree.ignoreExtension("class");
 		dragSource = new DragSource();
 		dragSource.createDefaultDragGestureRecognizer(tree, DnDConstants.ACTION_COPY, new DragAndDrop());
@@ -653,7 +653,7 @@ public class TextEditor extends JFrame implements ActionListener,
 					}
 				}
 				if (isBinary(file)) {
-					System.out.println("isBinary: " + true);
+					log.debug("isBinary: " + true);
 					try {
 						final Object o = ioService.open(file.getAbsolutePath());
 						// Open in whatever way possible
@@ -661,8 +661,8 @@ public class TextEditor extends JFrame implements ActionListener,
 						else JOptionPane.showMessageDialog(TextEditor.this, "Could not open the file at: " + file.getAbsolutePath());
 						return;
 					} catch (Exception e) {
+						log.error(e);
 						error("Could not open image at " + file);
-						e.printStackTrace();
 					}
 				}
 				// Ask:
@@ -1179,7 +1179,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			setEditorPaneFileName(path.substring(path.lastIndexOf('/') + 1));
 		}
 		catch (final Exception e) {
-			e.printStackTrace();
+			log.error(e);
 			error("The template '" + url + "' was not found.");
 		}
 	}
@@ -1364,6 +1364,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				}
 			}
 			catch (final ClassNotFoundException e) {
+				log.debug(e);
 				error("Could not open source for class " + className);
 			}
 		}
@@ -1586,7 +1587,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			try {
 				uiService.show(ioService.open(file.getAbsolutePath()));
 			} catch (IOException e) {
-				e.printStackTrace();
+				log.error(e);
 			}
 			return null;
 		}
@@ -1636,11 +1637,11 @@ public class TextEditor extends JFrame implements ActionListener,
 			return tab;
 		}
 		catch (final FileNotFoundException e) {
-			e.printStackTrace();
+			log.error(e);
 			error("The file '" + file + "' was not found.");
 		}
 		catch (final Exception e) {
-			e.printStackTrace();
+			log.error(e);
 			error("There was an error while opening '" + file + "': " + e);
 		}
 		return null;
@@ -1694,8 +1695,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			return true;
 		}
 		catch (final IOException e) {
+			log.error(e);
 			error("Could not save " + file.getName());
-			e.printStackTrace();
 			return false;
 		}
 	}
@@ -1723,7 +1724,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			return true;
 		}
 		catch (final IOException e) {
-			e.printStackTrace();
+			log.error(e);
 			error("Could not write " + selectedFile + ": " + e.getMessage());
 			return false;
 		}
@@ -1787,8 +1788,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			out.closeEntry();
 		}
 		catch (final ZipException e) {
-			e.printStackTrace();
-			throw new IOException(e.getMessage());
+			throw new IOException(e);
 		}
 	}
 
@@ -2077,7 +2077,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				if (null != errors) errors.shutdownNow();
 			}
 			catch (final Exception e) {
-				e.printStackTrace();
+				log.error(e);
 			}
 			for (final Thread thread : getAllThreads()) {
 				try {
@@ -2086,7 +2086,7 @@ public class TextEditor extends JFrame implements ActionListener,
 					thread.stop();
 				}
 				catch (final Throwable t) {
-					t.printStackTrace();
+					log.error(t);
 				}
 			}
 			executingTasks.remove(this);
@@ -2154,7 +2154,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			execute(selectionOnly);
 		}
 		catch (final Throwable t) {
-			t.printStackTrace();
+			log.error(t);
 		}
 	}
 
@@ -2261,7 +2261,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			}.start();
 		}
 		catch (final Throwable t) {
-			t.printStackTrace();
+			log.error(t);
 		}
 		finally {
 			// Re-enable when all text to send has been sent
@@ -2294,8 +2294,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			Files.write(Paths.get(path), Arrays.asList(new String[]{text, "#"}), Charset.forName("UTF-8"),
 					StandardOpenOption.APPEND, StandardOpenOption.DSYNC);
 		} catch (IOException e) {
-			System.out.println("Failed to write executed prompt command to file " + path);
-			e.printStackTrace();
+			log.error("Failed to write executed prompt command to file " + path, e);
 		}
 	}
 	
@@ -2321,11 +2320,10 @@ public class TextEditor extends JFrame implements ActionListener,
 			commands.addAll(Arrays.asList(new String(bytes, Charset.forName("UTF-8")).split(sep + "#" + sep)));
 			if (0 == commands.get(commands.size()-1).length()) commands.remove(commands.size() -1); // last entry is empty
 		} catch (IOException e) {
-			System.out.println("Failed to read history of prompt commands from file " + path);
-			e.printStackTrace();
+			log.error("Failed to read history of prompt commands from file " + path, e);
 			return lines;
 		} finally {
-			try { if (null != ra) ra.close(); } catch (IOException e) { e.printStackTrace(); }
+			try { if (null != ra) ra.close(); } catch (IOException e) { log.error(e); }
 		}
 		if (commands.size() > 1000) {
 			commands = commands.subList(commands.size() - 1000, commands.size());
@@ -2339,11 +2337,10 @@ public class TextEditor extends JFrame implements ActionListener,
 				Files.write(Paths.get(path + "-tmp"), croppedLog, Charset.forName("UTF-8"),
 						StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.DSYNC);
 				if (!new File(path + "-tmp").renameTo(new File(path))) {
-					System.out.println("Could not rename command log file " + path + "-tmp to " + path);
+					log.error("Could not rename command log file " + path + "-tmp to " + path);
 				}
 			} catch (Exception e) {
-				System.out.println("Failed to crop history of prompt commands file " + path);
-				e.printStackTrace();
+				log.error("Failed to crop history of prompt commands file " + path, e);
 			}
 		}
 		lines.addAll(commands);
