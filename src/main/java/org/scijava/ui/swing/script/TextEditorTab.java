@@ -188,18 +188,17 @@ public class TextEditorTab extends JSplitPane {
 		incremental = new JCheckBox("persistent");
 		incremental.setEnabled(true);
 		incremental.setSelected(false);
-		incremental.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(final ActionEvent ae) {
-				if (incremental.isSelected() && null == textEditor.getCurrentLanguage()) {
-					incremental.setSelected(false);
-					JOptionPane.showMessageDialog(TextEditorTab.this, "Select a language first!");
-					return;
-				}
-				textEditor.setIncremental(incremental.isSelected());
-				prompt_title.setText(incremental.isSelected() ? "REPL: " + textEditor.getCurrentLanguage().getLanguageName() : "");
-				prompt.setEnabled(incremental.isSelected());
+		incremental.addActionListener(ae -> {
+			if (incremental.isSelected() && null == textEditor.getCurrentLanguage()) {
+				incremental.setSelected(false);
+				JOptionPane.showMessageDialog(TextEditorTab.this,
+					"Select a language first!");
+				return;
 			}
+			textEditor.setIncremental(incremental.isSelected());
+			prompt_title.setText(incremental.isSelected() ? //
+				"REPL: " + textEditor.getCurrentLanguage().getLanguageName() : "");
+			prompt.setEnabled(incremental.isSelected());
 		});
 		bottom.add(incremental, bc);
 
@@ -213,13 +212,7 @@ public class TextEditorTab extends JSplitPane {
 		bc.weightx = 0;
 		bc.anchor = GridBagConstraints.NORTHEAST;
 		toggleErrors = new JButton("Show Errors");
-		toggleErrors.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(final ActionEvent e) {
-				toggleErrors();
-			}
-		});
+		toggleErrors.addActionListener(e -> toggleErrors());
 		bottom.add(toggleErrors, bc);
 
 		bc.gridx = 6;
@@ -227,12 +220,7 @@ public class TextEditorTab extends JSplitPane {
 		bc.weightx = 0;
 		bc.anchor = GridBagConstraints.NORTHEAST;
 		final JButton clear = new JButton("Clear");
-		clear.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(final ActionEvent ae) {
-				getScreen().setText("");
-			}
-		});
+		clear.addActionListener(ae -> getScreen().setText(""));
 		bottom.add(clear, bc);
 		
 		bc.gridx = 7;
@@ -250,11 +238,7 @@ public class TextEditorTab extends JSplitPane {
 				}
 				// Keep prompt collapsed if not in use
 				if (!incremental.isSelected()) {
-					SwingUtilities.invokeLater(new Runnable() {
-						public void run() {
-							screenAndPromptSplit.setDividerLocation(1.0);
-						}
-					});
+					SwingUtilities.invokeLater(() -> screenAndPromptSplit.setDividerLocation(1.0));
 				}
 			}
 		});

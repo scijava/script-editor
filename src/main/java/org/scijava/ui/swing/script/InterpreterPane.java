@@ -106,13 +106,7 @@ public class InterpreterPane implements UIComponent<JComponent> {
 
 		final JButton clearButton = new JButton("Clear");
 		clearButton.setToolTipText("Clears the text in the output pane.");
-		clearButton.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(final ActionEvent e) {
-				output.setText("");
-			}
-		});
+		clearButton.addActionListener(e -> output.setText(""));
 
 		final JPanel bottomPane = new JPanel();
 		bottomPane.setLayout(new MigLayout("", "[grow,fill][pref]",
@@ -125,19 +119,15 @@ public class InterpreterPane implements UIComponent<JComponent> {
 		if (importGenerator != null) {
 			final JButton autoImportButton = new JButton("Auto-Import");
 			autoImportButton.setToolTipText("Auto-imports common classes.");
-			autoImportButton.addActionListener(new ActionListener() {
-
-				@Override
-				public void actionPerformed(final ActionEvent e) {
-					try {
-						repl.getInterpreter().getEngine().eval(importGenerator.toString());
-					}
-					catch (final ScriptException e1) {
-						e1.printStackTrace(new PrintWriter(output.getOutputWriter()));
-					}
-					autoImportButton.setEnabled(false);
-					prompt.getComponent().requestFocus();
+			autoImportButton.addActionListener(e -> {
+				try {
+					repl.getInterpreter().getEngine().eval(importGenerator.toString());
 				}
+				catch (final ScriptException e1) {
+					e1.printStackTrace(new PrintWriter(output.getOutputWriter()));
+				}
+				autoImportButton.setEnabled(false);
+				prompt.getComponent().requestFocus();
 			});
 			bottomPane.add(autoImportButton, "w pref!, h pref!, wrap");
 		}
