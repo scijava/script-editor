@@ -44,7 +44,6 @@ import org.scijava.log.Logger;
  * @author Albert Cardona
  *
  */
-@SuppressWarnings("serial")
 public class FileSystemTree extends JTree
 {	
 	static private String withSlash(String path) {
@@ -111,9 +110,9 @@ public class FileSystemTree extends JTree
 			}
 			final File[] files = file.listFiles(new FileFilter() {
 				@Override
-				public boolean accept(final File file) {
-					return !file.isHidden() && !file.getName().endsWith("~")
-							&& !re_ignored_extensions.matcher(file.getName()).matches();
+				public boolean accept(final File f) {
+					return !f.isHidden() && !f.getName().endsWith("~")
+							&& !re_ignored_extensions.matcher(f.getName()).matches();
 				}
 			});
 			if (sort) Arrays.sort(files);
@@ -145,7 +144,7 @@ public class FileSystemTree extends JTree
 		 */
 		public void expandTo(final String path, final TreePath[] full) {
 			if (path.startsWith(this.path)) {
-				final LinkedList<Node> stack = new LinkedList<Node>();
+				final LinkedList<Node> stack = new LinkedList<>();
 				stack.add(this);
 				while (true) {
 					final Node node = stack.removeFirst();
@@ -336,7 +335,7 @@ public class FileSystemTree extends JTree
 	}
 
 	synchronized public ArrayList<LeafListener> getLeafListeners() {
-		return new ArrayList<LeafListener>(this.leaf_listeners);
+		return new ArrayList<>(this.leaf_listeners);
 	}
 
 	/**
@@ -355,7 +354,7 @@ public class FileSystemTree extends JTree
 		if (checkIfChild) {
 			// If dir is a subdirectory of an existing root, expand recursively to show it
 			for (int i=0; i<root.getChildCount(); ++i) {
-				final Node node = (Node) root.getChildAt(i);
+				final Node node = root.getChildAt(i);
 				if (dirPath.startsWith(node.path)) {
 					final TreePath[] p = new TreePath[1];
 					node.expandTo(dirPath, p);
@@ -395,9 +394,9 @@ public class FileSystemTree extends JTree
 	public String getTopLevelFoldersString() {
 		final Node root = (Node) getModel().getRoot();
 		if (0 == root.getChildCount()) return "";
-		final StringBuilder sb = new StringBuilder(((Node)root.getChildAt(0)).path);
+		final StringBuilder sb = new StringBuilder(root.getChildAt(0).path);
 		for (int i=1, l=root.getChildCount(); i<l; ++i) {
-			sb.append(':').append(((Node)root.getChildAt(i)).path);
+			sb.append(':').append(root.getChildAt(i).path);
 		}
 		return sb.toString();
 	}

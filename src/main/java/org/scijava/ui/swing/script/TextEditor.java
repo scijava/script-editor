@@ -175,7 +175,6 @@ import org.scijava.widget.FileWidget;
  * @author Johannes Schindelin
  * @author Jonathan Hale
  */
-@SuppressWarnings("serial")
 public class TextEditor extends JFrame implements ActionListener,
 	ChangeListener, CloseConfirmable, DocumentListener
 {
@@ -261,8 +260,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	private boolean incremental = false;
 	private DragSource dragSource;
 	
-	static public final ArrayList<TextEditor> instances = new ArrayList<TextEditor>();
-	static public final ArrayList<Context> contexts = new ArrayList<Context>();
+	public static final ArrayList<TextEditor> instances = new ArrayList<>();
+	public static final ArrayList<Context> contexts = new ArrayList<>();
 
 	public TextEditor(final Context context) {
 		super("Script Editor");
@@ -344,7 +343,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		removeUnusedImports.setMnemonic(KeyEvent.VK_U);
 		sortImports = addToMenu(edit, "Sort imports", 0, 0);
 		sortImports.setMnemonic(KeyEvent.VK_S);
-		respectAutoImports = prefService.getBoolean(AUTO_IMPORT_PREFS, false);
+		respectAutoImports = prefService.getBoolean(getClass(), AUTO_IMPORT_PREFS, false);
 		autoImport =
 			new JCheckBoxMenuItem("Auto-import (deprecated)", respectAutoImports);
 		autoImport.addItemListener(new ItemListener() {
@@ -352,7 +351,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			@Override
 			public void itemStateChanged(final ItemEvent e) {
 				respectAutoImports = e.getStateChange() == ItemEvent.SELECTED;
-				prefService.put(AUTO_IMPORT_PREFS, respectAutoImports);
+				prefService.put(getClass(), AUTO_IMPORT_PREFS, respectAutoImports);
 			}
 		});
 		edit.add(autoImport);
@@ -668,35 +667,35 @@ public class TextEditor extends JFrame implements ActionListener,
 		tree.setMinimumSize(new Dimension(200, 600));
 		tree.addLeafListener(new FileSystemTree.LeafListener() {
 			@Override
-			public void leafDoubleClicked(final File file) {
-				final String name = file.getName();
+			public void leafDoubleClicked(final File f) {
+				final String name = f.getName();
 				final int idot = name.lastIndexOf('.');
 				if (idot > -1) {
 					final String ext = name.substring(idot + 1);
 					final ScriptLanguage lang = scriptService.getLanguageByExtension(ext);
 					if (null != lang) {
-						open(file);
+						open(f);
 						return;
 					}
 				}
-				if (isBinary(file)) {
+				if (isBinary(f)) {
 					log.debug("isBinary: " + true);
 					try {
-						final Object o = ioService.open(file.getAbsolutePath());
+						final Object o = ioService.open(f.getAbsolutePath());
 						// Open in whatever way possible
 						if ( null != o ) uiService.show(o);
-						else JOptionPane.showMessageDialog(TextEditor.this, "Could not open the file at: " + file.getAbsolutePath());
+						else JOptionPane.showMessageDialog(TextEditor.this, "Could not open the file at: " + f.getAbsolutePath());
 						return;
 					} catch (Exception e) {
 						log.error(e);
-						error("Could not open image at " + file);
+						error("Could not open image at " + f);
 					}
 				}
 				// Ask:
 				final int choice = JOptionPane.showConfirmDialog(TextEditor.this,
 						"Really try to open file " + name + " in a tab?", "Confirm", JOptionPane.OK_CANCEL_OPTION);
 				if (JOptionPane.OK_OPTION == choice) {
-					open(file);
+					open(f);
 				}
 			}
 		});
@@ -707,8 +706,8 @@ public class TextEditor extends JFrame implements ActionListener,
 				c.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 				c.setFileHidingEnabled(true); // hide hidden files
 				if (JFileChooser.APPROVE_OPTION == c.showOpenDialog(getContentPane())) {
-					final File file = c.getSelectedFile();
-					if (file.isDirectory()) tree.addRootDirectory(file.getAbsolutePath(), false);
+					final File f = c.getSelectedFile();
+					if (f.isDirectory()) tree.addRootDirectory(f.getAbsolutePath(), false);
 				}
 			}
 		});
@@ -939,7 +938,9 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	@EventHandler
-	private void onEvent(final ContextDisposingEvent e) {
+	private void onEvent(
+		@SuppressWarnings("unused") final ContextDisposingEvent e)
+	{
 		if (isDisplayable()) dispose();
 	}
 
@@ -957,8 +958,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			dim.height = DEFAULT_WINDOW_HEIGHT;
 		}
 
-		setPreferredSize(new Dimension(prefService.getInt(WINDOW_WIDTH, dim.width),
-			prefService.getInt(WINDOW_HEIGHT, dim.height)));
+		setPreferredSize(new Dimension(prefService.getInt(getClass(), WINDOW_WIDTH,
+			dim.width), prefService.getInt(getClass(), WINDOW_HEIGHT, dim.height)));
 	}
 
 	/**
@@ -971,8 +972,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	 */
 	public void saveWindowSizeToPrefs() {
 		final Dimension dim = getSize();
-		prefService.put(WINDOW_HEIGHT, dim.height);
-		prefService.put(WINDOW_WIDTH, dim.width);
+		prefService.put(getClass(), WINDOW_HEIGHT, dim.height);
+		prefService.put(getClass(), WINDOW_WIDTH, dim.width);
 	}
 
 	final public RSyntaxTextArea getTextArea() {
@@ -2190,11 +2191,11 @@ public class TextEditor extends JFrame implements ActionListener,
 	 */
 	public void runBatch() {
 		// get script from current tab
-		String script = getTab().getEditorPane().getText();
-		ScriptInfo scriptInfo = new ScriptInfo(context, "dummy."
-				+ getCurrentLanguage().getExtensions().get(0),
-				new StringReader(script));
-		batchService.run(scriptInfo);
+		final String script = getTab().getEditorPane().getText();
+		final ScriptInfo info = new ScriptInfo(context, //
+			"dummy." + getCurrentLanguage().getExtensions().get(0), //
+			new StringReader(script));
+		batchService.run(info);
 	}
 
 	/** Invoke in the context of the event dispatch thread. */
@@ -2335,10 +2336,10 @@ public class TextEditor extends JFrame implements ActionListener,
 	private ArrayList<String> loadPromptLog(final ScriptLanguage language) {
 		final String path = getPromptCommandsFilename(language);
 		final File file = new File(path);
-		final ArrayList<String> lines = new ArrayList<String>();
+		final ArrayList<String> lines = new ArrayList<>();
 		if (!file.exists()) return lines;
 		RandomAccessFile ra = null;
-		List<String> commands = new ArrayList<String>();
+		List<String> commands = new ArrayList<>();
 		try {
 			ra = new RandomAccessFile(path, "r");
 			final byte[] bytes = new byte[(int)ra.length()];
@@ -2355,7 +2356,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (commands.size() > 1000) {
 			commands = commands.subList(commands.size() - 1000, commands.size());
 			// Crop the log: otherwise would grow unbounded
-			final ArrayList<String> croppedLog = new ArrayList<String>();
+			final ArrayList<String> croppedLog = new ArrayList<>();
 			for (final String c : commands) {
 				croppedLog.add(c);
 				croppedLog.add("#");
@@ -2802,7 +2803,6 @@ public class TextEditor extends JFrame implements ActionListener,
 				{
 					commands.add(""); // the current prompt text
 				}
-				private String unexecuted_command = "";
 				@Override
 				public void keyPressed(final KeyEvent ke) {
 					int keyCode = ke.getKeyCode();

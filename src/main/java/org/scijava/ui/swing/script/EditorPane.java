@@ -82,7 +82,6 @@ import org.scijava.util.FileUtils;
  * @author Johannes Schindelin
  * @author Jonathan Hale
  */
-@SuppressWarnings("serial")
 public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	private String fallBackBaseName;
@@ -721,32 +720,32 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 */
 	public void loadPreferences() {
 		resetTabSize();
-		setFontSize(prefService.getFloat(FONT_SIZE_PREFS, getFontSize()));
-		setLineWrap(prefService.getBoolean(LINE_WRAP_PREFS, getLineWrap()));
-		setTabsEmulated(prefService.getBoolean(TABS_EMULATED_PREFS,
+		setFontSize(prefService.getFloat(getClass(), FONT_SIZE_PREFS, getFontSize()));
+		setLineWrap(prefService.getBoolean(getClass(), LINE_WRAP_PREFS, getLineWrap()));
+		setTabsEmulated(prefService.getBoolean(getClass(), TABS_EMULATED_PREFS,
 			getTabsEmulated()));
 	}
 	
 	public String loadFolders() {
-		return prefService.get(FOLDERS_PREFS, System.getProperty("user.home"));
+		return prefService.get(getClass(), FOLDERS_PREFS, System.getProperty("user.home"));
 	}
 
 	/**
 	 * Retrieves and saves the preferences to the persistent store
 	 */
 	public void savePreferences(final String top_folders) {
-		prefService.put(TAB_SIZE_PREFS, getTabSize());
-		prefService.put(FONT_SIZE_PREFS, getFontSize());
-		prefService.put(LINE_WRAP_PREFS, getLineWrap());
-		prefService.put(TABS_EMULATED_PREFS, getTabsEmulated());
-		if (null != top_folders) prefService.put(FOLDERS_PREFS, top_folders);
+		prefService.put(getClass(), TAB_SIZE_PREFS, getTabSize());
+		prefService.put(getClass(), FONT_SIZE_PREFS, getFontSize());
+		prefService.put(getClass(), LINE_WRAP_PREFS, getLineWrap());
+		prefService.put(getClass(), TABS_EMULATED_PREFS, getTabsEmulated());
+		if (null != top_folders) prefService.put(getClass(), FOLDERS_PREFS, top_folders);
 	}
 
 	/**
 	 * Reset tab size to current preferences.
 	 */
 	public void resetTabSize() {
-		setTabSize(prefService.getInt(TAB_SIZE_PREFS, DEFAULT_TAB_SIZE));
+		setTabSize(prefService.getInt(getClass(), TAB_SIZE_PREFS, DEFAULT_TAB_SIZE));
 	}
 
 }

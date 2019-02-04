@@ -65,7 +65,6 @@ import org.scijava.ui.swing.script.TextEditor.Executer;
  *
  * @author Jonathan Hale
  */
-@SuppressWarnings("serial")
 public class TextEditorTab extends JSplitPane {
 
 	protected final EditorPane editorPane;
