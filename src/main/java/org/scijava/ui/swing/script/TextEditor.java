@@ -326,107 +326,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		listBookmarks.setMnemonic(KeyEvent.VK_O);
 		edit.addSeparator();
 
-		// Font adjustments
-		decreaseFontSize =
-			addToMenu(edit, "Decrease font size", KeyEvent.VK_MINUS, ctrl);
-		decreaseFontSize.setMnemonic(KeyEvent.VK_D);
-		increaseFontSize =
-			addToMenu(edit, "Increase font size", KeyEvent.VK_PLUS, ctrl);
-		increaseFontSize.setMnemonic(KeyEvent.VK_C);
-
-		fontSizeMenu = new JMenu("Font sizes");
-		fontSizeMenu.setMnemonic(KeyEvent.VK_Z);
-		final boolean[] fontSizeShortcutUsed = new boolean[10];
-		final ButtonGroup buttonGroup = new ButtonGroup();
-		for (final int size : new int[] { 8, 10, 12, 16, 20, 28, 42 }) {
-			final JRadioButtonMenuItem item =
-				new JRadioButtonMenuItem("" + size + " pt");
-			item.addActionListener(new ActionListener() {
-
-				@Override
-				public void actionPerformed(final ActionEvent event) {
-					setFontSize(size);
-				}
-			});
-			for (final char c : ("" + size).toCharArray()) {
-				final int digit = c - '0';
-				if (!fontSizeShortcutUsed[digit]) {
-					item.setMnemonic(KeyEvent.VK_0 + digit);
-					fontSizeShortcutUsed[digit] = true;
-					break;
-				}
-			}
-			buttonGroup.add(item);
-			fontSizeMenu.add(item);
-		}
-		chooseFontSize = new JRadioButtonMenuItem("Other...", false);
-		chooseFontSize.setMnemonic(KeyEvent.VK_O);
-		chooseFontSize.addActionListener(this);
-		buttonGroup.add(chooseFontSize);
-		fontSizeMenu.add(chooseFontSize);
-		edit.add(fontSizeMenu);
-
-		// Add tab size adjusting menu
-		tabSizeMenu = new JMenu("Tab sizes");
-		tabSizeMenu.setMnemonic(KeyEvent.VK_T);
-		final ButtonGroup bg = new ButtonGroup();
-		for (final int size : new int[] { 2, 4, 8 }) {
-			final JRadioButtonMenuItem item = new JRadioButtonMenuItem("" + size);
-			item.addActionListener(new ActionListener() {
-
-				@Override
-				public void actionPerformed(final ActionEvent event) {
-					getEditorPane().setTabSize(size);
-					updateTabAndFontSize(false);
-				}
-			});
-			item.setMnemonic(KeyEvent.VK_0 + (size % 10));
-			bg.add(item);
-			tabSizeMenu.add(item);
-		}
-		chooseTabSize = new JRadioButtonMenuItem("Other...", false);
-		chooseTabSize.setMnemonic(KeyEvent.VK_O);
-		chooseTabSize.addActionListener(this);
-		bg.add(chooseTabSize);
-		tabSizeMenu.add(chooseTabSize);
-		edit.add(tabSizeMenu);
-
-		wrapLines = new JCheckBoxMenuItem("Wrap lines");
-		wrapLines.addChangeListener(new ChangeListener() {
-
-			@Override
-			public void stateChanged(final ChangeEvent e) {
-				getEditorPane().setLineWrap(wrapLines.getState());
-			}
-		});
-		edit.add(wrapLines);
-
-		// Add Tab inserts as spaces
-		tabsEmulated = new JCheckBoxMenuItem("Tab key inserts spaces");
-		tabsEmulated.addChangeListener(new ChangeListener() {
-
-			@Override
-			public void stateChanged(final ChangeEvent e) {
-				getEditorPane().setTabsEmulated(tabsEmulated.getState());
-			}
-		});
-		edit.add(tabsEmulated);
-
-		toggleAutoCompletionMenu = new JCheckBoxMenuItem("Auto completion");
-		toggleAutoCompletionMenu.setSelected(prefService.getBoolean(TextEditor.class, "autoComplete", true));
-		toggleAutoCompletionMenu.addChangeListener(new ChangeListener() {
-
-			@Override
-			public void stateChanged(final ChangeEvent e) {
-				toggleAutoCompletion();
-			}
-		});
-		edit.add(toggleAutoCompletionMenu);
-
-		savePreferences = addToMenu(edit, "Save Preferences", 0, 0);
-
-		edit.addSeparator();
-
 		clearScreen = addToMenu(edit, "Clear output panel", 0, 0);
 		clearScreen.setMnemonic(KeyEvent.VK_L);
 
@@ -619,6 +518,111 @@ public class TextEditor extends JFrame implements ActionListener,
 		tabsMenuTabsStart = tabsMenu.getItemCount();
 		tabsMenuItems = new HashSet<>();
 		mbar.add(tabsMenu);
+
+		final JMenu options = new JMenu("Options");
+		options.setMnemonic(KeyEvent.VK_O);
+
+		// Font adjustments
+		decreaseFontSize =
+			addToMenu(options, "Decrease font size", KeyEvent.VK_MINUS, ctrl);
+		decreaseFontSize.setMnemonic(KeyEvent.VK_D);
+		increaseFontSize =
+			addToMenu(options, "Increase font size", KeyEvent.VK_PLUS, ctrl);
+		increaseFontSize.setMnemonic(KeyEvent.VK_C);
+
+		fontSizeMenu = new JMenu("Font sizes");
+		fontSizeMenu.setMnemonic(KeyEvent.VK_Z);
+		final boolean[] fontSizeShortcutUsed = new boolean[10];
+		final ButtonGroup buttonGroup = new ButtonGroup();
+		for (final int size : new int[] { 8, 10, 12, 16, 20, 28, 42 }) {
+			final JRadioButtonMenuItem item =
+				new JRadioButtonMenuItem("" + size + " pt");
+			item.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(final ActionEvent event) {
+					setFontSize(size);
+				}
+			});
+			for (final char c : ("" + size).toCharArray()) {
+				final int digit = c - '0';
+				if (!fontSizeShortcutUsed[digit]) {
+					item.setMnemonic(KeyEvent.VK_0 + digit);
+					fontSizeShortcutUsed[digit] = true;
+					break;
+				}
+			}
+			buttonGroup.add(item);
+			fontSizeMenu.add(item);
+		}
+		chooseFontSize = new JRadioButtonMenuItem("Other...", false);
+		chooseFontSize.setMnemonic(KeyEvent.VK_O);
+		chooseFontSize.addActionListener(this);
+		buttonGroup.add(chooseFontSize);
+		fontSizeMenu.add(chooseFontSize);
+		options.add(fontSizeMenu);
+
+		// Add tab size adjusting menu
+		tabSizeMenu = new JMenu("Tab sizes");
+		tabSizeMenu.setMnemonic(KeyEvent.VK_T);
+		final ButtonGroup bg = new ButtonGroup();
+		for (final int size : new int[] { 2, 4, 8 }) {
+			final JRadioButtonMenuItem item = new JRadioButtonMenuItem("" + size);
+			item.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(final ActionEvent event) {
+					getEditorPane().setTabSize(size);
+					updateTabAndFontSize(false);
+				}
+			});
+			item.setMnemonic(KeyEvent.VK_0 + (size % 10));
+			bg.add(item);
+			tabSizeMenu.add(item);
+		}
+		chooseTabSize = new JRadioButtonMenuItem("Other...", false);
+		chooseTabSize.setMnemonic(KeyEvent.VK_O);
+		chooseTabSize.addActionListener(this);
+		bg.add(chooseTabSize);
+		tabSizeMenu.add(chooseTabSize);
+		options.add(tabSizeMenu);
+
+		wrapLines = new JCheckBoxMenuItem("Wrap lines");
+		wrapLines.addChangeListener(new ChangeListener() {
+
+			@Override
+			public void stateChanged(final ChangeEvent e) {
+				getEditorPane().setLineWrap(wrapLines.getState());
+			}
+		});
+		options.add(wrapLines);
+
+		// Add Tab inserts as spaces
+		tabsEmulated = new JCheckBoxMenuItem("Tab key inserts spaces");
+		tabsEmulated.addChangeListener(new ChangeListener() {
+
+			@Override
+			public void stateChanged(final ChangeEvent e) {
+				getEditorPane().setTabsEmulated(tabsEmulated.getState());
+			}
+		});
+		options.add(tabsEmulated);
+
+		toggleAutoCompletionMenu = new JCheckBoxMenuItem("Auto completion");
+		toggleAutoCompletionMenu.setSelected(prefService.getBoolean(TextEditor.class, "autoComplete", true));
+		toggleAutoCompletionMenu.addChangeListener(new ChangeListener() {
+
+			@Override
+			public void stateChanged(final ChangeEvent e) {
+				toggleAutoCompletion();
+			}
+		});
+		options.add(toggleAutoCompletionMenu);
+
+		options.addSeparator();
+		savePreferences = addToMenu(options, "Save Preferences", 0, 0);
+
+		mbar.add(options);
 
 		// Add the editor and output area
 		tabbed = new JTabbedPane();
