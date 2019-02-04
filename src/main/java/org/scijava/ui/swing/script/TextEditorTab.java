@@ -67,6 +67,10 @@ import org.scijava.ui.swing.script.TextEditor.Executer;
  */
 public class TextEditorTab extends JSplitPane {
 
+	private static final String DOWN_ARROW = "\u25BC";
+
+	private static final String RIGHT_ARROW = "\u25B6";
+
 	protected final EditorPane editorPane;
 	protected final JTextArea screen = new JTextArea();
 	protected final JTextArea prompt = new JTextArea();
@@ -224,17 +228,17 @@ public class TextEditorTab extends JSplitPane {
 		bottom.add(clear, bc);
 		
 		bc.gridx = 7;
-		switchSplit = new JButton("▶");
+		switchSplit = new JButton(RIGHT_ARROW);
 		switchSplit.setToolTipText("Switch location");
 		switchSplit.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if (switchSplit.getText() == "▼") {
+				if (DOWN_ARROW.equals(switchSplit.getText())) {
 					TextEditorTab.this.setOrientation(JSplitPane.VERTICAL_SPLIT);
-					switchSplit.setText("▶");
+					switchSplit.setText(RIGHT_ARROW);
 				} else {
 					TextEditorTab.this.setOrientation(JSplitPane.HORIZONTAL_SPLIT);
-					switchSplit.setText("▼");
+					switchSplit.setText(DOWN_ARROW);
 				}
 				// Keep prompt collapsed if not in use
 				if (!incremental.isSelected()) {
