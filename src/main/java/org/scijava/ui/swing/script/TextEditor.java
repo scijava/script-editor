@@ -184,6 +184,9 @@ public class TextEditor extends JFrame implements ActionListener,
 	public static final String WINDOW_WIDTH = "script.editor.width";
 	public static final int DEFAULT_WINDOW_WIDTH = 800;
 	public static final int DEFAULT_WINDOW_HEIGHT = 600;
+	public static final String MAIN_DIV_LOCATION = "script.editor.main.divLocation";
+	public static final String TAB_DIV_LOCATION = "script.editor.tab.divLocation";
+	public static final String TAB_DIV_ORIENTATION = "script.editor.tab.divOrientation";
 
 	static {
 		// Add known script template paths.
@@ -217,6 +220,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	private JTextArea errorScreen = new JTextArea();
 	
 	private final FileSystemTree tree;
+	private final JSplitPane body;
 
 	private int compileStartOffset;
 	private Position compileStartPosition;
@@ -260,6 +264,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	private ScriptModule module;
 	private boolean incremental = false;
 	private DragSource dragSource;
+	private boolean layoutLoading = true;
 	
 	public static final ArrayList<TextEditor> instances = new ArrayList<>();
 	public static final ArrayList<Context> contexts = new ArrayList<>();
@@ -270,7 +275,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		contexts.add(context);
 		context.inject(this);
 		initializeTokenMakers();
-		loadPreferences();
 
 		// -- BEGIN MENUS --
 
@@ -706,8 +710,11 @@ public class TextEditor extends JFrame implements ActionListener,
 		scrolltree.setBackground(Color.white);
 		scrolltree.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(0,5,0,5)));
 		scrolltree.setPreferredSize(new Dimension(200, 600));
-		final JSplitPane body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrolltree, tabbed);
+		body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrolltree, tabbed);
 		body.setOneTouchExpandable(true);
+		body.addPropertyChangeListener(evt -> {
+			if ("dividerLocation".equals(evt.getPropertyName())) saveWindowSizeToPrefs();
+		});
 		getContentPane().add(body);
 
 		// for Eclipse and MS Visual Studio lovers
@@ -754,6 +761,8 @@ public class TextEditor extends JFrame implements ActionListener,
 				pack();
 				body.setDividerLocation(0.2);
 				getTab().getScreenAndPromptSplit().setDividerLocation(1.0);
+				loadPreferences();
+				pack();
 			});
 		}
 		catch (final Exception ie) {
@@ -762,7 +771,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		findDialog = new FindAndReplaceDialog(this);
 
-		// Save the size of the window in the preferences
+		// Save the layout when window is resized.
 		addComponentListener(new ComponentAdapter() {
 
 			@Override
@@ -895,35 +904,55 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	/**
-	 * Loads the preferences for the JFrame from file
+	 * Loads the Script Editor layout from persisted storage.
+	 * @see #saveWindowSizeToPrefs()
 	 */
 	public void loadPreferences() {
+		layoutLoading = true;
+
 		final Dimension dim = getSize();
 
 		// If a dimension is 0 then use the default dimension size
-		if (0 == dim.width) {
-			dim.width = DEFAULT_WINDOW_WIDTH;
-		}
-		if (0 == dim.height) {
-			dim.height = DEFAULT_WINDOW_HEIGHT;
-		}
+		if (0 == dim.width) dim.width = DEFAULT_WINDOW_WIDTH;
+		if (0 == dim.height) dim.height = DEFAULT_WINDOW_HEIGHT;
 
-		setPreferredSize(new Dimension(prefService.getInt(getClass(), WINDOW_WIDTH,
-			dim.width), prefService.getInt(getClass(), WINDOW_HEIGHT, dim.height)));
+		final int windowWidth = prefService.getInt(getClass(), WINDOW_WIDTH, dim.width);
+		final int windowHeight = prefService.getInt(getClass(), WINDOW_HEIGHT, dim.height);
+		setPreferredSize(new Dimension(windowWidth, windowHeight));
+
+		final int mainDivLocation = prefService.getInt(getClass(), MAIN_DIV_LOCATION, body.getDividerLocation());
+		body.setDividerLocation(mainDivLocation);
+
+		final TextEditorTab tab = getTab();
+		final int tabDivLocation = prefService.getInt(getClass(), TAB_DIV_LOCATION, tab.getDividerLocation());
+		final int tabDivOrientation = prefService.getInt(getClass(), TAB_DIV_ORIENTATION, tab.getOrientation());
+		tab.setDividerLocation(tabDivLocation);
+		tab.setOrientation(tabDivOrientation);
+
+		layoutLoading = false;
 	}
 
 	/**
-	 * Saves the window size to preferences.
+	 * Saves the Script Editor layout to persisted storage.
 	 * <p>
 	 * Separated from savePreferences because we always want to save the window
 	 * size when it's resized, however, we don't want to automatically save the
 	 * font, tab size, etc. without the user pressing "Save Preferences"
 	 * </p>
+	 * @see #loadPreferences()
 	 */
 	public void saveWindowSizeToPrefs() {
+		if (layoutLoading) return;
+
 		final Dimension dim = getSize();
 		prefService.put(getClass(), WINDOW_HEIGHT, dim.height);
 		prefService.put(getClass(), WINDOW_WIDTH, dim.width);
+
+		prefService.put(getClass(), MAIN_DIV_LOCATION, body.getDividerLocation());
+
+		final TextEditorTab tab = getTab();
+		prefService.put(getClass(), TAB_DIV_LOCATION, tab.getDividerLocation());
+		prefService.put(getClass(), TAB_DIV_ORIENTATION, tab.getOrientation());
 	}
 
 	final public RSyntaxTextArea getTextArea() {

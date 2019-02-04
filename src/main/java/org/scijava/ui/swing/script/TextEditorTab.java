@@ -45,6 +45,7 @@ import java.awt.dnd.DropTargetEvent;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.util.List;
 
@@ -327,6 +328,12 @@ public class TextEditorTab extends JSplitPane {
 		super.setRightComponent(screenAndPromptSplit);
 		screenAndPromptSplit.setDividerLocation(600);
 		screenAndPromptSplit.setDividerLocation(1.0);
+
+		// Persist Script Editor layout whenever split pane divider is adjusted.
+		addPropertyChangeListener(evt -> {
+			if ("dividerLocation".equals(evt.getPropertyName()))
+				textEditor.saveWindowSizeToPrefs();
+		});
 	}
 	
 	// Package-private
