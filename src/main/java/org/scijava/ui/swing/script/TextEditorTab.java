@@ -31,6 +31,7 @@
 
 package org.scijava.ui.swing.script;
 
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -251,6 +252,8 @@ public class TextEditorTab extends JSplitPane {
 		prompt.setEnabled(false);
 		
 		final JPanel prompt_panel = new JPanel();
+		prompt_panel.setMinimumSize(new Dimension(0, 0));
+		prompt_panel.setVisible(false);
 		prompt_panel.setLayout(new GridBagLayout());
 		
 		bc.gridx = 0;
@@ -315,6 +318,7 @@ public class TextEditorTab extends JSplitPane {
 			prompt_title.setText(incremental.isSelected() ? //
 				"REPL: " + textEditor.getCurrentLanguage().getLanguageName() : "");
 			prompt.setEnabled(incremental.isSelected());
+			prompt_panel.setVisible(incremental.isSelected());
 		});
 
 		screenAndPromptSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, bottom, prompt_panel);
