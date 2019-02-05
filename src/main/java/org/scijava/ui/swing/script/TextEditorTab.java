@@ -192,18 +192,6 @@ public class TextEditorTab extends JSplitPane {
 		incremental = new JCheckBox("persistent");
 		incremental.setEnabled(true);
 		incremental.setSelected(false);
-		incremental.addActionListener(ae -> {
-			if (incremental.isSelected() && null == textEditor.getCurrentLanguage()) {
-				incremental.setSelected(false);
-				JOptionPane.showMessageDialog(TextEditorTab.this,
-					"Select a language first!");
-				return;
-			}
-			textEditor.setIncremental(incremental.isSelected());
-			prompt_title.setText(incremental.isSelected() ? //
-				"REPL: " + textEditor.getCurrentLanguage().getLanguageName() : "");
-			prompt.setEnabled(incremental.isSelected());
-		});
 		bottom.add(incremental, bc);
 
 		bc.gridx = 4;
@@ -316,6 +304,19 @@ public class TextEditorTab extends JSplitPane {
 		bc.gridwidth = 4;
 		prompt_panel.add(prompt, bc);
 		
+		incremental.addActionListener(ae -> {
+			if (incremental.isSelected() && null == textEditor.getCurrentLanguage()) {
+				incremental.setSelected(false);
+				JOptionPane.showMessageDialog(TextEditorTab.this,
+					"Select a language first!");
+				return;
+			}
+			textEditor.setIncremental(incremental.isSelected());
+			prompt_title.setText(incremental.isSelected() ? //
+				"REPL: " + textEditor.getCurrentLanguage().getLanguageName() : "");
+			prompt.setEnabled(incremental.isSelected());
+		});
+
 		screenAndPromptSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, bottom, prompt_panel);
 		
 		super.setLeftComponent(editorPane.wrappedInScrollbars());
