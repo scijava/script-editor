@@ -276,7 +276,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 * Write the contents of this {@link EditorPane} to given file.
 	 *
 	 * @param file File to write the contents of this editor to.
-	 * @throws IOException
+	 * @throws IOException Thrown when a parent directory could not be created.
 	 */
 	public void write(final File file) throws IOException {
 		final File dir = file.getParentFile();
@@ -299,7 +299,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 * Load editor contents from given file.
 	 *
 	 * @param file file to load.
-	 * @throws IOException
+	 * @throws IOException Thrown if the canonical file path couldn't be obtained for the file. 
 	 */
 	public void open(final File file) throws IOException {
 		final File oldFile = curFile;
@@ -370,7 +370,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	/**
 	 * TODO
 	 *
-	 * @param file
+	 * @param file The file to edit in this {@link EditorPane}.
 	 */
 	public void setFileName(final File file) {
 		curFile = file;
@@ -613,7 +613,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			}
 			catch (final BadLocationException e) {
 				/* ignore */
-				System.out.println("Cannot toggle bookmark at this location.");
+				log.error("Cannot toggle bookmark at this location.");
 			}
 		}
 	}
@@ -669,7 +669,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 				setText(new String(chars));
 			}
 			catch (final Throwable t) {
-				t.printStackTrace();
+				log.error(t);
 			}
 			finally {
 				endAtomicEdit();
@@ -685,7 +685,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			super.convertTabsToSpaces();
 		}
 		catch (final Throwable t) {
-			t.printStackTrace();
+			log.error(t);
 		}
 		finally {
 			endAtomicEdit();
@@ -699,7 +699,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			super.convertSpacesToTabs();
 		}
 		catch (final Throwable t) {
-			t.printStackTrace();
+			log.error(t);
 		}
 		finally {
 			endAtomicEdit();
@@ -711,6 +711,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public static final String LINE_WRAP_PREFS = "script.editor.WrapLines";
 	public static final String TAB_SIZE_PREFS = "script.editor.TabSize";
 	public static final String TABS_EMULATED_PREFS = "script.editor.TabsEmulated";
+	public static final String FOLDERS_PREFS = "script.editor.folders";
 
 	public static final int DEFAULT_TAB_SIZE = 4;
 
@@ -719,27 +720,32 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 */
 	public void loadPreferences() {
 		resetTabSize();
-		setFontSize(prefService.getFloat(FONT_SIZE_PREFS, getFontSize()));
-		setLineWrap(prefService.getBoolean(LINE_WRAP_PREFS, getLineWrap()));
-		setTabsEmulated(prefService.getBoolean(TABS_EMULATED_PREFS,
+		setFontSize(prefService.getFloat(getClass(), FONT_SIZE_PREFS, getFontSize()));
+		setLineWrap(prefService.getBoolean(getClass(), LINE_WRAP_PREFS, getLineWrap()));
+		setTabsEmulated(prefService.getBoolean(getClass(), TABS_EMULATED_PREFS,
 			getTabsEmulated()));
+	}
+	
+	public String loadFolders() {
+		return prefService.get(getClass(), FOLDERS_PREFS, System.getProperty("user.home"));
 	}
 
 	/**
 	 * Retrieves and saves the preferences to the persistent store
 	 */
-	public void savePreferences() {
-		prefService.put(TAB_SIZE_PREFS, getTabSize());
-		prefService.put(FONT_SIZE_PREFS, getFontSize());
-		prefService.put(LINE_WRAP_PREFS, getLineWrap());
-		prefService.put(TABS_EMULATED_PREFS, getTabsEmulated());
+	public void savePreferences(final String top_folders) {
+		prefService.put(getClass(), TAB_SIZE_PREFS, getTabSize());
+		prefService.put(getClass(), FONT_SIZE_PREFS, getFontSize());
+		prefService.put(getClass(), LINE_WRAP_PREFS, getLineWrap());
+		prefService.put(getClass(), TABS_EMULATED_PREFS, getTabsEmulated());
+		if (null != top_folders) prefService.put(getClass(), FOLDERS_PREFS, top_folders);
 	}
 
 	/**
 	 * Reset tab size to current preferences.
 	 */
 	public void resetTabSize() {
-		setTabSize(prefService.getInt(TAB_SIZE_PREFS, DEFAULT_TAB_SIZE));
+		setTabSize(prefService.getInt(getClass(), TAB_SIZE_PREFS, DEFAULT_TAB_SIZE));
 	}
 
 }

@@ -10,7 +10,7 @@
 	</parent>
 
 	<artifactId>script-editor</artifactId>
-	<version>0.4.1-SNAPSHOT</version>
+	<version>0.5.0-SNAPSHOT</version>
 
 	<name>SciJava Script Editor</name>
 	<description>Script Editor and Interpreter for SciJava script languages.</description>
@@ -18,7 +18,7 @@
 	<inceptionYear>2009</inceptionYear>
 	<organization>
 		<name>SciJava</name>
-		<url>http://scijava.org/</url>
+		<url>https://scijava.org/</url>
 	</organization>
 	<licenses>
 		<license>
@@ -31,7 +31,7 @@
 		<developer>
 			<id>ctrueden</id>
 			<name>Curtis Rueden</name>
-			<url>http://imagej.net/User:Rueden</url>
+			<url>https://imagej.net/User:Rueden</url>
 			<roles>
 				<role>lead</role>
 				<role>developer</role>
@@ -45,7 +45,7 @@
 	<contributors>
 		<contributor>
 			<name>Johannes Schindelin</name>
-			<url>http://imagej.net/User:Schindelin</url>
+			<url>https://imagej.net/User:Schindelin</url>
 			<roles><role>founder</role></roles>
 			<properties><id>dscho</id></properties>
 		</contributor>
@@ -55,12 +55,12 @@
 		</contributor>
 		<contributor>
 			<name>Albert Cardona</name>
-			<url>http://imagej.net/User:Albertcardona</url>
+			<url>https://imagej.net/User:Albertcardona</url>
 			<properties><id>acardona</id></properties>
 		</contributor>
 		<contributor>
 			<name>Jan Eglinger</name>
-			<url>http://imagej.net/User:Eglinger</url>
+			<url>https://imagej.net/User:Eglinger</url>
 			<properties><id>imagejan</id></properties>
 		</contributor>
 		<contributor>
@@ -73,22 +73,22 @@
 		</contributor>
 		<contributor>
 			<name>Stefan Helfrich</name>
-			<url>http://imagej.net/User:Stelfrich</url>
+			<url>https://imagej.net/User:Stelfrich</url>
 			<properties><id>stelfrich</id></properties>
 		</contributor>
 		<contributor>
 			<name>Mark Hiner</name>
-			<url>http://imagej.net/User:Hinerm</url>
+			<url>https://imagej.net/User:Hinerm</url>
 			<properties><id>hinerm</id></properties>
 		</contributor>
 		<contributor>
 			<name>Samuel Inverso</name>
-			<url>http://imagej.net/User:Sinverso</url>
+			<url>https://imagej.net/User:Sinverso</url>
 			<properties><id>sinverso</id></properties>
 		</contributor>
 		<contributor>
 			<name>Tom Kazimiers</name>
-			<url>http://imagej.net/User:Kazimiers</url>
+			<url>https://imagej.net/User:Kazimiers</url>
 			<properties><id>tomka</id></properties>
 		</contributor>
 		<contributor>
@@ -96,17 +96,17 @@
 		</contributor>
 		<contributor>
 			<name>Luke Stuyvenberg</name>
-			<url>http://imagej.net/User:Stuyvenberg</url>
+			<url>https://imagej.net/User:Stuyvenberg</url>
 			<properties><id>stuyvenberg</id></properties>
 		</contributor>
 		<contributor>
 			<name>Jean-Yves Tinevez</name>
-			<url>http://imagej.net/User:JeanYvesTinevez</url>
+			<url>https://imagej.net/User:JeanYvesTinevez</url>
 			<properties><id>tinevez</id></properties>
 		</contributor>
 		<contributor>
 			<name>Yili Zhao</name>
-			<url>http://imagej.net/User:Panovr</url>
+			<url>https://imagej.net/User:Panovr</url>
 			<properties><id>panovr</id></properties>
 		</contributor>
 	</contributors>
@@ -129,7 +129,7 @@
 	</scm>
 	<issueManagement>
 		<system>GitHub Issues</system>
-		<url>http://github.com/scijava/script-editor/issues</url>
+		<url>https://github.com/scijava/script-editor/issues</url>
 	</issueManagement>
 	<ciManagement>
 		<system>Travis CI</system>
@@ -150,7 +150,7 @@ Genetics, and others.</license.copyrightOwners>
 	<repositories>
 		<repository>
 			<id>imagej.public</id>
-			<url>http://maven.imagej.net/content/groups/public</url>
+			<url>https://maven.imagej.net/content/groups/public</url>
 		</repository>
 	</repositories>
 
