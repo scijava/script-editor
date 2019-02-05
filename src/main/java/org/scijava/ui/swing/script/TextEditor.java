@@ -150,6 +150,7 @@ import org.scijava.script.ScriptInfo;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptModule;
 import org.scijava.script.ScriptService;
+import org.scijava.thread.ThreadService;
 import org.scijava.ui.CloseConfirmable;
 import org.scijava.ui.UIService;
 import org.scijava.ui.swing.script.commands.ChooseFontSize;
@@ -245,6 +246,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	private UIService uiService;
 	@Parameter
 	private PrefService prefService;
+	@Parameter
+	private ThreadService threadService;
 	@Parameter
 	private AppService appService;
 	@Parameter
@@ -747,20 +750,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 
 		try {
-			final Runnable ui_task = () -> {
+			threadService.invoke(() -> {
 				pack();
 				body.setDividerLocation(0.2);
 				getTab().getScreenAndPromptSplit().setDividerLocation(1.0);
-			};
-			if (SwingUtilities.isEventDispatchThread()) {
-				ui_task.run();
-			}
-			else {
-				SwingUtilities.invokeAndWait(ui_task);
-			}
+			});
 		}
 		catch (final Exception ie) {
 			/* ignore */
+			log.debug(ie);
 		}
 		findDialog = new FindAndReplaceDialog(this);
 
