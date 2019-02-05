@@ -773,6 +773,12 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		setLocationRelativeTo(null); // center on screen
 
+		// HACK: Avoid weird macOS bug where window becomes tiny
+		// in bottom left corner if centered while maximized.
+		int y = getLocation().y - 11;
+		if (y < 0) y = 0;
+		setLocation(getLocation().x, y);
+
 		open(null);
 
 		final EditorPane editorPane = getEditorPane();
