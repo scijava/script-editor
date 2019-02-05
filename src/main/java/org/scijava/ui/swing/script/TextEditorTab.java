@@ -235,10 +235,8 @@ public class TextEditorTab extends JSplitPane {
 			public void actionPerformed(ActionEvent e) {
 				if (DOWN_ARROW.equals(switchSplit.getText())) {
 					TextEditorTab.this.setOrientation(JSplitPane.VERTICAL_SPLIT);
-					switchSplit.setText(RIGHT_ARROW);
 				} else {
 					TextEditorTab.this.setOrientation(JSplitPane.HORIZONTAL_SPLIT);
-					switchSplit.setText(DOWN_ARROW);
 				}
 				// Keep prompt collapsed if not in use
 				if (!incremental.isSelected()) {
@@ -330,7 +328,14 @@ public class TextEditorTab extends JSplitPane {
 	JSplitPane getScreenAndPromptSplit() {
 		return screenAndPromptSplit;
 	}
-	
+
+	@Override
+	public void setOrientation(final int orientation) {
+		super.setOrientation(orientation);
+		switchSplit.setText(orientation == JSplitPane.VERTICAL_SPLIT ? //
+			RIGHT_ARROW : DOWN_ARROW);
+	}
+
 	// Package private
 	void destroy() {
 		dropTarget.removeDropTargetListener(dropTargetListener);
