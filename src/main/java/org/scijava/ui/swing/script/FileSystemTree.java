@@ -507,10 +507,14 @@ public class FileSystemTree extends JTree
 					if (null != node) nodes.add(node);
 				}
 
-				for (final Node node : nodes) {
-					node.updateChildrenList(FileSystemTree.this.getModel());
-					FileSystemTree.this.expandPath(new TreePath(node.getPath()));
-				}
+				SwingUtilities.invokeLater(new Runnable() {
+					public void run() {
+						for (final Node node : nodes) {
+							node.updateChildrenList(FileSystemTree.this.getModel());
+							FileSystemTree.this.expandPath(new TreePath(node.getPath()));
+						}
+					}
+				});
 
 				boolean valid = key.reset();
 				if (!valid) {
