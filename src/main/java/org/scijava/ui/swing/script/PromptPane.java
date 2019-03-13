@@ -47,6 +47,7 @@ import org.scijava.Context;
 import org.scijava.script.ScriptREPL;
 import org.scijava.thread.ThreadService;
 import org.scijava.util.ClassUtils;
+import org.scijava.util.Types;
 import org.scijava.widget.UIComponent;
 
 /**
@@ -189,7 +190,7 @@ public abstract class PromptPane implements UIComponent<JTextArea> {
 		// HACK: Get the SciJava context from the REPL.
 		// This can be fixed if/when the REPL offers a getter for it.
 		final Context ctx = (Context) ClassUtils.getValue(//
-			ClassUtils.getField(repl.getClass(), "context"), repl);
+			Types.field(repl.getClass(), "context"), repl);
 		return ctx.service(ThreadService.class);
 	}
 
