@@ -111,7 +111,7 @@ public class TextEditorTab extends JSplitPane {
 				try {
 					final Object o = t.getTransferData(DataFlavor.javaFileListFlavor);
 					if (!(o instanceof List)) return;
-					final List list = (List)o;
+					final List<?> list = (List<?>) o;
 					if (list.isEmpty()) return;
 					String path;
 					Object first = list.get(0);
