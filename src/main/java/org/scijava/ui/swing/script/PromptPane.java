@@ -169,20 +169,13 @@ public abstract class PromptPane implements UIComponent<JTextArea> {
 		textArea.setText("");
 		executing = true;
 
-		threadService().run(new Runnable() {
-
-			@Override
-			public void run() {
-				final boolean result = repl.evaluate(text);
-				threadService().queue(new Runnable() {
-					@Override
-					public void run() {
-						executing = false;
-						if (!result) quit();
-						vars.update();
-					}
-				});
-			}
+		threadService().run(() -> {
+			final boolean result = repl.evaluate(text);
+			threadService().queue(() -> {
+				executing = false;
+				if (!result) quit();
+				vars.update();
+			});
 		});
 	}
 

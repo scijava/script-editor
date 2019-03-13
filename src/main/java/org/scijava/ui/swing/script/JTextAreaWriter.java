@@ -65,13 +65,8 @@ public class JTextAreaWriter extends Writer {
 	{
 		this.textArea = textArea;
 		log = logService;
-		updater.scheduleWithFixedDelay(new Runnable() {
-
-			@Override
-			public void run() {
-				flushQueue();
-			}
-		}, 10, 400, TimeUnit.MILLISECONDS);
+		updater.scheduleWithFixedDelay(() -> flushQueue(), 10, 400,
+			TimeUnit.MILLISECONDS);
 	}
 
 	public void print(final String line) {

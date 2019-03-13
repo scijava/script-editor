@@ -56,12 +56,7 @@ public class ScriptEditorTestDrive {
 		editor.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosed(final WindowEvent e) {
-				SwingUtilities.invokeLater(new Runnable() {
-					@Override
-					public void run() {
-						context.dispose();
-					}
-				});
+				SwingUtilities.invokeLater(() -> context.dispose());
 			}
 		});
 		editor.setVisible(true);

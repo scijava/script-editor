@@ -378,12 +378,7 @@ public class FileSystemTree extends JTree
 	}
 
 	public void updateUILater() {
-		SwingUtilities.invokeLater(new Runnable() {
-			@Override
-			public void run() {
-				FileSystemTree.this.updateUI();
-			}
-		});
+		SwingUtilities.invokeLater(() -> FileSystemTree.this.updateUI());
 	}
 
 	/**
@@ -507,12 +502,10 @@ public class FileSystemTree extends JTree
 					if (null != node) nodes.add(node);
 				}
 
-				SwingUtilities.invokeLater(new Runnable() {
-					public void run() {
-						for (final Node node : nodes) {
-							node.updateChildrenList(FileSystemTree.this.getModel());
-							FileSystemTree.this.expandPath(new TreePath(node.getPath()));
-						}
+				SwingUtilities.invokeLater(() -> {
+					for (final Node node : nodes) {
+						node.updateChildrenList(FileSystemTree.this.getModel());
+						FileSystemTree.this.expandPath(new TreePath(node.getPath()));
 					}
 				});
 

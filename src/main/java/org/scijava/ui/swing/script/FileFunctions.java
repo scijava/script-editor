@@ -407,16 +407,12 @@ public class FileFunctions {
 					else newLine += width;
 
 					final int removeCount = remove, at = newLine;
-					SwingUtilities.invokeLater(new Runnable() {
-
-						@Override
-						public void run() {
-							try {
-								if (removeCount > 0) document.remove(at, removeCount);
-								document.insertString(at, "\n", null);
-							}
-							catch (final BadLocationException e2) { /* ignore */}
+					SwingUtilities.invokeLater(() -> {
+						try {
+							if (removeCount > 0) document.remove(at, removeCount);
+							document.insertString(at, "\n", null);
 						}
+						catch (final BadLocationException e2) { /* ignore */}
 					});
 				}
 			}

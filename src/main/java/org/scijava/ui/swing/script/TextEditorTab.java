@@ -45,7 +45,6 @@ import java.awt.dnd.DropTargetEvent;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.util.List;
 
@@ -363,15 +362,11 @@ public class TextEditorTab extends JSplitPane {
 	}
 
 	public void restore() {
-		SwingUtilities.invokeLater(new Runnable() {
-
-			@Override
-			public void run() {
-				editorPane.setEditable(true);
-				runit.setEnabled(true);
-				killit.setEnabled(false);
-				setExecutor(null);
-			}
+		SwingUtilities.invokeLater(() -> {
+			editorPane.setEditable(true);
+			runit.setEnabled(true);
+			killit.setEnabled(false);
+			setExecutor(null);
 		});
 	}
 

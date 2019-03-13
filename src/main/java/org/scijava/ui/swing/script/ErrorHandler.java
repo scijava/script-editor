@@ -127,18 +127,14 @@ public class ErrorHandler {
 	public void scrollToVisible(final int offset) {
 		if (textArea == null) return;
 		final JTextArea textArea = this.textArea;
-		final Runnable task = new Runnable() {
-
-			@Override
-			public void run() {
-				try {
-					textArea.scrollRectToVisible(textArea.modelToView(textArea
-						.getDocument().getLength()));
-					textArea.scrollRectToVisible(textArea.modelToView(offset));
-				}
-				catch (final BadLocationException e) {
-					// ignore
-				}
+		final Runnable task = () -> {
+			try {
+				textArea.scrollRectToVisible(textArea.modelToView(textArea.getDocument()
+					.getLength()));
+				textArea.scrollRectToVisible(textArea.modelToView(offset));
+			}
+			catch (final BadLocationException e) {
+				// ignore
 			}
 		};
 		if (SwingUtilities.isEventDispatchThread()) {
