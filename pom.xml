@@ -41,6 +41,14 @@
 				<role>maintainer</role>
 			</roles>
 		</developer>
+		<developer>
+			<id>acardona</id>
+			<name>Albert Cardona</name>
+			<url>https://imagej.net/User:Albertcardona</url>
+			<roles>
+				<role>developer</role>
+			</roles>
+		</developer>
 	</developers>
 	<contributors>
 		<contributor>
@@ -52,11 +60,6 @@
 		<contributor>
 			<name>Sumit Dubey</name>
 			<roles><role>founder</role></roles>
-		</contributor>
-		<contributor>
-			<name>Albert Cardona</name>
-			<url>https://imagej.net/User:Albertcardona</url>
-			<properties><id>acardona</id></properties>
 		</contributor>
 		<contributor>
 			<name>Jan Eglinger</name>
