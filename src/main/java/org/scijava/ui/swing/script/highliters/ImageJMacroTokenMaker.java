@@ -2429,6 +2429,11 @@ public class ImageJMacroTokenMaker extends AbstractJFlexCTokenMaker {
 		zzStartRead = zzMarkedPos;
 	}
 
+	@Override
+	public String[] getLineCommentStartAndEnd(int languageIndex) {
+		return new String[] { "//", null };
+	}
+
 	/**
 	 * Returns the first token in the linked list of tokens generated from
 	 * <code>text</code>. This method must be implemented by subclasses so they
