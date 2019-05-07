@@ -178,7 +178,12 @@ public class FileSystemTree extends JTree
 		@Override
 		public synchronized Node getChildAt(final int index) {
 			if (0 == getChildCount()) return null;
-			return (Node) super.getChildAt(index);
+			try {
+				return (Node) super.getChildAt(index);
+			} catch (ArrayIndexOutOfBoundsException ae) {
+				System.out.println("FileSystemTree: no child at index " + index + " for file at " + this.path);
+				return null;
+			}
 		}
 
 		public Icon getIcon() {
