@@ -172,8 +172,7 @@ public class FileSystemTree extends JTree
 
 		@Override
 		public synchronized int getChildCount() {
-			if (isRoot()) return super.getChildCount();
-			return new File(this.path).isDirectory() ? updatedChildrenFiles(false).length : 0;
+			return super.getChildCount();
 		}
 
 		@Override
