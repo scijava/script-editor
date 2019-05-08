@@ -52,6 +52,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -94,6 +96,8 @@ import java.util.Vector;
 import java.util.concurrent.ExecutionException;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import java.util.zip.ZipException;
 
 import javax.script.ScriptEngine;
@@ -116,6 +120,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
+import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
@@ -618,6 +623,11 @@ public class TextEditor extends JFrame implements ActionListener,
 		add_directory.setToolTipText("Add a directory");
 		final JButton remove_directory = new JButton("[-]");
 		remove_directory.setToolTipText("Remove a top-level directory");
+		
+		final JTextField filter = new JTextField("filter...", 20);
+		filter.setForeground(Color.gray);
+		filter.setToolTipText("Use leading '/' for regular expressions");
+		
 		tree = new FileSystemTree(log);
 		tree.ignoreExtension("class");
 		dragSource = new DragSource();
@@ -683,6 +693,47 @@ public class TextEditor extends JFrame implements ActionListener,
 					"Can only remove top-level folders.");
 			}
 		});
+		filter.addFocusListener(new FocusListener() {
+			@Override
+			public void focusLost(FocusEvent e) {}
+			
+			@Override
+			public void focusGained(FocusEvent e) {
+				if (filter.getForeground() == Color.gray) {
+					filter.setText("");
+					filter.setForeground(Color.black);
+				}
+			}
+		});
+		filter.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyPressed(final KeyEvent ke) {
+				if (ke.getKeyCode() == KeyEvent.VK_ENTER) {
+					final String text = filter.getText();
+					if (0 == text.length()) {
+						tree.setFileFilter(((f) -> true)); // any
+						return;
+					}
+					if ('/' == text.charAt(0)) {
+						// Interpret as a regular expression
+						try {
+							final Pattern pattern = Pattern.compile(text.substring(1));
+							tree.setFileFilter((f) -> pattern.matcher(f.getName()).matches());
+						} catch (final PatternSyntaxException pse) {
+							filter.setForeground(Color.red);
+						}
+					} else {
+						// Interpret as a literal match
+						tree.setFileFilter((f) -> -1 != f.getName().indexOf(text));
+					}
+				} else {
+					// Upon re-typing something
+					if (filter.getForeground() == Color.red) {
+						filter.setForeground(Color.black);
+					}
+				}
+			}
+		});
 		
 		// Restore top-level directories
 		tree.addTopLevelFoldersFrom(getEditorPane().loadFolders());
@@ -699,8 +750,11 @@ public class TextEditor extends JFrame implements ActionListener,
 		tree_panel.add(add_directory, bc);
 		bc.gridx = 1;
 		tree_panel.add(remove_directory, bc);
+		bc.gridx = 2;
+		bc.fill = GridBagConstraints.HORIZONTAL;
+		tree_panel.add(filter);
 		bc.gridx = 0;
-		bc.gridwidth = 2;
+		bc.gridwidth = 3;
 		bc.gridy = 1;
 		bc.weightx = 1.0;
 		bc.weighty = 1.0;
