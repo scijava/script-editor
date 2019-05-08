@@ -695,7 +695,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		});
 		filter.addFocusListener(new FocusListener() {
 			@Override
-			public void focusLost(FocusEvent e) {}
+			public void focusLost(FocusEvent e) {
+				if (0 == filter.getText().length()) {
+					filter.setForeground(Color.gray);
+					filter.setText("filter...");
+				}
+			}
 			
 			@Override
 			public void focusGained(FocusEvent e) {
