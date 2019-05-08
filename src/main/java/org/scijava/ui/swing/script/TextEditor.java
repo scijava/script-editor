@@ -624,7 +624,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final JButton remove_directory = new JButton("[-]");
 		remove_directory.setToolTipText("Remove a top-level directory");
 		
-		final JTextField filter = new JTextField("filter...", 20);
+		final JTextField filter = new JTextField("filter...");
 		filter.setForeground(Color.gray);
 		filter.setToolTipText("Use leading '/' for regular expressions");
 		
@@ -751,8 +751,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		bc.gridx = 1;
 		tree_panel.add(remove_directory, bc);
 		bc.gridx = 2;
-		bc.fill = GridBagConstraints.HORIZONTAL;
-		tree_panel.add(filter);
+		bc.fill = GridBagConstraints.BOTH;
+		tree_panel.add(filter, bc);
 		bc.gridx = 0;
 		bc.gridwidth = 3;
 		bc.gridy = 1;
