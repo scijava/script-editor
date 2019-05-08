@@ -103,7 +103,13 @@ public class FileSystemTree extends JTree
 			return new File(this.path).isDirectory();
 		}
 
-		public File[] updatedChildrenFiles(final boolean sort) {
+		/**
+		 * 
+		 * @param sort
+		 * @param file_filter Applies to leafs, not to directories.
+		 * @return
+		 */
+		public File[] updatedChildrenFiles(final boolean sort, final FileFilter file_filter) {
 			final File file = new File(this.path);
 			if (!file.isDirectory()) {
 				return new File[0];
@@ -112,7 +118,8 @@ public class FileSystemTree extends JTree
 				@Override
 				public boolean accept(final File f) {
 					return !f.isHidden() && !f.getName().endsWith("~")
-							&& !re_ignored_extensions.matcher(f.getName()).matches();
+							&& !re_ignored_extensions.matcher(f.getName()).matches()
+							&& (f.isDirectory() || file_filter.accept(f));
 				}
 			});
 			if (sort) Arrays.sort(files);
@@ -122,11 +129,11 @@ public class FileSystemTree extends JTree
 		/**
 		 * If it's a directory, add a Node for each of its visible files.
 		 */
-		public synchronized void populateChildren(final DefaultTreeModel model) {
+		public synchronized void populateChildren(final DefaultTreeModel model, final FileFilter file_filter) {
 			try {
 				if (isLeaf()) return;
 				int index = 0;
-				for (final File file : updatedChildrenFiles(true)) {
+				for (final File file : updatedChildrenFiles(true, file_filter)) {
 					// Can't use add: would try to insert at getChildCount(), which is the wrong value here
 					model.insertNodeInto(new Node(file.getAbsolutePath()), this, index++);
 				}
@@ -207,9 +214,9 @@ public class FileSystemTree extends JTree
 			}
 		}
 
-		public synchronized void updateChildrenList(final DefaultTreeModel model) {
+		public synchronized void updateChildrenList(final DefaultTreeModel model, final FileFilter file_filter) {
 			removeAllChildren(model);
-			populateChildren(model);
+			populateChildren(model, file_filter);
 		}
 	}
 
@@ -225,6 +232,7 @@ public class FileSystemTree extends JTree
 
 	private final HashSet<String> ignored_extensions = new HashSet<>();
 	private Pattern re_ignored_extensions = Pattern.compile("^.*$", Pattern.CASE_INSENSITIVE); // match all
+	private FileFilter file_filter = ((f) -> true);
 
 	public FileSystemTree(final Logger log)
 	{
@@ -238,7 +246,7 @@ public class FileSystemTree extends JTree
 			@Override
 			public void treeWillExpand(TreeExpansionEvent event) throws ExpandVetoException {
 				final Node node = ((Node)event.getPath().getLastPathComponent());
-				node.populateChildren(getModel());
+				node.populateChildren(getModel(), file_filter);
 				dir_watcher.register(node);
 			}
 
@@ -327,6 +335,46 @@ public class FileSystemTree extends JTree
 			s.append(String.join("|", this.ignored_extensions.toArray(new String[this.ignored_extensions.size()])));
 			s.append(")$");
 			this.re_ignored_extensions = Pattern.compile(s.toString(), Pattern.CASE_INSENSITIVE);
+		}
+	}
+	
+	public void setFileFilter(final FileFilter file_filter) {
+		this.file_filter = file_filter;
+		updateRecursively(file_filter);
+	}
+	
+	private void updateRecursively(final FileFilter file_filter) {
+		// Find expanded directories
+		final ArrayList<Node> stack = new ArrayList<>();
+		final Node root = (Node) this.getModel().getRoot();
+		for (int i=root.getChildCount() -1; i>-1; --i) {
+			stack.add((Node)root.getChildAt(i));
+		}
+		final ArrayList<Node> stack2 = new ArrayList<>(stack); // copy for second phase
+		final HashSet<String> expanded = new HashSet<>();
+		while (!stack.isEmpty()) {
+			final Node node = stack.remove(0);
+			if (this.isExpanded(new TreePath(node.getPath()))) {
+				expanded.add(node.path);
+				for (int i=node.getChildCount() -1; i>-1; --i) {
+					final Node child = node.getChildAt(i);
+					if (child.isDirectory()) stack.add(child);
+				}
+			}
+		}
+		// Re-list all files, filtering
+		while (!stack2.isEmpty()) {
+			final Node node = stack2.remove(0);
+			if (expanded.contains(node.path)) {
+				node.removeAllChildren(this.getModel());
+				node.populateChildren(this.getModel(), file_filter);
+				final int count = node.getChildCount();
+				if (count > 0) expandPath(new TreePath(node.getChildAt(0).getPath())); // awkward way to ensure parent is expanded
+				for (int i=0; i<count; ++i) {
+					final Node child = node.getChildAt(i);
+					if (expanded.contains(child.path)) stack2.add(child);
+				}
+			}
 		}
 	}
 
@@ -508,7 +556,7 @@ public class FileSystemTree extends JTree
 
 				SwingUtilities.invokeLater(() -> {
 					for (final Node node : nodes) {
-						node.updateChildrenList(FileSystemTree.this.getModel());
+						node.updateChildrenList(FileSystemTree.this.getModel(), file_filter);
 						FileSystemTree.this.expandPath(new TreePath(node.getPath()));
 					}
 				});
