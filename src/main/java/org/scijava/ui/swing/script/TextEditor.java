@@ -706,6 +706,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		});
 		filter.addKeyListener(new KeyAdapter() {
+			Pattern pattern = null;
 			@Override
 			public void keyPressed(final KeyEvent ke) {
 				if (ke.getKeyCode() == KeyEvent.VK_ENTER) {
@@ -716,11 +717,21 @@ public class TextEditor extends JFrame implements ActionListener,
 					}
 					if ('/' == text.charAt(0)) {
 						// Interpret as a regular expression
+						// Attempt to compile the pattern
 						try {
-							final Pattern pattern = Pattern.compile(text.substring(1));
-							tree.setFileFilter((f) -> pattern.matcher(f.getName()).matches());
+							String regex = text.substring(1);
+							if ('^' != regex.charAt(1)) regex = "^.*" + regex;
+							if ('$' != regex.charAt(regex.length() -1)) regex += ".*$";
+							pattern = Pattern.compile(regex);
+							filter.setForeground(Color.black);
 						} catch (final PatternSyntaxException pse) {
+							log.warn(pse.getLocalizedMessage());
 							filter.setForeground(Color.red);
+							pattern = null;
+							return;
+						}
+						if (null != pattern) {
+							tree.setFileFilter((f) -> pattern.matcher(f.getName()).matches());
 						}
 					} else {
 						// Interpret as a literal match
