@@ -181,7 +181,7 @@ public class FileSystemTree extends JTree
 			try {
 				return (Node) super.getChildAt(index);
 			} catch (ArrayIndexOutOfBoundsException ae) {
-				System.out.println("FileSystemTree: no child at index " + index + " for file at " + this.path);
+				log.error("FileSystemTree: no child at index " + index + " for file at " + this.path, ae);
 				return null;
 			}
 		}
