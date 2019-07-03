@@ -209,4 +209,23 @@ Genetics, and others.</license.copyrightOwners>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
+
+	<profiles>
+		<!-- Launch the Script Editor via Maven using: mvn -Pexec,editor -->
+		<profile>
+			<id>editor</id>
+			<properties>
+				<main-class>org.scijava.ui.swing.script.ScriptEditorTestDrive</main-class>
+				<exec.classpathScope>test</exec.classpathScope>
+			</properties>
+		</profile>
+		<!-- Launch the Script Interpreter via Maven using: mvn -Pexec,interp -->
+		<profile>
+			<id>interp</id>
+			<properties>
+				<main-class>org.scijava.ui.swing.script.ScriptInterpreterTestDrive</main-class>
+				<exec.classpathScope>test</exec.classpathScope>
+			</properties>
+		</profile>
+	</profiles>
 </project>
