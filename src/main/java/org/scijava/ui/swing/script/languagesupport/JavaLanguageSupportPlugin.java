@@ -31,9 +31,13 @@
 
 package org.scijava.ui.swing.script.languagesupport;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.fife.rsta.ac.java.JavaLanguageSupport;
+import org.fife.rsta.ac.java.buildpath.JarLibraryInfo;
+import org.fife.rsta.ac.java.buildpath.LibraryInfo;
+import org.fife.rsta.ac.java.buildpath.ZipSourceLocation;
 import org.scijava.plugin.Plugin;
 import org.scijava.ui.swing.script.LanguageSupportPlugin;
 import org.scijava.ui.swing.script.LanguageSupportService;
@@ -51,9 +55,8 @@ public class JavaLanguageSupportPlugin extends JavaLanguageSupport implements
 {
 
 	public JavaLanguageSupportPlugin() throws IOException {
-		super();
-
-		getJarManager().addCurrentJreClassFileSource();
+		final LibraryInfo info = getMainJreJarInfo();
+		if (info != null) getJarManager().addClassFileSource(info);
 	}
 
 	@Override
@@ -61,4 +64,42 @@ public class JavaLanguageSupportPlugin extends JavaLanguageSupport implements
 		return "java";
 	}
 
+	// -- Helper methods --
+
+	/**
+	 * Replacement for {@link LibraryInfo#getMainJreJarInfo()}, which is smarter
+	 * about Java 9+, and which does not spew messages to stderr.
+	 */
+	private static LibraryInfo getMainJreJarInfo() {
+		String javaHome = System.getProperty("java.home");
+		return getJreJarInfo(new File(javaHome));
+	}
+
+	/**
+	 * Replacement for {@link LibraryInfo#getJreJarInfo(java.io.File)}, which is
+	 * smarter about Java 9+, and which does not spew messages to stderr.
+	 */
+	private static LibraryInfo getJreJarInfo(final File jreHome) {
+		final File classesArchive = findExistingPath(jreHome, "lib/rt.jar",
+			"../Classes/classes.jar", "jmods/java.base.jmod");
+		if (classesArchive == null) return null; // unsupported JRE structure
+
+		final LibraryInfo info = new JarLibraryInfo(classesArchive);
+
+		final File sourcesArchive = findExistingPath(jreHome, "lib/src.zip",
+			"lib/src.jar", "src.zip", "../src.zip", "src.jar", "../src.jar");
+		if (sourcesArchive != null) {
+			info.setSourceLocation(new ZipSourceLocation(sourcesArchive));
+		}
+
+		return info;
+	}
+
+	private static File findExistingPath(final File baseDir, String... paths) {
+		for (final String path : paths) {
+			File file = new File(baseDir, path);
+			if (file.exists()) return file;
+		}
+		return null;
+	}
 }
