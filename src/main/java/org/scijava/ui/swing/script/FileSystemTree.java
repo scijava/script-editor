@@ -572,7 +572,8 @@ public class FileSystemTree extends JTree
 
 				for (final WatchEvent<?> event: key.pollEvents()) {
 					final WatchEvent.Kind<?> kind = event.kind();
-					if (StandardWatchEventKinds.OVERFLOW == kind) {
+					if (StandardWatchEventKinds.OVERFLOW == kind
+					 || StandardWatchEventKinds.ENTRY_MODIFY == kind) { // ignore e.g. files getting larger or smaller
 						continue;
 					}
 
