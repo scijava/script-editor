@@ -10,7 +10,7 @@
 	</parent>
 
 	<artifactId>script-editor</artifactId>
-	<version>0.5.5-SNAPSHOT</version>
+	<version>0.5.5</version>
 
 	<name>SciJava Script Editor</name>
 	<description>Script Editor and Interpreter for SciJava script languages.</description>
@@ -127,7 +127,7 @@
 	<scm>
 		<connection>scm:git:git://github.com/scijava/script-editor</connection>
 		<developerConnection>scm:git:git@github.com:scijava/script-editor</developerConnection>
-		<tag>HEAD</tag>
+		<tag>script-editor-0.5.5</tag>
 		<url>https://github.com/scijava/script-editor</url>
 	</scm>
 	<issueManagement>
