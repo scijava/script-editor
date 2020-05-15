@@ -36,8 +36,8 @@ import java.util.Set;
 
 import javax.script.Bindings;
 
-import org.scijava.parse.eval.AbstractEvaluator;
-import org.scijava.parse.eval.Evaluator;
+import org.scijava.parsington.eval.AbstractEvaluator;
+import org.scijava.parsington.eval.Evaluator;
 
 /**
  * Script bindings for the {@link ParsingtonScriptEngine}.

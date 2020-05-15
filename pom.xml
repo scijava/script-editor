@@ -151,6 +151,8 @@
 		<scijava-search.version>0.7.0</scijava-search.version>
 		<scijava-ui-awt.version>0.1.7</scijava-ui-awt.version>
 		<scijava-ui-swing.version>0.13.1</scijava-ui-swing.version>
+		<scijava-common.version>2.83.1</scijava-common.version>
+		<parsington.version>2.0.0</parsington.version>
 	</properties>
 
 	<repositories>

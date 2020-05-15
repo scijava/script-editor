@@ -39,7 +39,7 @@ import org.scijava.script.AbstractScriptLanguage;
 import org.scijava.script.ScriptLanguage;
 
 /**
- * Simple script language built on the {@link org.scijava.parse.eval} package.
+ * Simple script language built on the {@link org.scijava.parsington.eval} package.
  * 
  * @author Curtis Rueden
  */

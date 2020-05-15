@@ -38,9 +38,9 @@ import java.util.Collection;
 
 import javax.script.ScriptException;
 
-import org.scijava.parse.Variable;
-import org.scijava.parse.eval.DefaultEvaluator;
-import org.scijava.parse.eval.Evaluator;
+import org.scijava.parsington.Variable;
+import org.scijava.parsington.eval.DefaultEvaluator;
+import org.scijava.parsington.eval.Evaluator;
 import org.scijava.script.AbstractScriptEngine;
 
 /**
