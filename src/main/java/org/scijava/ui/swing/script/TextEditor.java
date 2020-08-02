@@ -162,6 +162,8 @@ import org.scijava.ui.swing.script.commands.GitGrep;
 import org.scijava.ui.swing.script.commands.KillScript;
 import org.scijava.util.FileUtils;
 import org.scijava.util.MiscUtils;
+import org.scijava.util.POM;
+import org.scijava.util.Types;
 import org.scijava.widget.FileWidget;
 
 /**
@@ -2598,10 +2600,63 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * @param className
 	 * @param withFrames
 	 */
-	public void openHelp(final String className, final boolean withFrames) {
-		if (className == null) {
-			// FIXME: This cannot be right.
-			getSelectedClassNameOrAsk();
+	public void openHelp(String className, final boolean withFrames) {
+		if (className == null) className = getSelectedClassNameOrAsk();
+		if (className == null) return;
+		final Class<?> c = Types.load(className, false);
+
+		final String path = (withFrames ? "index.html?" : "") + //
+				className.replace('.', '/') + ".html";
+
+		final String url;
+
+		if (className.startsWith("java.") || className.startsWith("javax.")) {
+			// Core Java class -- use javadoc.scijava.org/Java<#> link.
+			final String javaVersion = System.getProperty("java.version");
+			final String majorVersion;
+			if (javaVersion.startsWith("1.")) {
+				majorVersion = javaVersion.substring(2, javaVersion.indexOf('.', 2));
+			}
+			else majorVersion = javaVersion.substring(0, javaVersion.indexOf('.'));
+			url = "https://javadoc.scijava.org/Java" + majorVersion + "/" + path;
+		}
+		else {
+			// Third party library -- look for a Maven POM identifying it.
+			final POM pom = POM.getPOM(c);
+			if (pom == null) {
+				throw new IllegalArgumentException(//
+					"Unknown origin for class " + className);
+			}
+			final String releaseProfiles = pom.cdata("//properties/releaseProfiles");
+			final boolean scijavaRepo = "deploy-to-scijava".equals(releaseProfiles);
+			if (scijavaRepo) {
+				// Use javadoc.scijava.org -- try to figure out which project.
+				// Maybe some day, we can bake this information into the POM.
+				final String project;
+				final String g = pom.getGroupId();
+				if ("net.imagej".equals(g)) {
+					project = "ij".equals(pom.getArtifactId()) ? "ImageJ1" : "ImageJ";
+				}
+				else if ("io.scif".equals(g)) project = "SCIFIO";
+				else if ("net.imglib2".equals(g)) project = "ImgLib2";
+				else if ("org.bonej".equals(g)) project = "BoneJ";
+				else if ("org.scijava".equals(g)) project = "SciJava";
+				else if ("sc.fiji".equals(g)) project = "Fiji";
+				else project = "Java";
+				url = "https://javadoc.scijava.org/" + project + "/" + path;
+			}
+			else {
+				// Assume Maven Central -- use javadoc.io.
+				url = "https://javadoc.io/static/" + pom.getGroupId() + "/" + //
+					pom.getArtifactId() + "/" + pom.getVersion() + "/" + path;
+			}
+		}
+
+		try {
+			platformService.open(new URL(url));
+		}
+		catch (final Throwable e) {
+			handleException(e);
 		}
 	}
 
