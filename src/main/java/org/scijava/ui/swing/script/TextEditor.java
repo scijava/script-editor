@@ -1403,8 +1403,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == openSourceForClass) {
 			final String className = getSelectedClassNameOrAsk();
 			if (className != null) {
-				final String url = new FileFunctions(this).getSourceURL(className);
 				try {
+					final String url = new FileFunctions(this).getSourceURL(className);
 					platformService.open(new URL(url));
 				}
 				catch (final Throwable e) {
