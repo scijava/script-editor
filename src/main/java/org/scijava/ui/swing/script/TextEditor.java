@@ -1402,22 +1402,14 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == extractSourceJar) extractSourceJar();
 		else if (source == openSourceForClass) {
 			final String className = getSelectedClassNameOrAsk();
-			if (className != null) try {
-				final String path = new FileFunctions(this).getSourcePath(className);
-				if (path != null) open(new File(path));
-				else {
-					final String url = new FileFunctions(this).getSourceURL(className);
-					try {
-						platformService.open(new URL(url));
-					}
-					catch (final Throwable e) {
-						handleException(e);
-					}
+			if (className != null) {
+				final String url = new FileFunctions(this).getSourceURL(className);
+				try {
+					platformService.open(new URL(url));
 				}
-			}
-			catch (final ClassNotFoundException e) {
-				log.debug(e);
-				error("Could not open source for class " + className);
+				catch (final Throwable e) {
+					handleException(e);
+				}
 			}
 		}
 		/* TODO

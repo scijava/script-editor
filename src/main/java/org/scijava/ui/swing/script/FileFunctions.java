@@ -152,9 +152,12 @@ public class FileFunctions {
 	}
 
 	/**
-	 * Make a sensible effort to get the path of the source for a class.
+	 * @deprecated Use {@link #getSourceURL(String)} instead.
+	 * @throws ClassNotFoundException
 	 */
-	public String getSourcePath(final String className)
+	@Deprecated
+	public String getSourcePath(
+		@SuppressWarnings("unused") final String className)
 		throws ClassNotFoundException
 	{
 		// move updater's stuff into ij-core and re-use here
