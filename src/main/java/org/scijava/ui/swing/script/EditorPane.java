@@ -500,7 +500,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		}
 		catch (final NullPointerException exc) {
 			// NB: Avoid possible NPEs in RSyntaxTextArea code.
-			// See: http://fiji.sc/bugzilla/show_bug.cgi?id=1181
+			// See: https://fiji.sc/bug/1181.html
 			log.debug(exc);
 		}
 
