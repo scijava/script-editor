@@ -47,6 +47,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Matcher;
@@ -65,7 +66,10 @@ import javax.swing.text.JTextComponent;
 import org.scijava.util.AppUtils;
 import org.scijava.util.FileUtils;
 import org.scijava.util.LineOutputStream;
+import org.scijava.util.Manifest;
+import org.scijava.util.POM;
 import org.scijava.util.ProcessUtils;
+import org.scijava.util.Types;
 
 /**
  * TODO
@@ -152,9 +156,12 @@ public class FileFunctions {
 	}
 
 	/**
-	 * Make a sensible effort to get the path of the source for a class.
+	 * @deprecated Use {@link #getSourceURL(String)} instead.
+	 * @throws ClassNotFoundException
 	 */
-	public String getSourcePath(final String className)
+	@Deprecated
+	public String getSourcePath(
+		@SuppressWarnings("unused") final String className)
 		throws ClassNotFoundException
 	{
 		// move updater's stuff into ij-core and re-use here
@@ -162,7 +169,22 @@ public class FileFunctions {
 	}
 
 	public String getSourceURL(final String className) {
-		return "http://fiji.sc/" + className.replace('.', '/') + ".java";
+		final Class<?> c = Types.load(className, false);
+		final POM pom = POM.getPOM(c);
+		final String scmPath = pom.getSCMURL();
+		if (scmPath == null || scmPath.isEmpty()) return null;
+		final String branch;
+		final String scmTag = pom.getSCMTag();
+		if (scmTag == null || scmTag.isEmpty() || Objects.equals(scmTag, "HEAD")) {
+			final Manifest m = Manifest.getManifest(c);
+			final String commit = m == null ? null : m.getImplementationBuild();
+			branch = commit == null || commit.isEmpty() ? "master" : commit;
+		}
+		else branch = scmTag;
+
+		final String prefix = scmPath.endsWith("/") ? scmPath : scmPath + "/";
+		return prefix + "blob/" + branch + "/src/main/java/" + //
+			className.replace('.', '/') + ".java";
 	}
 
 	protected static Map<String, List<String>> class2source;
