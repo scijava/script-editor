@@ -988,7 +988,12 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		final int windowWidth = prefService.getInt(getClass(), WINDOW_WIDTH, dim.width);
 		final int windowHeight = prefService.getInt(getClass(), WINDOW_HEIGHT, dim.height);
-		setPreferredSize(new Dimension(windowWidth, windowHeight));
+		// Avoid creating a window larger than the desktop
+		final Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+		if (windowWidth > screen.getWidth() || windowHeight > screen.getHeight())
+			setPreferredSize(new Dimension(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT));
+		else
+			setPreferredSize(new Dimension(windowWidth, windowHeight));
 
 		final int mainDivLocation = prefService.getInt(getClass(), MAIN_DIV_LOCATION, body.getDividerLocation());
 		body.setDividerLocation(mainDivLocation);
