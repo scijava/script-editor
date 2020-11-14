@@ -9,6 +9,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.jar.JarEntry;
@@ -28,8 +29,12 @@ public class ClassUtil {
 	
 	static private final void ensureCache() {
 		synchronized (class_urls) {
-			if (class_urls.isEmpty())
-				class_urls.putAll(findAllClasses());
+			if (class_urls.isEmpty()) {
+				final ArrayList<String> dirs = new ArrayList<>();
+				dirs.add(System.getProperty("java.home"));
+				dirs.add(System.getProperty("ij.dir"));
+				class_urls.putAll(findAllClasses(dirs));
+			}
 		}
 	}
 	
@@ -161,25 +166,22 @@ public class ClassUtil {
 		}
 	}
 	
-	static public final HashMap<String, JarProperties> findAllClasses() {
+	static public final HashMap<String, JarProperties> findAllClasses(final List<String> jar_folders) {
 		// Find all jar files
 		final ArrayList<String> jarFilePaths = new ArrayList<String>();
-		final LinkedList<String> dirs = new LinkedList<>();
-		dirs.add(System.getProperty("java.home"));
-		dirs.add(System.getProperty("ij.dir"));
+		final LinkedList<String> dirs = new LinkedList<>(jar_folders);
 		final HashSet<String> seenDirs = new HashSet<>();
 		while (!dirs.isEmpty()) {
 			final String filepath = dirs.removeFirst();
+			if (null == filepath) continue;
 			final File file = new File(filepath);
 			seenDirs.add(file.getAbsolutePath());
-			if (file.exists()) {
-				if (file.isDirectory()) {
-					for (final File child : file.listFiles()) {
-						final String childfilepath = child.getAbsolutePath();
-						if (seenDirs.contains(childfilepath)) continue;
-						if (child.isDirectory()) dirs.add(childfilepath);
-						else if (childfilepath.endsWith(".jar")) jarFilePaths.add(childfilepath);
-					}
+			if (file.exists() && file.isDirectory()) {
+				for (final File child : file.listFiles()) {
+					final String childfilepath = child.getAbsolutePath();
+					if (seenDirs.contains(childfilepath)) continue;
+					if (child.isDirectory()) dirs.add(childfilepath);
+					else if (childfilepath.endsWith(".jar")) jarFilePaths.add(childfilepath);
 				}
 			}
 		}
