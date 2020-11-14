@@ -2712,10 +2712,18 @@ public class TextEditor extends JFrame implements ActionListener,
 				final JLabel class_label = new JLabel(classname);
 				gridbag.setConstraints(class_label, c);
 				panel.add(class_label);
-				for (final String url: matches.get(classname)) {
+				ArrayList<String> urls = matches.get(classname);
+				if (urls.isEmpty()) {
+					urls = new ArrayList<String>();
+					urls.add("https://duckduckgo.com/?q=" + classname);
+				}
+				for (final String url: urls) {
 					c.gridx += 1;
 					c.anchor = GridBagConstraints.WEST;
-					final JButton link = new JButton(url.endsWith("java") ? "Source" : "JavaDoc");
+					String title = "JavaDoc";
+					if (url.endsWith(".java")) title = "Source";
+					else if (url.contains("duckduckgo")) title = "Search...";
+					final JButton link = new JButton(title);
 					gridbag.setConstraints(link, c);
 					panel.add(link);
 					link.addActionListener(new ActionListener() {
