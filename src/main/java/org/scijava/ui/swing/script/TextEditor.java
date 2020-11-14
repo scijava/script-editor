@@ -30,6 +30,7 @@
 package org.scijava.ui.swing.script;
 
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
@@ -108,6 +109,7 @@ import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -214,7 +216,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			openMacroFunctions, decreaseFontSize, increaseFontSize, chooseFontSize,
 			chooseTabSize, gitGrep, openInGitweb, replaceTabsWithSpaces,
 			replaceSpacesWithTabs, toggleWhiteSpaceLabeling, zapGremlins,
-			savePreferences, toggleAutoCompletionMenu;
+			savePreferences, toggleAutoCompletionMenu, openClassOrPackageHelp;
 	private RecentFilesMenuItem openRecent;
 	private JMenu gitMenu, tabsMenu, fontSizeMenu, tabSizeMenu, toolsMenu,
 			runMenu, whiteSpaceMenu;
@@ -483,6 +485,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		openHelp =
 			addToMenu(toolsMenu, "Open Help for Class (with frames)...", 0, 0);
 		openHelp.setMnemonic(KeyEvent.VK_P);
+		openClassOrPackageHelp = addToMenu(toolsMenu, "Source or javadoc for class or package...", 0, 0);
+		openClassOrPackageHelp.setMnemonic(KeyEvent.VK_S);
 		openMacroFunctions =
 			addToMenu(toolsMenu, "Open Help on Macro Functions...", 0, 0);
 		openMacroFunctions.setMnemonic(KeyEvent.VK_H);
@@ -1400,6 +1404,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		else if (source == openHelp) openHelp(null);
 		else if (source == openHelpWithoutFrames) openHelp(null, false);
+		else if (source == openClassOrPackageHelp) openClassOrPackageHelp(null);
 		else if (source == openMacroFunctions) try {
 			new MacroFunctions(this).openHelp(getTextArea().getSelectedText());
 		}
@@ -2662,6 +2667,79 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		catch (final Throwable e) {
 			handleException(e);
+		}
+	}
+	
+	/**
+	 * @param text Either a classname, or a partial class name, or package name or any part of the fully qualified class name.
+	 */
+	public void openClassOrPackageHelp(String text) {
+		if (text == null)
+			text = getSelectedClassNameOrAsk();
+		if (null == text) return;
+		new Thread(new FindClassSourceAndJavadoc(text)).start(); // fork away from event dispatch thread
+	}
+	
+	public class FindClassSourceAndJavadoc implements Runnable {
+		private final String text;
+		public FindClassSourceAndJavadoc(final String text) {
+			this.text = text;
+		}
+		@Override
+		public void run() {
+			setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+			final HashMap<String, ArrayList<String>> matches;
+			try {
+				 matches = ClassUtil.findDocumentationForClass(text);
+			} finally {
+				setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+			}
+			if (matches.isEmpty()) {
+				JOptionPane.showMessageDialog(getEditorPane(), "No info found for:\n'" + text +'"');
+				return;
+			}
+			final JPanel panel = new JPanel();
+			final GridBagLayout gridbag = new GridBagLayout();
+			final GridBagConstraints c = new GridBagConstraints();
+			panel.setLayout(gridbag);
+			panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+			final List<String> keys = new ArrayList<String>(matches.keySet());
+			Collections.sort(keys);
+			c.gridy = 0;
+			for (final String classname: keys) {
+				c.gridx = 0;
+				c.anchor = GridBagConstraints.EAST;
+				final JLabel class_label = new JLabel(classname);
+				gridbag.setConstraints(class_label, c);
+				panel.add(class_label);
+				for (final String url: matches.get(classname)) {
+					c.gridx += 1;
+					c.anchor = GridBagConstraints.WEST;
+					final JButton link = new JButton(url.endsWith("java") ? "Source" : "JavaDoc");
+					gridbag.setConstraints(link, c);
+					panel.add(link);
+					link.addActionListener(new ActionListener() {
+						public void actionPerformed(final ActionEvent event) {
+							try {
+								platformService.open(new URL(url));
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
+					});
+				}
+				c.gridy += 1;
+			}
+			final JScrollPane jsp = new JScrollPane(panel);
+			//jsp.setPreferredSize(new Dimension(800, 500));
+			SwingUtilities.invokeLater(new Runnable() {
+				public void run() {
+					final JFrame frame = new JFrame(text);
+					frame.getContentPane().add(jsp);
+					frame.pack();
+					frame.setVisible(true);
+				}
+			});
 		}
 	}
 
