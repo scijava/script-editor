@@ -74,16 +74,21 @@ public class ClassUtil {
 		final HashMap<String, JarProperties> matches = findClassDocumentationURLs(s);
 		ensureSciJavaSubURLCache();
 		
-		final Pattern java8 = Pattern.compile("^(java|javax|org.omg|org.w3c|org.xml|org.ietf.jgss)\\..*$");
-		
+		final Pattern javaPackages = Pattern.compile("^(java|javax|org\\.omg|org\\.w3c|org\\.xml|org\\.ietf\\.jgss)\\..*$");
+		final String version = System.getProperty("java.version");
+		final String majorVersion = version.startsWith("1.") ?
+				  version.substring(2, version.indexOf('.', 2))
+				: version.substring(0, version.indexOf('.'));
+		final String javaDoc = "java" + majorVersion;
+	
 		final HashMap<String, ArrayList<String>> class_urls = new HashMap<>();
 		
 		for (final Map.Entry<String, JarProperties> entry: matches.entrySet()) {
 			final String classname = entry.getKey();
 			final ArrayList<String> urls = new ArrayList<>();
 			class_urls.put(classname, urls);
-			if (java8.matcher(classname).matches()) {
-				urls.add(scijava_javadoc_URLs.get("java8") + classname.replace('.', '/') + ".html");
+			if (javaPackages.matcher(classname).matches()) {
+				urls.add(scijava_javadoc_URLs.get(javaDoc) + classname.replace('.', '/') + ".html");
 			} else {
 				final JarProperties props = entry.getValue();
 				// Find the first URL with git in it
