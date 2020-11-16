@@ -121,9 +121,9 @@ public class ClassUtil {
 					String scijava_javadoc_url = scijava_javadoc_URLs.get(props.name.toLowerCase());
 					if (null == scijava_javadoc_url) {
 						// Try cropping name at the first whitespace if any (e.g. "ImgLib2 Core Library" to "ImgLib2")
-						final int ispace = props.name.indexOf(' ');
-						if (-1 != ispace) {
-							scijava_javadoc_url = scijava_javadoc_URLs.get(props.name.toLowerCase().substring(0, ispace));
+						for (final String word: props.name.split(" ")) {
+							scijava_javadoc_url = scijava_javadoc_URLs.get(word.toLowerCase());
+							if (null != scijava_javadoc_url) break; // found a valid one
 						}
 					}
 					if (null != scijava_javadoc_url) {
