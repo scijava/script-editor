@@ -16,6 +16,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 public class ClassUtil {
 	
@@ -24,18 +25,35 @@ public class ClassUtil {
 	/** Cache of class names vs list of URLs found in the pom.xml files of their contaning jar files, if any. */
 	static private final Map<String, JarProperties> class_urls = new HashMap<>();
 	
+	static private final Map<String, JarProperties> package_urls = new HashMap<>();
+	
+	static private boolean ready = false;
+	
 	/** Cache of subURL javadoc at https://javadoc.scijava.org */
 	static private final HashMap<String, String> scijava_javadoc_URLs = new HashMap<>();
 	
-	static private final void ensureCache() {
+	static public final void ensureCache() {
 		synchronized (class_urls) {
 			if (class_urls.isEmpty()) {
 				final ArrayList<String> dirs = new ArrayList<>();
 				dirs.add(System.getProperty("java.home"));
 				dirs.add(System.getProperty("ij.dir"));
 				class_urls.putAll(findAllClasses(dirs));
+				// Soft attempt at getting all packages (will get them wrong if multiple jars have the same packages)
+				for (final Map.Entry<String, JarProperties> entry: class_urls.entrySet()) {
+					final int idot = entry.getKey().lastIndexOf('.');
+					if (-1 == idot) continue; // no package
+					final String package_name = entry.getKey().substring(0, idot);
+					if (package_urls.containsKey(package_name)) continue;
+					package_urls.put(package_name, entry.getValue());
+				}
+				ready = true;
 			}
 		}
+	}
+	
+	static public final boolean isCacheReady() {
+		return ready;
 	}
 	
 	static public final void ensureSciJavaSubURLCache() {
@@ -236,5 +254,31 @@ public class ClassUtil {
 			}
 		}
 		return class_urls;
+	}
+	
+	static public final Stream<String> findPackageNamesStartingWith(final String text) {
+		ensureCache();
+		return package_urls.keySet().stream().filter(s -> s.startsWith(text));
+	}
+	
+	static public final Stream<String> findClassNamesForPackage(final String packageName) {
+		ensureCache();
+		return class_urls.keySet().stream().filter(s -> s.startsWith(packageName) && -1 == s.indexOf('.', packageName.length() + 2));
+	}
+	
+	static public final Stream<String> findClassNamesStartingWith(final String text) {
+		ensureCache();
+		return class_urls.keySet().stream().filter(s -> s.startsWith(text));
+	}
+	
+	static public final ArrayList<String> findSimpleClassNamesStartingWith(final String text) {
+		ensureCache();
+		final ArrayList<String> matches = new ArrayList<>();
+		for (final String classname: class_urls.keySet()) {
+			final int idot = classname.lastIndexOf('.');
+			final String simplename = -1 == idot ? classname : classname.substring(idot + 1);
+			if (simplename.startsWith(text)) matches.add(simplename);
+		}
+		return matches;
 	}
 }
