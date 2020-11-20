@@ -266,9 +266,24 @@ public class ClassUtil {
 		return class_urls.keySet().stream().filter(s -> s.startsWith(packageName) && -1 == s.indexOf('.', packageName.length() + 2));
 	}
 	
+	/**
+	 * 
+	 * @param text A left-justified substring of a fully qualified class name, with the package.
+	 * @return
+	 */
 	static public final Stream<String> findClassNamesStartingWith(final String text) {
 		ensureCache();
 		return class_urls.keySet().stream().filter(s -> s.startsWith(text));
+	}
+	
+	/**
+	 * 
+	 * @param text A substring of a class fully qualified name.
+	 * @return
+	 */
+	static public final Stream<String> findClassNamesContaining(final String text) {
+		ensureCache();
+		return class_urls.keySet().stream().filter(s -> s.contains(text));
 	}
 	
 	static public final ArrayList<String> findSimpleClassNamesStartingWith(final String text) {
