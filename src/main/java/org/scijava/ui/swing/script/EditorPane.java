@@ -54,7 +54,6 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultEditorKit;
 
 import org.fife.rsta.ac.LanguageSupport;
-import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Style;
@@ -72,6 +71,8 @@ import org.scijava.prefs.PrefService;
 import org.scijava.script.ScriptHeaderService;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptService;
+import org.scijava.ui.swing.script.autocompletion.AutoCompletionProxy;
+import org.scijava.ui.swing.script.autocompletion.AutocompletionProvider;
 import org.scijava.util.FileUtils;
 
 /**
@@ -126,7 +127,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		ToolTipManager.sharedInstance().registerComponent(this);
 		getDocument().addDocumentListener(this);
 		
-		new AutoCompletion(new AutocompletionProvider(this)).install(this);
+		new AutoCompletionProxy(new AutocompletionProvider(this)).install(this);
 	}
 
 	@Override
