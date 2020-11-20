@@ -1,4 +1,4 @@
-package org.scijava.ui.swing.script;
+package org.scijava.ui.swing.script.autocompletion;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -6,6 +6,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -17,6 +18,7 @@ import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.scijava.ui.swing.script.ClassUtil;
 
 public class AutocompletionProvider extends DefaultCompletionProvider {
 	
@@ -67,10 +69,18 @@ public class AutocompletionProvider extends DefaultCompletionProvider {
 		
 		final String text = this.getAlreadyEnteredText(comp);
 
-		// E.g. "from ij" to expand to a package name like ij or ij.gui or ij.plugin
+		// E.g. "from ij" to expand to a package name and class like ij or ij.gui or ij.plugin
 		final Matcher m1 = fromImport.matcher(text);
 		if (m1.find())
-			return asCompletionList(ClassUtil.findPackageNamesStartingWith(m1.group(2)), m1.group(1));
+			return asCompletionList(ClassUtil.findClassNamesContaining(m1.group(2))
+					.map(new Function<String, String>() {
+						@Override
+						public final String apply(final String s) {
+							final int idot = s.lastIndexOf('.');
+							return s.substring(0, Math.max(0, idot)) + " import " + s.substring(idot +1);
+						}
+					}),
+					m1.group(1));
 
 		final Matcher m1f = fastImport.matcher(text);
 		if (m1f.find())
