@@ -263,6 +263,8 @@ public class ClassUtil {
 	
 	static public final Stream<String> findClassNamesForPackage(final String packageName) {
 		ensureCache();
+		if (packageName.length() == 0)
+			return class_urls.keySet().stream();
 		return class_urls.keySet().stream().filter(s -> s.startsWith(packageName) && -1 == s.indexOf('.', packageName.length() + 2));
 	}
 	
@@ -273,6 +275,8 @@ public class ClassUtil {
 	 */
 	static public final Stream<String> findClassNamesStartingWith(final String text) {
 		ensureCache();
+		if (text.length() == 0)
+			return class_urls.keySet().stream();
 		return class_urls.keySet().stream().filter(s -> s.startsWith(text));
 	}
 	
@@ -289,6 +293,8 @@ public class ClassUtil {
 	static public final ArrayList<String> findSimpleClassNamesStartingWith(final String text) {
 		ensureCache();
 		final ArrayList<String> matches = new ArrayList<>();
+		if (0 == text.length())
+			return matches;
 		for (final String classname: class_urls.keySet()) {
 			final int idot = classname.lastIndexOf('.');
 			final String simplename = -1 == idot ? classname : classname.substring(idot + 1);
