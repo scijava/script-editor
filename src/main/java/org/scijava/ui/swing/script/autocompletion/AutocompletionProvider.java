@@ -50,7 +50,7 @@ public class AutocompletionProvider extends DefaultCompletionProvider {
 	}
 	
 	static private final Pattern
-			fromImport = Pattern.compile("^(from[ \\t]+)([a-zA-Z][a-zA-Z0-9._]*)$"),
+			fromImport = Pattern.compile("^((from|import)[ \\t]+)([a-zA-Z][a-zA-Z0-9._]*)$"),
 			fastImport = Pattern.compile("^(from[ \\t]+)([a-zA-Z][a-zA-Z0-9._]*)[ \\t]+$"),
 			importStatement = Pattern.compile("^((from[ \\t]+([a-zA-Z0-9._]+)[ \\t]+|[ \\t]*)import(Class\\(|[ \\t]+))([a-zA-Z0-9_., \\t]*)$"),
 			simpleClassName = Pattern.compile("^(.*[ \\t]+|)([A-Z_][a-zA-Z0-9_]+)$"),
@@ -72,15 +72,15 @@ public class AutocompletionProvider extends DefaultCompletionProvider {
 		// E.g. "from ij" to expand to a package name and class like ij or ij.gui or ij.plugin
 		final Matcher m1 = fromImport.matcher(text);
 		if (m1.find())
-			return asCompletionList(ClassUtil.findClassNamesContaining(m1.group(2))
+			return asCompletionList(ClassUtil.findClassNamesContaining(m1.group(3))
 					.map(new Function<String, String>() {
 						@Override
 						public final String apply(final String s) {
 							final int idot = s.lastIndexOf('.');
-							return s.substring(0, Math.max(0, idot)) + " import " + s.substring(idot +1);
+							return "from " + s.substring(0, Math.max(0, idot)) + " import " + s.substring(idot +1);
 						}
 					}),
-					m1.group(1));
+					"");
 
 		final Matcher m1f = fastImport.matcher(text);
 		if (m1f.find())
