@@ -158,6 +158,7 @@ import org.scijava.script.ScriptService;
 import org.scijava.thread.ThreadService;
 import org.scijava.ui.CloseConfirmable;
 import org.scijava.ui.UIService;
+import org.scijava.ui.swing.script.autocompletion.ClassUtil;
 import org.scijava.ui.swing.script.commands.ChooseFontSize;
 import org.scijava.ui.swing.script.commands.ChooseTabSize;
 import org.scijava.ui.swing.script.commands.GitGrep;

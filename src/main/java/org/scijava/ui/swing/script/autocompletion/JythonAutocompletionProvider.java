@@ -18,14 +18,15 @@ import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.scijava.ui.swing.script.ClassUtil;
 
-public class AutocompletionProvider extends DefaultCompletionProvider {
+public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 	
 	private final RSyntaxTextArea text_area;
+	private final ImportFormat formatter;
 
-	public AutocompletionProvider(final RSyntaxTextArea text_area) {
+	public JythonAutocompletionProvider(final RSyntaxTextArea text_area, final ImportFormat formatter) {
 		this.text_area = text_area;
+		this.formatter = formatter;
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
@@ -58,7 +59,7 @@ public class AutocompletionProvider extends DefaultCompletionProvider {
 	
 	private final List<Completion> asCompletionList(final Stream<String> stream, final String pre) {
 		return stream
-				.map((s) -> new BasicCompletion(AutocompletionProvider.this, pre + s))
+				.map((s) -> new BasicCompletion(JythonAutocompletionProvider.this, pre + s))
 				.collect(Collectors.toList());
 	}
 	
@@ -72,20 +73,11 @@ public class AutocompletionProvider extends DefaultCompletionProvider {
 		// E.g. "from ij" to expand to a package name and class like ij or ij.gui or ij.plugin
 		final Matcher m1 = fromImport.matcher(text);
 		if (m1.find())
-			return asCompletionList(ClassUtil.findClassNamesContaining(m1.group(3))
-					.map(new Function<String, String>() {
-						@Override
-						public final String apply(final String s) {
-							final int idot = s.lastIndexOf('.');
-							return "from " + s.substring(0, Math.max(0, idot)) + " import " + s.substring(idot +1);
-						}
-					}),
-					"");
+			return asCompletionList(ClassUtil.findClassNamesContaining(m1.group(3)).map(formatter::singleToImportStatement), "");
 
 		final Matcher m1f = fastImport.matcher(text);
 		if (m1f.find())
-			return asCompletionList(ClassUtil.findClassNamesForPackage(m1f.group(2)).map(s -> s.substring(m1f.group(2).length() + 1)),
-					m1f.group(0) + "import ");
+			return asCompletionList(ClassUtil.findClassNamesForPackage(m1f.group(2)).map(formatter::singleToImportStatement), "");
 		
 		// E.g. "from ij.gui import Roi, Po" to expand to PolygonRoi, PointRoi for Jython
 		// or e.g. "importClass(Package.ij" to expand to a fully qualified class name for Javascript
@@ -113,8 +105,16 @@ public class AutocompletionProvider extends DefaultCompletionProvider {
 		}
 
 		final Matcher m3 = simpleClassName.matcher(text);
-		if (m3.find())
-			return asCompletionList(ClassUtil.findSimpleClassNamesStartingWith(m3.group(2)).stream(), m3.group(1));
+		if (m3.find()) {
+			// Side effect: insert the import at the top of the file if necessary
+			//return asCompletionList(ClassUtil.findSimpleClassNamesStartingWith(m3.group(2)).stream(), m3.group(1));
+			return ClassUtil.findSimpleClassNamesStartingWith(m3.group(2)).stream()
+					.map(className -> new ImportCompletion(JythonAutocompletionProvider.this,
+							m3.group(1) + className.substring(className.lastIndexOf('.') + 1),
+							className,
+							formatter.singleToImportStatement(className)))
+					.collect(Collectors.toList());
+		}
 
 		final Matcher m4 = staticMethodOrField.matcher(text);
 		if (m4.find()) {

@@ -71,8 +71,7 @@ import org.scijava.prefs.PrefService;
 import org.scijava.script.ScriptHeaderService;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptService;
-import org.scijava.ui.swing.script.autocompletion.AutoCompletionProxy;
-import org.scijava.ui.swing.script.autocompletion.AutocompletionProvider;
+import org.scijava.ui.swing.script.autocompletion.JythonAutoCompletion;
 import org.scijava.util.FileUtils;
 
 /**
@@ -108,6 +107,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private PrefService prefService;
 	@Parameter
 	private LogService log;
+	
+	private JythonAutoCompletion autoCompletionProxy;
 
 	/**
 	 * Constructor.
@@ -126,8 +127,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			wordMovement(-1, true));
 		ToolTipManager.sharedInstance().registerComponent(this);
 		getDocument().addDocumentListener(this);
-		
-		new AutoCompletionProxy(new AutocompletionProvider(this)).install(this);
 	}
 
 	@Override

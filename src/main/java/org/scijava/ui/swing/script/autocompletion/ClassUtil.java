@@ -1,4 +1,4 @@
-package org.scijava.ui.swing.script;
+package org.scijava.ui.swing.script.autocompletion;
 
 import java.io.File;
 import java.io.IOException;
@@ -290,6 +290,11 @@ public class ClassUtil {
 		return class_urls.keySet().stream().filter(s -> s.contains(text));
 	}
 	
+	/**
+	 * Find simple class names starting with "text", returning the fully qualified class names.
+	 * @param text
+	 * @return
+	 */
 	static public final ArrayList<String> findSimpleClassNamesStartingWith(final String text) {
 		ensureCache();
 		final ArrayList<String> matches = new ArrayList<>();
@@ -298,7 +303,7 @@ public class ClassUtil {
 		for (final String classname: class_urls.keySet()) {
 			final int idot = classname.lastIndexOf('.');
 			final String simplename = -1 == idot ? classname : classname.substring(idot + 1);
-			if (simplename.startsWith(text)) matches.add(simplename);
+			if (simplename.startsWith(text)) matches.add(classname);
 		}
 		return matches;
 	}
