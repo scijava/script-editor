@@ -6,5 +6,10 @@ import org.fife.ui.autocomplete.Completion;
 
 public interface AutoCompletionListener {
 
+	/**
+	 * 
+	 * @param text The whole line up to the caret where autocompletion was invoked.
+	 * @return
+	 */
 	public List<Completion> completionsFor(final String text);
 }
