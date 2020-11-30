@@ -195,6 +195,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	public static final String MAIN_DIV_LOCATION = "script.editor.main.divLocation";
 	public static final String TAB_DIV_LOCATION = "script.editor.tab.divLocation";
 	public static final String TAB_DIV_ORIENTATION = "script.editor.tab.divOrientation";
+	public static final String LAST_LANGUAGE = "script.editor.lastLanguage";
 
 	static {
 		// Add known script template paths.
@@ -1626,6 +1627,10 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 
 			tab.editorPane.setLanguage(scriptService.getLanguageByName(language));
+		} else {
+			final String lastLanguageName = prefService.get(getClass(), LAST_LANGUAGE);
+			if (null != lastLanguageName && "none" != lastLanguageName)
+				setLanguage(scriptService.getLanguageByName(lastLanguageName));
 		}
 
 		if (null != content) {
@@ -1684,6 +1689,11 @@ public class TextEditor extends JFrame implements ActionListener,
 				}
 			}
 			if (file != null) openRecent.add(file.getAbsolutePath());
+			else {
+				final String lastLanguageName = prefService.get(getClass(), LAST_LANGUAGE);
+				if ("none" != lastLanguageName)
+					setLanguage(scriptService.getLanguageByName(lastLanguageName));
+			}
 
 			updateLanguageMenu(tab.editorPane.getCurrentLanguage());
 
@@ -1866,6 +1876,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			this.scriptInfo = null;
 		}
 		getEditorPane().setLanguage(language, addHeader);
+		
+		prefService.put(getClass(), LAST_LANGUAGE, null == language? "none" : language.getLanguageName());
 
 		setTitle();
 		updateLanguageMenu(language);
