@@ -99,7 +99,7 @@ public class JythonAutoCompletion extends AutoCompletion {
 				// Insert import statement after the last import, if not there already
 				if (!classNames.contains(cc.className))
 					try {
-						editor.insert(cc.importStatement + "\n", editor.getLineStartOffset(insertAtLine + 1));
+						editor.insert(cc.importStatement + "\n", editor.getLineStartOffset(0 == insertAtLine ? 0 : insertAtLine + 1));
 					} catch (BadLocationException e) {
 						e.printStackTrace();
 					}
