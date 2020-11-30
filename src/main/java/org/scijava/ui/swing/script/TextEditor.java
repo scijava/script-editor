@@ -1862,7 +1862,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	void setLanguage(final ScriptLanguage language, final boolean addHeader) {
-		if (null != this.getCurrentLanguage() && this.getCurrentLanguage().getLanguageName() != language.getLanguageName()) {
+		if (null != this.getCurrentLanguage() && (null == language || this.getCurrentLanguage().getLanguageName() != language.getLanguageName())) {
 			this.scriptInfo = null;
 		}
 		getEditorPane().setLanguage(language, addHeader);
