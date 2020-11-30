@@ -34,6 +34,11 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+<<<<<<< HEAD
+=======
+import java.util.Vector;
+import java.util.function.Function;
+>>>>>>> AutoCompletionListener: so that e.g. Fiji update sites can add more completions
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -48,6 +53,8 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.scijava.ui.swing.script.autocompletion.JythonAutoCompletion.Import;
 
 public class JythonAutocompletionProvider extends DefaultCompletionProvider {
+	
+	static private final Vector<AutoCompletionListener> autocompletion_listeners = new Vector<>();
 	
 	private final RSyntaxTextArea text_area;
 	private final ImportFormat formatter;
@@ -91,12 +98,36 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 				.collect(Collectors.toList());
 	}
 	
+	static public void addAutoCompletionListener(final AutoCompletionListener listener) {
+		if (!autocompletion_listeners.contains(listener))
+			autocompletion_listeners.add(listener);
+	}
+	
+	static public void removeAutoCompletionListener(final AutoCompletionListener listener) {
+		autocompletion_listeners.remove(listener);
+	}
+	
 	@Override
 	public List<Completion> getCompletionsImpl(final JTextComponent comp) {
+		final ArrayList<Completion> completions = new ArrayList<>();
+		final String text = this.getAlreadyEnteredText(comp);
+		completions.addAll(getCompletions(text));
+		for (final AutoCompletionListener listener: new Vector<>(autocompletion_listeners)) {
+			try {
+				final List<Completion> cs = listener.completionsFor(text);
+				if ( null != cs)
+					completions.addAll(cs);
+			} catch (Exception e) {
+				System.out.println("Failed to get autocompletions from " + listener);
+				e.printStackTrace();
+			}
+		}
+		return completions;
+	}
+
+	public List<Completion> getCompletions(final String text) {
 		// don't block
 		if (!ClassUtil.isCacheReady()) return Collections.emptyList();
-		
-		final String text = this.getAlreadyEnteredText(comp);
 
 		// E.g. "from ij" to expand to a package name and class like ij or ij.gui or ij.plugin
 		final Matcher m1 = fromImport.matcher(text);
