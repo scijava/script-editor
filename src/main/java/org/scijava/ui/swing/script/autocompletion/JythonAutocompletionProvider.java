@@ -34,11 +34,9 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-<<<<<<< HEAD
-=======
+
 import java.util.Vector;
 import java.util.function.Function;
->>>>>>> AutoCompletionListener: so that e.g. Fiji update sites can add more completions
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
