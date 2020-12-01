@@ -28,7 +28,7 @@
  */
 package org.scijava.ui.swing.script.autocompletion;
 
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -37,7 +37,6 @@ import javax.swing.text.BadLocationException;
 import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionProvider;
-import org.scijava.script.ScriptLanguage;
 import org.scijava.ui.swing.script.EditorPane;
 
 public class JythonAutoCompletion extends AutoCompletion {
@@ -47,8 +46,83 @@ public class JythonAutoCompletion extends AutoCompletion {
 		this.setShowDescWindow(true);
 	}
 	
-	static private final Pattern importPattern = Pattern.compile("^(from[ \\t]+([a-zA-Z_][a-zA-Z0-9._]*)[ \\t]+|)import[ \\t]+([a-zA-Z_][a-zA-Z0-9_]*[ \\ta-zA-Z0-9_,]*)[ \\t]*([\\\\]*|)[  \\t]*(#.*|)$");
+	static private final Pattern importPattern = Pattern.compile("^(from[ \\t]+([a-zA-Z_][a-zA-Z0-9._]*)[ \\t]+|)import[ \\t]+([a-zA-Z_][a-zA-Z0-9_]*[ \\ta-zA-Z0-9_,]*)[ \\t]*([\\\\]*|)[  \\t]*(#.*|)$"),
+								 tripleQuotePattern = Pattern.compile("\"\"\"");
 
+	static public class Import {
+		final public String className,
+							alias; // same as simple class name, or the alias from "as <alias>"
+		final public int lineNumber;
+		
+		public Import(final String className, final String alias, final int lineNumber) {
+			this.className = className;
+			this.alias = null != alias ? alias : className.substring(className.lastIndexOf('.') + 1);
+			this.lineNumber = lineNumber;
+		}
+		
+		// E.g. handle "ImageJFunctions as IL" -> ["ImageJFunctions", "as", "IL"]
+		public Import(final String packageName, final String[] parts, final int lineNumber) {
+			this(packageName + "." + parts[0], 3 == parts.length ? parts[2] : null, lineNumber);
+		}
+	}
+	
+	static public final HashMap<String, Import> findImportedClasses(final String text) {
+		final HashMap<String, Import> importedClasses = new HashMap<>();
+		String packageName = "";
+		boolean endingBackslash = false;
+		boolean insideTripleQuotes = false;
+		
+		// Scan the whole file for imports
+		final String[] lines = text.split("\n");
+		for (int i=0; i<lines.length; ++i) {
+			String line = lines[i];
+			final String trimmed = line.trim();
+			if (0 == trimmed.length() || '#' == trimmed.charAt(0)) continue;
+			final Matcher mq = tripleQuotePattern.matcher(line);
+			int n_triple_quotes = 0;
+			while (mq.find()) ++n_triple_quotes;
+			if (insideTripleQuotes) {
+				if (0 != n_triple_quotes % 2) { // odd number
+					insideTripleQuotes = false;
+				}
+				continue;
+			} else {
+				// If odd, enter
+				if (0 != n_triple_quotes % 2) {
+					insideTripleQuotes = true;
+					continue;
+				}
+			}
+			// Handle classes imported in a truncated import statement
+			if (endingBackslash) {
+				String importLine = line;
+				final int backslash = line.lastIndexOf('\\');
+				if (backslash > -1) importLine = importLine.substring(0, backslash);
+				else {
+					final int sharp = importLine.lastIndexOf('#');
+					if (sharp > -1) importLine = importLine.substring(0, sharp);
+				}
+				for (final String simpleClassName : importLine.split(",")) {
+					final Import im = new Import(packageName, simpleClassName.trim().split("\\s"), i);
+					importedClasses.put(im.alias, im);
+				}
+				endingBackslash = -1 != backslash; // otherwise there is another line with classes of the same package
+				continue;
+			}
+			final Matcher m = importPattern.matcher(line);
+			if (m.find()) {
+				packageName = null == m.group(2) ? "" : m.group(2);
+				for (final String simpleClassName : m.group(3).split(",")) {
+					final Import im = new Import(packageName, simpleClassName.trim().split("\\s"), i);
+					importedClasses.put(im.alias, im);
+				}
+				endingBackslash = null != m.group(4) && m.group(4).length() > 0 && '\\' == m.group(4).charAt(0);
+			}
+		}
+		
+		return importedClasses;
+	}
+	
 	@Override
 	protected void insertCompletion(final Completion c, final boolean typedParamListStartChar) {
 		if (c instanceof ImportCompletion) {
@@ -57,52 +131,19 @@ public class JythonAutoCompletion extends AutoCompletion {
 			try {
 				super.insertCompletion(c, typedParamListStartChar);
 				final ImportCompletion cc = (ImportCompletion)c;
-				final HashSet<String> classNames = new HashSet<>();
-				String packageName = "";
-				boolean endingBackslash = false;
-				int insertAtLine = 0;
-				
-				// Scan the whole file for imports
-				final String[] lines = editor.getText().split("\n");
-				for (int i=0; i<lines.length; ++i) {
-					final String line = lines[i];
-				
-					// Handle classes imported in a truncated import statement
-					if (endingBackslash) {
-						String importLine = line;
-						final int backslash = line.lastIndexOf('\\');
-						if (backslash > -1) importLine = importLine.substring(0, backslash);
-						else {
-							final int sharp = importLine.lastIndexOf('#');
-							if (sharp > -1) importLine = importLine.substring(0, sharp);
-						}
-						for (final String simpleClassname : importLine.split(",")) {
-							classNames.add(packageName + "." + simpleClassname.trim());
-						}
-						endingBackslash = -1 != backslash; // otherwise there is another line with classes of the same package
-						insertAtLine = i;
-						continue;
-					}
-					final Matcher m = importPattern.matcher(line);
-					if (m.find()) {
-						packageName = null == m.group(2) ? "" : m.group(2);
-						for (final String simpleClassName : m.group(3).split(",")) {
-							classNames.add(packageName + "." + simpleClassName.trim());
-						}
-						endingBackslash = null != m.group(4) && m.group(4).length() > 0 && '\\' == m.group(4).charAt(0);
-						insertAtLine = i;
-					}
-				}
-				for (final String className : classNames) {
-					System.out.println(className);
-				}
+				final HashMap<String, Import> importedClasses = findImportedClasses(editor.getText());
 				// Insert import statement after the last import, if not there already
-				if (!classNames.contains(cc.className))
-					try {
-						editor.insert(cc.importStatement + "\n", editor.getLineStartOffset(0 == insertAtLine ? 0 : insertAtLine + 1));
-					} catch (BadLocationException e) {
-						e.printStackTrace();
-					}
+				for (final Import im : importedClasses.values()) {
+					if (im.className.contentEquals(cc.className))
+						return; // don't insert
+				}
+				try {
+					final int insertAtLine = 0 == importedClasses.size() ? 0
+							: importedClasses.values().stream().map(im -> im.lineNumber).reduce(Math::max).get();
+					editor.insert(cc.importStatement + "\n", editor.getLineStartOffset(0 == insertAtLine ? 0 : insertAtLine + 1));
+				} catch (BadLocationException e) {
+					e.printStackTrace();
+				}
 			} finally {
 				editor.endAtomicEdit();
 			}

@@ -34,7 +34,6 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -46,6 +45,7 @@ import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.scijava.ui.swing.script.autocompletion.JythonAutoCompletion.Import;
 
 public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 	
@@ -79,9 +79,9 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 	}
 	
 	static private final Pattern
-			fromImport = Pattern.compile("^((from|import)[ \\t]+)([a-zA-Z][a-zA-Z0-9._]*)$"),
-			fastImport = Pattern.compile("^(from[ \\t]+)([a-zA-Z][a-zA-Z0-9._]*)[ \\t]+$"),
-			importStatement = Pattern.compile("^((from[ \\t]+([a-zA-Z0-9._]+)[ \\t]+|[ \\t]*)import(Class\\(|[ \\t]+))([a-zA-Z0-9_., \\t]*)$"),
+			fromImport = Pattern.compile("^((from|import)[ \\t]+)([a-zA-Z_][a-zA-Z0-9._]*)$"),
+			fastImport = Pattern.compile("^(from[ \\t]+)([a-zA-Z_][a-zA-Z0-9._]*)[ \\t]+$"),
+			importStatement = Pattern.compile("^((from[ \\t]+([a-zA-Z0-9._]+)[ \\t]+|[ \\t]*)import[ \\t]+)([a-zA-Z0-9_., \\t]*)$"),
 			simpleClassName = Pattern.compile("^(.*[ \\t]+|)([A-Z_][a-zA-Z0-9_]+)$"),
 			staticMethodOrField = Pattern.compile("^((.*[ \\t]+|)([A-Z_][a-zA-Z0-9_]*)\\.)([a-zA-Z0-9_]*)$");
 	
@@ -112,7 +112,7 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 		final Matcher m2 = importStatement.matcher(text);
 		if (m2.find()) {
 			String packageName = m2.group(3),
-					 className = m2.group(5); // incomplete or empty, or multiple separated by commas with the last one incomplete or empty
+					 className = m2.group(4); // incomplete or empty, or multiple separated by commas with the last one incomplete or empty
 
 			System.out.println("m2 matches className: " + className);
 			final String[] bycomma = className.split(",");
@@ -127,8 +127,8 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 				stream = ClassUtil.findClassNamesStartingWith(null == packageName ? className : packageName + "." + className);
 			else
 				stream = ClassUtil.findClassNamesForPackage(packageName);
-			if (!m2.group(4).equals("Class(Package"))
-				stream = stream.map((s) -> s.substring(Math.max(0, s.lastIndexOf('.') + 1))); // simple class name for Jython
+			// Simple class names
+			stream = stream.map((s) -> s.substring(Math.max(0, s.lastIndexOf('.') + 1)));
 			return asCompletionList(stream, m2.group(1) + precomma);
 		}
 
@@ -149,35 +149,11 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 			try {
 				final String simpleClassName   = m4.group(3), // expected complete, e.g. ImagePlus
 							 methodOrFieldSeed = m4.group(4).toLowerCase(); // incomplete: e.g. "GR", a string to search for in the class declared fields or methods
+
 				// Scan the script, parse the imports, find first one matching
-				String packageName = null;
-				lines: for (final String line: text_area.getText().split("\n")) {
-					System.out.println(line);
-					final String[] comma = line.split(",");
-					final Matcher m = importStatement.matcher(comma[0]);
-					if (m.find()) {
-						final String first = m.group(5);
-						if (m.group(4).equals("Class(Package")) {
-							// Javascript import
-							final int lastdot = Math.max(0, first.lastIndexOf('.'));
-							if (simpleClassName.equals(first.substring(lastdot + 1))) {
-								packageName = first.substring(0, lastdot);
-								break lines;
-							}
-						} else {
-							// Jython import
-							comma[0] = first;
-							for (int i=0; i<comma.length; ++i)
-								if (simpleClassName.equals(comma[i].trim())) {
-									packageName = m.group(3);
-									break lines;
-								}
-						}
-					}
-				}
-				System.out.println("package name: " + packageName);
-				if (null != packageName) {
-					final Class<?> c = Class.forName(packageName + "." + simpleClassName);
+				final Import im = JythonAutoCompletion.findImportedClasses(text_area.getText()).get(simpleClassName);
+				if (null != im) {
+					final Class<?> c = Class.forName(im.className);
 					final ArrayList<String> matches = new ArrayList<>();
 					for (final Field f: c.getFields()) {
 						if (Modifier.isStatic(f.getModifiers()) && f.getName().toLowerCase().startsWith(methodOrFieldSeed))
