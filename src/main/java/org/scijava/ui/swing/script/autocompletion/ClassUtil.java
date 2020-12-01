@@ -291,7 +291,7 @@ public class ClassUtil {
 	
 	static public final Stream<String> findClassNamesForPackage(final String packageName) {
 		ensureCache();
-		if (packageName.length() == 0)
+		if (null == packageName || packageName.length() == 0)
 			return class_urls.keySet().stream();
 		return class_urls.keySet().stream().filter(s -> s.startsWith(packageName) && -1 == s.indexOf('.', packageName.length() + 2));
 	}
