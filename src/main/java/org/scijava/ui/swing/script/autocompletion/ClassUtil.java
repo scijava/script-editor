@@ -48,7 +48,7 @@ import java.util.stream.Stream;
 
 public class ClassUtil {
 	
-	static private final String scijava_javadoc_URL = "https://javadoc.scijava.org/"; // with ending slash
+	static final String scijava_javadoc_URL = "https://javadoc.scijava.org/"; // with ending slash
 	
 	/** Cache of class names vs list of URLs found in the pom.xml files of their contaning jar files, if any. */
 	static private final Map<String, JarProperties> class_urls = new HashMap<>();
