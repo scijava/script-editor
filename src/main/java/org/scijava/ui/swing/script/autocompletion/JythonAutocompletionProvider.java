@@ -153,8 +153,8 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 		// E.g. "from ij.gui import Roi, Po" to expand to PolygonRoi, PointRoi for Jython
 		final Matcher m2 = importStatement.matcher(text);
 		if (m2.find()) {
-			final String packageName = m2.group(3); // incomplete or empty, or multiple separated by commas with the last one incomplete or empty
-			String className = m2.group(4);
+			final String packageName = m2.group(3);
+			String className = m2.group(4); // incomplete or empty, or multiple separated by commas with the last one incomplete or empty
 
 			System.out.println("m2 matches className: " + className);
 			final String[] bycomma = className.split(",");
@@ -209,7 +209,7 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 
 				// a call to an instantiated class
 				final String[] varAndSeed = getVariableAnSeedAtCaretLocation();
-				if (varAndSeed == null) return Collections.emptyList();;
+				if (varAndSeed == null) return Collections.emptyList();
 
 				simpleClassName = JythonAutoCompletion.findClassAliasOfVariable(varAndSeed[0], text_area.getText());
 				if (simpleClassName == null) return Collections.emptyList();
