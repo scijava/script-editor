@@ -42,6 +42,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.swing.text.BadLocationException;
 import javax.swing.text.JTextComponent;
 
 import org.fife.ui.autocomplete.BasicCompletion;
@@ -135,13 +136,13 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 		final Matcher m1f = fastImport.matcher(text);
 		if (m1f.find())
 			return asCompletionList(ClassUtil.findClassNamesForPackage(m1f.group(2)).map(formatter::singleToImportStatement), "");
-		
+
 		// E.g. "from ij.gui import Roi, Po" to expand to PolygonRoi, PointRoi for Jython
 		// or e.g. "importClass(Package.ij" to expand to a fully qualified class name for Javascript
 		final Matcher m2 = importStatement.matcher(text);
 		if (m2.find()) {
-			String packageName = m2.group(3),
-					 className = m2.group(4); // incomplete or empty, or multiple separated by commas with the last one incomplete or empty
+			final String packageName = m2.group(3); // incomplete or empty, or multiple separated by commas with the last one incomplete or empty
+			String className = m2.group(4);
 
 			System.out.println("m2 matches className: " + className);
 			final String[] bycomma = className.split(",");
@@ -174,31 +175,79 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 		}
 
 		final Matcher m4 = staticMethodOrField.matcher(text);
-		if (m4.find()) {
-			try {
-				final String simpleClassName   = m4.group(3), // expected complete, e.g. ImagePlus
-							 methodOrFieldSeed = m4.group(4).toLowerCase(); // incomplete: e.g. "GR", a string to search for in the class declared fields or methods
+		try {
 
-				// Scan the script, parse the imports, find first one matching
-				final Import im = JythonAutoCompletion.findImportedClasses(text_area.getText()).get(simpleClassName);
-				if (null != im) {
-					final Class<?> c = Class.forName(im.className);
-					final ArrayList<String> matches = new ArrayList<>();
-					for (final Field f: c.getFields()) {
-						if (Modifier.isStatic(f.getModifiers()) && f.getName().toLowerCase().startsWith(methodOrFieldSeed))
-							matches.add(f.getName());
-					}
-					for (final Method m: c.getMethods()) {
-						if (Modifier.isStatic(m.getModifiers()) && m.getName().toLowerCase().startsWith(methodOrFieldSeed))
-							matches.add(m.getName() + "(");
-					}
-					return asCompletionList(matches.stream(), m4.group(1));
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
+			String simpleClassName;
+			String methodOrFieldSeed;
+			String pre;
+			boolean isStatic;
+
+			if (m4.find()) {
+
+				// a call to a static class
+				pre = m4.group(1);
+				simpleClassName   = m4.group(3); // expected complete, e.g. ImagePlus
+				methodOrFieldSeed = m4.group(4).toLowerCase(); // incomplete: e.g. "GR", a string to search for in the class declared fields or methods
+				isStatic = true;
+
+			} else {
+
+				// a call to an instantiated class
+				final String[] varAndSeed = getVariableAnSeedAtCaretLocation();
+				if (varAndSeed == null) return Collections.emptyList();;
+
+				simpleClassName = JythonAutoCompletion.findClassAliasOfVariable(varAndSeed[0], text_area.getText());
+				if (simpleClassName == null) return Collections.emptyList();
+
+				pre = varAndSeed[0] + ".";
+				methodOrFieldSeed = varAndSeed[1];
+				isStatic = false;
+
+//				System.out.println("simpleClassName: " + simpleClassName);
+//				System.out.println("methodOrFieldSeed: " + methodOrFieldSeed);
+
 			}
+
+			// Retrieve all methods and fields, if the seed is empty
+			final boolean includeAll = methodOrFieldSeed.trim().isEmpty();
+
+			// Scan the script, parse the imports, find first one matching
+			final Import im = JythonAutoCompletion.findImportedClasses(text_area.getText()).get(simpleClassName);
+			if (null != im) {
+				final Class<?> c = Class.forName(im.className);
+				final ArrayList<String> matches = new ArrayList<>();
+				for (final Field f: c.getFields()) {
+					if (isStatic == Modifier.isStatic(f.getModifiers()) &&
+							(includeAll || f.getName().toLowerCase().startsWith(methodOrFieldSeed)))
+						matches.add(f.getName());
+				}
+				for (final Method m: c.getMethods()) {
+					if (isStatic == Modifier.isStatic(m.getModifiers()) &&
+							(includeAll || m.getName().toLowerCase().startsWith(methodOrFieldSeed)))
+						matches.add(m.getName() + "(");
+				}
+				return asCompletionList(matches.stream(), pre);
+			}
+		} catch (final Exception e) {
+			e.printStackTrace();
 		}
-		
+
 		return Collections.emptyList();
 	}
+
+	private String[] getVariableAnSeedAtCaretLocation() {
+		try {
+			final int caretOffset = text_area.getCaretPosition();
+			final int lineNumber = text_area.getLineOfOffset(caretOffset);
+			final int startOffset = text_area.getLineStartOffset(lineNumber);
+			final String lineUpToCaret = text_area.getText(startOffset, caretOffset - startOffset);
+			final String[] words = lineUpToCaret.split("\\s+");
+			final String[] varAndSeed = words[words.length - 1].split("\\.");
+			return (varAndSeed.length == 2) ? varAndSeed : new String[] { varAndSeed[varAndSeed.length - 1], "" };
+		} catch (final BadLocationException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
 }
