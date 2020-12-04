@@ -86,8 +86,8 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 			fromImport = Pattern.compile("^((from|import)[ \\t]+)([a-zA-Z_][a-zA-Z0-9._]*)$"),
 			fastImport = Pattern.compile("^(from[ \\t]+)([a-zA-Z_][a-zA-Z0-9._]*)[ \\t]+$"),
 			importStatement = Pattern.compile("^((from[ \\t]+([a-zA-Z0-9._]+)[ \\t]+|[ \\t]*)import[ \\t]+)([a-zA-Z0-9_., \\t]*)$"),
-			simpleClassName = Pattern.compile("^(.*[ \\t]+|)([A-Z_][a-zA-Z0-9_]+)$"),
-			staticMethodOrField = Pattern.compile("^((.*[ \\t]+|)([A-Z_][a-zA-Z0-9_]*)\\.)([a-zA-Z0-9_]*)$");
+			simpleClassName = Pattern.compile("^(.*[ \\t]+|)([a-zA-Z0-9_]+)$"),
+			staticMethodOrField = Pattern.compile("^((.*[ \\t]+|)([a-zA-Z0-9_]*)\\.)([a-zA-Z0-9_]*)$");
 	
 	private final List<Completion> asCompletionList(final Stream<String> stream, final String pre) {
 		return stream
