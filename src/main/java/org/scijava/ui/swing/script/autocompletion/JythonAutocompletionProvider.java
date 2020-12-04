@@ -214,25 +214,37 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 			// Scan the script, parse the imports, find first one matching
 			final Import im = JythonAutoCompletion.findImportedClasses(text_area.getText()).get(simpleClassName);
 			if (null != im) {
-				final Class<?> c = Class.forName(im.className);
-				final ArrayList<String> matches = new ArrayList<>();
-				for (final Field f: c.getFields()) {
-					if (isStatic == Modifier.isStatic(f.getModifiers()) &&
-							(includeAll || f.getName().toLowerCase().startsWith(methodOrFieldSeed)))
-						matches.add(f.getName());
+				try {
+					final Class<?> c = Class.forName(im.className);
+					final ArrayList<String> matches = new ArrayList<>();
+					for (final Field f: c.getFields()) {
+						if (isStatic == Modifier.isStatic(f.getModifiers()) &&
+								(includeAll || f.getName().toLowerCase().startsWith(methodOrFieldSeed)))
+							matches.add(f.getName());
+					}
+					for (final Method m: c.getMethods()) {
+						if (isStatic == Modifier.isStatic(m.getModifiers()) &&
+								(includeAll || m.getName().toLowerCase().startsWith(methodOrFieldSeed)))
+							matches.add(m.getName() + "(");
+					}
+					return asCompletionList(matches.stream(), pre);
+				} catch (final ClassNotFoundException ignored) {
+					return classUnavailableCompletions(simpleClassName + ".");
 				}
-				for (final Method m: c.getMethods()) {
-					if (isStatic == Modifier.isStatic(m.getModifiers()) &&
-							(includeAll || m.getName().toLowerCase().startsWith(methodOrFieldSeed)))
-						matches.add(m.getName() + "(");
-				}
-				return asCompletionList(matches.stream(), pre);
 			}
 		} catch (final Exception e) {
 			e.printStackTrace();
 		}
 
 		return Collections.emptyList();
+	}
+
+	private List<Completion> classUnavailableCompletions(final String pre) {
+		// placeholder completions to warn users class was not available
+		final List<Completion> list = new ArrayList<>();
+		list.add(new BasicCompletion(JythonAutocompletionProvider.this, pre + "CLASS_NOT_FOUND"));
+		list.add(new BasicCompletion(JythonAutocompletionProvider.this, pre + "INVALID_IMPORT"));
+		return list;
 	}
 
 	private String[] getVariableAnSeedAtCaretLocation() {
