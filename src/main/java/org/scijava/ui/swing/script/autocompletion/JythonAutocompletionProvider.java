@@ -34,6 +34,7 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import java.util.Vector;
@@ -227,6 +228,25 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 								(includeAll || m.getName().toLowerCase().contains(methodOrFieldSeed)))
 						completions.add(getCompletion(pre+m.getName(), m, c));
 					}
+
+					Collections.sort(completions, new Comparator<Completion>() {
+						int prefix1Index = Integer.MAX_VALUE;
+						int prefix2Index = Integer.MAX_VALUE;
+						@Override
+						public int compare(final Completion o1, final Completion o2) {
+							prefix1Index = Integer.MAX_VALUE;
+							prefix2Index = Integer.MAX_VALUE;
+							if (o1.getReplacementText().startsWith(pre))
+								prefix1Index = 0;
+							if (o2.getReplacementText().startsWith(pre))
+								prefix2Index = 0;
+							if (prefix1Index == prefix2Index)
+								return o1.compareTo(o2);
+							else
+								return prefix1Index - prefix2Index;
+						}
+					});
+
 					return completions;
 				} catch (final ClassNotFoundException ignored) {
 					return classUnavailableCompletions(simpleClassName + ".");
