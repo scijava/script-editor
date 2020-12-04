@@ -230,18 +230,18 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 			if (null != im) {
 				try {
 					final Class<?> c = Class.forName(im.className);
-					final ArrayList<String> matches = new ArrayList<>();
+					final ArrayList<Completion> completions = new ArrayList<>();
 					for (final Field f: c.getFields()) {
 						if (isStatic == Modifier.isStatic(f.getModifiers()) &&
 								(includeAll || f.getName().toLowerCase().startsWith(methodOrFieldSeed)))
-							matches.add(f.getName());
+							completions.add(getCompletion(pre, f, c));
 					}
 					for (final Method m: c.getMethods()) {
 						if (isStatic == Modifier.isStatic(m.getModifiers()) &&
 								(includeAll || m.getName().toLowerCase().startsWith(methodOrFieldSeed)))
-							matches.add(m.getName() + "(");
+						completions.add(getCompletion(pre+m.getName(), m, c));
 					}
-					return asCompletionList(matches.stream(), pre);
+					return completions;
 				} catch (final ClassNotFoundException ignored) {
 					return classUnavailableCompletions(simpleClassName + ".");
 				}
@@ -255,11 +255,48 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 		return Collections.emptyList();
 	}
 
+	private Completion getCompletion(final String pre, final Field field, final Class<?> c) {
+		// TODO: Add hyperlinks for javadocs
+		final StringBuffer summary = new StringBuffer();
+		summary.append("<b>").append(field.getName()).append("<b>");
+		summary.append("<DL>");
+		summary.append("<DT><b>Defined in:</b>");
+		summary.append("<DD>").append(c.getName());
+		summary.append("</DL>");
+		return new BasicCompletion(JythonAutocompletionProvider.this, pre+field.getName(), null, summary.toString());
+	}
+
+	private Completion getCompletion(final String replacementText, final Method method, final Class<?> c) {
+		// TODO: Add hyperlinks for javadocs
+		final StringBuffer summary = new StringBuffer();
+		{
+			summary.append("<b>").append(method.getName()).append("(");
+			final Parameter[] params = method.getParameters();
+			if (params.length > 0) {
+				for (final Parameter parameter : params) {
+					summary.append(parameter.getType().getSimpleName()).append(", ");
+				}
+				summary.setLength(summary.length() - 2); // remove trailing ', ';
+			}
+			summary.append(")</b>");
+			summary.append("<DL>");
+			summary.append("<DT><b>Returns:</b>");
+			summary.append("<DD>").append(method.getReturnType().getSimpleName());
+			summary.append("<DT><b>Defined in:</b>");
+			summary.append("<DD>").append(c.getName());
+			summary.append("</DL>");
+		}
+		return new BasicCompletion(JythonAutocompletionProvider.this, replacementText, null, summary.toString());
+	}
+
 	private List<Completion> classUnavailableCompletions(final String pre) {
-		// placeholder completions to warn users class was not available
+		// placeholder completions to warn users class was not available (repeated to force pop-up display)
 		final List<Completion> list = new ArrayList<>();
-		list.add(new BasicCompletion(JythonAutocompletionProvider.this, pre + "CLASS_NOT_FOUND"));
-		list.add(new BasicCompletion(JythonAutocompletionProvider.this, pre + "INVALID_IMPORT"));
+		final String summary = "Class not found or invalid import. See "
+				+ String.format("<a href='%s';>SciJavaDocs</a>", ClassUtil.scijava_javadoc_URL)
+				+ " or <a href='https://search.imagej.net/';>search</a> for help";
+		list.add(new BasicCompletion(JythonAutocompletionProvider.this, pre + "?", null, summary));
+		list.add(new BasicCompletion(JythonAutocompletionProvider.this, pre + "?", null, summary));
 		return list;
 	}
 
