@@ -47,6 +47,7 @@ public class JythonAutoCompletion extends AutoCompletion {
 	}
 	
 	static private final Pattern importPattern = Pattern.compile("^(from[ \\t]+([a-zA-Z_][a-zA-Z0-9._]*)[ \\t]+|)import[ \\t]+([a-zA-Z_][a-zA-Z0-9_]*[ \\ta-zA-Z0-9_,]*)[ \\t]*([\\\\]*|)[  \\t]*(#.*|)$"),
+								 importAsPattern = Pattern.compile("^(from[ \\t]+([a-zA-Z_][a-zA-Z0-9._]*)[ \\t]+|)import[ \\t]+([a-zA-Z_][a-zA-Z0-9_]*[ \\ta-zA-Z0-9_,]*)[ \\t]*([\\\\]*|)[  \\t]*(#.*|)as[ \\t]+([a-zA-Z_][a-zA-Z0-9_]*[ \\ta-zA-Z0-9_,]*)[ \\t]*([\\\\]*|)[  \\t]*(#.*|)$"),
 								 tripleQuotePattern = Pattern.compile("\"\"\""),
 								 variableDeclarationPattern = Pattern.compile("([a-zA-Z_][a-zA-Z0-9._]*)\\s*=\\s*([A-Z_][a-zA-Z0-9._]*)(?:\\()"); // E.g., in 'imp=ImagePlus()' grou1: imp; group2: ImagePlus
 
@@ -137,6 +138,15 @@ public class JythonAutoCompletion extends AutoCompletion {
 					importedClasses.put(im.alias, im);
 				}
 				endingBackslash = null != m.group(4) && m.group(4).length() > 0 && '\\' == m.group(4).charAt(0);
+			}
+			final Matcher m1 = importAsPattern.matcher(line);
+			if (m1.find()) {
+				packageName = null == m1.group(2) ? "" : m1.group(2);
+				for (final String simpleClassName : m1.group(3).split(",")) {
+					final Import im = new Import(packageName, simpleClassName.trim().split("\\s"), i);
+					importedClasses.put(m1.group(4), im);
+				}
+				endingBackslash = null != m1.group(5) && m1.group(5).length() > 0 && '\\' == m1.group(5).charAt(0);
 			}
 		}
 		
