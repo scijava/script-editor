@@ -219,12 +219,12 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 					final ArrayList<Completion> completions = new ArrayList<>();
 					for (final Field f: c.getFields()) {
 						if (isStatic == Modifier.isStatic(f.getModifiers()) &&
-								(includeAll || f.getName().toLowerCase().startsWith(methodOrFieldSeed)))
+								(includeAll || f.getName().toLowerCase().contains(methodOrFieldSeed)))
 							completions.add(getCompletion(pre, f, c));
 					}
 					for (final Method m: c.getMethods()) {
 						if (isStatic == Modifier.isStatic(m.getModifiers()) &&
-								(includeAll || m.getName().toLowerCase().startsWith(methodOrFieldSeed)))
+								(includeAll || m.getName().toLowerCase().contains(methodOrFieldSeed)))
 						completions.add(getCompletion(pre+m.getName(), m, c));
 					}
 					return completions;
