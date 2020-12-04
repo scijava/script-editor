@@ -48,7 +48,7 @@ public class JythonAutoCompletion extends AutoCompletion {
 	
 	static private final Pattern importPattern = Pattern.compile("^(from[ \\t]+([a-zA-Z_][a-zA-Z0-9._]*)[ \\t]+|)import[ \\t]+([a-zA-Z_][a-zA-Z0-9_]*[ \\ta-zA-Z0-9_,]*)[ \\t]*([\\\\]*|)[  \\t]*(#.*|)$"),
 								 tripleQuotePattern = Pattern.compile("\"\"\""),
-								 variableDeclarationPattern = Pattern.compile("([a-zA-Z_][a-zA-Z0-9._]*)\\s*=\\s*([A-Z_][a-zA-Z0-9._]*)(?:\\()"); // E.g., in 'imp=ImagePlus()' grou1: imp; group2: ImagePlus
+								 variableDeclarationPattern = Pattern.compile("([a-zA-Z_][a-zA-Z0-9._]*)[ \\t]*=[ \\t]*([A-Z_][a-zA-Z0-9._]*)(?:\\()"); // E.g., in 'imp=ImagePlus()' group1: imp; group2: ImagePlus
 
 	static public class Import {
 		final public String className,
