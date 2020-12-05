@@ -347,32 +347,32 @@ public class ClassUtil {
 		final String name = c.getCanonicalName();
 		final String pkg = getDocPackage(name);
 		if (pkg == null) return name;
-		final String url = String.format("%s%s%s", scijava_javadoc_URL, pkg, name.replace(".", "/"));
+		final String url = String.format("%s%s/index.html?%s.html", scijava_javadoc_URL, pkg, name.replace(".", "/"));
 		return String.format("<a href='%s';>%s</a>", url, name);
 	}
 
 	private static String getDocPackage(final String classCanonicalName) {
 		//TODO: Do this programatically
 		if (classCanonicalName.startsWith("ij."))
-			return "ImageJ1/";
+			return "ImageJ1";
 		else if (classCanonicalName.startsWith("sc.fiji"))
-			return "Fiji/";
+			return "Fiji";
 		else if (classCanonicalName.startsWith("net.imagej"))
-			return "ImageJ/";
+			return "ImageJ";
 		else if (classCanonicalName.startsWith("net.imglib2"))
-			return "ImgLib2/";
+			return "ImgLib2";
 		else if (classCanonicalName.startsWith("org.scijava"))
-			return "SciJava/";
+			return "SciJava";
 		else if (classCanonicalName.startsWith("loci.formats"))
-			return "Bio-Formats/";
+			return "Bio-Formats";
 		if (classCanonicalName.startsWith("java."))
-			return "Java8/";
+			return "Java8";
 		else if (classCanonicalName.startsWith("sc.iview"))
-			return "SciView/";
+			return "SciView";
 		else if (classCanonicalName.startsWith("weka."))
-			return "Weka/";
+			return "Weka";
 		else if (classCanonicalName.startsWith("inra.ijpb"))
-			return "MorphoLibJ/";
+			return "MorphoLibJ";
 		return null;
 	}
 
