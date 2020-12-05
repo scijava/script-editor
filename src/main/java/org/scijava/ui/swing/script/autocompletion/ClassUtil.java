@@ -30,6 +30,9 @@ package org.scijava.ui.swing.script.autocompletion;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
@@ -45,6 +48,10 @@ import java.util.jar.JarFile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+
+import org.fife.ui.autocomplete.BasicCompletion;
+import org.fife.ui.autocomplete.Completion;
+import org.fife.ui.autocomplete.CompletionProvider;
 
 public class ClassUtil {
 	
@@ -335,4 +342,88 @@ public class ClassUtil {
 		}
 		return matches;
 	}
+
+	private static String getJavaDocLink(final Class<?> c) {
+		final String name = c.getCanonicalName();
+		final String pkg = getDocPackage(name);
+		if (pkg == null) return name;
+		final String url = String.format("%s%s%s", scijava_javadoc_URL, pkg, name.replace(".", "/"));
+		return String.format("<a href='%s';>%s</a>", url, name);
+	}
+
+	private static String getDocPackage(final String classCanonicalName) {
+		//TODO: Do this programatically
+		if (classCanonicalName.startsWith("ij."))
+			return "ImageJ1/";
+		else if (classCanonicalName.startsWith("sc.fiji"))
+			return "Fiji/";
+		else if (classCanonicalName.startsWith("net.imagej"))
+			return "ImageJ/";
+		else if (classCanonicalName.startsWith("net.imglib2"))
+			return "ImgLib2/";
+		else if (classCanonicalName.startsWith("org.scijava"))
+			return "SciJava/";
+		else if (classCanonicalName.startsWith("loci.formats"))
+			return "Bio-Formats/";
+		if (classCanonicalName.startsWith("java."))
+			return "Java8/";
+		else if (classCanonicalName.startsWith("sc.iview"))
+			return "SciView/";
+		else if (classCanonicalName.startsWith("weka."))
+			return "Weka/";
+		else if (classCanonicalName.startsWith("inra.ijpb"))
+			return "MorphoLibJ/";
+		return null;
+	}
+
+	static Completion getCompletion(final CompletionProvider provider, final String pre, final Field field, final Class<?> c) {
+		final StringBuffer summary = new StringBuffer();
+		summary.append("<b>").append(field.getName()).append("</b>");
+		summary.append(" ("+ field.getType().getSimpleName()).append(")");
+		summary.append("<DL>");
+		summary.append("<DT><b>Defined in:</b>");
+		summary.append("<DD>").append(getJavaDocLink(c));
+		summary.append("</DL>");
+		return new BasicCompletion(provider, pre+field.getName(), null, summary.toString());
+	}
+
+	static Completion getCompletion(final CompletionProvider provider, final String pre, final Method method, final Class<?> c) {
+		final StringBuffer summary = new StringBuffer();
+		final StringBuffer replacementHeader = new StringBuffer(method.getName());
+		String replacementString;
+		final int bIndex = replacementHeader.length(); // remember '(' position
+		replacementHeader.append("(");
+		final Parameter[] params = method.getParameters();
+		if (params.length > 0) {
+			for (final Parameter parameter : params) {
+				replacementHeader.append(parameter.getType().getSimpleName()).append(", ");
+			}
+			replacementHeader.setLength(replacementHeader.length() - 2); // remove trailing ', ';
+		}
+		replacementHeader.append(")");
+		replacementString = pre + replacementHeader.toString();
+
+		replacementHeader.replace(bIndex, bIndex+1, "</b>("); // In header, highlight only method name for extra contrast
+		summary.append("<b>").append(replacementHeader);
+		summary.append("<DL>");
+		summary.append("<DT><b>Returns:</b>");
+		summary.append("<DD>").append(method.getReturnType().getSimpleName());
+		summary.append("<DT><b>Defined in:</b>");
+		summary.append("<DD>").append(getJavaDocLink(c));
+		summary.append("</DL>");
+
+		return new BasicCompletion(provider, replacementString, null, summary.toString());
+	}
+
+	static List<Completion> classUnavailableCompletions(final CompletionProvider provider, final String pre) {
+		// placeholder completions to warn users class was not available (repeated to force pop-up display)
+		final List<Completion> list = new ArrayList<>();
+		final String summary = "Class not found or invalid import. See "
+				+ String.format("<a href='%s';>SciJavaDocs</a>", scijava_javadoc_URL)
+				+ " or <a href='https://search.imagej.net/';>search</a> for help";
+		list.add(new BasicCompletion(provider, pre + "?", null, summary));
+		list.add(new BasicCompletion(provider, pre + "?", null, summary));
+		return list;
+	}
+
 }
