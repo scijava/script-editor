@@ -28,31 +28,35 @@
  */
 package org.scijava.ui.swing.script.autocompletion;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import java.util.Vector;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.swing.text.BadLocationException;
 import javax.swing.text.JTextComponent;
 
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.scijava.ui.swing.script.autocompletion.JythonAutoCompletion.Import;
 
 public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 	
 	static private final Vector<AutoCompletionListener> autocompletion_listeners = new Vector<>();
+	
+	static {
+		try {
+			// Load the class so that it adds itself to the autocompletion_listeners
+			Class.forName("sc.fiji.jython.autocompletion.JythonAutoCompletions");
+		} catch (Throwable t) {
+			System.out.println("WARNING did not load JythonAutoCompletions");
+		}
+	}
 	
 	private final RSyntaxTextArea text_area;
 	private final ImportFormat formatter;
@@ -60,12 +64,7 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 	public JythonAutocompletionProvider(final RSyntaxTextArea text_area, final ImportFormat formatter) {
 		this.text_area = text_area;
 		this.formatter = formatter;
-		new Thread(new Runnable() {
-			@Override
-			public void run() {
-				ClassUtil.ensureCache();
-			}
-		}).start();
+		new Thread(ClassUtil::ensureCache).start();
 	}
 	
 	/**
@@ -108,12 +107,27 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 	@Override
 	public List<Completion> getCompletionsImpl(final JTextComponent comp) {
 		final ArrayList<Completion> completions = new ArrayList<>();
-		final String text = this.getAlreadyEnteredText(comp);
-		completions.addAll(getCompletions(text));
+		String currentLine,
+			   codeWithoutLastLine,
+			   alreadyEnteredText = this.getAlreadyEnteredText(comp);
+		try {
+			codeWithoutLastLine = comp.getText(0, comp.getCaretPosition());
+			final int lastLineBreak = codeWithoutLastLine.lastIndexOf("\n") + 1;
+			currentLine = codeWithoutLastLine.substring(lastLineBreak); // up to the caret position
+			codeWithoutLastLine = codeWithoutLastLine.substring(0, lastLineBreak);
+			System.out.println("codeWithoutLastLine:\n#####\n" + codeWithoutLastLine + "\n#####");
+			System.out.println("currentLine:\n" + currentLine + "\n#####");
+		} catch (BadLocationException e1) {
+			e1.printStackTrace();
+			return completions;
+		}
+		// Java class discovery for completions with auto-imports
+		completions.addAll(getCompletions(alreadyEnteredText));
+		// Completions provided by listeners (e.g. for methods and fields and variables and builtins from jython-autocompletion package)
 		for (final AutoCompletionListener listener: new Vector<>(autocompletion_listeners)) {
 			try {
-				final List<Completion> cs = listener.completionsFor(text);
-				if ( null != cs)
+				final List<Completion> cs = listener.completionsFor(this, codeWithoutLastLine, currentLine, alreadyEnteredText);
+				if (null != cs)
 					completions.addAll(cs);
 			} catch (Exception e) {
 				System.out.println("Failed to get autocompletions from " + listener);
@@ -123,6 +137,7 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 		return completions;
 	}
 
+	/** Completions to discover (autocomplete imports) and auto-import java classes. */
 	public List<Completion> getCompletions(final String text) {
 		// don't block
 		if (!ClassUtil.isCacheReady()) return Collections.emptyList();
@@ -160,7 +175,7 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 			stream = stream.map((s) -> s.substring(Math.max(0, s.lastIndexOf('.') + 1)));
 			return asCompletionList(stream, m2.group(1) + precomma);
 		}
-
+		
 		final Matcher m3 = simpleClassName.matcher(text);
 		if (m3.find()) {
 			// Side effect: insert the import at the top of the file if necessary
@@ -172,6 +187,9 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 							formatter.singleToImportStatement(className)))
 					.collect(Collectors.toList());
 		}
+		
+
+		/* Covered by listener from jython-completions
 
 		final Matcher m4 = staticMethodOrField.matcher(text);
 		if (m4.find()) {
@@ -198,6 +216,8 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 				e.printStackTrace();
 			}
 		}
+		
+		*/
 		
 		return Collections.emptyList();
 	}

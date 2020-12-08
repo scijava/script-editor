@@ -31,13 +31,14 @@ package org.scijava.ui.swing.script.autocompletion;
 import java.util.List;
 
 import org.fife.ui.autocomplete.Completion;
+import org.fife.ui.autocomplete.CompletionProvider;
 
 public interface AutoCompletionListener {
 
 	/**
-	 * 
+	 * @param codeWithoutLastLine The entire script up to the line with the caret.
 	 * @param text The whole line up to the caret where autocompletion was invoked.
 	 * @return
 	 */
-	public List<Completion> completionsFor(final String text);
+	public List<Completion> completionsFor(final CompletionProvider provider, final String codeWithoutLastLine, final String lastLine, final String alreadyEnteredText);
 }
