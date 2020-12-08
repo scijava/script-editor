@@ -115,8 +115,6 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 			final int lastLineBreak = codeWithoutLastLine.lastIndexOf("\n") + 1;
 			currentLine = codeWithoutLastLine.substring(lastLineBreak); // up to the caret position
 			codeWithoutLastLine = codeWithoutLastLine.substring(0, lastLineBreak);
-			System.out.println("codeWithoutLastLine:\n#####\n" + codeWithoutLastLine + "\n#####");
-			System.out.println("currentLine:\n" + currentLine + "\n#####");
 		} catch (BadLocationException e1) {
 			e1.printStackTrace();
 			return completions;
