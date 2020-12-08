@@ -32,6 +32,7 @@ import org.fife.rsta.ac.AbstractLanguageSupport;
 import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.scijava.Priority;
 import org.scijava.plugin.Plugin;
 import org.scijava.ui.swing.script.LanguageSupportPlugin;
 import org.scijava.ui.swing.script.LanguageSupportService;
@@ -61,6 +62,11 @@ public class JythonLanguageSupportPlugin extends  AbstractLanguageSupport implem
 	@Override
 	public String getLanguageName() {
 		return "python";
+	}
+	
+	@Override
+	public double priority() {
+		return Priority.FIRST;
 	}
 
 	@Override
