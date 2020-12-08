@@ -64,10 +64,12 @@ public class JythonLanguageSupportPlugin extends  AbstractLanguageSupport implem
 		return "python";
 	}
 	
+	/*
 	@Override
 	public double priority() {
 		return Priority.FIRST;
 	}
+	*/
 
 	@Override
 	public void install(final RSyntaxTextArea textArea) {
