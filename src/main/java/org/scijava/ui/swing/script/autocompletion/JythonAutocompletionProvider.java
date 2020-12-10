@@ -178,7 +178,7 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 			// Side effect: insert the import at the top of the file if necessary
 			//return asCompletionList(ClassUtil.findSimpleClassNamesStartingWith(m3.group(2)).stream(), m3.group(1));
 			return ClassUtil.findSimpleClassNamesStartingWith(m3.group(2)).stream()
-					.map(className -> new ImportCompletion(JythonAutocompletionProvider.this,
+					.map(className -> new ImportCompletionImpl(JythonAutocompletionProvider.this,
 							m3.group(1) + className.substring(className.lastIndexOf('.') + 1),
 							className,
 							formatter.singleToImportStatement(className)))

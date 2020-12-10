@@ -134,13 +134,13 @@ public class JythonAutoCompletion extends AutoCompletion {
 				final HashMap<String, Import> importedClasses = findImportedClasses(editor.getText());
 				// Insert import statement after the last import, if not there already
 				for (final Import im : importedClasses.values()) {
-					if (im.className.contentEquals(cc.className))
+					if (im.className.contentEquals(cc.getClassName()))
 						return; // don't insert
 				}
 				try {
 					final int insertAtLine = 0 == importedClasses.size() ? 0
 							: importedClasses.values().stream().map(im -> im.lineNumber).reduce(Math::max).get();
-					editor.insert(cc.importStatement + "\n", editor.getLineStartOffset(0 == insertAtLine ? 0 : insertAtLine + 1));
+					editor.insert(cc.getImportStatement() + "\n", editor.getLineStartOffset(0 == insertAtLine ? 0 : insertAtLine + 1));
 				} catch (BadLocationException e) {
 					e.printStackTrace();
 				}
