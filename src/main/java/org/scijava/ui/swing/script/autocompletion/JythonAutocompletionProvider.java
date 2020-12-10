@@ -119,8 +119,6 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 			e1.printStackTrace();
 			return completions;
 		}
-		// Java class discovery for completions with auto-imports
-		completions.addAll(getCompletions(alreadyEnteredText));
 		// Completions provided by listeners (e.g. for methods and fields and variables and builtins from jython-autocompletion package)
 		for (final AutoCompletionListener listener: new Vector<>(autocompletion_listeners)) {
 			try {
@@ -132,6 +130,8 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 				e.printStackTrace();
 			}
 		}
+		// Java class discovery for completions with auto-imports
+		completions.addAll(getCompletions(alreadyEnteredText));
 		return completions;
 	}
 
@@ -150,7 +150,6 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 			return asCompletionList(ClassUtil.findClassNamesForPackage(m1f.group(2)).map(formatter::singleToImportStatement), "");
 		
 		// E.g. "from ij.gui import Roi, Po" to expand to PolygonRoi, PointRoi for Jython
-		// or e.g. "importClass(Package.ij" to expand to a fully qualified class name for Javascript
 		final Matcher m2 = importStatement.matcher(text);
 		if (m2.find()) {
 			String packageName = m2.group(3),
