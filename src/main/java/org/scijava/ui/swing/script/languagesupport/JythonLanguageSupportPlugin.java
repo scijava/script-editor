@@ -47,7 +47,7 @@ import org.scijava.ui.swing.script.autocompletion.JythonAutoCompletion;
  * 
  * @see LanguageSupportService
  */
-@Plugin(type = LanguageSupportPlugin.class)
+@Plugin(type = LanguageSupportPlugin.class, priority = Priority.HIGH)
 public class JythonLanguageSupportPlugin extends  AbstractLanguageSupport implements LanguageSupportPlugin
 {
 	
@@ -63,13 +63,6 @@ public class JythonLanguageSupportPlugin extends  AbstractLanguageSupport implem
 	public String getLanguageName() {
 		return "python";
 	}
-	
-	/*
-	@Override
-	public double priority() {
-		return Priority.FIRST;
-	}
-	*/
 
 	@Override
 	public void install(final RSyntaxTextArea textArea) {
