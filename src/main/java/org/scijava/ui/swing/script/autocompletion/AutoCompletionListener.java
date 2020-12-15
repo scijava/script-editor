@@ -37,7 +37,9 @@ public interface AutoCompletionListener {
 
 	/**
 	 * @param codeWithoutLastLine The entire script up to the line with the caret.
-	 * @param text The whole line up to the caret where autocompletion was invoked.
+	 * @param provider
+	 * @param lastLine The whole line up to the caret where autocompletion was invoked.
+	 * @param alreadyEnteredText The text to consider for autoexpanding, i.e. any alphanumeric, dot or space character up to the caret.
 	 * @return
 	 */
 	public List<Completion> completionsFor(final CompletionProvider provider, final String codeWithoutLastLine, final String lastLine, final String alreadyEnteredText);
