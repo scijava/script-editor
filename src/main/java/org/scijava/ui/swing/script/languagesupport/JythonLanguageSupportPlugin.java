@@ -32,6 +32,7 @@ import org.fife.rsta.ac.AbstractLanguageSupport;
 import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.scijava.Priority;
 import org.scijava.plugin.Plugin;
 import org.scijava.ui.swing.script.LanguageSupportPlugin;
 import org.scijava.ui.swing.script.LanguageSupportService;
@@ -46,7 +47,7 @@ import org.scijava.ui.swing.script.autocompletion.JythonAutoCompletion;
  * 
  * @see LanguageSupportService
  */
-@Plugin(type = LanguageSupportPlugin.class)
+@Plugin(type = LanguageSupportPlugin.class, priority = Priority.HIGH)
 public class JythonLanguageSupportPlugin extends  AbstractLanguageSupport implements LanguageSupportPlugin
 {
 	

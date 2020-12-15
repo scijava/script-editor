@@ -28,17 +28,32 @@
  */
 package org.scijava.ui.swing.script.autocompletion;
 
-import java.util.List;
-
-import org.fife.ui.autocomplete.Completion;
+import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.CompletionProvider;
 
-public interface AutoCompletionListener {
+public class ImportCompletionImpl extends BasicCompletion implements ImportCompletion
+{
+	protected final String importStatement,
+						   className;
+	
+	public ImportCompletionImpl(final CompletionProvider provider, final String replacementText, final String className, final String importStatement) {
+		super(provider, replacementText);
+		this.className = className;
+		this.importStatement = importStatement;
+	}
+	
+	@Override
+	public String getSummary() {
+		return importStatement; // better than nothing
+	}
 
-	/**
-	 * @param codeWithoutLastLine The entire script up to the line with the caret.
-	 * @param text The whole line up to the caret where autocompletion was invoked.
-	 * @return
-	 */
-	public List<Completion> completionsFor(final CompletionProvider provider, final String codeWithoutLastLine, final String lastLine, final String alreadyEnteredText);
+	@Override
+	public String getImportStatement() {
+		return importStatement;
+	}
+	
+	@Override
+	public String getClassName() {
+		return className;
+	}
 }
