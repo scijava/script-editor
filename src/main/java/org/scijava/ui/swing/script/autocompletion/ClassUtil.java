@@ -376,21 +376,38 @@ public class ClassUtil {
 		return null;
 	}
 
-	static Completion getCompletion(final CompletionProvider provider, final String pre, final Field field, final Class<?> c) {
+	/**
+	 * Assembles an HTML-formatted auto-completion summary with functional
+	 * hyperlinks
+	 *
+	 * @param field    the field being documented
+	 * @param c        the class being documented. Expected to be documented at the
+	 *                 Scijava API documentation portal.
+	 * @return the completion summary
+	 */
+	protected static String getSummaryCompletion(final Field field, final Class<?> c) {
 		final StringBuffer summary = new StringBuffer();
 		summary.append("<b>").append(field.getName()).append("</b>");
-		summary.append(" ("+ field.getType().getSimpleName()).append(")");
+		summary.append(" (").append(field.getType().getName()).append(")");
 		summary.append("<DL>");
 		summary.append("<DT><b>Defined in:</b>");
 		summary.append("<DD>").append(getJavaDocLink(c));
 		summary.append("</DL>");
-		return new BasicCompletion(provider, pre+field.getName(), null, summary.toString());
+		return summary.toString();
 	}
 
-	static Completion getCompletion(final CompletionProvider provider, final String pre, final Method method, final Class<?> c) {
+	/**
+	 * Assembles an HTML-formatted auto-completion summary with functional
+	 * hyperlinks
+	 *
+	 * @param method   the method being documented
+	 * @param c        the class being documented. Expected to be documented at the
+	 *                 Scijava API documentation portal.
+	 * @return the completion summary
+	 */
+	protected static String getSummaryCompletion(final Method method, final Class<?> c) {
 		final StringBuffer summary = new StringBuffer();
 		final StringBuffer replacementHeader = new StringBuffer(method.getName());
-		String replacementString;
 		final int bIndex = replacementHeader.length(); // remember '(' position
 		replacementHeader.append("(");
 		final Parameter[] params = method.getParameters();
@@ -401,9 +418,8 @@ public class ClassUtil {
 			replacementHeader.setLength(replacementHeader.length() - 2); // remove trailing ', ';
 		}
 		replacementHeader.append(")");
-		replacementString = pre + replacementHeader.toString();
-
-		replacementHeader.replace(bIndex, bIndex+1, "</b>("); // In header, highlight only method name for extra contrast
+		replacementHeader.replace(bIndex, bIndex + 1, "</b>("); // In header, highlight only method name for extra
+																// contrast
 		summary.append("<b>").append(replacementHeader);
 		summary.append("<DL>");
 		summary.append("<DT><b>Returns:</b>");
@@ -411,8 +427,7 @@ public class ClassUtil {
 		summary.append("<DT><b>Defined in:</b>");
 		summary.append("<DD>").append(getJavaDocLink(c));
 		summary.append("</DL>");
-
-		return new BasicCompletion(provider, replacementString, null, summary.toString());
+		return summary.toString();
 	}
 
 	static List<Completion> classUnavailableCompletions(final CompletionProvider provider, final String pre) {

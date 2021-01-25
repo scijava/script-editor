@@ -30,7 +30,6 @@ package org.scijava.ui.swing.script.autocompletion;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Vector;
 import java.util.regex.Matcher;
@@ -83,6 +82,7 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 		return Character.isLetterOrDigit(c) || '.' == c || ' ' == c;
 	}
 	
+	@SuppressWarnings("unused")
 	static private final Pattern
 			fromImport = Pattern.compile("^((from|import)[ \\t]+)([a-zA-Z_][a-zA-Z0-9._]*)$"),
 			fastImport = Pattern.compile("^(from[ \\t]+)([a-zA-Z_][a-zA-Z0-9._]*)[ \\t]+$"),
@@ -275,6 +275,7 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 		return Collections.emptyList();
 	}
 
+	@SuppressWarnings("unused")
 	private String[] getVariableAnSeedAtCaretLocation() {
 		try {
 			final int caretOffset = text_area.getCaretPosition();
