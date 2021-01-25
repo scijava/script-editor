@@ -30,6 +30,7 @@ package org.scijava.ui.swing.script.autocompletion;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Vector;
 import java.util.regex.Matcher;
