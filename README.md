@@ -1,4 +1,4 @@
-[![](https://travis-ci.org/scijava/script-editor.svg?branch=master)](https://travis-ci.org/scijava/script-editor)
+[![](https://github.com/scijava/script-editor/actions/workflows/build-main.yml/badge.svg)](https://github.com/scijava/script-editor/actions/workflows/build-main.yml)
 
 SciJava Script Editor
 ---------------------
