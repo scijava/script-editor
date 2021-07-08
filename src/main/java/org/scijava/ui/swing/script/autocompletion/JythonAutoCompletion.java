@@ -47,7 +47,8 @@ public class JythonAutoCompletion extends AutoCompletion {
 	}
 	
 	static private final Pattern importPattern = Pattern.compile("^(from[ \\t]+([a-zA-Z_][a-zA-Z0-9._]*)[ \\t]+|)import[ \\t]+([a-zA-Z_][a-zA-Z0-9_]*[ \\ta-zA-Z0-9_,]*)[ \\t]*([\\\\]*|)[  \\t]*(#.*|)$"),
-								 tripleQuotePattern = Pattern.compile("\"\"\"");
+								 tripleQuotePattern = Pattern.compile("\"\"\""),
+								 variableDeclarationPattern = Pattern.compile("([a-zA-Z_][a-zA-Z0-9._]*)[ \\t]*=[ \\t]*([A-Z_][a-zA-Z0-9._]*)(?:\\()"); // E.g., in 'imp=ImagePlus()' group1: imp; group2: ImagePlus
 
 	static public class Import {
 		final public String className,
@@ -65,7 +66,26 @@ public class JythonAutoCompletion extends AutoCompletion {
 			this(packageName + "." + parts[0], 3 == parts.length ? parts[2] : null, lineNumber);
 		}
 	}
-	
+
+	static public final String findClassAliasOfVariable(final String variable, String inputText) {
+		final String[] lines = inputText.split("\n");
+		for (int i = 0; i < lines.length; ++i) {
+			final String line = lines[i];
+			final Matcher matcher = variableDeclarationPattern.matcher(line);
+			if (matcher.find()) {
+				// a line containing a variable declaration
+//				System.out.println("Queried variable: " + variable);
+//				System.out.println("Hit: line #" + i + ": " + line);
+//				System.out.println("Matcher g1: " + matcher.group(1));
+//				System.out.println("Matcher g2: " + matcher.group(2));
+				if (variable.equals(matcher.group(1))) {
+					return matcher.group(2);
+				}
+			}
+		}
+		return null;
+	}
+
 	static public final HashMap<String, Import> findImportedClasses(final String text) {
 		final HashMap<String, Import> importedClasses = new HashMap<>();
 		String packageName = "";
