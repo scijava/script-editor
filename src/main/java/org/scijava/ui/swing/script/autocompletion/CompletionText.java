@@ -74,6 +74,12 @@ public class CompletionText {
 	public AbstractCompletion getCompletion(final CompletionProvider provider, final String replacementText) {
 		return new BasicCompletion(provider, replacementText, description, summary);
 	}
+	
+	public AbstractCompletion getCompletion(final CompletionProvider provider, final String replacementText, final int relevance) {
+		final BasicCompletion bc = new BasicCompletion(provider, replacementText, description, summary);
+		bc.setRelevance(relevance);
+		return bc;
+	}
 
 	public void setReplacementText(final String replacementText) {
 		this.replacementText = replacementText;
