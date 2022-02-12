@@ -30,6 +30,7 @@ package org.scijava.ui.swing.script.autocompletion;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Vector;
 import java.util.regex.Matcher;
@@ -82,6 +83,7 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 		return Character.isLetterOrDigit(c) || '.' == c || ' ' == c;
 	}
 	
+	@SuppressWarnings("unused")
 	static private final Pattern
 			fromImport = Pattern.compile("^((from|import)[ \\t]+)([a-zA-Z_][a-zA-Z0-9._]*)$"),
 			fastImport = Pattern.compile("^(from[ \\t]+)([a-zA-Z_][a-zA-Z0-9._]*)[ \\t]+$"),
@@ -148,12 +150,12 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 		final Matcher m1f = fastImport.matcher(text);
 		if (m1f.find())
 			return asCompletionList(ClassUtil.findClassNamesForPackage(m1f.group(2)).map(formatter::singleToImportStatement), "");
-		
+
 		// E.g. "from ij.gui import Roi, Po" to expand to PolygonRoi, PointRoi for Jython
 		final Matcher m2 = importStatement.matcher(text);
 		if (m2.find()) {
-			String packageName = m2.group(3),
-					 className = m2.group(4); // incomplete or empty, or multiple separated by commas with the last one incomplete or empty
+			final String packageName = m2.group(3);
+			String className = m2.group(4); // incomplete or empty, or multiple separated by commas with the last one incomplete or empty
 
 			System.out.println("m2 matches className: " + className);
 			final String[] bycomma = className.split(",");
@@ -189,33 +191,105 @@ public class JythonAutocompletionProvider extends DefaultCompletionProvider {
 		/* Covered by listener from jython-completions
 
 		final Matcher m4 = staticMethodOrField.matcher(text);
-		if (m4.find()) {
-			try {
-				final String simpleClassName   = m4.group(3), // expected complete, e.g. ImagePlus
-							 methodOrFieldSeed = m4.group(4).toLowerCase(); // incomplete: e.g. "GR", a string to search for in the class declared fields or methods
+		try {
 
-				// Scan the script, parse the imports, find first one matching
-				final Import im = JythonAutoCompletion.findImportedClasses(text_area.getText()).get(simpleClassName);
-				if (null != im) {
+			String simpleClassName;
+			String methodOrFieldSeed;
+			String pre;
+			boolean isStatic;
+
+			if (m4.find()) {
+
+				// a call to a static class
+				pre = m4.group(1);
+				simpleClassName   = m4.group(3); // expected complete, e.g. ImagePlus
+				methodOrFieldSeed = m4.group(4).toLowerCase(); // incomplete: e.g. "GR", a string to search for in the class declared fields or methods
+				isStatic = true;
+
+			} else {
+
+				// a call to an instantiated class
+				final String[] varAndSeed = getVariableAnSeedAtCaretLocation();
+				if (varAndSeed == null) return Collections.emptyList();
+
+				simpleClassName = JythonAutoCompletion.findClassAliasOfVariable(varAndSeed[0], text_area.getText());
+				if (simpleClassName == null) return Collections.emptyList();
+
+				pre = varAndSeed[0] + ".";
+				methodOrFieldSeed = varAndSeed[1];
+				isStatic = false;
+
+//				System.out.println("simpleClassName: " + simpleClassName);
+//				System.out.println("methodOrFieldSeed: " + methodOrFieldSeed);
+
+			}
+
+			// Retrieve all methods and fields, if the seed is empty
+			final boolean includeAll = methodOrFieldSeed.trim().isEmpty();
+
+			// Scan the script, parse the imports, find first one matching
+			final Import im = JythonAutoCompletion.findImportedClasses(text_area.getText()).get(simpleClassName);
+			if (null != im) {
+				try {
 					final Class<?> c = Class.forName(im.className);
-					final ArrayList<String> matches = new ArrayList<>();
+					final ArrayList<Completion> completions = new ArrayList<>();
 					for (final Field f: c.getFields()) {
-						if (Modifier.isStatic(f.getModifiers()) && f.getName().toLowerCase().startsWith(methodOrFieldSeed))
-							matches.add(f.getName());
+						if (isStatic == Modifier.isStatic(f.getModifiers()) &&
+								(includeAll || f.getName().toLowerCase().contains(methodOrFieldSeed)))
+							completions.add(ClassUtil.getCompletion(this, pre, f, c));
 					}
 					for (final Method m: c.getMethods()) {
-						if (Modifier.isStatic(m.getModifiers()) && m.getName().toLowerCase().startsWith(methodOrFieldSeed))
-							matches.add(m.getName() + "(");
+						if (isStatic == Modifier.isStatic(m.getModifiers()) &&
+								(includeAll || m.getName().toLowerCase().contains(methodOrFieldSeed)))
+						completions.add(ClassUtil.getCompletion(this, pre, m, c));
 					}
-					return asCompletionList(matches.stream(), m4.group(1));
+
+					Collections.sort(completions, new Comparator<Completion>() {
+						int prefix1Index = Integer.MAX_VALUE;
+						int prefix2Index = Integer.MAX_VALUE;
+						@Override
+						public int compare(final Completion o1, final Completion o2) {
+							prefix1Index = Integer.MAX_VALUE;
+							prefix2Index = Integer.MAX_VALUE;
+							if (o1.getReplacementText().startsWith(pre))
+								prefix1Index = 0;
+							if (o2.getReplacementText().startsWith(pre))
+								prefix2Index = 0;
+							if (prefix1Index == prefix2Index)
+								return o1.compareTo(o2);
+							else
+								return prefix1Index - prefix2Index;
+						}
+					});
+
+					return completions;
+				} catch (final ClassNotFoundException ignored) {
+					return ClassUtil.classUnavailableCompletions(this, simpleClassName + ".");
 				}
-			} catch (Exception e) {
-				e.printStackTrace();
 			}
+		} catch (final Exception e) {
+			e.printStackTrace();
 		}
 		
 		*/
 		
 		return Collections.emptyList();
 	}
+
+	@SuppressWarnings("unused")
+	private String[] getVariableAnSeedAtCaretLocation() {
+		try {
+			final int caretOffset = text_area.getCaretPosition();
+			final int lineNumber = text_area.getLineOfOffset(caretOffset);
+			final int startOffset = text_area.getLineStartOffset(lineNumber);
+			final String lineUpToCaret = text_area.getText(startOffset, caretOffset - startOffset);
+			final String[] words = lineUpToCaret.split("\\s+");
+			final String[] varAndSeed = words[words.length - 1].split("\\.");
+			return (varAndSeed.length == 2) ? varAndSeed : new String[] { varAndSeed[varAndSeed.length - 1], "" };
+		} catch (final BadLocationException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
 }
