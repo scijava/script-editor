@@ -36,9 +36,9 @@ import org.scijava.Priority;
 import org.scijava.plugin.Plugin;
 import org.scijava.ui.swing.script.LanguageSupportPlugin;
 import org.scijava.ui.swing.script.LanguageSupportService;
+import org.scijava.ui.swing.script.autocompletion.JythonAutoCompletion;
 import org.scijava.ui.swing.script.autocompletion.JythonAutocompletionProvider;
 import org.scijava.ui.swing.script.autocompletion.JythonImportFormat;
-import org.scijava.ui.swing.script.autocompletion.JythonAutoCompletion;
 
 /**
  * {@link LanguageSupportPlugin} for the jython language.
