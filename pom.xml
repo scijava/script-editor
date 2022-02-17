@@ -140,6 +140,7 @@
 	</ciManagement>
 
 	<properties>
+		<main-class>org.scijava.ui.swing.script.Main</main-class>
 		<package-name>org.scijava.ui.swing.script</package-name>
 		<license.licenseName>bsd_2</license.licenseName>
 		<license.copyrightOwners>SciJava developers.</license.copyrightOwners>

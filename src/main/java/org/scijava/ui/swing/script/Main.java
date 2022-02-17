@@ -29,18 +29,43 @@
 
 package org.scijava.ui.swing.script;
 
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+
+import javax.swing.SwingUtilities;
+
+import org.scijava.Context;
+import org.scijava.script.ScriptLanguage;
+import org.scijava.script.ScriptService;
+
 /**
- * Interactive test for the script editor.
- * <p>
- * This class exists so that you can launch the Script Editor conveniently from
- * test scope, with the Groovy language included on the classpath.
- * </p>
+ * Main entry point for launching the script editor standalone.
  *
  * @author Johannes Schindelin
  * @author Curtis Rueden
  */
-public class ScriptEditorTestDrive {
+public final class Main {
+
+	public static void launch(final String language) {
+		final Context context = new Context();
+		final TextEditor editor = new TextEditor(context);
+		final ScriptService scriptService = context.getService(ScriptService.class);
+		final ScriptLanguage lang = scriptService.getLanguageByName(language);
+		if (lang == null) {
+			throw new IllegalArgumentException("Script language '" + language +
+				"' not found");
+		}
+		editor.setLanguage(lang);
+		editor.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosed(final WindowEvent e) {
+				SwingUtilities.invokeLater(() -> context.dispose());
+			}
+		});
+		editor.setVisible(true);
+	}
 	public static void main(String[] args) throws Exception {
-		Main.launch("Groovy");
+		String lang = args.length == 0 ? "Java" : args[0];
+		launch(lang);
 	}
 }
