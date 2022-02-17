@@ -578,7 +578,7 @@ public class MatlabTokenMaker extends AbstractJFlexTokenMaker {
 	 * Resets the scanner to read from a new input stream. Does not close the old
 	 * reader. All internal variables are reset, the old input stream
 	 * <b>cannot</b> be reused (internal buffer is discarded and lost). Lexical
-	 * state is set to <tt>YY_INITIAL</tt>.
+	 * state is set to {@code YY_INITIAL}.
 	 *
 	 * @param reader the new input stream
 	 */
@@ -685,8 +685,8 @@ public class MatlabTokenMaker extends AbstractJFlexTokenMaker {
 	}
 
 	/**
-	 * Returns the character at position <tt>pos</tt> from the matched text. It is
-	 * equivalent to yytext().charAt(pos), but faster
+	 * Returns the character at position {@code pos} from the matched text. It is
+	 * equivalent to {@code yytext().charAt(pos)}, but faster.
 	 *
 	 * @param pos the position of the character to fetch. A value from 0 to
 	 *          yylength()-1.

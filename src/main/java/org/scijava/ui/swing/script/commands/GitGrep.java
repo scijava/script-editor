@@ -37,7 +37,7 @@ import org.scijava.ui.swing.script.FileFunctions;
 import org.scijava.ui.swing.script.TextEditor;
 
 /**
- * Calls <tt>git grep</tt> in a given directory.
+ * Calls {@code git grep} in a given directory.
  *
  * @author Johannes Schindelin
  */
