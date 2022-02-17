@@ -216,7 +216,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			previousTab, runSelection, extractSourceJar, toggleBookmark,
 			listBookmarks, openSourceForClass, openSourceForMenuItem,
 			openMacroFunctions, decreaseFontSize, increaseFontSize, chooseFontSize,
-			chooseTabSize, gitGrep, openInGitweb, replaceTabsWithSpaces,
+			chooseTabSize, gitGrep, replaceTabsWithSpaces,
 			replaceSpacesWithTabs, toggleWhiteSpaceLabeling, zapGremlins,
 			savePreferences, toggleAutoCompletionMenu, openClassOrPackageHelp;
 	private RecentFilesMenuItem openRecent;
@@ -516,8 +516,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		*/
 		gitGrep = addToMenu(gitMenu, "Grep...", 0, 0);
 		gitGrep.setMnemonic(KeyEvent.VK_G);
-		openInGitweb = addToMenu(gitMenu, "Open in gitweb", 0, 0);
-		openInGitweb.setMnemonic(KeyEvent.VK_W);
 		mbar.add(gitMenu);
 
 		// -- Tabs menu --
@@ -1451,11 +1449,6 @@ public class TextEditor extends JFrame implements ActionListener,
 
 			commandService.run(GitGrep.class, true, "editor", this, "searchTerm",
 				searchTerm, "searchRoot", searchRoot);
-		}
-		else if (source == openInGitweb) {
-			final EditorPane editorPane = getEditorPane();
-			new FileFunctions(this).openInGitweb(editorPane.getFile(), editorPane
-				.getGitDirectory(), editorPane.getCaretLineNumber() + 1);
 		}
 		else if (source == increaseFontSize || source == decreaseFontSize) {
 			getEditorPane().increaseFontSize(
