@@ -71,7 +71,6 @@ import org.scijava.prefs.PrefService;
 import org.scijava.script.ScriptHeaderService;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptService;
-import org.scijava.ui.swing.script.autocompletion.JythonAutoCompletion;
 import org.scijava.util.FileUtils;
 
 /**
@@ -108,8 +107,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	@Parameter
 	private LogService log;
 	
-	private JythonAutoCompletion autoCompletionProxy;
-
 	/**
 	 * Constructor.
 	 */
