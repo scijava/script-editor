@@ -30,6 +30,10 @@ package org.scijava.ui.swing.script.autocompletion;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import org.fife.ui.autocomplete.AbstractCompletion;
 import org.fife.ui.autocomplete.BasicCompletion;
@@ -40,6 +44,7 @@ public class CompletionText {
 	private String replacementText;
 	private String description;
 	private String summary;
+	private List<Parameter> method_args = Collections.emptyList();
 
 	public CompletionText(final String replacementText) {
 		this(replacementText, (String)null, (String)null);
@@ -57,6 +62,7 @@ public class CompletionText {
 
 	public CompletionText(final String replacementText, final Class<?> c, final Method m) {
 		this(replacementText, ClassUtil.getSummaryCompletion(m, c), null);
+		this.method_args = Arrays.asList(m.getParameters());
 	}
 
 	public String getReplacementText() {
@@ -69,6 +75,10 @@ public class CompletionText {
 
 	public String getSummary() {
 		return summary;
+	}
+	
+	public List<Parameter> getMethodArgs() {
+		return method_args;
 	}
 
 	public AbstractCompletion getCompletion(final CompletionProvider provider, final String replacementText) {
