@@ -413,7 +413,7 @@ public class ClassUtil {
 		final Parameter[] params = method.getParameters();
 		if (params.length > 0) {
 			for (final Parameter parameter : params) {
-				replacementHeader.append(parameter.getType().getSimpleName()).append(", ");
+				replacementHeader.append(parameter.getType().getSimpleName()).append(" ").append(parameter.getName()).append(", ");
 			}
 			replacementHeader.setLength(replacementHeader.length() - 2); // remove trailing ', ';
 		}
