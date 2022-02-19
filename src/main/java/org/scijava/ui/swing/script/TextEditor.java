@@ -218,7 +218,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			openMacroFunctions, decreaseFontSize, increaseFontSize, chooseFontSize,
 			chooseTabSize, gitGrep, replaceTabsWithSpaces,
 			replaceSpacesWithTabs, toggleWhiteSpaceLabeling, zapGremlins,
-			savePreferences, toggleAutoCompletionMenu, openClassOrPackageHelp;
+			savePreferences, toggleAutoCompletionMenu, toggleAutoCompletionKeyRequired,
+			openClassOrPackageHelp;
 	private RecentFilesMenuItem openRecent;
 	private JMenu gitMenu, tabsMenu, fontSizeMenu, tabSizeMenu, toolsMenu,
 			runMenu, whiteSpaceMenu;
@@ -605,6 +606,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		toggleAutoCompletionMenu.setSelected(prefService.getBoolean(TextEditor.class, "autoComplete", true));
 		toggleAutoCompletionMenu.addChangeListener(e -> toggleAutoCompletion());
 		options.add(toggleAutoCompletionMenu);
+		toggleAutoCompletionKeyRequired = new JCheckBoxMenuItem("Auto-completion Requires Ctrl+Space");
+		toggleAutoCompletionKeyRequired.setSelected(prefService.getBoolean(TextEditor.class, "autoCompleteKeyRequired", true));
+		toggleAutoCompletionKeyRequired.addChangeListener(e -> toggleAutoCompletionKeyRequired());
+		options.add(toggleAutoCompletionKeyRequired);
 
 		options.addSeparator();
 		savePreferences = addToMenu(options, "Save Preferences", 0, 0);
@@ -1466,6 +1471,14 @@ public class TextEditor extends JFrame implements ActionListener,
 			editorPane.setAutoCompletionEnabled(toggleAutoCompletionMenu.isSelected());
 		}
 		prefService.put(TextEditor.class, "autoComplete", toggleAutoCompletionMenu.isSelected());
+	}
+
+	private void toggleAutoCompletionKeyRequired() {
+		for (int i = 0; i < tabbed.getTabCount(); i++) {
+			final EditorPane editorPane = getEditorPane(i);
+			editorPane.setAutoCompletionEnabled(toggleAutoCompletionKeyRequired.isSelected());
+		}
+		prefService.put(TextEditor.class, "autoCompleteKeyRequired", toggleAutoCompletionKeyRequired.isSelected());
 	}
 
 	protected boolean handleTabsMenu(final Object source) {

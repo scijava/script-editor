@@ -523,6 +523,14 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		setLanguage(currentLanguage);
 	}
 
+	private boolean autoCompletionKeyRequired = false;
+	void setAutoCompletionKeyRequired(boolean value) {
+		autoCompletionKeyRequired = value;
+	}
+	public boolean getAutoCompletionKeyRequired() {
+		return autoCompletionKeyRequired;
+	}
+
 	/**
 	 * Get file currently open in this {@link EditorPane}.
 	 *
