@@ -45,6 +45,7 @@ public class CompletionText {
 	private String description;
 	private String summary;
 	private List<Parameter> method_args = Collections.emptyList();
+	private String method_returnType = null;
 
 	public CompletionText(final String replacementText) {
 		this(replacementText, (String)null, (String)null);
@@ -63,6 +64,7 @@ public class CompletionText {
 	public CompletionText(final String replacementText, final Class<?> c, final Method m) {
 		this(replacementText, ClassUtil.getSummaryCompletion(m, c), null);
 		this.method_args = Arrays.asList(m.getParameters());
+		this.method_returnType = m.getReturnType().getCanonicalName();
 	}
 
 	public String getReplacementText() {
@@ -79,6 +81,10 @@ public class CompletionText {
 	
 	public List<Parameter> getMethodArgs() {
 		return method_args;
+	}
+	
+	public String getReturnType() {
+		return method_returnType;
 	}
 
 	public AbstractCompletion getCompletion(final CompletionProvider provider, final String replacementText) {
