@@ -352,7 +352,7 @@ public class ClassUtil {
 	}
 
 	private static String getDocPackage(final String classCanonicalName) {
-		//TODO: Do this programatically
+		//TODO: Do this programmatically
 		if (classCanonicalName.startsWith("ij."))
 			return "ImageJ1";
 		else if (classCanonicalName.startsWith("sc.fiji"))
@@ -418,8 +418,7 @@ public class ClassUtil {
 			replacementHeader.setLength(replacementHeader.length() - 2); // remove trailing ', ';
 		}
 		replacementHeader.append(")");
-		replacementHeader.replace(bIndex, bIndex + 1, "</b>("); // In header, highlight only method name for extra
-																// contrast
+		replacementHeader.replace(bIndex, bIndex + 1, "</b>("); // In header, highlight only method name for extra contrast
 		summary.append("<b>").append(replacementHeader);
 		summary.append("<DL>");
 		summary.append("<DT><b>Returns:</b>");
