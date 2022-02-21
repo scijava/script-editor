@@ -188,7 +188,7 @@ public class TextEditorTab extends JSplitPane {
 		bottom.add(killit, bc);
 		
 		bc.gridx = 3;
-		incremental = new JCheckBox("persistent");
+		incremental = new JCheckBox("Persistent");
 		incremental.setEnabled(true);
 		incremental.setSelected(false);
 		bottom.add(incremental, bc);
@@ -291,7 +291,7 @@ public class TextEditorTab extends JSplitPane {
 						+ "and shift+up/down arrow work like arrow keys before for caret movement\n"
 						+ "within a multi-line prompt."
 						;
-				JOptionPane.showMessageDialog(textEditor, msg, "REPL help", JOptionPane.INFORMATION_MESSAGE);
+				JOptionPane.showMessageDialog(textEditor, msg, "REPL Help", JOptionPane.INFORMATION_MESSAGE);
 			}
 		});
 		prompt_panel.add(prompt_help, bc);

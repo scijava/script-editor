@@ -32,7 +32,6 @@ package org.scijava.ui.swing.script;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Toolkit;
@@ -123,6 +122,7 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
@@ -212,7 +212,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			close, undo, redo, cut, copy, paste, find, replace, selectAll, kill,
 			gotoLine, makeJar, makeJarWithSource, removeUnusedImports, sortImports,
 			removeTrailingWhitespace, findNext, findPrevious, openHelp, addImport,
-			clearScreen, nextError, previousError, openHelpWithoutFrames, nextTab,
+			//clearScreen, redundant with "Clear" JButton
+			nextError, previousError, openHelpWithoutFrames, nextTab,
 			previousTab, runSelection, extractSourceJar, toggleBookmark,
 			listBookmarks, openSourceForClass, openSourceForMenuItem,
 			openMacroFunctions, decreaseFontSize, increaseFontSize, chooseFontSize,
@@ -305,14 +306,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		openRecent = new RecentFilesMenuItem(prefService, this);
 		openRecent.setMnemonic(KeyEvent.VK_R);
 		file.add(openRecent);
+		file.addSeparator();
 		save = addToMenu(file, "Save", KeyEvent.VK_S, ctrl);
 		save.setMnemonic(KeyEvent.VK_S);
-		saveas = addToMenu(file, "Save as...", 0, 0);
+		saveas = addToMenu(file, "Save As...", 0, 0);
 		saveas.setMnemonic(KeyEvent.VK_A);
 		file.addSeparator();
-		makeJar = addToMenu(file, "Export as .jar", 0, 0);
+		makeJar = addToMenu(file, "Export as JAR", 0, 0);
 		makeJar.setMnemonic(KeyEvent.VK_E);
-		makeJarWithSource = addToMenu(file, "Export as .jar (with source)", 0, 0);
+		makeJarWithSource = addToMenu(file, "Export as JAR (With Source)", 0, 0);
 		makeJarWithSource.setMnemonic(KeyEvent.VK_X);
 		file.addSeparator();
 		close = addToMenu(file, "Close", KeyEvent.VK_W, ctrl);
@@ -330,7 +332,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		cut = addToMenu(edit, "Cut", KeyEvent.VK_X, ctrl);
 		copy = addToMenu(edit, "Copy", KeyEvent.VK_C, ctrl);
 		paste = addToMenu(edit, "Paste", KeyEvent.VK_V, ctrl);
-		edit.addSeparator();
+		addSeparator(edit, "Find:");
 		find = addToMenu(edit, "Find...", KeyEvent.VK_F, ctrl);
 		find.setMnemonic(KeyEvent.VK_F);
 		findNext = addToMenu(edit, "Find Next", KeyEvent.VK_F3, 0);
@@ -338,16 +340,18 @@ public class TextEditor extends JFrame implements ActionListener,
 		findPrevious = addToMenu(edit, "Find Previous", KeyEvent.VK_F3, shift);
 		findPrevious.setMnemonic(KeyEvent.VK_P);
 		replace = addToMenu(edit, "Find and Replace...", KeyEvent.VK_H, ctrl);
-		gotoLine = addToMenu(edit, "Goto line...", KeyEvent.VK_G, ctrl);
+
+		addSeparator(edit, "Goto:");
+		gotoLine = addToMenu(edit, "Goto Line...", KeyEvent.VK_G, ctrl);
 		gotoLine.setMnemonic(KeyEvent.VK_G);
 		toggleBookmark = addToMenu(edit, "Toggle Bookmark", KeyEvent.VK_B, ctrl);
 		toggleBookmark.setMnemonic(KeyEvent.VK_B);
-		listBookmarks = addToMenu(edit, "List Bookmarks", 0, 0);
+		listBookmarks = addToMenu(edit, "List Bookmarks...", 0, 0);
 		listBookmarks.setMnemonic(KeyEvent.VK_O);
-		edit.addSeparator();
 
-		clearScreen = addToMenu(edit, "Clear output panel", 0, 0);
-		clearScreen.setMnemonic(KeyEvent.VK_L);
+		// This is redundant with 'Clear' JButton
+//		clearScreen = addToMenu(edit, "Clear output panel", 0, 0);
+//		clearScreen.setMnemonic(KeyEvent.VK_L);
 
 		zapGremlins = addToMenu(edit, "Zap Gremlins", 0, 0);
 
@@ -456,12 +460,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		compileAndRun.setMnemonic(KeyEvent.VK_R);
 
 		runSelection =
-			addToMenu(runMenu, "Run selected code", KeyEvent.VK_R, ctrl | shift);
+			addToMenu(runMenu, "Run Selected Code", KeyEvent.VK_R, ctrl | shift);
 		runSelection.setMnemonic(KeyEvent.VK_S);
 
 		compile = addToMenu(runMenu, "Compile", KeyEvent.VK_C, ctrl | shift);
 		compile.setMnemonic(KeyEvent.VK_C);
-		autoSave = new JCheckBoxMenuItem("Auto-save before compiling");
+		autoSave = new JCheckBoxMenuItem("Auto-save Before Compiling");
 		runMenu.add(autoSave);
 
 		runMenu.addSeparator();
@@ -472,7 +476,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		runMenu.addSeparator();
 
-		kill = addToMenu(runMenu, "Kill running script...", 0, 0);
+		kill = addToMenu(runMenu, "Kill Running Script...", 0, 0);
 		kill.setMnemonic(KeyEvent.VK_K);
 		kill.setEnabled(false);
 
@@ -539,14 +543,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		options.setMnemonic(KeyEvent.VK_O);
 
 		// Font adjustments
+		addSeparator(options, "Font:");
 		decreaseFontSize =
-			addToMenu(options, "Decrease font size", KeyEvent.VK_MINUS, ctrl);
+			addToMenu(options, "Decrease Font Size", KeyEvent.VK_MINUS, ctrl);
 		decreaseFontSize.setMnemonic(KeyEvent.VK_D);
 		increaseFontSize =
-			addToMenu(options, "Increase font size", KeyEvent.VK_PLUS, ctrl);
+			addToMenu(options, "Increase Font Size", KeyEvent.VK_PLUS, ctrl);
 		increaseFontSize.setMnemonic(KeyEvent.VK_C);
 
-		fontSizeMenu = new JMenu("Font sizes");
+		fontSizeMenu = new JMenu("Font Size");
 		fontSizeMenu.setMnemonic(KeyEvent.VK_Z);
 		final boolean[] fontSizeShortcutUsed = new boolean[10];
 		final ButtonGroup buttonGroup = new ButtonGroup();
@@ -828,8 +833,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		});
 
-		final Font font = new Font("Courier", Font.PLAIN, 12);
-		errorScreen.setFont(font);
+		errorScreen.setFont(getEditorPane().getFont());
 		errorScreen.setEditable(false);
 		errorScreen.setLineWrap(true);
 
@@ -1397,13 +1401,13 @@ public class TextEditor extends JFrame implements ActionListener,
 			.convertTabsToSpaces();
 		else if (source == replaceSpacesWithTabs) getTextArea()
 			.convertSpacesToTabs();
-		else if (source == clearScreen) {
-			getTab().getScreen().setText("");
-		}
+//		else if (source == clearScreen) {
+//			getTab().getScreen().setText("");
+//		}
 		else if (source == zapGremlins) zapGremlins();
-		else if (source == toggleAutoCompletionMenu) {
-			toggleAutoCompletion();
-		}
+//		else if (source == toggleAutoCompletionMenu) {
+//			toggleAutoCompletion();
+//		}
 		else if (source == savePreferences) {
 			getEditorPane().savePreferences(tree.getTopLevelFoldersString());
 		}
@@ -1558,9 +1562,11 @@ public class TextEditor extends JFrame implements ActionListener,
 			final TextEditorTab tab = (TextEditorTab) tabbed.getComponentAt(i);
 			tab.editorPane.getBookmarks(tab, bookmarks);
 		}
-
-		final BookmarkDialog dialog = new BookmarkDialog(this, bookmarks);
-		dialog.setVisible(true);
+		if (bookmarks.isEmpty()) {
+			JOptionPane.showMessageDialog(this, "No Bookmarks currently exist.");
+		} else {
+			new BookmarkDialog(this, bookmarks).setVisible(true);
+		}
 	}
 
 	public boolean reload() {
@@ -3133,5 +3139,24 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private void changeFontSize(final JTextArea a, final float size) {
 		a.setFont(a.getFont().deriveFont(size));
+	}
+
+	private static void addSeparator(final JMenu menu, final String header) {
+		final JLabel label = new JLabel(header);
+		// label.setHorizontalAlignment(SwingConstants.LEFT);
+		label.setEnabled(false);
+		label.setForeground(getDisabledComponentColor());
+		if (menu.getMenuComponentCount() > 1) {
+			menu.addSeparator();
+		}
+		menu.add(label);
+	}
+
+	private static Color getDisabledComponentColor() {
+		try {
+			return UIManager.getColor("MenuItem.disabledForeground");
+		} catch (final Exception ignored) {
+			return Color.GRAY;
+		}
 	}
 }
