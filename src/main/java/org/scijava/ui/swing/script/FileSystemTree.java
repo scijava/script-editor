@@ -49,11 +49,15 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
+import javax.swing.JOptionPane;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
 import javax.swing.event.TreeExpansionEvent;
@@ -270,6 +274,22 @@ public class FileSystemTree extends JTree
 		getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
 		setAutoscrolls(true);
 		setScrollsOnExpand(true);
+		setExpandsSelectedPaths(true);
+		new FileDrop(this, files -> {
+			final List<File> dirs = Arrays.asList(files).stream().filter(f -> f.isDirectory())
+					.collect(Collectors.toList());
+			if (dirs.isEmpty()) {
+				JOptionPane.showMessageDialog(FileSystemTree.this, "Only folders can be dropped into the file tree.",
+						"Invalid Drop", JOptionPane.WARNING_MESSAGE);
+				return;
+			}
+			final boolean confirm = dirs.size() < 4 || (JOptionPane.showConfirmDialog(FileSystemTree.this,
+					"Confirm loading of " + dirs.size() + " folders?", "Confirm?",
+					JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION);
+			if (confirm) {
+				dirs.forEach(dir -> addRootDirectory(dir.getAbsolutePath(), true));
+			}
+		});
 		addTreeWillExpandListener(new TreeWillExpandListener() {
 			@Override
 			public void treeWillExpand(TreeExpansionEvent event) throws ExpandVetoException {
@@ -439,9 +459,10 @@ public class FileSystemTree extends JTree
 					final TreePath[] p = new TreePath[1];
 					node.expandTo(dirPath, p);
 					if (null != p[0]) {
-						getModel().reload();
+						//getModel().reload(); // this will collapse all nodes
 						expandPath(p[0]);
-						scrollPathToVisible(p[0]);
+						setSelectionPath(p[0]);
+						scrollPathToVisible(p[0]); //spurious!?
 						return;
 					}
 				}
@@ -449,7 +470,8 @@ public class FileSystemTree extends JTree
 		}
 		// Else, append it as a new root
 		getModel().insertNodeInto(new Node(dirPath), root, root.getChildCount());
-		getModel().reload();
+		//getModel().reload(); // this will collapse all nodes
+		getModel().nodesWereInserted(root, new int[] { root.getChildCount() - 1 });
 	}
 
 	@Override
@@ -491,6 +513,7 @@ public class FileSystemTree extends JTree
 
 	public void destroy() {
 		dir_watcher.interrupt();
+		FileDrop.remove(this);
 	}
 
 	private class DirectoryWatcher extends Thread {

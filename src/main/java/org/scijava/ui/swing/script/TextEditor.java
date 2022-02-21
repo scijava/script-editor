@@ -31,6 +31,7 @@ package org.scijava.ui.swing.script;
 
 import java.awt.Color;
 import java.awt.Cursor;
+import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -114,6 +115,7 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
@@ -129,6 +131,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Position;
+import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
@@ -633,17 +636,23 @@ public class TextEditor extends JFrame implements ActionListener,
 			new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 		
 		final JPanel tree_panel = new JPanel();
-		final JButton add_directory = new JButton("[+]");
+		final JButton add_directory = new JButton("<HTML>&#43;");
 		add_directory.setToolTipText("Add a directory");
-		final JButton remove_directory = new JButton("[-]");
+		final JButton remove_directory = new JButton("<HTML>&#8722;");
 		remove_directory.setToolTipText("Remove a top-level directory");
 		
-		final JTextField filter = new JTextField("filter...");
-		filter.setForeground(Color.gray);
-		filter.setToolTipText("Use leading '/' for regular expressions");
-		
+		final JTextField filter = new JTextField("File Filter...");
+		filter.setForeground(Color.GRAY);
+		filter.setToolTipText("<HTML><p>Use leading '/' for regular expressions. E.g.:</p>"
+				+ "<dl>"
+				+ "<dt><tt>/py$</tt> Displays only filenames ending with <i>py</i></dt>"
+				+ "<dt><tt>/^Demo</tt> Displays only filenames starting with <i>Demo</i></dt>"
+				+ "</dl>"
+				+ "<p>Press Enter to apply. Clear to reset.</p>");
 		tree = new FileSystemTree(log);
 		tree.ignoreExtension("class");
+		addContextualMenuToTree(tree);
+		
 		dragSource = new DragSource();
 		dragSource.createDefaultDragGestureRecognizer(tree, DnDConstants.ACTION_COPY, new DragAndDrop());
 		tree.setMinimumSize(new Dimension(200, 600));
@@ -682,45 +691,60 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		});
 		add_directory.addActionListener(e -> {
-			final JFileChooser c = new JFileChooser("Choose a directory");
+			final String folders = tree.getTopLevelFoldersString();
+			final String lastFolder = folders.substring(folders.lastIndexOf(":") + 1);
+			final JFileChooser c = new JFileChooser();
+			c.setDialogTitle("Choose Top-Level Folder");
+			c.setCurrentDirectory(new File(lastFolder));
 			c.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 			c.setFileHidingEnabled(true); // hide hidden files
+			c.setAcceptAllFileFilterUsed(false); // disable "All files" as it has no meaning here
+			c.setApproveButtonText("Choose Folder");
+			c.setMultiSelectionEnabled(false);
+			c.setDragEnabled(true);
+			new FileDrop(c, files -> {
+				if (files.length == 0) return;
+				final File firstFile = files[0];
+				c.setCurrentDirectory((firstFile.isDirectory()) ? firstFile : firstFile.getParentFile());
+				c.rescanCurrentDirectory();
+			});
 			if (JFileChooser.APPROVE_OPTION == c.showOpenDialog(getContentPane())) {
 				final File f = c.getSelectedFile();
 				if (f.isDirectory()) tree.addRootDirectory(f.getAbsolutePath(), false);
 			}
+			FileDrop.remove(c);
 		});
 		remove_directory.addActionListener(e -> {
 			final TreePath p = tree.getSelectionPath();
 			if (null == p) {
-				JOptionPane.showMessageDialog(TextEditor.this,
-					"Select a top-level folder first.");
+				JOptionPane.showMessageDialog(TextEditor.this, "Select a top-level folder first.", "Invalid Folder",
+						JOptionPane.ERROR_MESSAGE);
 				return;
 			}
 			if (2 == p.getPathCount()) {
 				// Is a child of the root, so it's a top-level folder
 				tree.getModel().removeNodeFromParent(//
-					(FileSystemTree.Node) p.getLastPathComponent());
-			}
-			else {
-				JOptionPane.showMessageDialog(TextEditor.this,
-					"Can only remove top-level folders.");
+						(FileSystemTree.Node) p.getLastPathComponent());
+			} else {
+				JOptionPane.showMessageDialog(TextEditor.this, "Can only remove top-level folders.", "Invalid Folder",
+						JOptionPane.ERROR_MESSAGE);
 			}
 		});
 		filter.addFocusListener(new FocusListener() {
 			@Override
 			public void focusLost(FocusEvent e) {
 				if (0 == filter.getText().length()) {
-					filter.setForeground(Color.gray);
-					filter.setText("filter...");
+					filter.setForeground(Color.GRAY);
+					filter.setText("File Filter...");
+					tree.setFileFilter(((f) -> true)); // any // no need to press enter
 				}
 			}
 			
 			@Override
 			public void focusGained(FocusEvent e) {
-				if (filter.getForeground() == Color.gray) {
+				if (filter.getForeground() == Color.GRAY) {
 					filter.setText("");
-					filter.setForeground(Color.black);
+					filter.setForeground(tree.getForeground());
 				}
 			}
 		});
@@ -742,10 +766,11 @@ public class TextEditor extends JFrame implements ActionListener,
 							if ('^' != regex.charAt(1)) regex = "^.*" + regex;
 							if ('$' != regex.charAt(regex.length() -1)) regex += ".*$";
 							pattern = Pattern.compile(regex);
-							filter.setForeground(Color.black);
-						} catch (final PatternSyntaxException pse) {
+							filter.setForeground(tree.getForeground());
+						} catch (final PatternSyntaxException | StringIndexOutOfBoundsException pse) {
+							// regex is too short to be parseable or is invalid
 							log.warn(pse.getLocalizedMessage());
-							filter.setForeground(Color.red);
+							filter.setForeground(Color.RED);
 							pattern = null;
 							return;
 						}
@@ -754,12 +779,12 @@ public class TextEditor extends JFrame implements ActionListener,
 						}
 					} else {
 						// Interpret as a literal match
-						tree.setFileFilter((f) -> -1 != f.getName().indexOf(text));
+						tree.setFileFilter((f) -> -1 != f.getName().toLowerCase().indexOf(text.toLowerCase()));
 					}
 				} else {
 					// Upon re-typing something
-					if (filter.getForeground() == Color.red) {
-						filter.setForeground(Color.black);
+					if (filter.getForeground() == Color.RED) {
+						filter.setForeground(tree.getForeground());
 					}
 				}
 			}
@@ -791,7 +816,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		bc.fill = GridBagConstraints.BOTH;
 		tree_panel.add(tree, bc);
 		final JScrollPane scrolltree = new JScrollPane(tree_panel);
-		scrolltree.setBackground(Color.white);
+		//scrolltree.setBackground(Color.white); // No hardwired constants for compatibility w/ dark themes
 		scrolltree.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(0,5,0,5)));
 		scrolltree.setPreferredSize(new Dimension(200, 600));
 		body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrolltree, tabbed);
@@ -889,6 +914,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		@Override
 		public void dragGestureRecognized(DragGestureEvent dge) {
 			TreePath path = tree.getSelectionPath();
+			if (path == null) // nothing is currently selected
+				return;
 			final String filepath = (String)((FileSystemTree.Node) path.getLastPathComponent()).getUserObject();
 			dragSource.startDrag(dge, DragSource.DefaultCopyDrop, new Transferable() {
 				@Override
@@ -3158,5 +3185,52 @@ public class TextEditor extends JFrame implements ActionListener,
 		} catch (final Exception ignored) {
 			return Color.GRAY;
 		}
+	}
+
+	private void addContextualMenuToTree(final FileSystemTree tree) {
+		final JPopupMenu popup = new JPopupMenu();
+		JMenuItem jmi = new JMenuItem("Collapse All");
+		jmi.addActionListener(e -> {
+			SwingUtilities.invokeLater(() -> {
+				for (int i = tree.getRowCount() - 1; i >= 0; i--)
+					tree.collapseRow(i);
+			});
+		});
+		popup.add(jmi);
+		jmi = new JMenuItem("Expand One Level");
+		jmi.addActionListener(e -> {
+			SwingUtilities.invokeLater(() -> {
+				for (int i = tree.getRowCount() - 1; i >= 0; i--)
+					tree.expandRow(i);
+			});
+		});
+		popup.add(jmi);
+		popup.addSeparator();
+		jmi = new JMenuItem("Show in System Explorer");
+		jmi.addActionListener(e -> {
+			final TreePath path = tree.getSelectionPath();
+			if (path == null) {
+				JOptionPane.showMessageDialog(TextEditor.this, "No items are currently selected.",
+						"Invalid Selection", JOptionPane.INFORMATION_MESSAGE);
+				return;
+			}
+			try {
+				final String filepath = (String) ((FileSystemTree.Node) path.getLastPathComponent()).getUserObject();
+				final File f = new File(filepath);
+				Desktop.getDesktop().open((f.isDirectory()) ? f : f.getParentFile());
+			} catch (final Exception | Error ignored) {
+				JOptionPane.showMessageDialog(TextEditor.this,
+						"Folder of selected item does not seem to be accessible.", "Error", JOptionPane.ERROR_MESSAGE);
+			}
+		});
+		popup.add(jmi);
+		popup.addSeparator();
+		jmi = new JMenuItem("Reset Tree to Home Folder");
+		jmi.addActionListener(e -> {
+			((DefaultMutableTreeNode) tree.getModel().getRoot()).removeAllChildren();
+			tree.addTopLevelFoldersFrom(System.getProperty("user.home"));
+		});
+		popup.add(jmi);
+		tree.setComponentPopupMenu(popup);
 	}
 }
