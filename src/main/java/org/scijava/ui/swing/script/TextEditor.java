@@ -178,6 +178,8 @@ import org.scijava.widget.FileWidget;
  *
  * @author Johannes Schindelin
  * @author Jonathan Hale
+ * @author Albert Cardona
+ * @author Tiago Ferreira
  */
 public class TextEditor extends JFrame implements ActionListener,
 	ChangeListener, CloseConfirmable, DocumentListener
@@ -210,14 +212,14 @@ public class TextEditor extends JFrame implements ActionListener,
 			close, undo, redo, cut, copy, paste, find, replace, selectAll, kill,
 			gotoLine, makeJar, makeJarWithSource, removeUnusedImports, sortImports,
 			removeTrailingWhitespace, findNext, findPrevious, openHelp, addImport,
-			//clearScreen, redundant with "Clear" JButton
 			nextError, previousError, openHelpWithoutFrames, nextTab,
 			previousTab, runSelection, extractSourceJar, toggleBookmark,
-			listBookmarks, openSourceForClass, openSourceForMenuItem,
+			listBookmarks, openSourceForClass,
+			//openSourceForMenuItem, // this never had an actionListener!??
 			openMacroFunctions, decreaseFontSize, increaseFontSize, chooseFontSize,
 			chooseTabSize, gitGrep, replaceTabsWithSpaces,
 			replaceSpacesWithTabs, toggleWhiteSpaceLabeling, zapGremlins,
-			savePreferences, toggleAutoCompletionMenu,
+			toggleAutoCompletionMenu,
 			openClassOrPackageHelp;
 	private RecentFilesMenuItem openRecent;
 	private JMenu gitMenu, tabsMenu, fontSizeMenu, tabSizeMenu, toolsMenu,
@@ -357,10 +359,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		listBookmarks = addToMenu(edit, "List Bookmarks...", 0, 0);
 		listBookmarks.setMnemonic(KeyEvent.VK_O);
 
-		// This is redundant with 'Clear' JButton
-//		clearScreen = addToMenu(edit, "Clear output panel", 0, 0);
-//		clearScreen.setMnemonic(KeyEvent.VK_L);
-
 		addSeparator(edit, "Utilities:");
 		removeTrailingWhitespace = addToMenu(edit, "Remove Trailing Whitespace", 0, 0);
 		removeTrailingWhitespace.setMnemonic(KeyEvent.VK_W);
@@ -478,25 +476,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		sortImports.setMnemonic(KeyEvent.VK_S);
 
 		addSeparator(toolsMenu, "Source & APIs:");
-		openHelpWithoutFrames =
-			addToMenu(toolsMenu, "Open Help for Class...", 0, 0);
-		openHelpWithoutFrames.setMnemonic(KeyEvent.VK_O);
-		openHelp =
-			addToMenu(toolsMenu, "Open Help for Class (with frames)...", 0, 0);
-		openHelp.setMnemonic(KeyEvent.VK_P);
-		openClassOrPackageHelp = addToMenu(toolsMenu, "Source or javadoc for class or package...", 0, 0);
-		openClassOrPackageHelp.setMnemonic(KeyEvent.VK_S);
-		openMacroFunctions =
-			addToMenu(toolsMenu, "Open Help on Macro Functions...", 0, 0);
-		openMacroFunctions.setMnemonic(KeyEvent.VK_H);
-		extractSourceJar = addToMenu(toolsMenu, "Extract source .jar...", 0, 0);
+		extractSourceJar = addToMenu(toolsMenu, "Extract Source Jar...", 0, 0);
 		extractSourceJar.setMnemonic(KeyEvent.VK_E);
-		openSourceForClass =
-			addToMenu(toolsMenu, "Open .java file for class...", 0, 0);
+		openSourceForClass = addToMenu(toolsMenu, "Open Java File for Class...", 0, 0);
 		openSourceForClass.setMnemonic(KeyEvent.VK_J);
-		openSourceForMenuItem =
-			addToMenu(toolsMenu, "Open .java file for menu item...", 0, 0);
-		openSourceForMenuItem.setMnemonic(KeyEvent.VK_M);
+		//openSourceForMenuItem = addToMenu(toolsMenu, "Open Java File for Menu Item...", 0, 0);
+		//openSourceForMenuItem.setMnemonic(KeyEvent.VK_M);
 		mbar.add(toolsMenu);
 
 		// -- Git menu --
@@ -757,7 +742,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		addAccelerator(compileAndRun, KeyEvent.VK_F5, 0, true);
 		addAccelerator(nextTab, KeyEvent.VK_PAGE_DOWN, ctrl, true);
 		addAccelerator(previousTab, KeyEvent.VK_PAGE_UP, ctrl, true);
-
 		addAccelerator(increaseFontSize, KeyEvent.VK_EQUALS, ctrl | shift, true);
 
 		// make sure that the window is not closed by accident
@@ -1342,7 +1326,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			commandService.run(ChooseTabSize.class, true, "editor", this);
 		}
 		else if (source == addImport) {
-			addImport(getSelectedClassNameOrAsk());
+			addImport(getSelectedClassNameOrAsk("Add import (complete qualified name of class/package)",
+					"Which Class to Import?"));
 		}
 		else if (source == removeUnusedImports) new TokenFunctions(getTextArea())
 			.removeUnusedImports();
@@ -1361,9 +1346,6 @@ public class TextEditor extends JFrame implements ActionListener,
 //		else if (source == toggleAutoCompletionMenu) {
 //			toggleAutoCompletion();
 //		}
-		else if (source == savePreferences) {
-			getEditorPane().savePreferences(tree.getTopLevelFoldersString());
-		}
 		else if (source == openHelp) openHelp(null);
 		else if (source == openHelpWithoutFrames) openHelp(null, false);
 		else if (source == openClassOrPackageHelp) openClassOrPackageHelp(null);
@@ -1375,7 +1357,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		else if (source == extractSourceJar) extractSourceJar();
 		else if (source == openSourceForClass) {
-			final String className = getSelectedClassNameOrAsk();
+			final String className = getSelectedClassNameOrAsk("Class (Fully qualified name):", "Which Class?");
 			if (className != null) {
 				try {
 					final String url = new FileFunctions(this).getSourceURL(className);
@@ -1911,31 +1893,31 @@ public class TextEditor extends JFrame implements ActionListener,
 		final boolean isCompileable =
 			language != null && language.isCompiledLanguage();
 
-		runMenu.setVisible(isRunnable);
+		runMenu.setEnabled(isRunnable);
 		compileAndRun.setText(isCompileable ? "Compile and Run" : "Run");
 		compileAndRun.setEnabled(isRunnable);
-		runSelection.setVisible(isRunnable && !isCompileable);
-		compile.setVisible(isCompileable);
-		autoSave.setVisible(isCompileable);
-		makeJar.setVisible(isCompileable);
-		makeJarWithSource.setVisible(isCompileable);
+		runSelection.setEnabled(isRunnable && !isCompileable);
+		compile.setEnabled(isCompileable);
+		autoSave.setEnabled(isCompileable);
+		makeJar.setEnabled(isCompileable);
+		makeJarWithSource.setEnabled(isCompileable);
 
 		final boolean isJava =
 			language != null && language.getLanguageName().equals("Java");
-		addImport.setVisible(isJava);
-		removeUnusedImports.setVisible(isJava);
-		sortImports.setVisible(isJava);
-		openSourceForMenuItem.setVisible(isJava);
+		addImport.setEnabled(isJava);
+		removeUnusedImports.setEnabled(isJava);
+		sortImports.setEnabled(isJava);
+		//openSourceForMenuItem.setEnabled(isJava);
 
 		final boolean isMacro =
 			language != null && language.getLanguageName().equals("ImageJ Macro");
-		openMacroFunctions.setVisible(isMacro);
-		openSourceForClass.setVisible(!isMacro);
+		openMacroFunctions.setEnabled(isMacro);
+		openSourceForClass.setEnabled(!isMacro);
 
-		openHelp.setVisible(!isMacro && isRunnable);
-		openHelpWithoutFrames.setVisible(!isMacro && isRunnable);
-		nextError.setVisible(!isMacro && isRunnable);
-		previousError.setVisible(!isMacro && isRunnable);
+		openHelp.setEnabled(!isMacro && isRunnable);
+		openHelpWithoutFrames.setEnabled(!isMacro && isRunnable);
+		nextError.setEnabled(!isMacro && isRunnable);
+		previousError.setEnabled(!isMacro && isRunnable);
 
 		final boolean isInGit = getEditorPane().getGitDirectory() != null;
 		gitMenu.setVisible(isInGit);
@@ -2466,19 +2448,19 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 	}
 
-	public String getSelectedTextOrAsk(final String label) {
+	public String getSelectedTextOrAsk(final String msg, final String title) {
 		String selection = getTextArea().getSelectedText();
 		if (selection == null || selection.indexOf('\n') >= 0) {
-			selection =
-				JOptionPane.showInputDialog(this, label + ":", label + "...",
-					JOptionPane.QUESTION_MESSAGE);
-			if (selection == null) return null;
+			selection = JOptionPane.showInputDialog(this, msg + "\nAlternatively, select appropriate text and re-run.",
+					title, JOptionPane.QUESTION_MESSAGE);
+			if (selection == null)
+				return null;
 		}
 		return selection;
 	}
 
-	public String getSelectedClassNameOrAsk() {
-		String className = getSelectedTextOrAsk("Class name");
+	public String getSelectedClassNameOrAsk(final String msg, final String title) {
+		String className = getSelectedTextOrAsk(msg, title);
 		if (className != null) className = className.trim();
 		return className;
 	}
@@ -2640,7 +2622,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * @param withFrames
 	 */
 	public void openHelp(String className, final boolean withFrames) {
-		if (className == null) className = getSelectedClassNameOrAsk();
+		if (className == null) className = getSelectedClassNameOrAsk("Class (fully qualified name):", "Online Javadocs...");
 		if (className == null) return;
 		final Class<?> c = Types.load(className, false);
 
@@ -2704,7 +2686,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	 */
 	public void openClassOrPackageHelp(String text) {
 		if (text == null)
-			text = getSelectedClassNameOrAsk();
+			text = getSelectedClassNameOrAsk("Class or package (complete or partial name):", "Which Class/Package?");
 		if (null == text) return;
 		new Thread(new FindClassSourceAndJavadoc(text)).start(); // fork away from event dispatch thread
 	}
@@ -2724,7 +2706,11 @@ public class TextEditor extends JFrame implements ActionListener,
 				setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 			}
 			if (matches.isEmpty()) {
-				JOptionPane.showMessageDialog(getEditorPane(), "No info found for:\n'" + text +'"');
+				if (JOptionPane.showConfirmDialog(TextEditor.this,
+						"No info found for:\n'" + text + "'\nSearch for it on the web?", "Search the Web?",
+						JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+					openURL("https://duckduckgo.com/?q=" + text.trim().replace(" ", "+"));
+				}
 				return;
 			}
 			final JPanel panel = new JPanel();
@@ -2830,7 +2816,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	private void error(final String message) {
-		JOptionPane.showMessageDialog(this, message);
+		JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
 	}
 
 	public void handleException(final Throwable e) {
@@ -3169,10 +3155,19 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private JMenu helpMenu() {
 		final JMenu menu = new JMenu("Help");
-		//addSeparator(menu, "Online Resources");
+		addSeparator(menu, "Contextual Help:");
+		openHelpWithoutFrames = addToMenu(menu, "   Open Help for Class...", 0, 0);
+		openHelpWithoutFrames.setMnemonic(KeyEvent.VK_O);
+		openHelp = addToMenu(menu, "   Open Help for Class (With Frames)...", 0, 0);
+		openHelp.setMnemonic(KeyEvent.VK_P);
+		openClassOrPackageHelp = addToMenu(menu, "   Lookup Class or Package...", 0, 0);
+		openClassOrPackageHelp.setMnemonic(KeyEvent.VK_S);
+		openMacroFunctions = addToMenu(menu, "   Open Help on Macro Function(s)...", 0, 0);
+		openMacroFunctions.setMnemonic(KeyEvent.VK_H);
+		addSeparator(menu, "Online Resources:");
 		menu.add(helpMenuItem("Image.sc Forum ", "https://forum.image.sc/"));
 		menu.add(helpMenuItem("ImageJ Search Portal", "https://search.imagej.net/"));
-		menu.addSeparator();
+		//menu.addSeparator();
 		menu.add(helpMenuItem("SciJava Javadoc Portal", "https://javadoc.scijava.org/"));
 		menu.add(helpMenuItem("SciJava Maven Repository", "https://maven.scijava.org/"));
 		menu.addSeparator();
@@ -3180,23 +3175,25 @@ public class TextEditor extends JFrame implements ActionListener,
 		menu.add(helpMenuItem("SciJava on GitHub", "https://github.com/scijava/"));
 		menu.addSeparator();
 		menu.add(helpMenuItem("IJ1 Macro Functions", "https://imagej.nih.gov/ij/developer/macro/functions.html"));
-		menu.addSeparator();
 		menu.add(helpMenuItem("ImageJ Docs: Development", "https://imagej.net/develop/"));
 		menu.add(helpMenuItem("ImageJ Docs: Scripting", "https://imagej.net/scripting/"));
+		menu.addSeparator();
 		menu.add(helpMenuItem("ImageJ Notebook Tutorials", "https://github.com/imagej/tutorials#readme"));
 		return menu;
 	}
 
 	private JMenuItem helpMenuItem(final String label, final String url) {
-		final JMenuItem item = new JMenuItem(label);
-		item.addActionListener(e -> {
-			try {
-				platformService.open(new URL(url));
-			} catch (final IOException ignored) {
-				error("<HTML>Web page could not be open. " + "Please visit<br>" + url + "<br>using your web browser.");
-			}
-		});
+		final JMenuItem item = new JMenuItem("   " +label); // indent entries
+		item.addActionListener(e -> openURL(url));
 		return item;
+	}
+
+	private void openURL(final String url) {
+		try {
+			platformService.open(new URL(url));
+		} catch (final IOException ignored) {
+			error("<HTML>Web page could not be open. " + "Please visit<br>" + url + "<br>using your web browser.");
+		}
 	}
 
 	private static void addSeparator(final JMenu menu, final String header) {
