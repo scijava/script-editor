@@ -79,6 +79,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -92,8 +93,6 @@ import java.util.Vector;
 import java.util.concurrent.ExecutionException;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 import java.util.zip.ZipException;
 
 import javax.script.ScriptEngine;
@@ -111,6 +110,7 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
@@ -125,11 +125,11 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Position;
-import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.Theme;
 import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
 import org.scijava.Context;
 import org.scijava.app.AppService;
@@ -184,6 +184,7 @@ public class TextEditor extends JFrame implements ActionListener,
 {
 
 	private static final Set<String> TEMPLATE_PATHS = new HashSet<>();
+	private static final int BORDER_SIZE = 4;
 	public static final String AUTO_IMPORT_PREFS = "script.editor.AutoImport";
 	public static final String WINDOW_HEIGHT = "script.editor.height";
 	public static final String WINDOW_WIDTH = "script.editor.width";
@@ -283,6 +284,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		contexts.add(context);
 		context.inject(this);
 		initializeTokenMakers();
+
+		// NB: All panes must be initialized before menus are assembled!
+		tabbed = new JTabbedPane();
+		tabbed.setBorder(BorderFactory.createEmptyBorder(0,BORDER_SIZE,0,BORDER_SIZE));
+		tree = new FileSystemTree(log);
+		final JScrollPane scrolltree = new JScrollPane(new FileSystemTreePanel(tree, context));
+		scrolltree.setBorder(BorderFactory.createEmptyBorder(0,BORDER_SIZE,0,BORDER_SIZE));
+		scrolltree.setPreferredSize(new Dimension(200, 600));
+		body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrolltree, tabbed);
 
 		// -- BEGIN MENUS --
 
@@ -621,15 +631,33 @@ public class TextEditor extends JFrame implements ActionListener,
 		// -- END MENUS --
 
 		// Add the editor and output area
-		tabbed = new JTabbedPane();
 		tabbed.addChangeListener(this);
+		new FileDrop(tabbed, files -> {
+			final ArrayList<File> filteredFiles = new ArrayList<>();
+			assembleFlatFileCollection(filteredFiles, files);
+			if (filteredFiles.isEmpty()) {
+				JOptionPane.showMessageDialog(TextEditor.this, "None of the dropped file(s) seems parseable.",
+						"Invalid Drop", JOptionPane.WARNING_MESSAGE);
+				return;
+			}
+			final boolean confirm = filteredFiles.size() < 10 || (JOptionPane.showConfirmDialog(TextEditor.this,
+					"Confirm loading of " + filteredFiles.size()+ " items?", "Confirm?",
+					JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION);
+			if (confirm) {
+				filteredFiles.forEach(f -> open(f));
+			}
+		});
 		open(null); // make sure the editor pane is added
+		getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 
-		//tabbed.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
-		getContentPane().setLayout(
-			new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
+		// Tweaks for JSplitPane
+		body.setOneTouchExpandable(true);
+		body.addPropertyChangeListener(evt -> {
+			if ("dividerLocation".equals(evt.getPropertyName())) saveWindowSizeToPrefs();
+		});
 
-		tree = new FileSystemTree(log);
+		// Tweaks for FileSystemTree
+		tree.addTopLevelFoldersFrom(getEditorPane().loadFolders()); // Restore top-level directories
 		tree.setFont(tree.getFont().deriveFont(getEditorPane().getFontSize()));
 		dragSource = new DragSource();
 		dragSource.createDefaultDragGestureRecognizer(tree, DnDConstants.ACTION_COPY, new DragAndDrop());
@@ -670,17 +698,43 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		});
 
-		// Restore top-level directories
-		tree.addTopLevelFoldersFrom(getEditorPane().loadFolders());
-
-		final JScrollPane scrolltree = new JScrollPane(new FileSystemTreePanel(tree));
-		//scrolltree.setBackground(Color.white); // No hardwired constants for compatibility w/ dark themes
-		scrolltree.setBorder(BorderFactory.createEmptyBorder(0,5,0,5));
-		scrolltree.setPreferredSize(new Dimension(200, 600));
-		body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrolltree, tabbed);
-		body.setOneTouchExpandable(true);
-		body.addPropertyChangeListener(evt -> {
-			if ("dividerLocation".equals(evt.getPropertyName())) saveWindowSizeToPrefs();
+		// Tweaks for tabbed pane
+		final JPopupMenu popup = new JPopupMenu();
+		tabbed.setComponentPopupMenu(popup);
+		final ButtonGroup bGroup = new ButtonGroup();
+		for (final String pos : new String[] { "Top", "Left", "Bottom", "Right" }) {
+			final JMenuItem jcbmi = new JCheckBoxMenuItem("Place on " + pos, "Top".equals(pos));
+			jcbmi.addItemListener(e -> {
+				switch (pos) {
+				case "Top":
+					tabbed.setTabPlacement(JTabbedPane.TOP);
+					break;
+				case "Bottom":
+					tabbed.setTabPlacement(JTabbedPane.BOTTOM);
+					break;
+				case "Left":
+					tabbed.setTabPlacement(JTabbedPane.LEFT);
+					break;
+				case "Right":
+					tabbed.setTabPlacement(JTabbedPane.RIGHT);
+					break;
+				}
+			});
+			bGroup.add(jcbmi);
+			popup.add(jcbmi);
+		}
+		tabbed.addMouseWheelListener(e -> {
+			//https://stackoverflow.com/a/38463104
+			final JTabbedPane pane = (JTabbedPane) e.getSource();
+			final int units = e.getWheelRotation();
+			final int oldIndex = pane.getSelectedIndex();
+			final int newIndex = oldIndex + units;
+			if (newIndex < 0)
+				pane.setSelectedIndex(0);
+			else if (newIndex >= pane.getTabCount())
+				pane.setSelectedIndex(pane.getTabCount() - 1);
+			else
+				pane.setSelectedIndex(newIndex);
 		});
 		getContentPane().add(body);
 
@@ -3035,6 +3089,19 @@ public class TextEditor extends JFrame implements ActionListener,
 			menu.addSeparator();
 		}
 		menu.add(label);
+	}
+
+	private static Collection<File> assembleFlatFileCollection(final Collection<File> collection, final File[] files) {
+		if (files == null) return collection; // can happen while pressing 'Esc'!?
+		for (final File file : files) {
+			if (file == null || isBinary(file))
+				continue;
+			else if (file.isDirectory())
+				assembleFlatFileCollection(collection, file.listFiles());
+			else //if (!file.isHidden())
+				collection.add(file);
+		}
+		return collection;
 	}
 
 	private static Color getDisabledComponentColor() {

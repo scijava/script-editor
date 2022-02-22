@@ -103,6 +103,7 @@ public class TextEditorTab extends JSplitPane {
 					e.rejectDrop();
 					return;
 				}
+				e.acceptDrop(DnDConstants.ACTION_COPY_OR_MOVE); // fix for InvalidDnDOperationException: No drop current
 				Transferable t = e.getTransferable();
 				if (!t.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) return;
 				try {

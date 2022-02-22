@@ -53,10 +53,20 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 
+import org.scijava.Context;
+import org.scijava.app.AppService;
+import org.scijava.plugin.Parameter;
+
+/**
+ * Convenience class for displaying a {@link FileSystemTree} with some bells and
+ * whistles, incliding a filter toolbar.
+ * 
+ * @author Albert Cardona
+ * @author Tiago Ferreira
+ */
 class FileSystemTreePanel extends JPanel {
 
 	private static final long serialVersionUID = -710040159139542578L;
@@ -65,8 +75,12 @@ class FileSystemTreePanel extends JPanel {
 	private boolean regex;
 	private boolean caseSensitive;
 
-	FileSystemTreePanel(final FileSystemTree tree) {
+	@Parameter
+	private AppService appService;
+
+	FileSystemTreePanel(final FileSystemTree tree, final Context context) {
 		this.tree = tree;
+		context.inject(this);
 		searchField = initializedField();
 		setLayout(new GridBagLayout());
 		final GridBagConstraints bc = new GridBagConstraints();
@@ -118,7 +132,7 @@ class FileSystemTreePanel extends JPanel {
 						tree.setFileFilter(((f) -> true)); // any
 						return;
 					}
-					
+
 					if (isRegexEnabled()) { // if ('/' == text.charAt(0)) {
 						// Interpret as a regular expression
 						// Attempt to compile the pattern
@@ -234,7 +248,7 @@ class FileSystemTreePanel extends JPanel {
 		});
 		popup.add(jmi);
 		popup.addSeparator();
-		jmi = new JMenuItem("Context Help...");
+		jmi = new JMenuItem("About File Explorer ...");
 		jmi.addActionListener(e -> showHelpMsg());
 		popup.add(jmi);
 		options.addActionListener(e -> popup.show(options, options.getWidth() / 2, options.getHeight() / 2));
@@ -244,35 +258,26 @@ class FileSystemTreePanel extends JPanel {
 	@SuppressWarnings("unused")
 	private boolean allTreeNodesCollapsed() {
 		for (int i = 0; i < tree.getRowCount(); i++)
-			if (!tree.isCollapsed(i)) return false;
+			if (!tree.isCollapsed(i))
+				return false;
 		return true;
 	}
 
 	private void addContextualMenuToTree() {
 		final JPopupMenu popup = new JPopupMenu();
 		JMenuItem jmi = new JMenuItem("Collapse All");
-		jmi.addActionListener(e -> {
-			SwingUtilities.invokeLater(() -> {
-				for (int i = tree.getRowCount() - 1; i >= 0; i--)
-					tree.collapseRow(i);
-			});
-		});
+		jmi.addActionListener(e -> collapseAllNodes());
 		popup.add(jmi);
-		jmi = new JMenuItem("Expand All Folders");
-		jmi.addActionListener(e -> {
-			SwingUtilities.invokeLater(() -> {
-				for (int i = tree.getRowCount() - 1; i >= 0; i--)
-					tree.expandRow(i);
-			});
-		});
+		jmi = new JMenuItem("Expand Folders");
+		jmi.addActionListener(e -> expandImmediateNodes());
 		popup.add(jmi);
 		popup.addSeparator();
 		jmi = new JMenuItem("Show in System Explorer");
 		jmi.addActionListener(e -> {
 			final TreePath path = tree.getSelectionPath();
 			if (path == null) {
-				JOptionPane.showMessageDialog(this, "No items are currently selected.",
-						"Invalid Selection", JOptionPane.INFORMATION_MESSAGE);
+				JOptionPane.showMessageDialog(this, "No items are currently selected.", "Invalid Selection",
+						JOptionPane.INFORMATION_MESSAGE);
 				return;
 			}
 			try {
@@ -280,42 +285,59 @@ class FileSystemTreePanel extends JPanel {
 				final File f = new File(filepath);
 				Desktop.getDesktop().open((f.isDirectory()) ? f : f.getParentFile());
 			} catch (final Exception | Error ignored) {
-				JOptionPane.showMessageDialog(this,
-						"Folder of selected item does not seem to be accessible.", "Error", JOptionPane.ERROR_MESSAGE);
+				JOptionPane.showMessageDialog(this, "Folder of selected item does not seem to be accessible.", "Error",
+						JOptionPane.ERROR_MESSAGE);
 			}
 		});
 		popup.add(jmi);
 		popup.addSeparator();
-		jmi = new JMenuItem("Reset Tree to Home Folder");
-		jmi.addActionListener(e -> {
-			((DefaultMutableTreeNode) tree.getModel().getRoot()).removeAllChildren();
-			tree.addTopLevelFoldersFrom(System.getProperty("user.home"));
-		});
+		jmi = new JMenuItem("Reset to Home Folder");
+		jmi.addActionListener(e -> changeRootPath(System.getProperty("user.home")));
+		popup.add(jmi);
+		jmi = new JMenuItem("Reset to Fiji.app/");
+		jmi.addActionListener(e -> changeRootPath(appService.getApp().getBaseDirectory().getAbsolutePath()));
 		popup.add(jmi);
 		tree.setComponentPopupMenu(popup);
+	}
+
+	void changeRootPath(final String path) {
+		((DefaultMutableTreeNode) tree.getModel().getRoot()).removeAllChildren();
+		tree.addTopLevelFoldersFrom(path);
+		tree.getModel().reload(); // this will collapse all nodes
+		expandImmediateNodes();
+	}
+
+	private void collapseAllNodes() {
+		for (int i = tree.getRowCount() - 1; i >= 0; i--)
+			tree.collapseRow(i);
+	}
+
+	private void expandImmediateNodes() {
+		for (int i = tree.getRowCount() - 1; i >= 0; i--)
+			tree.expandRow(i);
 	}
 
 	private void showHelpMsg() {
 		final String msg = "<HTML><div WIDTH=650>" //
 				+ "<p><b>Overview</b></p>" //
-				+ "<p>The File Explorer provides a direct view of selected folders. Changes in " //
+				+ "<p>The File Explorer pane provides a direct view of selected folders. Changes in " //
 				+ "the native file system are synchronized in real time.</p>" //
 				+ "<br><p><b>Add/Remove Folders</b></p>" //
 				+ "<p>To add a folder, use the [+] button, or drag &amp; drop folders from the native " //
 				+ "System Explorer. To remove a folder: select it, then use the [-] button. To reset "
 				+ "or reveal items: use the commands in the contextual popup menu.</p>" //
+				+ "<br><p><b>Accessing Files &amp; Paths</b></p>" //
+				+ "<p>Double-click on a file to open it. Drag &amp; drop items into the editor pane "
+				+ "to paste their paths into the active script.</p>" //
 				+ "<br><p><b>Filtering Files</b></p>" //
-				+ "<p>Filters affect only filenames (not folders) and are applied by typing a "// 
-				+ "filtering string and pressing [Enter]. Filters act only on files being listed, " //
-				+ "and ignore collapsed folders. Examples of regex usage:</p>" //
+				+ "<p>Filters affect filenames (not folders) and are applied by typing a filtering "//
+				+ "string + [Enter]. Filters act only on files being listed, and ignore collapsed " //
+				+ "folders. Examples of regex usage:</p>" //
 				+ "<br><table align='center'>" //
-				+ " <thead>" //
 				+ "  <tr>" //
 				+ "   <th>Pattern</th>" //
 				+ "   <th>Result</th>" //
 				+ "  </tr>" //
-				+ " </thead>" //
-				+ " <tbody>" //
 				+ "  <tr>" //
 				+ "   <td>py$</td>" //
 				+ "   <td>Display filenames ending with <i>py</i></td>" //
@@ -324,9 +346,8 @@ class FileSystemTreePanel extends JPanel {
 				+ "   <td>^Demo</td>" //
 				+ "   <td>Display filenames starting with <i>Demo</i></td>" //
 				+ "  </tr>" //
-				+ " </tbody>" //
 				+ "</table>";
-		JOptionPane.showMessageDialog(this, msg, "File Explorer", JOptionPane.PLAIN_MESSAGE);
+		JOptionPane.showMessageDialog(this, msg, "File Explorer Pane", JOptionPane.PLAIN_MESSAGE);
 	}
 
 	private boolean isCaseSensitive() {
