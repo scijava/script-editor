@@ -218,9 +218,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			//openSourceForMenuItem, // this never had an actionListener!??
 			openMacroFunctions, decreaseFontSize, increaseFontSize, chooseFontSize,
 			chooseTabSize, gitGrep, replaceTabsWithSpaces,
-			replaceSpacesWithTabs, toggleWhiteSpaceLabeling, zapGremlins,
-			toggleAutoCompletionMenu,
-			openClassOrPackageHelp;
+			replaceSpacesWithTabs, zapGremlins,openClassOrPackageHelp;
 	private RecentFilesMenuItem openRecent;
 	private JMenu gitMenu, tabsMenu, fontSizeMenu, tabSizeMenu, toolsMenu,
 			runMenu;
@@ -228,9 +226,9 @@ public class TextEditor extends JFrame implements ActionListener,
 	private Set<JMenuItem> tabsMenuItems;
 	private FindAndReplaceDialog findDialog;
 	private JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport,
-			toggleAutoCompletionKeyRequired, paintTabs;
+			autoCompletionKey, autoCompletion, paintTabs, whiteSpace;
 	private JTextArea errorScreen = new JTextArea();
-	
+
 	private final FileSystemTree tree;
 	private final JSplitPane body;
 
@@ -239,6 +237,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	private ErrorHandler errorHandler;
 
 	private boolean respectAutoImports;
+	private String activeTheme;
+
 
 	@Parameter
 	private Context context;
@@ -296,6 +296,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		scrolltree.setBorder(BorderFactory.createEmptyBorder(0,BORDER_SIZE,0,BORDER_SIZE));
 		scrolltree.setPreferredSize(new Dimension(200, 600));
 		body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrolltree, tabbed);
+
+		// These items are dynamic and need to be initialized before EditorPane creation
+		initializeDynamicMenuComponents();
 
 		// -- BEGIN MENUS --
 
@@ -600,27 +603,13 @@ public class TextEditor extends JFrame implements ActionListener,
 		replaceTabsWithSpaces = addToMenu(options, "Replace Tabs With Spaces", 0, 0);
 
 		addSeparator(options, "View:");
-		toggleWhiteSpaceLabeling = new JCheckBoxMenuItem("Label Whitespace");
-		toggleWhiteSpaceLabeling.setMnemonic(KeyEvent.VK_L);
-		toggleWhiteSpaceLabeling.addActionListener(e -> {
-			getTextArea().setWhitespaceVisible(toggleWhiteSpaceLabeling.isSelected());
-		});
-		options.add(toggleWhiteSpaceLabeling);
-		wrapLines = new JCheckBoxMenuItem("Wrap Lines");
-		wrapLines.setMnemonic(KeyEvent.VK_W);
-		wrapLines.addChangeListener(e -> getEditorPane().setLineWrap(wrapLines.getState()));
+		options.add(whiteSpace);
 		options.add(wrapLines);
 		options.add(applyThemeMenu());
 
 		addSeparator(options, "Code Completions:");
-		toggleAutoCompletionMenu = new JCheckBoxMenuItem("Enable Autocompletion");
-		toggleAutoCompletionMenu.setSelected(prefService.getBoolean(TextEditor.class, "autoComplete", true));
-		toggleAutoCompletionMenu.addChangeListener(e -> toggleAutoCompletion());
-		options.add(toggleAutoCompletionMenu);
-		toggleAutoCompletionKeyRequired = new JCheckBoxMenuItem("Show Completions Only With Ctrl+Space");
-		toggleAutoCompletionKeyRequired.setSelected(prefService.getBoolean(TextEditor.class, "autoCompleteKeyRequired", true));
-		toggleAutoCompletionKeyRequired.addChangeListener(e -> toggleAutoCompletionKeyRequired());
-		options.add(toggleAutoCompletionKeyRequired);
+		options.add(autoCompletion);
+		options.add(autoCompletionKey);
 
 		options.addSeparator();
 		options.add(getPrefsMenu());
@@ -810,7 +799,11 @@ public class TextEditor extends JFrame implements ActionListener,
 		open(null);
 
 		final EditorPane editorPane = getEditorPane();
+		// Apply preferences that have not yet been set
+		updateUI(true);
+		applyTheme(editorPane.themeName());
 		editorPane.requestFocus();
+
 	}
 
 	private class DragAndDrop implements DragSourceListener, DragGestureListener {
@@ -892,6 +885,37 @@ public class TextEditor extends JFrame implements ActionListener,
 			catch (final Throwable t) {
 				log.warn("Could not register " + info.getName(), t);
 			}
+	}
+
+	private void initializeDynamicMenuComponents() {
+
+		// Options menu. These will be updated once EditorPane is created
+		wrapLines = new JCheckBoxMenuItem("Wrap Lines", false);
+		wrapLines.setMnemonic(KeyEvent.VK_W);
+		wrapLines.addChangeListener(e -> setWrapLines(wrapLines.getState()));
+		whiteSpace = new JCheckBoxMenuItem("Label Whitespace", false);
+		whiteSpace.setMnemonic(KeyEvent.VK_L);
+		whiteSpace.addChangeListener(e -> setWhiteSpaceVisible(whiteSpace.isSelected()));
+		autoCompletion = new JCheckBoxMenuItem("Enable Autocompletion", true);
+		autoCompletion.addChangeListener(e -> setAutoCompletionEnabled(autoCompletion.getState()));
+		autoCompletionKey = new JCheckBoxMenuItem("Show Completions Without Ctrl+Space", false);
+		autoCompletionKey.addChangeListener(e -> setAutoCompletionNoKeyRequired(autoCompletionKey.getState()));
+
+		// Help menu. These are 'dynamic' items
+		openMacroFunctions = new JMenuItem("   Open Help on Macro Function(s)...");
+		openMacroFunctions.setMnemonic(KeyEvent.VK_H);
+		openMacroFunctions.addActionListener(e -> {
+			try {
+				new MacroFunctions(this).openHelp(getTextArea().getSelectedText());
+			} catch (final IOException ex) {
+				handleException(ex);
+			}
+		});
+		openHelp = new JMenuItem("   Open Help for Class (With Frames)...");
+		openHelp.setMnemonic(KeyEvent.VK_H);
+		openHelp.addActionListener( e-> openHelp(null));
+		openHelpWithoutFrames = new JMenuItem("   Open Help for Class...");
+		openHelpWithoutFrames.addActionListener(e -> openHelp(null, false));
 	}
 
 	/**
@@ -1340,22 +1364,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			.convertTabsToSpaces();
 		else if (source == replaceSpacesWithTabs) getTextArea()
 			.convertSpacesToTabs();
-//		else if (source == clearScreen) {
-//			getTab().getScreen().setText("");
-//		}
 		else if (source == zapGremlins) zapGremlins();
-//		else if (source == toggleAutoCompletionMenu) {
-//			toggleAutoCompletion();
-//		}
-		else if (source == openHelp) openHelp(null);
-		else if (source == openHelpWithoutFrames) openHelp(null, false);
 		else if (source == openClassOrPackageHelp) openClassOrPackageHelp(null);
-		else if (source == openMacroFunctions) try {
-			new MacroFunctions(this).openHelp(getTextArea().getSelectedText());
-		}
-		catch (final IOException e) {
-			handleException(e);
-		}
 		else if (source == extractSourceJar) extractSourceJar();
 		else if (source == openSourceForClass) {
 			final String className = getSelectedClassNameOrAsk("Class (Fully qualified name):", "Which Class?");
@@ -1405,20 +1415,28 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (handleTabsMenu(source)) return;
 	}
 
-	private void toggleAutoCompletion() {
+	private void setAutoCompletionEnabled(final boolean enabled) {
 		for (int i = 0; i < tabbed.getTabCount(); i++) {
-			final EditorPane editorPane = getEditorPane(i);
-			editorPane.setAutoCompletionEnabled(toggleAutoCompletionMenu.isSelected());
+			getEditorPane(i).setAutoCompletionEnabled(enabled);
 		}
-		prefService.put(TextEditor.class, "autoComplete", toggleAutoCompletionMenu.isSelected());
 	}
 
-	private void toggleAutoCompletionKeyRequired() {
+	private void setAutoCompletionNoKeyRequired(final boolean noKeyRequired) {
 		for (int i = 0; i < tabbed.getTabCount(); i++) {
-			final EditorPane editorPane = getEditorPane(i);
-			editorPane.setAutoCompletionEnabled(toggleAutoCompletionKeyRequired.isSelected());
+			getEditorPane(i).setAutoCompletionNoKeyRequired(noKeyRequired);
 		}
-		prefService.put(TextEditor.class, "autoCompleteKeyRequired", toggleAutoCompletionKeyRequired.isSelected());
+	}
+
+	private void setWhiteSpaceVisible(final boolean visible) {
+		for (int i = 0; i < tabbed.getTabCount(); i++) {
+			getEditorPane(i).setWhitespaceVisible(visible);
+		}
+	}
+
+	private void setWrapLines(final boolean wrap) {
+		for (int i = 0; i < tabbed.getTabCount(); i++) {
+			getEditorPane(i).setLineWrap(wrap);
+		}
 	}
 
 	private JMenu applyThemeMenu() {
@@ -1431,13 +1449,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		map.put("IntelliJ (Light)", "idea");
 		map.put("Monokai", "monokai");
 		map.put("Visual Studio (Light)", "vs");
+		final ButtonGroup group = new ButtonGroup();
 		final JMenu menu = new JMenu("Theme");
 		map.forEach((k, v) -> {
 			if ("-".equals(k)) {
 				menu.addSeparator();
 				return;
 			}
-			final JMenuItem item = new JMenuItem(k);
+			final JRadioButtonMenuItem item = new JRadioButtonMenuItem(k);
+			group.add(item);
 			item.addActionListener(e -> {
 				try {
 					applyTheme(v);
@@ -1470,6 +1490,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		} catch (final Exception ex) {
 			throw new IllegalArgumentException(ex);
 		}
+		this.activeTheme = theme;
 	}
 
 	protected boolean handleTabsMenu(final Object source) {
@@ -1495,7 +1516,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		editorPane.requestFocus();
 		checkForOutsideChanges();
 
-		toggleWhiteSpaceLabeling.setSelected(editorPane.isWhitespaceVisible());
+		whiteSpace.setSelected(editorPane.isWhitespaceVisible());
 
 		editorPane.setLanguageByFileName(editorPane.getFileName());
 		updateLanguageMenu(editorPane.getCurrentLanguage());
@@ -1923,10 +1944,18 @@ public class TextEditor extends JFrame implements ActionListener,
 		final boolean isInGit = getEditorPane().getGitDirectory() != null;
 		gitMenu.setVisible(isInGit);
 
-		updateTabAndFontSize(false);
+		updateUI(false);
 	}
 
+	/**
+	 * Use {@link #updateUI(boolean)} instead
+	 */
+	@Deprecated
 	public void updateTabAndFontSize(final boolean setByLanguage) {
+		updateUI(setByLanguage);
+	}
+
+	public void updateUI(final boolean setByLanguage) {
 		final EditorPane pane = getEditorPane();
 		if (pane.getCurrentLanguage() == null) return;
 
@@ -1973,6 +2002,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		wrapLines.setState(pane.getLineWrap());
 		tabsEmulated.setState(pane.getTabsEmulated());
+		paintTabs.setState(pane.getPaintTabLines());
+		whiteSpace.setState(pane.isWhitespaceVisible());
+		autoCompletion.setState(pane.isAutoCompletionEnabled());
+		autoCompletionKey.setState(pane.isAutoCompletionNoKeyRequired());
 	}
 
 	public void setEditorPaneFileName(final String baseName) {
@@ -3135,8 +3168,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		JMenuItem item = new JMenuItem("Save");
 		menu.add(item);
 		item.addActionListener(e -> {
-			getEditorPane().savePreferences(tree.getTopLevelFoldersString());
-			write("Script Editor Settings Saved...\n");
+			getEditorPane().savePreferences(tree.getTopLevelFoldersString(), activeTheme);
+			write("Script Editor: Preferences Saved...\n");
 		});
 		item = new JMenuItem("Reset...");
 		menu.add(item);
@@ -3146,7 +3179,8 @@ public class TextEditor extends JFrame implements ActionListener,
 					JOptionPane.OK_CANCEL_OPTION);
 			if (JOptionPane.OK_OPTION == choice) {
 				prefService.clear(EditorPane.class);
-				write("Script Editor Settings Reset.\n");
+				prefService.clear(TextEditor.class);
+				write("Script Editor: Preferences Reset.\n");
 			}
 		});
 		return menu;
@@ -3155,14 +3189,12 @@ public class TextEditor extends JFrame implements ActionListener,
 	private JMenu helpMenu() {
 		final JMenu menu = new JMenu("Help");
 		addSeparator(menu, "Contextual Help:");
-		openHelpWithoutFrames = addToMenu(menu, "   Open Help for Class...", 0, 0);
+		menu.add(openHelpWithoutFrames);
 		openHelpWithoutFrames.setMnemonic(KeyEvent.VK_O);
-		openHelp = addToMenu(menu, "   Open Help for Class (With Frames)...", 0, 0);
-		openHelp.setMnemonic(KeyEvent.VK_P);
+		menu.add(openHelp);
 		openClassOrPackageHelp = addToMenu(menu, "   Lookup Class or Package...", 0, 0);
 		openClassOrPackageHelp.setMnemonic(KeyEvent.VK_S);
-		openMacroFunctions = addToMenu(menu, "   Open Help on Macro Function(s)...", 0, 0);
-		openMacroFunctions.setMnemonic(KeyEvent.VK_H);
+		menu.add(openMacroFunctions);
 		addSeparator(menu, "Online Resources:");
 		menu.add(helpMenuItem("Image.sc Forum ", "https://forum.image.sc/"));
 		menu.add(helpMenuItem("ImageJ Search Portal", "https://search.imagej.net/"));

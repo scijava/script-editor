@@ -93,6 +93,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	private boolean undoInProgress;
 	private boolean redoInProgress;
+	private boolean autoCompletionEnabled = true;
+	private boolean autoCompletionNoKeyRequired = false;
 
 	@Parameter
 	Context context;
@@ -111,8 +113,18 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 * Constructor.
 	 */
 	public EditorPane() {
-		setLineWrap(false);
-		setTabSize(8);
+
+		// set sensible defaults
+		setAntiAliasingEnabled(true);
+		setAutoIndentEnabled(true);
+		setBracketMatchingEnabled(true);
+		setCloseCurlyBraces(true);
+		setCloseMarkupTags(true);
+		setCodeFoldingEnabled(true);
+		setShowMatchedBracketPopup(true);
+
+		// load preferences
+		loadPreferences();
 
 		getActionMap()
 			.put(DefaultEditorKit.nextWordAction, wordMovement(+1, false));
@@ -517,18 +529,21 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		}
 	}
 
-	private boolean autoCompletionEnabled = true;
 	public void setAutoCompletionEnabled(boolean value) {
 		autoCompletionEnabled = value;
-		setLanguage(currentLanguage);
+		if (currentLanguage != null) setLanguage(currentLanguage);
 	}
 
-	private boolean autoCompletionKeyRequired = false;
-	void setAutoCompletionKeyRequired(boolean value) {
-		autoCompletionKeyRequired = value;
+	void setAutoCompletionNoKeyRequired(boolean value) {
+		autoCompletionNoKeyRequired = value;
 	}
-	public boolean getAutoCompletionKeyRequired() {
-		return autoCompletionKeyRequired;
+
+	public boolean isAutoCompletionEnabled() {
+		return autoCompletionNoKeyRequired;
+	}
+
+	public boolean isAutoCompletionNoKeyRequired() {
+		return autoCompletionNoKeyRequired;
 	}
 
 	/**
@@ -717,21 +732,44 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public static final String LINE_WRAP_PREFS = "script.editor.WrapLines";
 	public static final String TAB_SIZE_PREFS = "script.editor.TabSize";
 	public static final String TABS_EMULATED_PREFS = "script.editor.TabsEmulated";
+	public static final String WHITESPACE_VISIBLE_PREFS = "script.editor.Whitespace";
+	public static final String TABLINES_VISIBLE_PREFS = "script.editor.Tablines";
+	public static final String THEME_PREFS = "script.editor.theme";
+	public static final String AUTOCOMPLETE_PREFS = "script.editor.Autocomp";
+	public static final String AUTOCOMPLETE_NOKEY_PREFS = "script.editor.AutocompKey";
 	public static final String FOLDERS_PREFS = "script.editor.folders";
-
 	public static final int DEFAULT_TAB_SIZE = 4;
+	public static final String DEFAULT_THEME = "default";
 
 	/**
-	 * Loads the preferences for the Tab and apply them.
+	 * Loads and applies the preferences for the tab (theme excluded).
+	 * @see TextEditor#applyTheme(String)
 	 */
 	public void loadPreferences() {
-		resetTabSize();
-		setFontSize(prefService.getFloat(getClass(), FONT_SIZE_PREFS, getFontSize()));
-		setLineWrap(prefService.getBoolean(getClass(), LINE_WRAP_PREFS, getLineWrap()));
-		setTabsEmulated(prefService.getBoolean(getClass(), TABS_EMULATED_PREFS,
-			getTabsEmulated()));
+		if (prefService == null) {
+			setLineWrap(false);
+			setTabSize(DEFAULT_TAB_SIZE);
+			setLineWrap(false);
+			setTabsEmulated(false);
+			setPaintTabLines(false);
+			setAutoCompletionEnabled(true);
+			setAutoCompletionNoKeyRequired(false);
+		} else {
+			resetTabSize();
+			setFontSize(prefService.getFloat(getClass(), FONT_SIZE_PREFS, getFontSize()));
+			setLineWrap(prefService.getBoolean(getClass(), LINE_WRAP_PREFS, getLineWrap()));
+			setTabsEmulated(prefService.getBoolean(getClass(), TABS_EMULATED_PREFS, getTabsEmulated()));
+			setWhitespaceVisible(prefService.getBoolean(getClass(), WHITESPACE_VISIBLE_PREFS, isWhitespaceVisible()));
+			setPaintTabLines(prefService.getBoolean(getClass(), TABLINES_VISIBLE_PREFS, getPaintTabLines()));
+			setAutoCompletionEnabled(prefService.getBoolean(getClass(), AUTOCOMPLETE_PREFS, true));
+			setAutoCompletionNoKeyRequired(prefService.getBoolean(getClass(), AUTOCOMPLETE_NOKEY_PREFS, false));
+		}
 	}
-	
+
+	public String themeName() {
+		return prefService.get(getClass(), THEME_PREFS, DEFAULT_THEME);
+	}
+
 	public String loadFolders() {
 		return prefService.get(getClass(), FOLDERS_PREFS, System.getProperty("user.home"));
 	}
@@ -739,12 +777,17 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	/**
 	 * Retrieves and saves the preferences to the persistent store
 	 */
-	public void savePreferences(final String top_folders) {
+	public void savePreferences(final String top_folders, final String theme) {
 		prefService.put(getClass(), TAB_SIZE_PREFS, getTabSize());
 		prefService.put(getClass(), FONT_SIZE_PREFS, getFontSize());
 		prefService.put(getClass(), LINE_WRAP_PREFS, getLineWrap());
 		prefService.put(getClass(), TABS_EMULATED_PREFS, getTabsEmulated());
+		prefService.put(getClass(), WHITESPACE_VISIBLE_PREFS, isWhitespaceVisible());
+		prefService.put(getClass(), TABLINES_VISIBLE_PREFS, getPaintTabLines());
+		prefService.put(getClass(), AUTOCOMPLETE_PREFS, isAutoCompletionEnabled());
+		prefService.put(getClass(), AUTOCOMPLETE_NOKEY_PREFS, isAutoCompletionNoKeyRequired());
 		if (null != top_folders) prefService.put(getClass(), FOLDERS_PREFS, top_folders);
+		if (null != theme) prefService.put(getClass(), THEME_PREFS, theme);
 	}
 
 	/**
