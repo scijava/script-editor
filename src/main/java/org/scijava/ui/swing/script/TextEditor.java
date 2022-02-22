@@ -31,7 +31,6 @@ package org.scijava.ui.swing.script;
 
 import java.awt.Color;
 import java.awt.Cursor;
-import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -51,8 +50,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -107,7 +104,6 @@ import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
-import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
@@ -115,13 +111,11 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
-import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
@@ -631,30 +625,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		tabbed.addChangeListener(this);
 		open(null); // make sure the editor pane is added
 
-		tabbed.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+		//tabbed.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
 		getContentPane().setLayout(
 			new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
-		
-		final JPanel tree_panel = new JPanel();
-		final JButton add_directory = new JButton("<HTML>&#43;");
-		add_directory.setToolTipText("Add a directory");
-		final JButton remove_directory = new JButton("<HTML>&#8722;");
-		remove_directory.setToolTipText("Remove a top-level directory");
-		
-		final JTextField filter = new JTextField("File Filter...");
-		filter.setForeground(Color.GRAY);
-		filter.setToolTipText("<HTML><p>Use leading '/' for regular expressions. E.g.:</p>"
-				+ "<dl>"
-				+ "<dt><tt>/py$</tt> Displays only filenames ending with <i>py</i></dt>"
-				+ "<dt><tt>/^Demo</tt> Displays only filenames starting with <i>Demo</i></dt>"
-				+ "</dl>"
-				+ "<p>Press Enter to apply. Clear to reset.</p>");
+
 		tree = new FileSystemTree(log);
-		tree.ignoreExtension("class");
-		addContextualMenuToTree(tree);
-		
+		tree.setFont(tree.getFont().deriveFont(getEditorPane().getFontSize()));
 		dragSource = new DragSource();
 		dragSource.createDefaultDragGestureRecognizer(tree, DnDConstants.ACTION_COPY, new DragAndDrop());
+		tree.ignoreExtension("class");
 		tree.setMinimumSize(new Dimension(200, 600));
 		tree.addLeafListener(f -> {
 			final String name = f.getName();
@@ -690,134 +669,13 @@ public class TextEditor extends JFrame implements ActionListener,
 				open(f);
 			}
 		});
-		add_directory.addActionListener(e -> {
-			final String folders = tree.getTopLevelFoldersString();
-			final String lastFolder = folders.substring(folders.lastIndexOf(":") + 1);
-			final JFileChooser c = new JFileChooser();
-			c.setDialogTitle("Choose Top-Level Folder");
-			c.setCurrentDirectory(new File(lastFolder));
-			c.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-			c.setFileHidingEnabled(true); // hide hidden files
-			c.setAcceptAllFileFilterUsed(false); // disable "All files" as it has no meaning here
-			c.setApproveButtonText("Choose Folder");
-			c.setMultiSelectionEnabled(false);
-			c.setDragEnabled(true);
-			new FileDrop(c, files -> {
-				if (files.length == 0) return;
-				final File firstFile = files[0];
-				c.setCurrentDirectory((firstFile.isDirectory()) ? firstFile : firstFile.getParentFile());
-				c.rescanCurrentDirectory();
-			});
-			if (JFileChooser.APPROVE_OPTION == c.showOpenDialog(getContentPane())) {
-				final File f = c.getSelectedFile();
-				if (f.isDirectory()) tree.addRootDirectory(f.getAbsolutePath(), false);
-			}
-			FileDrop.remove(c);
-		});
-		remove_directory.addActionListener(e -> {
-			final TreePath p = tree.getSelectionPath();
-			if (null == p) {
-				JOptionPane.showMessageDialog(TextEditor.this, "Select a top-level folder first.", "Invalid Folder",
-						JOptionPane.ERROR_MESSAGE);
-				return;
-			}
-			if (2 == p.getPathCount()) {
-				// Is a child of the root, so it's a top-level folder
-				tree.getModel().removeNodeFromParent(//
-						(FileSystemTree.Node) p.getLastPathComponent());
-			} else {
-				JOptionPane.showMessageDialog(TextEditor.this, "Can only remove top-level folders.", "Invalid Folder",
-						JOptionPane.ERROR_MESSAGE);
-			}
-		});
-		filter.addFocusListener(new FocusListener() {
-			@Override
-			public void focusLost(FocusEvent e) {
-				if (0 == filter.getText().length()) {
-					filter.setForeground(Color.GRAY);
-					filter.setText("File Filter...");
-					tree.setFileFilter(((f) -> true)); // any // no need to press enter
-				}
-			}
-			
-			@Override
-			public void focusGained(FocusEvent e) {
-				if (filter.getForeground() == Color.GRAY) {
-					filter.setText("");
-					filter.setForeground(tree.getForeground());
-				}
-			}
-		});
-		filter.addKeyListener(new KeyAdapter() {
-			Pattern pattern = null;
-			@Override
-			public void keyPressed(final KeyEvent ke) {
-				if (ke.getKeyCode() == KeyEvent.VK_ENTER) {
-					final String text = filter.getText();
-					if (0 == text.length()) {
-						tree.setFileFilter(((f) -> true)); // any
-						return;
-					}
-					if ('/' == text.charAt(0)) {
-						// Interpret as a regular expression
-						// Attempt to compile the pattern
-						try {
-							String regex = text.substring(1);
-							if ('^' != regex.charAt(1)) regex = "^.*" + regex;
-							if ('$' != regex.charAt(regex.length() -1)) regex += ".*$";
-							pattern = Pattern.compile(regex);
-							filter.setForeground(tree.getForeground());
-						} catch (final PatternSyntaxException | StringIndexOutOfBoundsException pse) {
-							// regex is too short to be parseable or is invalid
-							log.warn(pse.getLocalizedMessage());
-							filter.setForeground(Color.RED);
-							pattern = null;
-							return;
-						}
-						if (null != pattern) {
-							tree.setFileFilter((f) -> pattern.matcher(f.getName()).matches());
-						}
-					} else {
-						// Interpret as a literal match
-						tree.setFileFilter((f) -> -1 != f.getName().toLowerCase().indexOf(text.toLowerCase()));
-					}
-				} else {
-					// Upon re-typing something
-					if (filter.getForeground() == Color.RED) {
-						filter.setForeground(tree.getForeground());
-					}
-				}
-			}
-		});
-		
+
 		// Restore top-level directories
 		tree.addTopLevelFoldersFrom(getEditorPane().loadFolders());
 
-		final GridBagLayout g = new GridBagLayout();
-		tree_panel.setLayout(g);
-		final GridBagConstraints bc = new GridBagConstraints();
-		bc.gridx = 0;
-		bc.gridy = 0;
-		bc.weightx = 0;
-		bc.weighty = 0;
-		bc.anchor = GridBagConstraints.NORTHWEST;
-		bc.fill = GridBagConstraints.NONE;
-		tree_panel.add(add_directory, bc);
-		bc.gridx = 1;
-		tree_panel.add(remove_directory, bc);
-		bc.gridx = 2;
-		bc.fill = GridBagConstraints.BOTH;
-		tree_panel.add(filter, bc);
-		bc.gridx = 0;
-		bc.gridwidth = 3;
-		bc.gridy = 1;
-		bc.weightx = 1.0;
-		bc.weighty = 1.0;
-		bc.fill = GridBagConstraints.BOTH;
-		tree_panel.add(tree, bc);
-		final JScrollPane scrolltree = new JScrollPane(tree_panel);
+		final JScrollPane scrolltree = new JScrollPane(new FileSystemTreePanel(tree));
 		//scrolltree.setBackground(Color.white); // No hardwired constants for compatibility w/ dark themes
-		scrolltree.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(0,5,0,5)));
+		scrolltree.setBorder(BorderFactory.createEmptyBorder(0,5,0,5));
 		scrolltree.setPreferredSize(new Dimension(200, 600));
 		body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrolltree, tabbed);
 		body.setOneTouchExpandable(true);
@@ -3187,50 +3045,4 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 	}
 
-	private void addContextualMenuToTree(final FileSystemTree tree) {
-		final JPopupMenu popup = new JPopupMenu();
-		JMenuItem jmi = new JMenuItem("Collapse All");
-		jmi.addActionListener(e -> {
-			SwingUtilities.invokeLater(() -> {
-				for (int i = tree.getRowCount() - 1; i >= 0; i--)
-					tree.collapseRow(i);
-			});
-		});
-		popup.add(jmi);
-		jmi = new JMenuItem("Expand One Level");
-		jmi.addActionListener(e -> {
-			SwingUtilities.invokeLater(() -> {
-				for (int i = tree.getRowCount() - 1; i >= 0; i--)
-					tree.expandRow(i);
-			});
-		});
-		popup.add(jmi);
-		popup.addSeparator();
-		jmi = new JMenuItem("Show in System Explorer");
-		jmi.addActionListener(e -> {
-			final TreePath path = tree.getSelectionPath();
-			if (path == null) {
-				JOptionPane.showMessageDialog(TextEditor.this, "No items are currently selected.",
-						"Invalid Selection", JOptionPane.INFORMATION_MESSAGE);
-				return;
-			}
-			try {
-				final String filepath = (String) ((FileSystemTree.Node) path.getLastPathComponent()).getUserObject();
-				final File f = new File(filepath);
-				Desktop.getDesktop().open((f.isDirectory()) ? f : f.getParentFile());
-			} catch (final Exception | Error ignored) {
-				JOptionPane.showMessageDialog(TextEditor.this,
-						"Folder of selected item does not seem to be accessible.", "Error", JOptionPane.ERROR_MESSAGE);
-			}
-		});
-		popup.add(jmi);
-		popup.addSeparator();
-		jmi = new JMenuItem("Reset Tree to Home Folder");
-		jmi.addActionListener(e -> {
-			((DefaultMutableTreeNode) tree.getModel().getRoot()).removeAllChildren();
-			tree.addTopLevelFoldersFrom(System.getProperty("user.home"));
-		});
-		popup.add(jmi);
-		tree.setComponentPopupMenu(popup);
-	}
 }

@@ -256,7 +256,7 @@ public class FileSystemTree extends JTree
 		public void leafDoubleClicked(final File file);
 	}
 
-	private final Logger log;
+	final Logger log;
 
 	private ArrayList<LeafListener> leaf_listeners = new ArrayList<>();
 
