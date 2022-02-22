@@ -683,7 +683,7 @@ public class TextEditor extends JFrame implements ActionListener,
 						"Could not open the file at: " + f.getAbsolutePath());
 					return;
 				}
-				catch (Exception e) {
+				catch (final Exception e) {
 					log.error(e);
 					error("Could not open image at " + f);
 				}
@@ -768,6 +768,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		});
 
+		// Tweaks for Console
 		errorScreen.setFont(getEditorPane().getFont());
 		errorScreen.setEditable(false);
 		errorScreen.setLineWrap(true);
@@ -811,19 +812,19 @@ public class TextEditor extends JFrame implements ActionListener,
 		final EditorPane editorPane = getEditorPane();
 		editorPane.requestFocus();
 	}
-	
+
 	private class DragAndDrop implements DragSourceListener, DragGestureListener {
 		@Override
-		public void dragDropEnd(DragSourceDropEvent dsde) {}
+		public void dragDropEnd(final DragSourceDropEvent dsde) {}
 
 		@Override
-		public void dragEnter(DragSourceDragEvent dsde) {
+		public void dragEnter(final DragSourceDragEvent dsde) {
 			dsde.getDragSourceContext().setCursor(DragSource.DefaultMoveNoDrop);
 		}
 
 		@Override
-		public void dragGestureRecognized(DragGestureEvent dge) {
-			TreePath path = tree.getSelectionPath();
+		public void dragGestureRecognized(final DragGestureEvent dge) {
+			final TreePath path = tree.getSelectionPath();
 			if (path == null) // nothing is currently selected
 				return;
 			final String filepath = (String)((FileSystemTree.Node) path.getLastPathComponent()).getUserObject();
@@ -839,7 +840,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				}
 				
 				@Override
-				public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
+				public Object getTransferData(final DataFlavor flavor) throws UnsupportedFlavorException, IOException {
 					if (isDataFlavorSupported(flavor))
 						return Arrays.asList(new String[]{filepath});
 					return null;
@@ -848,12 +849,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 
 		@Override
-		public void dragExit(DragSourceEvent dse) {
+		public void dragExit(final DragSourceEvent dse) {
 			dse.getDragSourceContext().setCursor(DragSource.DefaultMoveNoDrop);
 		}
 
 		@Override
-		public void dragOver(DragSourceDragEvent dsde) {
+		public void dragOver(final DragSourceDragEvent dsde) {
 			if (tree == dsde.getSource()) {
 				dsde.getDragSourceContext().setCursor(DragSource.DefaultCopyNoDrop);
 			} else if (dsde.getDropAction() == DnDConstants.ACTION_COPY) {
@@ -864,7 +865,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 
 		@Override
-		public void dropActionChanged(DragSourceDragEvent dsde) {}
+		public void dropActionChanged(final DragSourceDragEvent dsde) {}
 	}
 
 	public LogService log() { return log; }
@@ -1440,7 +1441,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			item.addActionListener(e -> {
 				try {
 					applyTheme(v);
-				} catch (IllegalArgumentException ex) {
+				} catch (final IllegalArgumentException ex) {
 					JOptionPane.showMessageDialog(TextEditor.this,
 							"An exception occured. Theme could not be loaded");
 					ex.printStackTrace();
@@ -1642,7 +1643,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (isBinary(file)) {
 			try {
 				uiService.show(ioService.open(file.getAbsolutePath()));
-			} catch (IOException e) {
+			} catch (final IOException e) {
 				log.error(e);
 			}
 			return null;
@@ -1650,7 +1651,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		try {
 			TextEditorTab tab = (tabbed.getTabCount() == 0) ? null : getTab();
-			TextEditorTab prior = tab;
+			final TextEditorTab prior = tab;
 			final boolean wasNew = tab != null && tab.editorPane.isNew();
 			float font_size = 0; // to set the new editor's font like the last active one, if any
 			if (!wasNew) {
@@ -2340,7 +2341,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final String path = getPromptCommandsFilename(language);
 		final File file = new File(path);
 		try {
-			boolean exists = file.exists();
+			final boolean exists = file.exists();
 			if (!exists) {
 				// Ensure parent directories exist
 				file.getParentFile().mkdirs();
@@ -2348,7 +2349,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 			Files.write(Paths.get(path), Arrays.asList(new String[]{text, "#"}), Charset.forName("UTF-8"),
 					StandardOpenOption.APPEND, StandardOpenOption.DSYNC);
-		} catch (IOException e) {
+		} catch (final IOException e) {
 			log.error("Failed to write executed prompt command to file " + path, e);
 		}
 	}
@@ -2374,11 +2375,11 @@ public class TextEditor extends JFrame implements ActionListener,
 			final String sep = System.getProperty("line.separator"); // used fy Files.write above
 			commands.addAll(Arrays.asList(new String(bytes, Charset.forName("UTF-8")).split(sep + "#" + sep)));
 			if (0 == commands.get(commands.size()-1).length()) commands.remove(commands.size() -1); // last entry is empty
-		} catch (IOException e) {
+		} catch (final IOException e) {
 			log.error("Failed to read history of prompt commands from file " + path, e);
 			return lines;
 		} finally {
-			try { if (null != ra) ra.close(); } catch (IOException e) { log.error(e); }
+			try { if (null != ra) ra.close(); } catch (final IOException e) { log.error(e); }
 		}
 		if (commands.size() > 1000) {
 			commands = commands.subList(commands.size() - 1000, commands.size());
@@ -2394,7 +2395,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				if (!new File(path + "-tmp").renameTo(new File(path))) {
 					log.error("Could not rename command log file " + path + "-tmp to " + path);
 				}
-			} catch (Exception e) {
+			} catch (final Exception e) {
 				log.error("Failed to crop history of prompt commands file " + path, e);
 			}
 		}
@@ -2717,7 +2718,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			final GridBagLayout gridbag = new GridBagLayout();
 			final GridBagConstraints c = new GridBagConstraints();
 			panel.setLayout(gridbag);
-			panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+			panel.setBorder(BorderFactory.createEmptyBorder(BORDER_SIZE, BORDER_SIZE, BORDER_SIZE, BORDER_SIZE));
 			final List<String> keys = new ArrayList<String>(matches.keySet());
 			Collections.sort(keys);
 			c.gridy = 0;
@@ -2741,13 +2742,11 @@ public class TextEditor extends JFrame implements ActionListener,
 					final JButton link = new JButton(title);
 					gridbag.setConstraints(link, c);
 					panel.add(link);
-					link.addActionListener(new ActionListener() {
-						public void actionPerformed(final ActionEvent event) {
-							try {
-								platformService.open(new URL(url));
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
+					link.addActionListener(event -> {
+						try {
+							platformService.open(new URL(url));
+						} catch (final Exception e) {
+							e.printStackTrace();
 						}
 					});
 				}
@@ -2920,7 +2919,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			try {
 				// Same engine, with persistent state
 				this.scriptInfo.setScript( reader );
-			} catch (IOException e) {
+			} catch (final IOException e) {
 				log.error(e);
 			}
 		}
@@ -2988,7 +2987,7 @@ public class TextEditor extends JFrame implements ActionListener,
 							execute(getTab(), text, true);
 							prompt.setText("");
 							screen.scrollRectToVisible(screen.modelToView(screen.getDocument().getLength()));
-						} catch (Throwable t) {
+						} catch (final Throwable t) {
 							log.error(t);
 						}
 						ke.consume(); // avoid writing the line break

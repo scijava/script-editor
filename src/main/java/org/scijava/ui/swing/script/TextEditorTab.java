@@ -30,7 +30,6 @@
 package org.scijava.ui.swing.script;
 
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.datatransfer.DataFlavor;
@@ -67,7 +66,6 @@ import org.scijava.ui.swing.script.TextEditor.Executer;
 public class TextEditorTab extends JSplitPane {
 
 	private static final String DOWN_ARROW = "\u25BC";
-
 	private static final String RIGHT_ARROW = "\u25B6";
 
 	protected final EditorPane editorPane;
@@ -95,16 +93,16 @@ public class TextEditorTab extends JSplitPane {
 		editorPane = new EditorPane();
 		dropTargetListener = new DropTargetListener() {
 			@Override
-			public void dropActionChanged(DropTargetDragEvent arg0) {}
+			public void dropActionChanged(final DropTargetDragEvent arg0) {}
 			
 			@Override
-			public void drop(DropTargetDropEvent e) {
+			public void drop(final DropTargetDropEvent e) {
 				if (e.getDropAction() != DnDConstants.ACTION_COPY) {
 					e.rejectDrop();
 					return;
 				}
 				e.acceptDrop(DnDConstants.ACTION_COPY_OR_MOVE); // fix for InvalidDnDOperationException: No drop current
-				Transferable t = e.getTransferable();
+				final Transferable t = e.getTransferable();
 				if (!t.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) return;
 				try {
 					final Object o = t.getTransferData(DataFlavor.javaFileListFlavor);
@@ -112,7 +110,7 @@ public class TextEditorTab extends JSplitPane {
 					final List<?> list = (List<?>) o;
 					if (list.isEmpty()) return;
 					String path;
-					Object first = list.get(0);
+					final Object first = list.get(0);
 					if (first instanceof String) path = (String) first;
 					else if (first instanceof File) path = ((File) first).getAbsolutePath();
 					else return;
@@ -120,29 +118,30 @@ public class TextEditorTab extends JSplitPane {
 					// Point p = e.getLocation();
 					// ... but it is more predictable (less surprising) to insert where the caret is:
 					editorPane.getRSyntaxDocument().insertString(editorPane.getCaretPosition(), path, null);
-				} catch (Exception ex) {
+				} catch (final Exception ex) {
 					ex.printStackTrace();
 				}
 			}
 			
 			@Override
-			public void dragOver(DropTargetDragEvent e) {
+			public void dragOver(final DropTargetDragEvent e) {
 				if (e.getDropAction() != DnDConstants.ACTION_COPY) e.rejectDrag();
 			}
 			
 			@Override
-			public void dragExit(DropTargetEvent e) {}
+			public void dragExit(final DropTargetEvent e) {}
 			
 			@Override
-			public void dragEnter(DropTargetDragEvent e) {
+			public void dragEnter(final DropTargetDragEvent e) {
 				if (e.getDropAction() != DnDConstants.ACTION_COPY) e.rejectDrag();
 			}
 		};
 		dropTarget = new DropTarget(editorPane, DnDConstants.ACTION_COPY, dropTargetListener);
 
+		// tweaks for console
 		screen.setEditable(false);
 		screen.setLineWrap(true);
-		screen.setFont(new Font("Courier", Font.PLAIN, 12));
+		screen.setFont(getEditorPane().getFont());
 
 		final JPanel bottom = new JPanel();
 		bottom.setLayout(new GridBagLayout());
@@ -156,38 +155,21 @@ public class TextEditorTab extends JSplitPane {
 		bc.fill = GridBagConstraints.NONE;
 		runit = new JButton("Run");
 		runit.setToolTipText("control + R");
-		runit.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(final ActionEvent ae) {
-				textEditor.runText();
-			}
-		});
+		runit.addActionListener(ae -> textEditor.runText());
 		bottom.add(runit, bc);
 
 		bc.gridx = 1;
 		batchit = new JButton("Batch");
-		batchit.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(final ActionEvent ae) {
-				textEditor.runBatch();
-			}
-		});
+		batchit.setToolTipText("Requires at least one @File SciJava parameter to be declared");
+		batchit.addActionListener(e -> textEditor.runBatch());
 		bottom.add(batchit, bc);
 
 		bc.gridx = 2;
 		killit = new JButton("Kill");
 		killit.setEnabled(false);
-		killit.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(final ActionEvent ae) {
-				kill();
-			}
-		});
+		killit.addActionListener(ae -> kill());
 		bottom.add(killit, bc);
-		
+
 		bc.gridx = 3;
 		incremental = new JCheckBox("Persistent");
 		incremental.setEnabled(true);
@@ -220,7 +202,7 @@ public class TextEditorTab extends JSplitPane {
 		switchSplit.setToolTipText("Switch location");
 		switchSplit.addActionListener(new ActionListener() {
 			@Override
-			public void actionPerformed(ActionEvent e) {
+			public void actionPerformed(final ActionEvent e) {
 				if (DOWN_ARROW.equals(switchSplit.getText())) {
 					TextEditorTab.this.setOrientation(JSplitPane.VERTICAL_SPLIT);
 				} else {
@@ -241,10 +223,6 @@ public class TextEditorTab extends JSplitPane {
 		bc.weightx = 1;
 		bc.weighty = 1;
 		bc.gridwidth = 8;
-		screen.setEditable(false);
-		screen.setLineWrap(true);
-		final Font font = new Font("Courier", Font.PLAIN, 12);
-		screen.setFont(font);
 		scroll = new JScrollPane(screen);
 		bottom.add(scroll, bc);
 		
@@ -278,22 +256,19 @@ public class TextEditorTab extends JSplitPane {
 		
 		bc.gridx = 3;
 		final JButton prompt_help = new JButton("?");
-		prompt_help.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent a) {
-				final String msg = "This REPL (read-evaluate-print-loop) parses " + textEditor.getCurrentLanguage().getLanguageName() + " code.\n\n"
-						+ "Key bindings:\n"
-						+ "* enter: evaluate code\n"
-						+ "* shift+enter: add line break (also alt-enter and meta-enter)\n"
-						+ "* page UP or ctrl+p: show previous entry in the history\n"
-						+ "* page DOWN or ctrl+n: show next entry in the history\n"
-						+ "\n"
-						+ "If 'Use arrow keys' is checked, then up/down arrows work like page UP/DOWN,\n"
-						+ "and shift+up/down arrow work like arrow keys before for caret movement\n"
-						+ "within a multi-line prompt."
-						;
-				JOptionPane.showMessageDialog(textEditor, msg, "REPL Help", JOptionPane.INFORMATION_MESSAGE);
-			}
+		prompt_help.addActionListener(a -> {
+			final String msg = "This REPL (read-evaluate-print-loop) parses " + textEditor.getCurrentLanguage().getLanguageName() + " code.\n\n"
+					+ "Key bindings:\n"
+					+ "* enter: evaluate code\n"
+					+ "* shift+enter: add line break (also alt-enter and meta-enter)\n"
+					+ "* page UP or ctrl+p: show previous entry in the history\n"
+					+ "* page DOWN or ctrl+n: show next entry in the history\n"
+					+ "\n"
+					+ "If 'Use arrow keys' is checked, then up/down arrows work like page UP/DOWN,\n"
+					+ "and shift+up/down arrow work like arrow keys before for caret movement\n"
+					+ "within a multi-line prompt."
+					;
+			JOptionPane.showMessageDialog(textEditor, msg, "REPL Help", JOptionPane.INFORMATION_MESSAGE);
 		});
 		prompt_panel.add(prompt_help, bc);
 		

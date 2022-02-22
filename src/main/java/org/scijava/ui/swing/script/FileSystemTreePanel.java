@@ -62,7 +62,7 @@ import org.scijava.plugin.Parameter;
 
 /**
  * Convenience class for displaying a {@link FileSystemTree} with some bells and
- * whistles, incliding a filter toolbar.
+ * whistles, including a filter toolbar.
  * 
  * @author Albert Cardona
  * @author Tiago Ferreira
