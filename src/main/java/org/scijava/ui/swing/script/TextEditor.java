@@ -217,15 +217,16 @@ public class TextEditor extends JFrame implements ActionListener,
 			openMacroFunctions, decreaseFontSize, increaseFontSize, chooseFontSize,
 			chooseTabSize, gitGrep, replaceTabsWithSpaces,
 			replaceSpacesWithTabs, toggleWhiteSpaceLabeling, zapGremlins,
-			savePreferences, toggleAutoCompletionMenu, toggleAutoCompletionKeyRequired,
+			savePreferences, toggleAutoCompletionMenu,
 			openClassOrPackageHelp;
 	private RecentFilesMenuItem openRecent;
 	private JMenu gitMenu, tabsMenu, fontSizeMenu, tabSizeMenu, toolsMenu,
-			runMenu, whiteSpaceMenu;
+			runMenu;
 	private int tabsMenuTabsStart;
 	private Set<JMenuItem> tabsMenuItems;
 	private FindAndReplaceDialog findDialog;
-	private JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport;
+	private JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport,
+			toggleAutoCompletionKeyRequired, paintTabs;
 	private JTextArea errorScreen = new JTextArea();
 	
 	private final FileSystemTree tree;
@@ -360,43 +361,10 @@ public class TextEditor extends JFrame implements ActionListener,
 //		clearScreen = addToMenu(edit, "Clear output panel", 0, 0);
 //		clearScreen.setMnemonic(KeyEvent.VK_L);
 
-		zapGremlins = addToMenu(edit, "Zap Gremlins", 0, 0);
-
-		edit.addSeparator();
-		addImport = addToMenu(edit, "Add import...", 0, 0);
-		addImport.setMnemonic(KeyEvent.VK_I);
-		removeUnusedImports = addToMenu(edit, "Remove unused imports", 0, 0);
-		removeUnusedImports.setMnemonic(KeyEvent.VK_U);
-		sortImports = addToMenu(edit, "Sort imports", 0, 0);
-		sortImports.setMnemonic(KeyEvent.VK_S);
-		respectAutoImports = prefService.getBoolean(getClass(), AUTO_IMPORT_PREFS, false);
-		autoImport =
-			new JCheckBoxMenuItem("Auto-import (deprecated)", respectAutoImports);
-		autoImport.addItemListener(e -> {
-			respectAutoImports = e.getStateChange() == ItemEvent.SELECTED;
-			prefService.put(getClass(), AUTO_IMPORT_PREFS, respectAutoImports);
-		});
-		edit.add(autoImport);
-
-		whiteSpaceMenu = new JMenu("Whitespace");
-		whiteSpaceMenu.setMnemonic(KeyEvent.VK_W);
-		removeTrailingWhitespace =
-			addToMenu(whiteSpaceMenu, "Remove trailing whitespace", 0, 0);
+		addSeparator(edit, "Utilities:");
+		removeTrailingWhitespace = addToMenu(edit, "Remove Trailing Whitespace", 0, 0);
 		removeTrailingWhitespace.setMnemonic(KeyEvent.VK_W);
-		replaceTabsWithSpaces =
-			addToMenu(whiteSpaceMenu, "Replace tabs with spaces", 0, 0);
-		replaceTabsWithSpaces.setMnemonic(KeyEvent.VK_S);
-		replaceSpacesWithTabs =
-			addToMenu(whiteSpaceMenu, "Replace spaces with tabs", 0, 0);
-		replaceSpacesWithTabs.setMnemonic(KeyEvent.VK_T);
-		toggleWhiteSpaceLabeling = new JRadioButtonMenuItem("Label whitespace");
-		toggleWhiteSpaceLabeling.setMnemonic(KeyEvent.VK_L);
-		toggleWhiteSpaceLabeling.addActionListener(e -> {
-			getTextArea().setWhitespaceVisible(toggleWhiteSpaceLabeling.isSelected());
-		});
-		whiteSpaceMenu.add(toggleWhiteSpaceLabeling);
-
-		edit.add(whiteSpaceMenu);
+		zapGremlins = addToMenu(edit, "Zap Gremlins", 0, 0);
 
 		mbar.add(edit);
 
@@ -493,6 +461,23 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		toolsMenu = new JMenu("Tools");
 		toolsMenu.setMnemonic(KeyEvent.VK_O);
+		addSeparator(toolsMenu, "Imports");
+		addImport = addToMenu(toolsMenu, "Add Import...", 0, 0);
+		addImport.setMnemonic(KeyEvent.VK_I);
+		respectAutoImports = prefService.getBoolean(getClass(), AUTO_IMPORT_PREFS, false);
+		autoImport =
+			new JCheckBoxMenuItem("Auto-import (Deprecated)", respectAutoImports);
+		autoImport.addItemListener(e -> {
+			respectAutoImports = e.getStateChange() == ItemEvent.SELECTED;
+			prefService.put(getClass(), AUTO_IMPORT_PREFS, respectAutoImports);
+		});
+		toolsMenu.add(autoImport);
+		removeUnusedImports = addToMenu(toolsMenu, "Remove Unused Imports", 0, 0);
+		removeUnusedImports.setMnemonic(KeyEvent.VK_U);
+		sortImports = addToMenu(toolsMenu, "Sort Imports", 0, 0);
+		sortImports.setMnemonic(KeyEvent.VK_S);
+
+		addSeparator(toolsMenu, "Source & APIs:");
 		openHelpWithoutFrames =
 			addToMenu(toolsMenu, "Open Help for Class...", 0, 0);
 		openHelpWithoutFrames.setMnemonic(KeyEvent.VK_O);
@@ -530,10 +515,24 @@ public class TextEditor extends JFrame implements ActionListener,
 		gitGrep.setMnemonic(KeyEvent.VK_G);
 		mbar.add(gitMenu);
 
-		// -- Tabs menu --
-
-		tabsMenu = new JMenu("Tabs");
-		tabsMenu.setMnemonic(KeyEvent.VK_A);
+		// -- Window Menu (previously labeled as Tabs menu --
+		tabsMenu = new JMenu("Window");
+		tabsMenu.setMnemonic(KeyEvent.VK_W);
+		addSeparator(tabsMenu, "Panes:");
+		final JCheckBoxMenuItem jcmi = new JCheckBoxMenuItem("File Explorer", true);
+		final int[] treePos = { body.getDividerLocation() };
+		jcmi.addItemListener(e -> {
+			if (jcmi.isSelected()) {
+				body.setDividerLocation(treePos[0]);
+			} else {
+				// see https://stackoverflow.com/q/4934499
+				treePos[0] = body.getDividerLocation();
+				body.getLeftComponent().setMinimumSize(new Dimension());
+				body.setDividerLocation(0.0d);
+			}
+		});
+		tabsMenu.add(jcmi);
+		addSeparator(tabsMenu, "Tabs:");
 		nextTab = addToMenu(tabsMenu, "Next Tab", KeyEvent.VK_PAGE_DOWN, ctrl);
 		nextTab.setMnemonic(KeyEvent.VK_N);
 		previousTab =
@@ -584,8 +583,16 @@ public class TextEditor extends JFrame implements ActionListener,
 		fontSizeMenu.add(chooseFontSize);
 		options.add(fontSizeMenu);
 
-		// Add tab size adjusting menu
-		tabSizeMenu = new JMenu("Tab sizes");
+		addSeparator(options, "Indentation:");
+		paintTabs = new JCheckBoxMenuItem("Indent Guides");
+		paintTabs.setMnemonic(KeyEvent.VK_I);
+		paintTabs.addChangeListener(e -> getEditorPane().setPaintTabLines(paintTabs.getState()));
+		options.add(paintTabs);
+		tabsEmulated = new JCheckBoxMenuItem("Indent Using Spaces");
+		tabsEmulated.setMnemonic(KeyEvent.VK_S);
+		tabsEmulated.addChangeListener(e -> getEditorPane().setTabsEmulated(tabsEmulated.getState()));
+		options.add(tabsEmulated);
+		tabSizeMenu = new JMenu("Tab Width");
 		tabSizeMenu.setMnemonic(KeyEvent.VK_T);
 		final ButtonGroup bg = new ButtonGroup();
 		for (final int size : new int[] { 2, 4, 8 }) {
@@ -604,29 +611,36 @@ public class TextEditor extends JFrame implements ActionListener,
 		bg.add(chooseTabSize);
 		tabSizeMenu.add(chooseTabSize);
 		options.add(tabSizeMenu);
+		replaceSpacesWithTabs = addToMenu(options, "Replace Spaces With Tabs", 0, 0);
+		replaceTabsWithSpaces = addToMenu(options, "Replace Tabs With Spaces", 0, 0);
 
-		wrapLines = new JCheckBoxMenuItem("Wrap lines");
+		addSeparator(options, "View:");
+		toggleWhiteSpaceLabeling = new JCheckBoxMenuItem("Label Whitespace");
+		toggleWhiteSpaceLabeling.setMnemonic(KeyEvent.VK_L);
+		toggleWhiteSpaceLabeling.addActionListener(e -> {
+			getTextArea().setWhitespaceVisible(toggleWhiteSpaceLabeling.isSelected());
+		});
+		options.add(toggleWhiteSpaceLabeling);
+		wrapLines = new JCheckBoxMenuItem("Wrap Lines");
+		wrapLines.setMnemonic(KeyEvent.VK_W);
 		wrapLines.addChangeListener(e -> getEditorPane().setLineWrap(wrapLines.getState()));
 		options.add(wrapLines);
+		options.add(applyThemeMenu());
 
-		// Add Tab inserts as spaces
-		tabsEmulated = new JCheckBoxMenuItem("Tab key inserts spaces");
-		tabsEmulated.addChangeListener(e -> getEditorPane().setTabsEmulated(tabsEmulated.getState()));
-		options.add(tabsEmulated);
-
-		toggleAutoCompletionMenu = new JCheckBoxMenuItem("Auto completion");
+		addSeparator(options, "Code Completions:");
+		toggleAutoCompletionMenu = new JCheckBoxMenuItem("Enable Autocompletion");
 		toggleAutoCompletionMenu.setSelected(prefService.getBoolean(TextEditor.class, "autoComplete", true));
 		toggleAutoCompletionMenu.addChangeListener(e -> toggleAutoCompletion());
 		options.add(toggleAutoCompletionMenu);
-		toggleAutoCompletionKeyRequired = new JCheckBoxMenuItem("Auto-completion Requires Ctrl+Space");
+		toggleAutoCompletionKeyRequired = new JCheckBoxMenuItem("Show Completions Only With Ctrl+Space");
 		toggleAutoCompletionKeyRequired.setSelected(prefService.getBoolean(TextEditor.class, "autoCompleteKeyRequired", true));
 		toggleAutoCompletionKeyRequired.addChangeListener(e -> toggleAutoCompletionKeyRequired());
 		options.add(toggleAutoCompletionKeyRequired);
 
 		options.addSeparator();
-		savePreferences = addToMenu(options, "Save Preferences", 0, 0);
-
+		options.add(getPrefsMenu());
 		mbar.add(options);
+		mbar.add(helpMenu());
 
 		// -- END MENUS --
 
@@ -1422,6 +1436,57 @@ public class TextEditor extends JFrame implements ActionListener,
 			editorPane.setAutoCompletionEnabled(toggleAutoCompletionKeyRequired.isSelected());
 		}
 		prefService.put(TextEditor.class, "autoCompleteKeyRequired", toggleAutoCompletionKeyRequired.isSelected());
+	}
+
+	private JMenu applyThemeMenu() {
+		final LinkedHashMap<String, String> map = new LinkedHashMap<>();
+		map.put("Default", "default");
+		map.put("-", "-");
+		map.put("Dark", "dark");
+		map.put("Druid", "druid");
+		map.put("Eclipse (Light)", "eclipse");
+		map.put("IntelliJ (Light)", "idea");
+		map.put("Monokai", "monokai");
+		map.put("Visual Studio (Light)", "vs");
+		final JMenu menu = new JMenu("Theme");
+		map.forEach((k, v) -> {
+			if ("-".equals(k)) {
+				menu.addSeparator();
+				return;
+			}
+			final JMenuItem item = new JMenuItem(k);
+			item.addActionListener(e -> {
+				try {
+					applyTheme(v);
+				} catch (IllegalArgumentException ex) {
+					JOptionPane.showMessageDialog(TextEditor.this,
+							"An exception occured. Theme could not be loaded");
+					ex.printStackTrace();
+				}
+			});
+			menu.add(item);
+		});
+		return menu;
+	}
+
+	/**
+	 * Applies a theme to all the panes of this editor.
+	 *
+	 * @param theme either "default", "dark", "druid", "eclipse", "idea", "monokai",
+	 *              "vs"
+	 * @throws IllegalArgumentException If {@code theme} is not a valid option, or
+	 *                                  the resource could not be loaded
+	 */
+	public void applyTheme(final String theme) throws IllegalArgumentException {
+		try {
+			final Theme th = Theme.load(getClass()
+					.getResourceAsStream("/org/fife/ui/rsyntaxtextarea/themes/" + theme + ".xml"));
+			for (int i = 0; i < tabbed.getTabCount(); i++) {
+				th.apply(getEditorPane(i));
+			}
+		} catch (final Exception ex) {
+			throw new IllegalArgumentException(ex);
+		}
 	}
 
 	protected boolean handleTabsMenu(final Object source) {
@@ -3078,6 +3143,60 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private void changeFontSize(final JTextArea a, final float size) {
 		a.setFont(a.getFont().deriveFont(size));
+	}
+
+	private JMenu getPrefsMenu() {
+		final JMenu menu = new JMenu("Preferences");
+		JMenuItem item = new JMenuItem("Save");
+		menu.add(item);
+		item.addActionListener(e -> {
+			getEditorPane().savePreferences(tree.getTopLevelFoldersString());
+			write("Script Editor Settings Saved...\n");
+		});
+		item = new JMenuItem("Reset...");
+		menu.add(item);
+		item.addActionListener(e -> {
+			final int choice = JOptionPane.showConfirmDialog(TextEditor.this,
+					"Reset preferences to defaults? (a restart may be required)", "Reset?",
+					JOptionPane.OK_CANCEL_OPTION);
+			if (JOptionPane.OK_OPTION == choice) {
+				prefService.clear(EditorPane.class);
+				write("Script Editor Settings Reset.\n");
+			}
+		});
+		return menu;
+	}
+
+	private JMenu helpMenu() {
+		final JMenu menu = new JMenu("Help");
+		//addSeparator(menu, "Online Resources");
+		menu.add(helpMenuItem("Image.sc Forum ", "https://forum.image.sc/"));
+		menu.add(helpMenuItem("ImageJ Search Portal", "https://search.imagej.net/"));
+		menu.addSeparator();
+		menu.add(helpMenuItem("SciJava Javadoc Portal", "https://javadoc.scijava.org/"));
+		menu.add(helpMenuItem("SciJava Maven Repository", "https://maven.scijava.org/"));
+		menu.addSeparator();
+		menu.add(helpMenuItem("Fiji on GitHub", "https://github.com/fiji"));
+		menu.add(helpMenuItem("SciJava on GitHub", "https://github.com/scijava/"));
+		menu.addSeparator();
+		menu.add(helpMenuItem("IJ1 Macro Functions", "https://imagej.nih.gov/ij/developer/macro/functions.html"));
+		menu.addSeparator();
+		menu.add(helpMenuItem("ImageJ Docs: Development", "https://imagej.net/develop/"));
+		menu.add(helpMenuItem("ImageJ Docs: Scripting", "https://imagej.net/scripting/"));
+		menu.add(helpMenuItem("ImageJ Notebook Tutorials", "https://github.com/imagej/tutorials#readme"));
+		return menu;
+	}
+
+	private JMenuItem helpMenuItem(final String label, final String url) {
+		final JMenuItem item = new JMenuItem(label);
+		item.addActionListener(e -> {
+			try {
+				platformService.open(new URL(url));
+			} catch (final IOException ignored) {
+				error("<HTML>Web page could not be open. " + "Please visit<br>" + url + "<br>using your web browser.");
+			}
+		});
+		return item;
 	}
 
 	private static void addSeparator(final JMenu menu, final String header) {
