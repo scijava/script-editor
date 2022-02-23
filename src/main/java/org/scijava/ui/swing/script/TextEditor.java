@@ -228,7 +228,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	private Set<JMenuItem> tabsMenuItems;
 	private FindAndReplaceDialog findDialog;
 	private JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport,
-			autoCompletionKey, autoCompletion, markOccurences, paintTabs, whiteSpace;
+			autocompletion, fallbackAutocompletion, keylessAutocompletion,
+			markOccurences, paintTabs, whiteSpace;
 	private ButtonGroup themeRadioGroup;
 	private JTextArea errorScreen = new JTextArea();
 
@@ -612,8 +613,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		options.add(applyThemeMenu());
 
 		addSeparator(options, "Code Completions:");
-		options.add(autoCompletion);
-		options.add(autoCompletionKey);
+		options.add(autocompletion);
+		options.add(keylessAutocompletion);
+		options.add(fallbackAutocompletion);
 
 		options.addSeparator();
 		options.add(getPrefsMenu());
@@ -808,7 +810,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		// if dark L&F and using the default theme, assume 'dark' theme
 		applyTheme((isDarkLaF() && "default".equals(editorPane.themeName())) ? "dark" : editorPane.themeName());
 		editorPane.requestFocus();
-
 	}
 
 	private class DragAndDrop implements DragSourceListener, DragGestureListener {
@@ -904,10 +905,16 @@ public class TextEditor extends JFrame implements ActionListener,
 		whiteSpace = new JCheckBoxMenuItem("Label Whitespace", false);
 		whiteSpace.setMnemonic(KeyEvent.VK_L);
 		whiteSpace.addChangeListener(e -> setWhiteSpaceVisible(whiteSpace.isSelected()));
-		autoCompletion = new JCheckBoxMenuItem("Enable Autocompletion", true);
-		autoCompletion.addChangeListener(e -> setAutoCompletionEnabled(autoCompletion.getState()));
-		autoCompletionKey = new JCheckBoxMenuItem("Show Completions Without Ctrl+Space", false);
-		autoCompletionKey.addChangeListener(e -> setAutoCompletionNoKeyRequired(autoCompletionKey.getState()));
+		autocompletion = new JCheckBoxMenuItem("Enable Autocompletion", true);
+		autocompletion.addChangeListener(e -> setAutoCompletionEnabled(autocompletion.getState()));
+		keylessAutocompletion = new JCheckBoxMenuItem("Show Completions Without Ctrl+Space", false);
+		keylessAutocompletion.setToolTipText("<HTML>If selected, completion pop-up automatically appears"
+				+ " while typing<br>NB: Not all languages support this feature");
+		keylessAutocompletion.addChangeListener(e -> setKeylessAutoCompletion(keylessAutocompletion.getState()));
+		fallbackAutocompletion = new JCheckBoxMenuItem("Unsupported languages: Fallback to Java", false);
+		fallbackAutocompletion.setToolTipText("<HTML>If selected, Java completions will be used when scripting<br>"
+				+ "a language for which auto-completions are not available");
+		fallbackAutocompletion.addChangeListener(e -> setFallbackAutoCompletion(fallbackAutocompletion.getState()));
 		themeRadioGroup = new ButtonGroup();
 
 		// Help menu. These are 'dynamic' items
@@ -1426,13 +1433,19 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private void setAutoCompletionEnabled(final boolean enabled) {
 		for (int i = 0; i < tabbed.getTabCount(); i++) {
-			getEditorPane(i).setAutoCompletionEnabled(enabled);
+			getEditorPane(i).setAutoCompletion(enabled);
 		}
 	}
 
-	private void setAutoCompletionNoKeyRequired(final boolean noKeyRequired) {
+	private void setKeylessAutoCompletion(final boolean noKeyRequired) {
 		for (int i = 0; i < tabbed.getTabCount(); i++) {
-			getEditorPane(i).setAutoCompletionNoKeyRequired(noKeyRequired);
+			getEditorPane(i).setKeylessAutoCompletion(noKeyRequired);
+		}
+	}
+
+	private void setFallbackAutoCompletion(final boolean fallback) {
+		for (int i = 0; i < tabbed.getTabCount(); i++) {
+			getEditorPane(i).setFallbackAutoCompletion(fallback);
 		}
 	}
 
@@ -2035,8 +2048,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		tabsEmulated.setState(pane.getTabsEmulated());
 		paintTabs.setState(pane.getPaintTabLines());
 		whiteSpace.setState(pane.isWhitespaceVisible());
-		autoCompletion.setState(pane.isAutoCompletionEnabled());
-		autoCompletionKey.setState(pane.isAutoCompletionNoKeyRequired());
+		autocompletion.setState(pane.isAutoCompletionEnabled());
+		keylessAutocompletion.setState(pane.isKeylessAutoCompletionEnabled());
 	}
 
 	public void setEditorPaneFileName(final String baseName) {

@@ -94,7 +94,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private boolean undoInProgress;
 	private boolean redoInProgress;
 	private boolean autoCompletionEnabled = true;
-	private boolean autoCompletionNoKeyRequired = false;
+	private boolean autoCompletionJavaFallback;
+	private boolean autoCompletionWithoutKey;
 
 	@Parameter
 	Context context;
@@ -521,29 +522,39 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setText(header += getText());
 		}
 
+		if (!autoCompletionEnabled) return;
+
 		// try to get language support for current language, may be null.
 		support = languageSupportService.getLanguageSupport(currentLanguage);
-
-		if (support != null && autoCompletionEnabled) {
+		if (support == null && autoCompletionJavaFallback)
+			support = languageSupportService.getLanguageSupport(scriptService.getLanguageByName("Java"));
+		if (support != null)
 			support.install(this);
-		}
 	}
 
-	public void setAutoCompletionEnabled(boolean value) {
+	public void setAutoCompletion(boolean value) {
 		autoCompletionEnabled = value;
 		if (currentLanguage != null) setLanguage(currentLanguage);
 	}
 
-	void setAutoCompletionNoKeyRequired(boolean value) {
-		autoCompletionNoKeyRequired = value;
+	void setFallbackAutoCompletion(boolean value) {
+		autoCompletionJavaFallback = value;
+	}
+
+	void setKeylessAutoCompletion(boolean value) {
+		autoCompletionWithoutKey = value;
 	}
 
 	public boolean isAutoCompletionEnabled() {
-		return autoCompletionNoKeyRequired;
+		return autoCompletionWithoutKey;
 	}
 
-	public boolean isAutoCompletionNoKeyRequired() {
-		return autoCompletionNoKeyRequired;
+	public boolean isKeylessAutoCompletionEnabled() {
+		return autoCompletionWithoutKey;
+	}
+
+	public boolean isFallbackAutoCompletionEnabled() {
+		return autoCompletionJavaFallback;
 	}
 
 	/**
@@ -735,8 +746,9 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public static final String WHITESPACE_VISIBLE_PREFS = "script.editor.Whitespace";
 	public static final String TABLINES_VISIBLE_PREFS = "script.editor.Tablines";
 	public static final String THEME_PREFS = "script.editor.theme";
-	public static final String AUTOCOMPLETE_PREFS = "script.editor.Autocomp";
-	public static final String AUTOCOMPLETE_NOKEY_PREFS = "script.editor.AutocompKey";
+	public static final String AUTOCOMPLETE_PREFS = "script.editor.AC";
+	public static final String AUTOCOMPLETE_NOKEY_PREFS = "script.editor.ACNoKey";
+	public static final String AUTOCOMPLETE_FALLBACK_PREFS = "script.editor.ACFallback";
 	public static final String MARK_OCCURRENCES_PREFS = "script.editor.Occurrences";
 	public static final String FOLDERS_PREFS = "script.editor.folders";
 	public static final int DEFAULT_TAB_SIZE = 4;
@@ -753,8 +765,9 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setLineWrap(false);
 			setTabsEmulated(false);
 			setPaintTabLines(false);
-			setAutoCompletionEnabled(true);
-			setAutoCompletionNoKeyRequired(false);
+			setAutoCompletion(true);
+			setKeylessAutoCompletion(false);
+			setFallbackAutoCompletion(false);
 			setMarkOccurrences(false);
 		} else {
 			resetTabSize();
@@ -763,8 +776,9 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setTabsEmulated(prefService.getBoolean(getClass(), TABS_EMULATED_PREFS, getTabsEmulated()));
 			setWhitespaceVisible(prefService.getBoolean(getClass(), WHITESPACE_VISIBLE_PREFS, isWhitespaceVisible()));
 			setPaintTabLines(prefService.getBoolean(getClass(), TABLINES_VISIBLE_PREFS, getPaintTabLines()));
-			setAutoCompletionEnabled(prefService.getBoolean(getClass(), AUTOCOMPLETE_PREFS, true));
-			setAutoCompletionNoKeyRequired(prefService.getBoolean(getClass(), AUTOCOMPLETE_NOKEY_PREFS, false));
+			setAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_PREFS, true));
+			setKeylessAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_NOKEY_PREFS, false));
+			setFallbackAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, false));
 			setMarkOccurrences(prefService.getBoolean(getClass(), MARK_OCCURRENCES_PREFS, false));
 		}
 	}
@@ -788,7 +802,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		prefService.put(getClass(), WHITESPACE_VISIBLE_PREFS, isWhitespaceVisible());
 		prefService.put(getClass(), TABLINES_VISIBLE_PREFS, getPaintTabLines());
 		prefService.put(getClass(), AUTOCOMPLETE_PREFS, isAutoCompletionEnabled());
-		prefService.put(getClass(), AUTOCOMPLETE_NOKEY_PREFS, isAutoCompletionNoKeyRequired());
+		prefService.put(getClass(), AUTOCOMPLETE_NOKEY_PREFS, isKeylessAutoCompletionEnabled());
+		prefService.put(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, isFallbackAutoCompletionEnabled());
 		if (null != top_folders) prefService.put(getClass(), FOLDERS_PREFS, top_folders);
 		if (null != theme) prefService.put(getClass(), THEME_PREFS, theme);
 	}
