@@ -647,7 +647,6 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		// Tweaks for FileSystemTree
 		tree.addTopLevelFoldersFrom(getEditorPane().loadFolders()); // Restore top-level directories
-		tree.setFont(tree.getFont().deriveFont(getEditorPane().getFontSize()));
 		dragSource = new DragSource();
 		dragSource.createDefaultDragGestureRecognizer(tree, DnDConstants.ACTION_COPY, new DragAndDrop());
 		tree.ignoreExtension("class");
@@ -802,7 +801,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		final EditorPane editorPane = getEditorPane();
 		// If dark L&F and using the default theme, assume 'dark' theme
 		applyTheme((isDarkLaF() && "default".equals(editorPane.themeName())) ? "dark" : editorPane.themeName());
-		// Apply preferences that have not yet been set
+		// Ensure font sizes are consistent across all panels
+		setFontSize(getEditorPane().getFontSize());
+		// Ensure menu commands are up-to-date
 		updateUI(true);
 		// Store locations of splitpanes
 		panePositions = new int[]{body.getDividerLocation(), getTab().getScreenAndPromptSplit().getDividerLocation()};
@@ -1515,7 +1516,11 @@ public class TextEditor extends JFrame implements ActionListener,
 			final Theme th = Theme
 					.load(getClass().getResourceAsStream("/org/fife/ui/rsyntaxtextarea/themes/" + theme + ".xml"));
 			for (int i = 0; i < tabbed.getTabCount(); i++) {
-				th.apply(getEditorPane(i));
+				// themes include font size, so we'll need to reset that
+				final EditorPane ep = getEditorPane(i);
+				final float existingFontSize = ep.getFontSize();
+				th.apply(ep);
+				ep.setFontSize(existingFontSize);
 			}
 		} catch (final Exception ex) {
 			throw new IllegalArgumentException(ex);
