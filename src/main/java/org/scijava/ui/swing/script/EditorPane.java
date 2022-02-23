@@ -546,7 +546,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	}
 
 	public boolean isAutoCompletionEnabled() {
-		return autoCompletionWithoutKey;
+		return autoCompletionEnabled;
 	}
 
 	public boolean isKeylessAutoCompletionEnabled() {
@@ -747,7 +747,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public static final String TABLINES_VISIBLE_PREFS = "script.editor.Tablines";
 	public static final String THEME_PREFS = "script.editor.theme";
 	public static final String AUTOCOMPLETE_PREFS = "script.editor.AC";
-	public static final String AUTOCOMPLETE_NOKEY_PREFS = "script.editor.ACNoKey";
+	public static final String AUTOCOMPLETE_KEYLESS_PREFS = "script.editor.ACNoKey";
 	public static final String AUTOCOMPLETE_FALLBACK_PREFS = "script.editor.ACFallback";
 	public static final String MARK_OCCURRENCES_PREFS = "script.editor.Occurrences";
 	public static final String FOLDERS_PREFS = "script.editor.folders";
@@ -766,7 +766,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setTabsEmulated(false);
 			setPaintTabLines(false);
 			setAutoCompletion(true);
-			setKeylessAutoCompletion(false);
+			setKeylessAutoCompletion(true); // true for backwards compatibility with IJ1 macro auto-completion
 			setFallbackAutoCompletion(false);
 			setMarkOccurrences(false);
 		} else {
@@ -777,7 +777,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setWhitespaceVisible(prefService.getBoolean(getClass(), WHITESPACE_VISIBLE_PREFS, isWhitespaceVisible()));
 			setPaintTabLines(prefService.getBoolean(getClass(), TABLINES_VISIBLE_PREFS, getPaintTabLines()));
 			setAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_PREFS, true));
-			setKeylessAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_NOKEY_PREFS, false));
+			setKeylessAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_KEYLESS_PREFS, true)); // true for backwards compatibility with IJ1 macro
 			setFallbackAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, false));
 			setMarkOccurrences(prefService.getBoolean(getClass(), MARK_OCCURRENCES_PREFS, false));
 		}
@@ -802,7 +802,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		prefService.put(getClass(), WHITESPACE_VISIBLE_PREFS, isWhitespaceVisible());
 		prefService.put(getClass(), TABLINES_VISIBLE_PREFS, getPaintTabLines());
 		prefService.put(getClass(), AUTOCOMPLETE_PREFS, isAutoCompletionEnabled());
-		prefService.put(getClass(), AUTOCOMPLETE_NOKEY_PREFS, isKeylessAutoCompletionEnabled());
+		prefService.put(getClass(), AUTOCOMPLETE_KEYLESS_PREFS, isKeylessAutoCompletionEnabled());
 		prefService.put(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, isFallbackAutoCompletionEnabled());
 		if (null != top_folders) prefService.put(getClass(), FOLDERS_PREFS, top_folders);
 		if (null != theme) prefService.put(getClass(), THEME_PREFS, theme);

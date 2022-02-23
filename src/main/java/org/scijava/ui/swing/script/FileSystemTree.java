@@ -275,21 +275,6 @@ public class FileSystemTree extends JTree
 		setAutoscrolls(true);
 		setScrollsOnExpand(true);
 		setExpandsSelectedPaths(true);
-		new FileDrop(this, files -> {
-			final List<File> dirs = Arrays.asList(files).stream().filter(f -> f.isDirectory())
-					.collect(Collectors.toList());
-			if (dirs.isEmpty()) {
-				JOptionPane.showMessageDialog(FileSystemTree.this, "Only folders can be dropped into the file tree.",
-						"Invalid Drop", JOptionPane.WARNING_MESSAGE);
-				return;
-			}
-			final boolean confirm = dirs.size() < 4 || (JOptionPane.showConfirmDialog(FileSystemTree.this,
-					"Confirm loading of " + dirs.size() + " folders?", "Confirm?",
-					JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION);
-			if (confirm) {
-				dirs.forEach(dir -> addRootDirectory(dir.getAbsolutePath(), true));
-			}
-		});
 		addTreeWillExpandListener(new TreeWillExpandListener() {
 			@Override
 			public void treeWillExpand(TreeExpansionEvent event) throws ExpandVetoException {

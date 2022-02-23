@@ -297,13 +297,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		// NB: All panes must be initialized before menus are assembled!
 		tabbed = new JTabbedPane();
 		tree = new FileSystemTree(log);
-		final JScrollPane scrolltree = new JScrollPane(new FileSystemTreePanel(tree, context));
-		// set borders. Needed for drag & drop and collapsing split pane
-		//tabbed.setBorder(BorderFactory.createEmptyBorder(0,BORDER_SIZE,0,BORDER_SIZE));
-		//scrolltree.setBorder(BorderFactory.createEmptyBorder(0,0,0,BORDER_SIZE));
-		scrolltree.setPreferredSize(new Dimension(200, 600));
-		body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrolltree, tabbed);
-
+		body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new FileSystemTreePanel(tree, context), tabbed);
 		// These items are dynamic and need to be initialized before EditorPane creation
 		initializeDynamicMenuComponents();
 
@@ -2317,8 +2311,17 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * Run current script with the batch processor
 	 */
 	public void runBatch() {
+		if (null == getCurrentLanguage()) {
+			error("Select a language first! Also, please note that this option\n"
+				+ "requires at least one @File parameter to be declared in the script.");
+			return;
+		}
 		// get script from current tab
 		final String script = getTab().getEditorPane().getText();
+		if (script.trim().isEmpty()) {
+			error("This option requires at least one @File parameter to be declared.");
+			return;
+		}
 		final ScriptInfo info = new ScriptInfo(context, //
 			"dummy." + getCurrentLanguage().getExtensions().get(0), //
 			new StringReader(script));

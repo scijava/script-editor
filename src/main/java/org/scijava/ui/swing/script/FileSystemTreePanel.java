@@ -33,6 +33,7 @@ import java.awt.Color;
 import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -42,9 +43,14 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.font.FontRenderContext;
+import java.awt.geom.Rectangle2D;
 import java.io.File;
+import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import java.util.stream.Collectors;
 
 import javax.swing.FocusManager;
 import javax.swing.JButton;
@@ -54,6 +60,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
@@ -109,7 +116,23 @@ class FileSystemTreePanel extends JPanel {
 		bc.weightx = 1.0;
 		bc.weighty = 1.0;
 		bc.fill = GridBagConstraints.BOTH;
-		add(tree, bc);
+		final JScrollPane treePane = new JScrollPane(tree);
+		add(treePane, bc);
+		new FileDrop(treePane, files -> {
+			final List<File> dirs = Arrays.asList(files).stream().filter(f -> f.isDirectory())
+					.collect(Collectors.toList());
+			if (dirs.isEmpty()) {
+				JOptionPane.showMessageDialog(this, "Only folders can be dropped into the file tree.",
+						"Invalid Drop", JOptionPane.WARNING_MESSAGE);
+				return;
+			}
+			final boolean confirm = dirs.size() < 4 || (JOptionPane.showConfirmDialog(this,
+					"Confirm loading of " + dirs.size() + " folders?", "Confirm?",
+					JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION);
+			if (confirm) {
+				dirs.forEach(dir -> tree.addRootDirectory(dir.getAbsolutePath(), true));
+			}
+		});
 		addContextualMenuToTree();
 	}
 
@@ -389,6 +412,21 @@ class FileSystemTreePanel extends JPanel {
 		private static final String REGEX_HOLDER = "[?*]";
 		private static final String CASE_HOLDER = "[Aa]";
 		private static final String DEF_HOLDER = "File filter... ";
+
+		SearchField() {
+			super();
+			try {
+				// make sure pane is large enough to display placeholders
+				final FontMetrics fm = getFontMetrics(getFont());
+				final FontRenderContext frc = fm.getFontRenderContext();
+				final String buf = CASE_HOLDER + REGEX_HOLDER + DEF_HOLDER;
+				final Rectangle2D rect = getFont().getStringBounds(buf, frc);
+				final int prefWidth = (int) rect.getWidth();
+				setColumns(prefWidth / super.getColumnWidth());
+			} catch (final Exception ignored) {
+				// do nothing
+			}
+		}
 
 		void update() {
 			update(getGraphics());
