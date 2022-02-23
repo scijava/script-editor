@@ -31,10 +31,12 @@ package org.scijava.ui.swing.script;
 
 import java.awt.Color;
 import java.awt.Desktop;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
@@ -172,8 +174,21 @@ class FileSystemTreePanel extends JPanel {
 		return field;
 	}
 
+	private JButton thinButton(final String label) {
+		final JButton b = new JButton(label);
+		final double FACTOR = .25;
+		final Insets insets =b.getMargin();
+		b.setMargin(new Insets(insets.top, (int) (insets.left *
+			FACTOR), insets.bottom, (int) (insets.right * FACTOR)));
+		//b.setBorder(null);
+		// set height to that of searchField. Do not allow vertical resizing
+		b.setPreferredSize(new Dimension(b.getPreferredSize().width, (int) searchField.getPreferredSize().getHeight()));
+		b.setMaximumSize(new Dimension(b.getMaximumSize().width, (int) searchField.getPreferredSize().getHeight()));
+		return b;
+	}
+
 	private JButton addDirectoryButton() {
-		final JButton add_directory = new JButton("<HTML>&#43;");
+		final JButton add_directory = thinButton("<HTML>&#43;");
 		add_directory.setToolTipText("Add a directory");
 		add_directory.addActionListener(e -> {
 			final String folders = tree.getTopLevelFoldersString();
@@ -205,7 +220,7 @@ class FileSystemTreePanel extends JPanel {
 	}
 
 	private JButton removeDirectoryButton() {
-		final JButton remove_directory = new JButton("<HTML>&#8722;");
+		final JButton remove_directory = thinButton("<HTML>&#8722;");
 		remove_directory.setToolTipText("Remove a top-level directory");
 		remove_directory.addActionListener(e -> {
 			final TreePath p = tree.getSelectionPath();
@@ -227,7 +242,7 @@ class FileSystemTreePanel extends JPanel {
 	}
 
 	private JButton searchOptionsButton() {
-		final JButton options = new JButton("<HTML>&#8942;");
+		final JButton options = thinButton("<HTML>&#8942;");
 		options.setToolTipText("Filtering options");
 		final JPopupMenu popup = new JPopupMenu();
 		final JCheckBoxMenuItem jcbmi1 = new JCheckBoxMenuItem("Case Sensitive", isCaseSensitive());
@@ -371,8 +386,8 @@ class FileSystemTreePanel extends JPanel {
 	private class SearchField extends JTextField {
 
 		private static final long serialVersionUID = 7004232238240585434L;
-		private static final String REGEX_HOLDER = "  [?*]";
-		private static final String CASE_HOLDER = "  [Aa]";
+		private static final String REGEX_HOLDER = "[?*]";
+		private static final String CASE_HOLDER = "[Aa]";
 		private static final String DEF_HOLDER = "File filter... ";
 
 		void update() {

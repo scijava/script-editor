@@ -295,10 +295,11 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		// NB: All panes must be initialized before menus are assembled!
 		tabbed = new JTabbedPane();
-		tabbed.setBorder(BorderFactory.createEmptyBorder(0,BORDER_SIZE,0,BORDER_SIZE));
 		tree = new FileSystemTree(log);
 		final JScrollPane scrolltree = new JScrollPane(new FileSystemTreePanel(tree, context));
-		scrolltree.setBorder(BorderFactory.createEmptyBorder(0,BORDER_SIZE,0,BORDER_SIZE));
+		// set borders. Needed for drag & drop and collapsing split pane
+		//tabbed.setBorder(BorderFactory.createEmptyBorder(0,BORDER_SIZE,0,BORDER_SIZE));
+		//scrolltree.setBorder(BorderFactory.createEmptyBorder(0,0,0,BORDER_SIZE));
 		scrolltree.setPreferredSize(new Dimension(200, 600));
 		body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrolltree, tabbed);
 
@@ -612,7 +613,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		options.add(fallbackAutocompletion);
 
 		options.addSeparator();
-		options.add(getPrefsMenu());
+		appendPreferences(options);
 		mbar.add(options);
 		mbar.add(helpMenu());
 
@@ -904,7 +905,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		autocompletion = new JCheckBoxMenuItem("Enable Autocompletion", true);
 		autocompletion.addChangeListener(e -> setAutoCompletionEnabled(autocompletion.getState()));
 		keylessAutocompletion = new JCheckBoxMenuItem("Show Completions Without Ctrl+Space", false);
-		keylessAutocompletion.setToolTipText("<HTML>If selected, completion pop-up automatically appears"
+		keylessAutocompletion.setToolTipText("<HTML>If selected, the completion pop-up automatically appears"
 				+ " while typing<br>NB: Not all languages support this feature");
 		keylessAutocompletion.addChangeListener(e -> setKeylessAutoCompletion(keylessAutocompletion.getState()));
 		fallbackAutocompletion = new JCheckBoxMenuItem("Unsupported languages: Fallback to Java", false);
@@ -914,7 +915,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		themeRadioGroup = new ButtonGroup();
 
 		// Help menu. These are 'dynamic' items
-		openMacroFunctions = new JMenuItem("   Open Help on Macro Function(s)...");
+		openMacroFunctions = new JMenuItem("Open Help on Macro Function(s)...");
 		openMacroFunctions.setMnemonic(KeyEvent.VK_H);
 		openMacroFunctions.addActionListener(e -> {
 			try {
@@ -923,10 +924,10 @@ public class TextEditor extends JFrame implements ActionListener,
 				handleException(ex);
 			}
 		});
-		openHelp = new JMenuItem("   Open Help for Class (With Frames)...");
+		openHelp = new JMenuItem("Open Help for Class (With Frames)...");
 		openHelp.setMnemonic(KeyEvent.VK_H);
 		openHelp.addActionListener( e-> openHelp(null));
-		openHelpWithoutFrames = new JMenuItem("   Open Help for Class...");
+		openHelpWithoutFrames = new JMenuItem("Open Help for Class...");
 		openHelpWithoutFrames.addActionListener(e -> openHelp(null, false));
 	}
 
@@ -1469,9 +1470,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		map.put("-", "-");
 		map.put("Dark", "dark");
 		map.put("Druid", "druid");
+		map.put("Monokai", "monokai");
 		map.put("Eclipse (Light)", "eclipse");
 		map.put("IntelliJ (Light)", "idea");
-		map.put("Monokai", "monokai");
 		map.put("Visual Studio (Light)", "vs");
 		themeRadioGroup = new ButtonGroup();
 		final JMenu menu = new JMenu("Theme");
@@ -1523,8 +1524,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (updateUI && themeRadioGroup != null) {
 			final Enumeration<AbstractButton> choices = themeRadioGroup.getElements();
 			while (choices.hasMoreElements()) {
-				AbstractButton choice = choices.nextElement();
-				if (theme == choice.getActionCommand()) {
+				final AbstractButton choice = choices.nextElement();
+				if (theme.equals(choice.getActionCommand())) {
 					choice.setSelected(true);
 					break;
 				}
@@ -2845,13 +2846,11 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 			final JScrollPane jsp = new JScrollPane(panel);
 			//jsp.setPreferredSize(new Dimension(800, 500));
-			SwingUtilities.invokeLater(new Runnable() {
-				public void run() {
-					final JFrame frame = new JFrame(text);
-					frame.getContentPane().add(jsp);
-					frame.pack();
-					frame.setVisible(true);
-				}
+			SwingUtilities.invokeLater(() -> {
+				final JFrame frame = new JFrame(text);
+				frame.getContentPane().add(jsp);
+				frame.pack();
+				frame.setVisible(true);
 			});
 		}
 	}
@@ -3221,9 +3220,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		a.setFont(a.getFont().deriveFont(size));
 	}
 
-	private JMenu getPrefsMenu() {
-		final JMenu menu = new JMenu("Preferences");
-		JMenuItem item = new JMenuItem("Save");
+	private void appendPreferences(final JMenu menu) {
+		JMenuItem item = new JMenuItem("Save Preferences");
 		menu.add(item);
 		item.addActionListener(e -> {
 			getEditorPane().savePreferences(tree.getTopLevelFoldersString(), activeTheme);
@@ -3241,7 +3239,6 @@ public class TextEditor extends JFrame implements ActionListener,
 				write("Script Editor: Preferences Reset.\n");
 			}
 		});
-		return menu;
 	}
 
 	private JMenu helpMenu() {
@@ -3250,7 +3247,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		menu.add(openHelpWithoutFrames);
 		openHelpWithoutFrames.setMnemonic(KeyEvent.VK_O);
 		menu.add(openHelp);
-		openClassOrPackageHelp = addToMenu(menu, "   Lookup Class or Package...", 0, 0);
+		openClassOrPackageHelp = addToMenu(menu, "Lookup Class or Package...", 0, 0);
 		openClassOrPackageHelp.setMnemonic(KeyEvent.VK_S);
 		menu.add(openMacroFunctions);
 		addSeparator(menu, "Online Resources:");
@@ -3272,7 +3269,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	private JMenuItem helpMenuItem(final String label, final String url) {
-		final JMenuItem item = new JMenuItem("   " +label); // indent entries
+		final JMenuItem item = new JMenuItem(label);
 		item.addActionListener(e -> openURL(url));
 		return item;
 	}
