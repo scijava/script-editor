@@ -737,6 +737,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public static final String THEME_PREFS = "script.editor.theme";
 	public static final String AUTOCOMPLETE_PREFS = "script.editor.Autocomp";
 	public static final String AUTOCOMPLETE_NOKEY_PREFS = "script.editor.AutocompKey";
+	public static final String MARK_OCCURRENCES_PREFS = "script.editor.Occurrences";
 	public static final String FOLDERS_PREFS = "script.editor.folders";
 	public static final int DEFAULT_TAB_SIZE = 4;
 	public static final String DEFAULT_THEME = "default";
@@ -754,6 +755,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setPaintTabLines(false);
 			setAutoCompletionEnabled(true);
 			setAutoCompletionNoKeyRequired(false);
+			setMarkOccurrences(false);
 		} else {
 			resetTabSize();
 			setFontSize(prefService.getFloat(getClass(), FONT_SIZE_PREFS, getFontSize()));
@@ -763,6 +765,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setPaintTabLines(prefService.getBoolean(getClass(), TABLINES_VISIBLE_PREFS, getPaintTabLines()));
 			setAutoCompletionEnabled(prefService.getBoolean(getClass(), AUTOCOMPLETE_PREFS, true));
 			setAutoCompletionNoKeyRequired(prefService.getBoolean(getClass(), AUTOCOMPLETE_NOKEY_PREFS, false));
+			setMarkOccurrences(prefService.getBoolean(getClass(), MARK_OCCURRENCES_PREFS, false));
 		}
 	}
 

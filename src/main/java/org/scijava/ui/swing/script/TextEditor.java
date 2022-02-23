@@ -82,6 +82,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -98,6 +99,7 @@ import java.util.zip.ZipException;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 import javax.swing.AbstractAction;
+import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
@@ -226,7 +228,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	private Set<JMenuItem> tabsMenuItems;
 	private FindAndReplaceDialog findDialog;
 	private JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport,
-			autoCompletionKey, autoCompletion, paintTabs, whiteSpace;
+			autoCompletionKey, autoCompletion, markOccurences, paintTabs, whiteSpace;
+	private ButtonGroup themeRadioGroup;
 	private JTextArea errorScreen = new JTextArea();
 
 	private final FileSystemTree tree;
@@ -604,6 +607,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		addSeparator(options, "View:");
 		options.add(whiteSpace);
+		options.add(markOccurences);
 		options.add(wrapLines);
 		options.add(applyThemeMenu());
 
@@ -801,7 +805,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		final EditorPane editorPane = getEditorPane();
 		// Apply preferences that have not yet been set
 		updateUI(true);
-		applyTheme(editorPane.themeName());
+		// if dark L&F and using the default theme, assume 'dark' theme
+		applyTheme((isDarkLaF() && "default".equals(editorPane.themeName())) ? "dark" : editorPane.themeName());
 		editorPane.requestFocus();
 
 	}
@@ -893,6 +898,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		wrapLines = new JCheckBoxMenuItem("Wrap Lines", false);
 		wrapLines.setMnemonic(KeyEvent.VK_W);
 		wrapLines.addChangeListener(e -> setWrapLines(wrapLines.getState()));
+		markOccurences = new JCheckBoxMenuItem("Mark Occurences", false);
+		markOccurences.setToolTipText("Highlights all occurrences of a selected element");
+		markOccurences.addChangeListener(e -> setMarkOccurrences(markOccurences.getState()));
 		whiteSpace = new JCheckBoxMenuItem("Label Whitespace", false);
 		whiteSpace.setMnemonic(KeyEvent.VK_L);
 		whiteSpace.addChangeListener(e -> setWhiteSpaceVisible(whiteSpace.isSelected()));
@@ -900,6 +908,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		autoCompletion.addChangeListener(e -> setAutoCompletionEnabled(autoCompletion.getState()));
 		autoCompletionKey = new JCheckBoxMenuItem("Show Completions Without Ctrl+Space", false);
 		autoCompletionKey.addChangeListener(e -> setAutoCompletionNoKeyRequired(autoCompletionKey.getState()));
+		themeRadioGroup = new ButtonGroup();
 
 		// Help menu. These are 'dynamic' items
 		openMacroFunctions = new JMenuItem("   Open Help on Macro Function(s)...");
@@ -1427,6 +1436,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 	}
 
+	private void setMarkOccurrences(final boolean markOccurrences) {
+		for (int i = 0; i < tabbed.getTabCount(); i++) {
+			getEditorPane(i).setMarkOccurrences(markOccurrences);
+		}
+	}
+
 	private void setWhiteSpaceVisible(final boolean visible) {
 		for (int i = 0; i < tabbed.getTabCount(); i++) {
 			getEditorPane(i).setWhitespaceVisible(visible);
@@ -1449,7 +1464,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		map.put("IntelliJ (Light)", "idea");
 		map.put("Monokai", "monokai");
 		map.put("Visual Studio (Light)", "vs");
-		final ButtonGroup group = new ButtonGroup();
+		themeRadioGroup = new ButtonGroup();
 		final JMenu menu = new JMenu("Theme");
 		map.forEach((k, v) -> {
 			if ("-".equals(k)) {
@@ -1457,10 +1472,11 @@ public class TextEditor extends JFrame implements ActionListener,
 				return;
 			}
 			final JRadioButtonMenuItem item = new JRadioButtonMenuItem(k);
-			group.add(item);
+			item.setActionCommand(v);
+			themeRadioGroup.add(item);
 			item.addActionListener(e -> {
 				try {
-					applyTheme(v);
+					applyTheme(v, false);
 				} catch (final IllegalArgumentException ex) {
 					JOptionPane.showMessageDialog(TextEditor.this,
 							"An exception occured. Theme could not be loaded");
@@ -1481,9 +1497,13 @@ public class TextEditor extends JFrame implements ActionListener,
 	 *                                  the resource could not be loaded
 	 */
 	public void applyTheme(final String theme) throws IllegalArgumentException {
+		applyTheme(theme, true);
+	}
+
+	private void applyTheme(final String theme, final boolean updateUI) throws IllegalArgumentException {
 		try {
-			final Theme th = Theme.load(getClass()
-					.getResourceAsStream("/org/fife/ui/rsyntaxtextarea/themes/" + theme + ".xml"));
+			final Theme th = Theme
+					.load(getClass().getResourceAsStream("/org/fife/ui/rsyntaxtextarea/themes/" + theme + ".xml"));
 			for (int i = 0; i < tabbed.getTabCount(); i++) {
 				th.apply(getEditorPane(i));
 			}
@@ -1491,6 +1511,16 @@ public class TextEditor extends JFrame implements ActionListener,
 			throw new IllegalArgumentException(ex);
 		}
 		this.activeTheme = theme;
+		if (updateUI && themeRadioGroup != null) {
+			final Enumeration<AbstractButton> choices = themeRadioGroup.getElements();
+			while (choices.hasMoreElements()) {
+				AbstractButton choice = choices.nextElement();
+				if (theme == choice.getActionCommand()) {
+					choice.setSelected(true);
+					break;
+				}
+			}
+		}
 	}
 
 	protected boolean handleTabsMenu(final Object source) {
@@ -2000,6 +2030,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				defaultSize = true;
 			}
 		}
+		markOccurences.setState(pane.getMarkOccurrences());
 		wrapLines.setState(pane.getLineWrap());
 		tabsEmulated.setState(pane.getTabsEmulated());
 		paintTabs.setState(pane.getPaintTabLines());
@@ -2505,6 +2536,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		textArea.setCaretPosition(length);
 	}
 	
+
 	public void markCompileStart() {
 		markCompileStart(true);
 	}
@@ -3257,6 +3289,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		} catch (final Exception ignored) {
 			return Color.GRAY;
 		}
+	}
+	
+	private static boolean isDarkLaF() {
+		// see https://stackoverflow.com/a/3943023
+		final Color b = new JLabel().getBackground();
+		return (b.getRed()*0.299 + b.getGreen()*0.587 + b.getBlue() *0.114) < 186;
 	}
 
 }
