@@ -79,6 +79,7 @@ public class TextEditorTab extends JSplitPane {
 	private final JButton runit, batchit, killit, toggleErrors, switchSplit;
 	private final JCheckBox incremental;
 	private final JSplitPane screenAndPromptSplit;
+	private int screenAndPromptSplitDividerLocation;
 
 	private final TextEditor textEditor;
 	private DropTarget dropTarget;
@@ -87,7 +88,10 @@ public class TextEditorTab extends JSplitPane {
 	public TextEditorTab(final TextEditor textEditor) {
 		super(JSplitPane.VERTICAL_SPLIT);
 		super.setResizeWeight(350.0 / 430.0);
-		this.setOneTouchExpandable(true);
+		// TF: disable setOneTouchExpandable() due to inconsistent behavior when
+		// applying preferences at startup. Also, it does not apply to all L&Fs.
+		// Users can use the controls in the menu bar to toggle the pane
+		this.setOneTouchExpandable(false);
 
 		this.textEditor = textEditor;
 		editorPane = new EditorPane();
@@ -210,7 +214,7 @@ public class TextEditorTab extends JSplitPane {
 				}
 				// Keep prompt collapsed if not in use
 				if (!incremental.isSelected()) {
-					SwingUtilities.invokeLater(() -> screenAndPromptSplit.setDividerLocation(1.0));
+					setREPLVisible(false);
 				}
 			}
 		});
@@ -299,7 +303,6 @@ public class TextEditorTab extends JSplitPane {
 		
 		super.setLeftComponent(editorPane.wrappedInScrollbars());
 		super.setRightComponent(screenAndPromptSplit);
-		screenAndPromptSplit.setDividerLocation(600);
 		screenAndPromptSplit.setDividerLocation(1.0);
 
 		// Persist Script Editor layout whenever split pane divider is adjusted.
@@ -312,6 +315,20 @@ public class TextEditorTab extends JSplitPane {
 	// Package-private
 	JSplitPane getScreenAndPromptSplit() {
 		return screenAndPromptSplit;
+	}
+
+	void setREPLVisible(final boolean visible) {
+		SwingUtilities.invokeLater(() -> {
+			if (visible) {
+				if (getScreenAndPromptSplit().getDividerLocation() <= getScreenAndPromptSplit().getMinimumDividerLocation())
+					getScreenAndPromptSplit().setDividerLocation(.5d); // half of panel's height
+				else
+					getScreenAndPromptSplit().setDividerLocation(screenAndPromptSplitDividerLocation);
+			} else { // collapse to bottom
+				screenAndPromptSplitDividerLocation = getScreenAndPromptSplit().getDividerLocation();
+				getScreenAndPromptSplit().setDividerLocation(1f);
+			}
+		});
 	}
 
 	@Override

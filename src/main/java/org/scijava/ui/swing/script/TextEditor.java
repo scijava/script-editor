@@ -197,6 +197,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	public static final String MAIN_DIV_LOCATION = "script.editor.main.divLocation";
 	public static final String TAB_DIV_LOCATION = "script.editor.tab.divLocation";
 	public static final String TAB_DIV_ORIENTATION = "script.editor.tab.divOrientation";
+	public static final String REPL_DIV_LOCATION = "script.editor.repl.divLocation";
 	public static final String LAST_LANGUAGE = "script.editor.lastLanguage";
 
 	static {
@@ -640,7 +641,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 
 		// Tweaks for JSplitPane
-		body.setOneTouchExpandable(true);
+		// TF: disable setOneTouchExpandable() due to inconsistent behavior when
+		// applying preferences at startup. Also, it does not apply to all L&Fs.
+		// Users can use the controls in the menu bar to toggle the pane
+		body.setOneTouchExpandable(false);
 		body.addPropertyChangeListener(evt -> {
 			if ("dividerLocation".equals(evt.getPropertyName())) saveWindowSizeToPrefs();
 		});
@@ -767,8 +771,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		try {
 			threadService.invoke(() -> {
 				pack();
-				body.setDividerLocation(0.2);
-				getTab().getScreenAndPromptSplit().setDividerLocation(1.0);
+				body.setDividerLocation(0.2); // Important!: will be read as prefs. default
+				getTab().setREPLVisible(false);
 				loadPreferences();
 				pack();
 			});
@@ -806,7 +810,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		// Ensure menu commands are up-to-date
 		updateUI(true);
 		// Store locations of splitpanes
-		panePositions = new int[]{body.getDividerLocation(), getTab().getScreenAndPromptSplit().getDividerLocation()};
+		panePositions = new int[]{body.getDividerLocation(), getTab().getDividerLocation()};
 		editorPane.requestFocus();
 	}
 
@@ -990,9 +994,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		final TextEditorTab tab = getTab();
 		final int tabDivLocation = prefService.getInt(getClass(), TAB_DIV_LOCATION, tab.getDividerLocation());
 		final int tabDivOrientation = prefService.getInt(getClass(), TAB_DIV_ORIENTATION, tab.getOrientation());
+		final int replDividerLocation = prefService.getInt(getClass(), REPL_DIV_LOCATION, tab.getScreenAndPromptSplit().getDividerLocation());
 		tab.setDividerLocation(tabDivLocation);
 		tab.setOrientation(tabDivOrientation);
-
+		tab.getScreenAndPromptSplit().setDividerLocation(replDividerLocation);
 		layoutLoading = false;
 	}
 
@@ -1017,6 +1022,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final TextEditorTab tab = getTab();
 		prefService.put(getClass(), TAB_DIV_LOCATION, tab.getDividerLocation());
 		prefService.put(getClass(), TAB_DIV_ORIENTATION, tab.getOrientation());
+		prefService.put(getClass(), REPL_DIV_LOCATION, tab.getScreenAndPromptSplit().getDividerLocation());
 	}
 
 	final public RSyntaxTextArea getTextArea() {
@@ -1541,13 +1547,10 @@ public class TextEditor extends JFrame implements ActionListener,
 	private void collapseSplitPane(final int pane, final boolean collapse) {
 		final JSplitPane jsp = (pane == 0)  ? body : getTab();
 		if (collapse) {
-			// see https://stackoverflow.com/q/4934499
 			panePositions[pane] = jsp.getDividerLocation();
 			if (pane == 0) { // collapse to left
-				jsp.getLeftComponent().setMinimumSize(new Dimension());
 				jsp.setDividerLocation(0.0d);
 			} else { // collapse to bottom
-				jsp.getTopComponent().setMinimumSize(new Dimension());
 				jsp.setDividerLocation(1.0d);
 			}
 		} else {
@@ -3047,7 +3050,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		
 		final JTextArea prompt = this.getTab().getPrompt();
 		if (incremental) {
-			getTab().getScreenAndPromptSplit().setDividerLocation(0.5);
+			getTab().setREPLVisible(true);
 			prompt.addKeyListener(new KeyAdapter() {
 				private final ArrayList<String> commands = loadPromptLog(getCurrentLanguage());
 				private int index = commands.size();
