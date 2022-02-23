@@ -242,6 +242,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private boolean respectAutoImports;
 	private String activeTheme;
+	private int[] panePositions;
 
 
 	@Parameter
@@ -511,19 +512,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		tabsMenu = new JMenu("Window");
 		tabsMenu.setMnemonic(KeyEvent.VK_W);
 		addSeparator(tabsMenu, "Panes:");
-		final JCheckBoxMenuItem jcmi = new JCheckBoxMenuItem("File Explorer", true);
-		final int[] treePos = { body.getDividerLocation() };
-		jcmi.addItemListener(e -> {
-			if (jcmi.isSelected()) {
-				body.setDividerLocation(treePos[0]);
-			} else {
-				// see https://stackoverflow.com/q/4934499
-				treePos[0] = body.getDividerLocation();
-				body.getLeftComponent().setMinimumSize(new Dimension());
-				body.setDividerLocation(0.0d);
-			}
-		});
-		tabsMenu.add(jcmi);
+		final JCheckBoxMenuItem jcmi1 = new JCheckBoxMenuItem("File Explorer", true);
+		jcmi1.addItemListener(e -> collapseSplitPane(0, !jcmi1.isSelected()));
+		tabsMenu.add(jcmi1);
+		final JCheckBoxMenuItem jcmi2 = new JCheckBoxMenuItem("Console", true);
+		jcmi2.addItemListener(e -> collapseSplitPane(1, !jcmi2.isSelected()));
+		tabsMenu.add(jcmi2);
 		addSeparator(tabsMenu, "Tabs:");
 		nextTab = addToMenu(tabsMenu, "Next Tab", KeyEvent.VK_PAGE_DOWN, ctrl);
 		nextTab.setMnemonic(KeyEvent.VK_N);
@@ -805,10 +799,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		open(null);
 
 		final EditorPane editorPane = getEditorPane();
+		// If dark L&F and using the default theme, assume 'dark' theme
+		applyTheme((isDarkLaF() && "default".equals(editorPane.themeName())) ? "dark" : editorPane.themeName());
 		// Apply preferences that have not yet been set
 		updateUI(true);
-		// if dark L&F and using the default theme, assume 'dark' theme
-		applyTheme((isDarkLaF() && "default".equals(editorPane.themeName())) ? "dark" : editorPane.themeName());
+		// Store locations of splitpanes
+		panePositions = new int[]{body.getDividerLocation(), getTab().getScreenAndPromptSplit().getDividerLocation()};
 		editorPane.requestFocus();
 	}
 
@@ -1533,6 +1529,23 @@ public class TextEditor extends JFrame implements ActionListener,
 					break;
 				}
 			}
+		}
+	}
+
+	private void collapseSplitPane(final int pane, final boolean collapse) {
+		final JSplitPane jsp = (pane == 0)  ? body : getTab();
+		if (collapse) {
+			// see https://stackoverflow.com/q/4934499
+			panePositions[pane] = jsp.getDividerLocation();
+			if (pane == 0) { // collapse to left
+				jsp.getLeftComponent().setMinimumSize(new Dimension());
+				jsp.setDividerLocation(0.0d);
+			} else { // collapse to bottom
+				jsp.getTopComponent().setMinimumSize(new Dimension());
+				jsp.setDividerLocation(1.0d);
+			}
+		} else {
+			jsp.setDividerLocation(panePositions[pane]);
 		}
 	}
 
