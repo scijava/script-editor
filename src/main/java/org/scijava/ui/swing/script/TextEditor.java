@@ -88,6 +88,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.Vector;
@@ -1984,6 +1985,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		updateUI(true);
 	}
 
+	private String lastSupportStatus = null;
+
 	void updateLanguageMenu(final ScriptLanguage language) {
 		JMenuItem item = languageMenuItems.get(language);
 		if (item == null) item = noneLanguageItem;
@@ -1991,8 +1994,11 @@ public class TextEditor extends JFrame implements ActionListener,
 			item.setSelected(true);
 		}
 		// print autocompletion status to console
-		if (getEditorPane().getSupportStatus() != null)
-			write(getEditorPane().getSupportStatus());
+		String supportStatus = getEditorPane().getSupportStatus();
+		if (supportStatus != null && !Objects.equals(supportStatus, lastSupportStatus)) {
+			write(supportStatus);
+			lastSupportStatus = supportStatus;
+		}
 
 		final boolean isRunnable = item != noneLanguageItem;
 		final boolean isCompileable =
