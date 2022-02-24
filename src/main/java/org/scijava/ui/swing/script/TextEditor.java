@@ -1977,12 +1977,11 @@ public class TextEditor extends JFrame implements ActionListener,
 			this.scriptInfo = null;
 		}
 		getEditorPane().setLanguage(language, addHeader);
-		
 		prefService.put(getClass(), LAST_LANGUAGE, null == language? "none" : language.getLanguageName());
 
 		setTitle();
 		updateLanguageMenu(language);
-		updateTabAndFontSize(true);
+		updateUI(true);
 	}
 
 	void updateLanguageMenu(final ScriptLanguage language) {
@@ -1991,6 +1990,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (!item.isSelected()) {
 			item.setSelected(true);
 		}
+		// print autocompletion status to console
+		if (getEditorPane().getSupportStatus() != null)
+			write(getEditorPane().getSupportStatus());
 
 		final boolean isRunnable = item != noneLanguageItem;
 		final boolean isCompileable =

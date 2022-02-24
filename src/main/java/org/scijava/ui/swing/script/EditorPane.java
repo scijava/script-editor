@@ -58,6 +58,7 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultEditorKit;
 
 import org.fife.rsta.ac.LanguageSupport;
+import org.fife.rsta.ac.LanguageSupportFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Style;
@@ -98,6 +99,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private boolean autoCompletionEnabled;
 	private boolean autoCompletionJavaFallback;
 	private boolean autoCompletionWithoutKey;
+	private String supportStatus;
 
 	@Parameter
 	Context context;
@@ -549,14 +551,37 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setText(header += getText());
 		}
 
-		if (!autoCompletionEnabled) return;
-
+		String supportLevel = "SciJava supported";
 		// try to get language support for current language, may be null.
 		support = languageSupportService.getLanguageSupport(currentLanguage);
-		if (support == null && autoCompletionJavaFallback)
+
+		// that did not work. See if there is internal support for it.
+		if (support == null) {
+			support = LanguageSupportFactory.get().getSupportFor(styleName);
+			supportLevel = "Legacy supported";
+		}
+		// that did not work, Fallback to Java
+		if (!"None".equals(languageName) && support == null && autoCompletionJavaFallback) {
 			support = languageSupportService.getLanguageSupport(scriptService.getLanguageByName("Java"));
-		if (support != null)
+			supportLevel = "N/A. Using Java as fallback";
+		}
+		if (support != null) {
+			support.setAutoCompleteEnabled(autoCompletionEnabled);
+			support.setAutoActivationEnabled(autoCompletionWithoutKey);
+			support.setAutoActivationDelay(200);
 			support.install(this);
+			if (!autoCompletionEnabled)
+				supportLevel += " but currently disabled\n";
+			else {
+				supportLevel += " triggered by Ctrl+Space";
+				if (autoCompletionWithoutKey)
+					supportLevel += " & auto-display ";
+				supportLevel += "\n";
+			}
+		} else {
+			supportLevel = "N/A";
+		}
+		supportStatus = "Active language: " + languageName + "\nAutocompletion: " + supportLevel;
 	}
 
 	/**
@@ -870,6 +895,10 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 */
 	public void resetTabSize() {
 		setTabSize(prefService.getInt(getClass(), TAB_SIZE_PREFS, DEFAULT_TAB_SIZE));
+	}
+
+	String getSupportStatus() {
+		return supportStatus;
 	}
 
 }
