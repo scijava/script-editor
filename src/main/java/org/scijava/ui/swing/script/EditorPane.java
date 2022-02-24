@@ -33,7 +33,9 @@ import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -45,6 +47,8 @@ import java.io.OutputStreamWriter;
 import java.util.Collection;
 import java.util.List;
 
+import javax.swing.ImageIcon;
+import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JViewport;
 import javax.swing.ToolTipManager;
@@ -60,7 +64,6 @@ import org.fife.ui.rsyntaxtextarea.Style;
 import org.fife.ui.rsyntaxtextarea.SyntaxScheme;
 import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.GutterIconInfo;
-import org.fife.ui.rtextarea.IconGroup;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.RecordableTextAction;
@@ -88,7 +91,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private long fileLastModified;
 	private ScriptLanguage currentLanguage;
 	private Gutter gutter;
-	private IconGroup iconGroup;
 	private int modifyCount;
 
 	private boolean undoInProgress;
@@ -161,13 +163,37 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		final RTextScrollPane sp = new RTextScrollPane(this);
 		sp.setPreferredSize(new Dimension(600, 350));
 		sp.setIconRowHeaderEnabled(true);
-
 		gutter = sp.getGutter();
-		iconGroup = new IconGroup("bullets", "images/", null, "png", null);
-		gutter.setBookmarkIcon(iconGroup.getIcon("var"));
 		gutter.setBookmarkingEnabled(true);
-
+		updateBookmarkIcon();
+		gutter.setShowCollapsedRegionToolTips(true);
+		gutter.setFoldIndicatorEnabled(true);
 		return sp;
+	}
+
+	protected void updateBookmarkIcon() {
+		// this will clear existing bookmarks, so we'll need restore existing ones
+		final GutterIconInfo[] stash = gutter.getBookmarks();
+		gutter.setBookmarkIcon(createBookmarkIcon());
+		try {
+			for (final GutterIconInfo info : stash)
+				gutter.toggleBookmark(info.getMarkedOffset());
+		} catch (final BadLocationException ignored) {
+			JOptionPane.showMessageDialog(this, "Some bookmarks may have been lost.", "Lost Bookmarks",
+					JOptionPane.WARNING_MESSAGE);
+		}
+	}
+
+	private ImageIcon createBookmarkIcon() {
+		final int size = gutter.getLineNumberFont().getSize();
+		final BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+		final Graphics2D graphics = image.createGraphics();
+		graphics.setColor(gutter.getLineNumberColor());
+		graphics.fillRect(0, 0, size, size);
+		graphics.setXORMode(getCurrentLineHighlightColor());
+		graphics.drawRect(0, 0, size - 1, size - 1);
+		image.flush();
+		return new ImageIcon(image);
 	}
 
 	/**
@@ -633,6 +659,12 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		final float size = Math.max(5, font.getSize2D() * factor);
 		setFont(font.deriveFont(size));
 		setSyntaxScheme(scheme);
+		// Adjust gutter size
+		if (gutter != null) {
+			final float lnSize = size * 0.8f;
+			gutter.setLineNumberFont(font.deriveFont(lnSize));
+			updateBookmarkIcon();
+		}
 		Component parent = getParent();
 		if (parent instanceof JViewport) {
 			parent = parent.getParent();
@@ -669,7 +701,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			}
 			catch (final BadLocationException e) {
 				/* ignore */
-				log.error("Cannot toggle bookmark at this location.");
+				JOptionPane.showMessageDialog(this, "Cannot toggle bookmark at this location.", "Error",
+						JOptionPane.ERROR_MESSAGE);
 			}
 		}
 	}

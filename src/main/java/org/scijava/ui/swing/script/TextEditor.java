@@ -212,12 +212,12 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private JTabbedPane tabbed;
 	private JMenuItem newFile, open, save, saveas, compileAndRun, compile,
-			close, undo, redo, cut, copy, paste, find, replace, selectAll, kill,
+			close, undo, redo, cut, copy, paste, find, selectAll, kill,
 			gotoLine, makeJar, makeJarWithSource, removeUnusedImports, sortImports,
 			removeTrailingWhitespace, findNext, findPrevious, openHelp, addImport,
 			nextError, previousError, openHelpWithoutFrames, nextTab,
-			previousTab, runSelection, extractSourceJar, toggleBookmark,
-			listBookmarks, openSourceForClass,
+			previousTab, runSelection, extractSourceJar,
+			openSourceForClass,
 			//openSourceForMenuItem, // this never had an actionListener!??
 			openMacroFunctions, decreaseFontSize, increaseFontSize, chooseFontSize,
 			chooseTabSize, gitGrep, replaceTabsWithSpaces,
@@ -357,10 +357,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		addSeparator(edit, "Goto:");
 		gotoLine = addToMenu(edit, "Goto Line...", KeyEvent.VK_G, ctrl);
 		gotoLine.setMnemonic(KeyEvent.VK_G);
-		toggleBookmark = addToMenu(edit, "Toggle Bookmark", KeyEvent.VK_B, ctrl);
+
+		final JMenuItem toggleBookmark = addToMenu(edit, "Toggle Bookmark", KeyEvent.VK_B, ctrl);
 		toggleBookmark.setMnemonic(KeyEvent.VK_B);
-		listBookmarks = addToMenu(edit, "List Bookmarks...", 0, 0);
-		listBookmarks.setMnemonic(KeyEvent.VK_O);
+		toggleBookmark.addActionListener( e -> toggleBookmark());
+		final JMenuItem listBookmarks = addToMenu(edit, "List Bookmarks...", 0, 0);
+		listBookmarks.setMnemonic(KeyEvent.VK_L);
+		listBookmarks.addActionListener( e -> listBookmarks());
+		final JMenuItem clearBookmarks = addToMenu(edit, "Clear Bookmarks...", 0, 0);
+		clearBookmarks.addActionListener(e -> clearAllBookmarks());
 
 		addSeparator(edit, "Utilities:");
 		removeTrailingWhitespace = addToMenu(edit, "Remove Trailing Whitespace", 0, 0);
@@ -1348,8 +1353,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == findNext) findDialog.searchOrReplace(false);
 		else if (source == findPrevious) findDialog.searchOrReplace(false, false);
 		else if (source == gotoLine) gotoLine();
-		else if (source == toggleBookmark) toggleBookmark();
-		else if (source == listBookmarks) listBookmarks();
 		else if (source == selectAll) {
 			getTextArea().setCaretPosition(0);
 			getTextArea().moveCaretPosition(getTextArea().getDocument().getLength());
@@ -1523,6 +1526,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				final float existingFontSize = ep.getFontSize();
 				th.apply(ep);
 				ep.setFontSize(existingFontSize);
+				ep.updateBookmarkIcon(); // update bookmark icon color
 			}
 		} catch (final Exception ex) {
 			throw new IllegalArgumentException(ex);
@@ -1624,17 +1628,33 @@ public class TextEditor extends JFrame implements ActionListener,
 		getEditorPane().toggleBookmark();
 	}
 
-	public void listBookmarks() {
+	private Vector<Bookmark> getAllBookmarks() {
 		final Vector<Bookmark> bookmarks = new Vector<>();
-
 		for (int i = 0; i < tabbed.getTabCount(); i++) {
 			final TextEditorTab tab = (TextEditorTab) tabbed.getComponentAt(i);
 			tab.editorPane.getBookmarks(tab, bookmarks);
 		}
 		if (bookmarks.isEmpty()) {
-			JOptionPane.showMessageDialog(this, "No Bookmarks currently exist.");
-		} else {
+			JOptionPane.showMessageDialog(this, "No Bookmarks currently exist.\n"
+					+ "You can bookmark lines by clicking next to their line number.");
+		}
+		return bookmarks;
+	}
+
+	public void listBookmarks() {
+		final Vector<Bookmark> bookmarks = getAllBookmarks();
+		if (!getAllBookmarks().isEmpty()) {
 			new BookmarkDialog(this, bookmarks).setVisible(true);
+		}
+	}
+
+	void clearAllBookmarks() {
+		final Vector<Bookmark> bookmarks = getAllBookmarks();
+		if (bookmarks.isEmpty())
+			return;
+		if (JOptionPane.showConfirmDialog(TextEditor.this, "Delete all bookmarks?", "Confirm Deletion?",
+				JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+			bookmarks.forEach(bk -> bk.tab.editorPane.toggleBookmark(bk.getLineNumber()));
 		}
 	}
 
