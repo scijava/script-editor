@@ -127,7 +127,7 @@
 	<scm>
 		<connection>scm:git:https://github.com/scijava/script-editor</connection>
 		<developerConnection>scm:git:git@github.com:scijava/script-editor</developerConnection>
-		<tag>script-editor-0.5.9</tag>
+		<tag>HEAD</tag>
 		<url>https://github.com/scijava/script-editor</url>
 	</scm>
 	<issueManagement>
