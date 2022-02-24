@@ -261,16 +261,16 @@ public class TextEditorTab extends JSplitPane {
 		bc.gridx = 3;
 		final JButton prompt_help = new JButton("?");
 		prompt_help.addActionListener(a -> {
-			final String msg = "This REPL (read-evaluate-print-loop) parses " + textEditor.getCurrentLanguage().getLanguageName() + " code.\n\n"
+			final String msg = "This REPL (Read-Evaluate-Print-Loop) parses " + textEditor.getCurrentLanguage().getLanguageName() + " code.\n\n"
 					+ "Key bindings:\n"
-					+ "* enter: evaluate code\n"
-					+ "* shift+enter: add line break (also alt-enter and meta-enter)\n"
-					+ "* page UP or ctrl+p: show previous entry in the history\n"
-					+ "* page DOWN or ctrl+n: show next entry in the history\n"
+					+ "  [Enter]:   Evaluate code\n"
+					+ "  [Shift+Enter]:   Add line break (also alt-enter and meta-enter)\n"
+					+ "  [Page UP] or [Ctrl+P]:   Show previous entry in the history\n"
+					+ "  [Page DOWN] or [Ctrl+N]:   Show next entry in the history\n"
 					+ "\n"
-					+ "If 'Use arrow keys' is checked, then up/down arrows work like page UP/DOWN,\n"
-					+ "and shift+up/down arrow work like arrow keys before for caret movement\n"
-					+ "within a multi-line prompt."
+					+ "If 'Use arrow keys' is checked, then up/down arrows work like\n"
+					+ "Page UP/DOWN, and Shift+up/down arrows work like arrow\n"
+					+ "keys before for caret movement within a multi-line prompt."
 					;
 			JOptionPane.showMessageDialog(textEditor, msg, "REPL Help", JOptionPane.INFORMATION_MESSAGE);
 		});

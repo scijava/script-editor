@@ -347,13 +347,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		copy = addToMenu(edit, "Copy", KeyEvent.VK_C, ctrl);
 		paste = addToMenu(edit, "Paste", KeyEvent.VK_V, ctrl);
 		addSeparator(edit, "Find:");
-		find = addToMenu(edit, "Find...", KeyEvent.VK_F, ctrl);
+		find = addToMenu(edit, "Find/Replace...", KeyEvent.VK_F, ctrl);
 		find.setMnemonic(KeyEvent.VK_F);
 		findNext = addToMenu(edit, "Find Next", KeyEvent.VK_F3, 0);
 		findNext.setMnemonic(KeyEvent.VK_N);
 		findPrevious = addToMenu(edit, "Find Previous", KeyEvent.VK_F3, shift);
 		findPrevious.setMnemonic(KeyEvent.VK_P);
-		replace = addToMenu(edit, "Find and Replace...", KeyEvent.VK_H, ctrl);
 
 		addSeparator(edit, "Goto:");
 		gotoLine = addToMenu(edit, "Goto Line...", KeyEvent.VK_G, ctrl);
@@ -566,13 +565,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		options.add(fontSizeMenu);
 
 		addSeparator(options, "Indentation:");
-		paintTabs = new JCheckBoxMenuItem("Indent Guides");
-		paintTabs.setMnemonic(KeyEvent.VK_I);
-		paintTabs.addChangeListener(e -> getEditorPane().setPaintTabLines(paintTabs.getState()));
-		options.add(paintTabs);
 		tabsEmulated = new JCheckBoxMenuItem("Indent Using Spaces");
 		tabsEmulated.setMnemonic(KeyEvent.VK_S);
-		tabsEmulated.addChangeListener(e -> getEditorPane().setTabsEmulated(tabsEmulated.getState()));
+		tabsEmulated.addItemListener(e -> setTabsEmulated(tabsEmulated.getState()));
 		options.add(tabsEmulated);
 		tabSizeMenu = new JMenu("Tab Width");
 		tabSizeMenu.setMnemonic(KeyEvent.VK_T);
@@ -598,6 +593,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		addSeparator(options, "View:");
 		options.add(whiteSpace);
+		options.add(paintTabs);
 		options.add(markOccurences);
 		options.add(wrapLines);
 		options.add(applyThemeMenu());
@@ -894,23 +890,24 @@ public class TextEditor extends JFrame implements ActionListener,
 		// Options menu. These will be updated once EditorPane is created
 		wrapLines = new JCheckBoxMenuItem("Wrap Lines", false);
 		wrapLines.setMnemonic(KeyEvent.VK_W);
-		wrapLines.addChangeListener(e -> setWrapLines(wrapLines.getState()));
+		wrapLines.addItemListener(e -> setWrapLines(wrapLines.getState()));
 		markOccurences = new JCheckBoxMenuItem("Mark Occurences", false);
 		markOccurences.setToolTipText("Highlights all occurrences of a selected element");
-		markOccurences.addChangeListener(e -> setMarkOccurrences(markOccurences.getState()));
-		whiteSpace = new JCheckBoxMenuItem("Label Whitespace", false);
-		whiteSpace.setMnemonic(KeyEvent.VK_L);
-		whiteSpace.addChangeListener(e -> setWhiteSpaceVisible(whiteSpace.isSelected()));
+		markOccurences.addItemListener(e -> setMarkOccurrences(markOccurences.getState()));
+		whiteSpace = new JCheckBoxMenuItem("Show Whitespace", false);
+		whiteSpace.addItemListener(e -> setWhiteSpaceVisible(whiteSpace.isSelected()));
+		paintTabs = new JCheckBoxMenuItem("Show Indent Guides");
+		paintTabs.addItemListener(e -> setPaintTabLines(paintTabs.getState()));
 		autocompletion = new JCheckBoxMenuItem("Enable Autocompletion", true);
-		autocompletion.addChangeListener(e -> setAutoCompletionEnabled(autocompletion.getState()));
+		autocompletion.setToolTipText("NB: Not all languages support this feature");
+		autocompletion.addItemListener(e -> setAutoCompletionEnabled(autocompletion.getState()));
 		keylessAutocompletion = new JCheckBoxMenuItem("Show Completions Without Ctrl+Space", false);
-		keylessAutocompletion.setToolTipText("<HTML>If selected, the completion pop-up automatically appears"
-				+ " while typing<br>NB: Not all languages support this feature");
-		keylessAutocompletion.addChangeListener(e -> setKeylessAutoCompletion(keylessAutocompletion.getState()));
-		fallbackAutocompletion = new JCheckBoxMenuItem("Unsupported languages: Fallback to Java", false);
+		keylessAutocompletion.setToolTipText("If selected, the completion pop-up automatically appears while typing");
+		keylessAutocompletion.addItemListener(e -> setKeylessAutoCompletion(keylessAutocompletion.getState()));
+		fallbackAutocompletion = new JCheckBoxMenuItem("Use Java Completions as Fallback", false);
 		fallbackAutocompletion.setToolTipText("<HTML>If selected, Java completions will be used when scripting<br>"
 				+ "a language for which auto-completions are not available");
-		fallbackAutocompletion.addChangeListener(e -> setFallbackAutoCompletion(fallbackAutocompletion.getState()));
+		fallbackAutocompletion.addItemListener(e -> setFallbackAutoCompletion(fallbackAutocompletion.getState()));
 		themeRadioGroup = new ButtonGroup();
 
 		// Help menu. These are 'dynamic' items
@@ -1347,10 +1344,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == paste) getTextArea().paste();
 		else if (source == undo) getTextArea().undoLastAction();
 		else if (source == redo) getTextArea().redoLastAction();
-		else if (source == find) findOrReplace(false);
+		else if (source == find) findOrReplace(true);
 		else if (source == findNext) findDialog.searchOrReplace(false);
 		else if (source == findPrevious) findDialog.searchOrReplace(false, false);
-		else if (source == replace) findOrReplace(true);
 		else if (source == gotoLine) gotoLine();
 		else if (source == toggleBookmark) toggleBookmark();
 		else if (source == listBookmarks) listBookmarks();
@@ -1430,39 +1426,45 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	private void setAutoCompletionEnabled(final boolean enabled) {
-		for (int i = 0; i < tabbed.getTabCount(); i++) {
+		for (int i = 0; i < tabbed.getTabCount(); i++)
 			getEditorPane(i).setAutoCompletion(enabled);
-		}
+		keylessAutocompletion.setEnabled(enabled);
+		fallbackAutocompletion.setEnabled(enabled);
+	}
+
+	private void setTabsEmulated(final boolean emulated) {
+		for (int i = 0; i < tabbed.getTabCount(); i++)
+			getEditorPane(i).setTabsEmulated(emulated);
+	}
+
+	private void setPaintTabLines(final boolean paint) {
+		for (int i = 0; i < tabbed.getTabCount(); i++)
+			getEditorPane(i).setPaintTabLines(paint);
 	}
 
 	private void setKeylessAutoCompletion(final boolean noKeyRequired) {
-		for (int i = 0; i < tabbed.getTabCount(); i++) {
+		for (int i = 0; i < tabbed.getTabCount(); i++)
 			getEditorPane(i).setKeylessAutoCompletion(noKeyRequired);
-		}
 	}
 
 	private void setFallbackAutoCompletion(final boolean fallback) {
-		for (int i = 0; i < tabbed.getTabCount(); i++) {
+		for (int i = 0; i < tabbed.getTabCount(); i++)
 			getEditorPane(i).setFallbackAutoCompletion(fallback);
-		}
 	}
 
 	private void setMarkOccurrences(final boolean markOccurrences) {
-		for (int i = 0; i < tabbed.getTabCount(); i++) {
+		for (int i = 0; i < tabbed.getTabCount(); i++)
 			getEditorPane(i).setMarkOccurrences(markOccurrences);
-		}
 	}
 
 	private void setWhiteSpaceVisible(final boolean visible) {
-		for (int i = 0; i < tabbed.getTabCount(); i++) {
+		for (int i = 0; i < tabbed.getTabCount(); i++)
 			getEditorPane(i).setWhitespaceVisible(visible);
-		}
 	}
 
 	private void setWrapLines(final boolean wrap) {
-		for (int i = 0; i < tabbed.getTabCount(); i++) {
+		for (int i = 0; i < tabbed.getTabCount(); i++)
 			getEditorPane(i).setLineWrap(wrap);
-		}
 	}
 
 	private JMenu applyThemeMenu() {
@@ -1600,7 +1602,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	public void gotoLine() {
 		final String line =
-			JOptionPane.showInputDialog(this, "Line:", "Goto line...",
+			JOptionPane.showInputDialog(this, "Enter line number:", "Goto Line",
 				JOptionPane.QUESTION_MESSAGE);
 		if (line == null) return;
 		try {
@@ -2065,7 +2067,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		paintTabs.setState(pane.getPaintTabLines());
 		whiteSpace.setState(pane.isWhitespaceVisible());
 		autocompletion.setState(pane.isAutoCompletionEnabled());
-		keylessAutocompletion.setState(pane.isKeylessAutoCompletionEnabled());
+		keylessAutocompletion.setState(pane.isAutoCompletionKeyless());
 	}
 
 	public void setEditorPaneFileName(final String baseName) {

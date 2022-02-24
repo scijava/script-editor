@@ -54,7 +54,7 @@ public class ChooseFontSize extends ContextCommand {
 		final float size = editor.getEditorPane().getFontSize();
 		changeFontSize(editor.getErrorScreen(), size);
 		changeFontSize(editor.getTab().getScreenInstance(), size);
-		editor.updateTabAndFontSize(false);
+		editor.updateUI(false);
 	}
 
 	private void changeFontSize(final JTextArea a, final float size) {

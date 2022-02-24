@@ -93,7 +93,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	private boolean undoInProgress;
 	private boolean redoInProgress;
-	private boolean autoCompletionEnabled = true;
+	private boolean autoCompletionEnabled;
 	private boolean autoCompletionJavaFallback;
 	private boolean autoCompletionWithoutKey;
 
@@ -123,6 +123,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		setCloseMarkupTags(true);
 		setCodeFoldingEnabled(true);
 		setShowMatchedBracketPopup(true);
+		setClearWhitespaceLinesEnabled(false); // most folks wont't want this set?
 
 		// load preferences
 		loadPreferences();
@@ -532,28 +533,51 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			support.install(this);
 	}
 
-	public void setAutoCompletion(boolean value) {
-		autoCompletionEnabled = value;
-		if (currentLanguage != null) setLanguage(currentLanguage);
+	/**
+	 * Toggles whether auto-completion is enabled.
+	 * 
+	 * @param enabled Whether auto-activation is enabled.
+	 */
+	public void setAutoCompletion(final boolean enabled) {
+		autoCompletionEnabled = enabled;
+		if (currentLanguage != null)
+			setLanguage(currentLanguage);
 	}
 
-	void setFallbackAutoCompletion(boolean value) {
+	/**
+	 * Toggles whether auto-completion should adopt Java completions if the current
+	 * language does not support auto-completion.
+	 * 
+	 * @param enabled Whether Java should be enabled as fallback language for
+	 *                auto-completion
+	 */
+	void setFallbackAutoCompletion(final boolean value) {
 		autoCompletionJavaFallback = value;
+		if (autoCompletionEnabled && currentLanguage != null)
+			setLanguage(currentLanguage);
 	}
 
-	void setKeylessAutoCompletion(boolean value) {
-		autoCompletionWithoutKey = value;
+	/**
+	 * Toggles whether auto-activation of auto-completion is enabled. Ignored if
+	 * auto-completion is not enabled.
+	 *
+	 * @param enabled Whether auto-activation is enabled.
+	 */
+	void setKeylessAutoCompletion(final boolean enabled) {
+		autoCompletionWithoutKey = enabled;
+		if (autoCompletionEnabled && currentLanguage != null)
+			setLanguage(currentLanguage);
 	}
 
 	public boolean isAutoCompletionEnabled() {
 		return autoCompletionEnabled;
 	}
 
-	public boolean isKeylessAutoCompletionEnabled() {
+	public boolean isAutoCompletionKeyless() {
 		return autoCompletionWithoutKey;
 	}
 
-	public boolean isFallbackAutoCompletionEnabled() {
+	public boolean isAutoCompletionFallbackEnabled() {
 		return autoCompletionJavaFallback;
 	}
 
@@ -802,8 +826,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		prefService.put(getClass(), WHITESPACE_VISIBLE_PREFS, isWhitespaceVisible());
 		prefService.put(getClass(), TABLINES_VISIBLE_PREFS, getPaintTabLines());
 		prefService.put(getClass(), AUTOCOMPLETE_PREFS, isAutoCompletionEnabled());
-		prefService.put(getClass(), AUTOCOMPLETE_KEYLESS_PREFS, isKeylessAutoCompletionEnabled());
-		prefService.put(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, isFallbackAutoCompletionEnabled());
+		prefService.put(getClass(), AUTOCOMPLETE_KEYLESS_PREFS, isAutoCompletionKeyless());
+		prefService.put(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, isAutoCompletionFallbackEnabled());
 		if (null != top_folders) prefService.put(getClass(), FOLDERS_PREFS, top_folders);
 		if (null != theme) prefService.put(getClass(), THEME_PREFS, theme);
 	}

@@ -80,8 +80,8 @@ public class FindAndReplaceDialog extends JDialog implements ActionListener {
 		c.ipadx = c.ipady = 1;
 		c.fill = GridBagConstraints.HORIZONTAL;
 		c.anchor = GridBagConstraints.LINE_START;
-		searchField = createField("Find Next", text, c, null);
-		replaceField = createField("Replace with", text, c, this);
+		searchField = createField("Find: ", text, c, null);
+		replaceField = createField("Replace with: ", text, c, this);
 
 		c.gridwidth = 4;
 		c.gridheight = c.gridy;
@@ -95,14 +95,14 @@ public class FindAndReplaceDialog extends JDialog implements ActionListener {
 		c.gridwidth = 1;
 		c.gridheight = 1;
 		c.weightx = 0.001;
-		matchCase = createCheckBox("Match Case", root, c);
+		matchCase = createCheckBox("Match case", root, c);
 		regex = createCheckBox("Regex", root, c);
 		forward = createCheckBox("Search forward", root, c);
 		forward.setSelected(true);
 		c.gridx = 0;
 		c.gridy++;
-		markAll = createCheckBox("Mark All", root, c);
-		wholeWord = createCheckBox("Whole Word", root, c);
+		markAll = createCheckBox("Mark all", root, c);
+		wholeWord = createCheckBox("Whole word", root, c);
 
 		c.gridx = 4;
 		c.gridy = 0;
@@ -137,7 +137,7 @@ public class FindAndReplaceDialog extends JDialog implements ActionListener {
 
 	@Override
 	public void show(final boolean replace) {
-		setTitle(replace ? "Replace" : "Find");
+		setTitle(replace ? "Find/Replace" : "Find");
 		replaceLabel.setEnabled(replace);
 		replaceField.setEnabled(replace);
 		replaceField.setBackground(replace ? searchField.getBackground()
