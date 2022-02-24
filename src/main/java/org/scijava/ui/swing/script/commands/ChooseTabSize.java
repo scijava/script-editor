@@ -54,7 +54,7 @@ public class ChooseTabSize extends DynamicCommand {
 	@Override
 	public void run() {
 		editor.getEditorPane().setTabSize(tabSize);
-		editor.updateTabAndFontSize(false);
+		editor.updateUI(false);
 	}
 
 	protected void initializeChoice() {

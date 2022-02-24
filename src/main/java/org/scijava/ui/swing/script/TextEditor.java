@@ -32,7 +32,6 @@ package org.scijava.ui.swing.script;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Toolkit;
@@ -51,8 +50,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -82,32 +79,33 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.Vector;
 import java.util.concurrent.ExecutionException;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 import java.util.zip.ZipException;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 import javax.swing.AbstractAction;
+import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
-import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
@@ -115,14 +113,15 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
-import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
@@ -133,6 +132,7 @@ import javax.swing.tree.TreePath;
 
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.Theme;
 import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
 import org.scijava.Context;
 import org.scijava.app.AppService;
@@ -181,12 +181,15 @@ import org.scijava.widget.FileWidget;
  *
  * @author Johannes Schindelin
  * @author Jonathan Hale
+ * @author Albert Cardona
+ * @author Tiago Ferreira
  */
 public class TextEditor extends JFrame implements ActionListener,
 	ChangeListener, CloseConfirmable, DocumentListener
 {
 
 	private static final Set<String> TEMPLATE_PATHS = new HashSet<>();
+	private static final int BORDER_SIZE = 4;
 	public static final String AUTO_IMPORT_PREFS = "script.editor.AutoImport";
 	public static final String WINDOW_HEIGHT = "script.editor.height";
 	public static final String WINDOW_WIDTH = "script.editor.width";
@@ -195,6 +198,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	public static final String MAIN_DIV_LOCATION = "script.editor.main.divLocation";
 	public static final String TAB_DIV_LOCATION = "script.editor.tab.divLocation";
 	public static final String TAB_DIV_ORIENTATION = "script.editor.tab.divOrientation";
+	public static final String REPL_DIV_LOCATION = "script.editor.repl.divLocation";
 	public static final String LAST_LANGUAGE = "script.editor.lastLanguage";
 
 	static {
@@ -209,25 +213,28 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private JTabbedPane tabbed;
 	private JMenuItem newFile, open, save, saveas, compileAndRun, compile,
-			close, undo, redo, cut, copy, paste, find, replace, selectAll, kill,
+			close, undo, redo, cut, copy, paste, find, selectAll, kill,
 			gotoLine, makeJar, makeJarWithSource, removeUnusedImports, sortImports,
 			removeTrailingWhitespace, findNext, findPrevious, openHelp, addImport,
-			clearScreen, nextError, previousError, openHelpWithoutFrames, nextTab,
-			previousTab, runSelection, extractSourceJar, toggleBookmark,
-			listBookmarks, openSourceForClass, openSourceForMenuItem,
+			nextError, previousError, openHelpWithoutFrames, nextTab,
+			previousTab, runSelection, extractSourceJar,
+			openSourceForClass,
+			//openSourceForMenuItem, // this never had an actionListener!??
 			openMacroFunctions, decreaseFontSize, increaseFontSize, chooseFontSize,
 			chooseTabSize, gitGrep, replaceTabsWithSpaces,
-			replaceSpacesWithTabs, toggleWhiteSpaceLabeling, zapGremlins,
-			savePreferences, toggleAutoCompletionMenu, openClassOrPackageHelp;
+			replaceSpacesWithTabs, zapGremlins,openClassOrPackageHelp;
 	private RecentFilesMenuItem openRecent;
 	private JMenu gitMenu, tabsMenu, fontSizeMenu, tabSizeMenu, toolsMenu,
-			runMenu, whiteSpaceMenu;
+			runMenu;
 	private int tabsMenuTabsStart;
 	private Set<JMenuItem> tabsMenuItems;
 	private FindAndReplaceDialog findDialog;
-	private JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport;
+	private JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport,
+			autocompletion, fallbackAutocompletion, keylessAutocompletion,
+			markOccurences, paintTabs, whiteSpace;
+	private ButtonGroup themeRadioGroup;
 	private JTextArea errorScreen = new JTextArea();
-	
+
 	private final FileSystemTree tree;
 	private final JSplitPane body;
 
@@ -236,6 +243,9 @@ public class TextEditor extends JFrame implements ActionListener,
 	private ErrorHandler errorHandler;
 
 	private boolean respectAutoImports;
+	private String activeTheme;
+	private int[] panePositions;
+
 
 	@Parameter
 	private Context context;
@@ -285,6 +295,13 @@ public class TextEditor extends JFrame implements ActionListener,
 		context.inject(this);
 		initializeTokenMakers();
 
+		// NB: All panes must be initialized before menus are assembled!
+		tabbed = new JTabbedPane();
+		tree = new FileSystemTree(log);
+		body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new FileSystemTreePanel(tree, context), tabbed);
+		// These items are dynamic and need to be initialized before EditorPane creation
+		initializeDynamicMenuComponents();
+
 		// -- BEGIN MENUS --
 
 		// Initialize menu
@@ -304,14 +321,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		openRecent = new RecentFilesMenuItem(prefService, this);
 		openRecent.setMnemonic(KeyEvent.VK_R);
 		file.add(openRecent);
+		file.addSeparator();
 		save = addToMenu(file, "Save", KeyEvent.VK_S, ctrl);
 		save.setMnemonic(KeyEvent.VK_S);
-		saveas = addToMenu(file, "Save as...", 0, 0);
+		saveas = addToMenu(file, "Save As...", 0, 0);
 		saveas.setMnemonic(KeyEvent.VK_A);
 		file.addSeparator();
-		makeJar = addToMenu(file, "Export as .jar", 0, 0);
+		makeJar = addToMenu(file, "Export as JAR", 0, 0);
 		makeJar.setMnemonic(KeyEvent.VK_E);
-		makeJarWithSource = addToMenu(file, "Export as .jar (with source)", 0, 0);
+		makeJarWithSource = addToMenu(file, "Export as JAR (With Source)", 0, 0);
 		makeJarWithSource.setMnemonic(KeyEvent.VK_X);
 		file.addSeparator();
 		close = addToMenu(file, "Close", KeyEvent.VK_W, ctrl);
@@ -329,62 +347,31 @@ public class TextEditor extends JFrame implements ActionListener,
 		cut = addToMenu(edit, "Cut", KeyEvent.VK_X, ctrl);
 		copy = addToMenu(edit, "Copy", KeyEvent.VK_C, ctrl);
 		paste = addToMenu(edit, "Paste", KeyEvent.VK_V, ctrl);
-		edit.addSeparator();
-		find = addToMenu(edit, "Find...", KeyEvent.VK_F, ctrl);
+		addSeparator(edit, "Find:");
+		find = addToMenu(edit, "Find/Replace...", KeyEvent.VK_F, ctrl);
 		find.setMnemonic(KeyEvent.VK_F);
 		findNext = addToMenu(edit, "Find Next", KeyEvent.VK_F3, 0);
 		findNext.setMnemonic(KeyEvent.VK_N);
 		findPrevious = addToMenu(edit, "Find Previous", KeyEvent.VK_F3, shift);
 		findPrevious.setMnemonic(KeyEvent.VK_P);
-		replace = addToMenu(edit, "Find and Replace...", KeyEvent.VK_H, ctrl);
-		gotoLine = addToMenu(edit, "Goto line...", KeyEvent.VK_G, ctrl);
+
+		addSeparator(edit, "Goto:");
+		gotoLine = addToMenu(edit, "Goto Line...", KeyEvent.VK_G, ctrl);
 		gotoLine.setMnemonic(KeyEvent.VK_G);
-		toggleBookmark = addToMenu(edit, "Toggle Bookmark", KeyEvent.VK_B, ctrl);
+
+		final JMenuItem toggleBookmark = addToMenu(edit, "Toggle Bookmark", KeyEvent.VK_B, ctrl);
 		toggleBookmark.setMnemonic(KeyEvent.VK_B);
-		listBookmarks = addToMenu(edit, "List Bookmarks", 0, 0);
-		listBookmarks.setMnemonic(KeyEvent.VK_O);
-		edit.addSeparator();
+		toggleBookmark.addActionListener( e -> toggleBookmark());
+		final JMenuItem listBookmarks = addToMenu(edit, "List Bookmarks...", 0, 0);
+		listBookmarks.setMnemonic(KeyEvent.VK_L);
+		listBookmarks.addActionListener( e -> listBookmarks());
+		final JMenuItem clearBookmarks = addToMenu(edit, "Clear Bookmarks...", 0, 0);
+		clearBookmarks.addActionListener(e -> clearAllBookmarks());
 
-		clearScreen = addToMenu(edit, "Clear output panel", 0, 0);
-		clearScreen.setMnemonic(KeyEvent.VK_L);
-
-		zapGremlins = addToMenu(edit, "Zap Gremlins", 0, 0);
-
-		edit.addSeparator();
-		addImport = addToMenu(edit, "Add import...", 0, 0);
-		addImport.setMnemonic(KeyEvent.VK_I);
-		removeUnusedImports = addToMenu(edit, "Remove unused imports", 0, 0);
-		removeUnusedImports.setMnemonic(KeyEvent.VK_U);
-		sortImports = addToMenu(edit, "Sort imports", 0, 0);
-		sortImports.setMnemonic(KeyEvent.VK_S);
-		respectAutoImports = prefService.getBoolean(getClass(), AUTO_IMPORT_PREFS, false);
-		autoImport =
-			new JCheckBoxMenuItem("Auto-import (deprecated)", respectAutoImports);
-		autoImport.addItemListener(e -> {
-			respectAutoImports = e.getStateChange() == ItemEvent.SELECTED;
-			prefService.put(getClass(), AUTO_IMPORT_PREFS, respectAutoImports);
-		});
-		edit.add(autoImport);
-
-		whiteSpaceMenu = new JMenu("Whitespace");
-		whiteSpaceMenu.setMnemonic(KeyEvent.VK_W);
-		removeTrailingWhitespace =
-			addToMenu(whiteSpaceMenu, "Remove trailing whitespace", 0, 0);
+		addSeparator(edit, "Utilities:");
+		removeTrailingWhitespace = addToMenu(edit, "Remove Trailing Whitespace", 0, 0);
 		removeTrailingWhitespace.setMnemonic(KeyEvent.VK_W);
-		replaceTabsWithSpaces =
-			addToMenu(whiteSpaceMenu, "Replace tabs with spaces", 0, 0);
-		replaceTabsWithSpaces.setMnemonic(KeyEvent.VK_S);
-		replaceSpacesWithTabs =
-			addToMenu(whiteSpaceMenu, "Replace spaces with tabs", 0, 0);
-		replaceSpacesWithTabs.setMnemonic(KeyEvent.VK_T);
-		toggleWhiteSpaceLabeling = new JRadioButtonMenuItem("Label whitespace");
-		toggleWhiteSpaceLabeling.setMnemonic(KeyEvent.VK_L);
-		toggleWhiteSpaceLabeling.addActionListener(e -> {
-			getTextArea().setWhitespaceVisible(toggleWhiteSpaceLabeling.isSelected());
-		});
-		whiteSpaceMenu.add(toggleWhiteSpaceLabeling);
-
-		edit.add(whiteSpaceMenu);
+		zapGremlins = addToMenu(edit, "Zap Gremlins", 0, 0);
 
 		mbar.add(edit);
 
@@ -455,12 +442,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		compileAndRun.setMnemonic(KeyEvent.VK_R);
 
 		runSelection =
-			addToMenu(runMenu, "Run selected code", KeyEvent.VK_R, ctrl | shift);
+			addToMenu(runMenu, "Run Selected Code", KeyEvent.VK_R, ctrl | shift);
 		runSelection.setMnemonic(KeyEvent.VK_S);
 
 		compile = addToMenu(runMenu, "Compile", KeyEvent.VK_C, ctrl | shift);
 		compile.setMnemonic(KeyEvent.VK_C);
-		autoSave = new JCheckBoxMenuItem("Auto-save before compiling");
+		autoSave = new JCheckBoxMenuItem("Auto-save Before Compiling");
 		runMenu.add(autoSave);
 
 		runMenu.addSeparator();
@@ -471,7 +458,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		runMenu.addSeparator();
 
-		kill = addToMenu(runMenu, "Kill running script...", 0, 0);
+		kill = addToMenu(runMenu, "Kill Running Script...", 0, 0);
 		kill.setMnemonic(KeyEvent.VK_K);
 		kill.setEnabled(false);
 
@@ -481,25 +468,29 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		toolsMenu = new JMenu("Tools");
 		toolsMenu.setMnemonic(KeyEvent.VK_O);
-		openHelpWithoutFrames =
-			addToMenu(toolsMenu, "Open Help for Class...", 0, 0);
-		openHelpWithoutFrames.setMnemonic(KeyEvent.VK_O);
-		openHelp =
-			addToMenu(toolsMenu, "Open Help for Class (with frames)...", 0, 0);
-		openHelp.setMnemonic(KeyEvent.VK_P);
-		openClassOrPackageHelp = addToMenu(toolsMenu, "Source or javadoc for class or package...", 0, 0);
-		openClassOrPackageHelp.setMnemonic(KeyEvent.VK_S);
-		openMacroFunctions =
-			addToMenu(toolsMenu, "Open Help on Macro Functions...", 0, 0);
-		openMacroFunctions.setMnemonic(KeyEvent.VK_H);
-		extractSourceJar = addToMenu(toolsMenu, "Extract source .jar...", 0, 0);
+		addSeparator(toolsMenu, "Imports");
+		addImport = addToMenu(toolsMenu, "Add Import...", 0, 0);
+		addImport.setMnemonic(KeyEvent.VK_I);
+		respectAutoImports = prefService.getBoolean(getClass(), AUTO_IMPORT_PREFS, false);
+		autoImport =
+			new JCheckBoxMenuItem("Auto-import (Deprecated)", respectAutoImports);
+		autoImport.addItemListener(e -> {
+			respectAutoImports = e.getStateChange() == ItemEvent.SELECTED;
+			prefService.put(getClass(), AUTO_IMPORT_PREFS, respectAutoImports);
+		});
+		toolsMenu.add(autoImport);
+		removeUnusedImports = addToMenu(toolsMenu, "Remove Unused Imports", 0, 0);
+		removeUnusedImports.setMnemonic(KeyEvent.VK_U);
+		sortImports = addToMenu(toolsMenu, "Sort Imports", 0, 0);
+		sortImports.setMnemonic(KeyEvent.VK_S);
+
+		addSeparator(toolsMenu, "Source & APIs:");
+		extractSourceJar = addToMenu(toolsMenu, "Extract Source Jar...", 0, 0);
 		extractSourceJar.setMnemonic(KeyEvent.VK_E);
-		openSourceForClass =
-			addToMenu(toolsMenu, "Open .java file for class...", 0, 0);
+		openSourceForClass = addToMenu(toolsMenu, "Open Java File for Class...", 0, 0);
 		openSourceForClass.setMnemonic(KeyEvent.VK_J);
-		openSourceForMenuItem =
-			addToMenu(toolsMenu, "Open .java file for menu item...", 0, 0);
-		openSourceForMenuItem.setMnemonic(KeyEvent.VK_M);
+		//openSourceForMenuItem = addToMenu(toolsMenu, "Open Java File for Menu Item...", 0, 0);
+		//openSourceForMenuItem.setMnemonic(KeyEvent.VK_M);
 		mbar.add(toolsMenu);
 
 		// -- Git menu --
@@ -518,10 +509,17 @@ public class TextEditor extends JFrame implements ActionListener,
 		gitGrep.setMnemonic(KeyEvent.VK_G);
 		mbar.add(gitMenu);
 
-		// -- Tabs menu --
-
-		tabsMenu = new JMenu("Tabs");
-		tabsMenu.setMnemonic(KeyEvent.VK_A);
+		// -- Window Menu (previously labeled as Tabs menu --
+		tabsMenu = new JMenu("Window");
+		tabsMenu.setMnemonic(KeyEvent.VK_W);
+		addSeparator(tabsMenu, "Panes:");
+		final JCheckBoxMenuItem jcmi1 = new JCheckBoxMenuItem("File Explorer", true);
+		jcmi1.addItemListener(e -> collapseSplitPane(0, !jcmi1.isSelected()));
+		tabsMenu.add(jcmi1);
+		final JCheckBoxMenuItem jcmi2 = new JCheckBoxMenuItem("Console", true);
+		jcmi2.addItemListener(e -> collapseSplitPane(1, !jcmi2.isSelected()));
+		tabsMenu.add(jcmi2);
+		addSeparator(tabsMenu, "Tabs:");
 		nextTab = addToMenu(tabsMenu, "Next Tab", KeyEvent.VK_PAGE_DOWN, ctrl);
 		nextTab.setMnemonic(KeyEvent.VK_N);
 		previousTab =
@@ -538,14 +536,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		options.setMnemonic(KeyEvent.VK_O);
 
 		// Font adjustments
+		addSeparator(options, "Font:");
 		decreaseFontSize =
-			addToMenu(options, "Decrease font size", KeyEvent.VK_MINUS, ctrl);
+			addToMenu(options, "Decrease Font Size", KeyEvent.VK_MINUS, ctrl);
 		decreaseFontSize.setMnemonic(KeyEvent.VK_D);
 		increaseFontSize =
-			addToMenu(options, "Increase font size", KeyEvent.VK_PLUS, ctrl);
+			addToMenu(options, "Increase Font Size", KeyEvent.VK_PLUS, ctrl);
 		increaseFontSize.setMnemonic(KeyEvent.VK_C);
 
-		fontSizeMenu = new JMenu("Font sizes");
+		fontSizeMenu = new JMenu("Font Size");
 		fontSizeMenu.setMnemonic(KeyEvent.VK_Z);
 		final boolean[] fontSizeShortcutUsed = new boolean[10];
 		final ButtonGroup buttonGroup = new ButtonGroup();
@@ -571,8 +570,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		fontSizeMenu.add(chooseFontSize);
 		options.add(fontSizeMenu);
 
-		// Add tab size adjusting menu
-		tabSizeMenu = new JMenu("Tab sizes");
+		addSeparator(options, "Indentation:");
+		tabsEmulated = new JCheckBoxMenuItem("Indent Using Spaces");
+		tabsEmulated.setMnemonic(KeyEvent.VK_S);
+		tabsEmulated.addItemListener(e -> setTabsEmulated(tabsEmulated.getState()));
+		options.add(tabsEmulated);
+		tabSizeMenu = new JMenu("Tab Width");
 		tabSizeMenu.setMnemonic(KeyEvent.VK_T);
 		final ButtonGroup bg = new ButtonGroup();
 		for (final int size : new int[] { 2, 4, 8 }) {
@@ -591,51 +594,62 @@ public class TextEditor extends JFrame implements ActionListener,
 		bg.add(chooseTabSize);
 		tabSizeMenu.add(chooseTabSize);
 		options.add(tabSizeMenu);
+		replaceSpacesWithTabs = addToMenu(options, "Replace Spaces With Tabs", 0, 0);
+		replaceTabsWithSpaces = addToMenu(options, "Replace Tabs With Spaces", 0, 0);
 
-		wrapLines = new JCheckBoxMenuItem("Wrap lines");
-		wrapLines.addChangeListener(e -> getEditorPane().setLineWrap(wrapLines.getState()));
+		addSeparator(options, "View:");
+		options.add(whiteSpace);
+		options.add(paintTabs);
+		options.add(markOccurences);
 		options.add(wrapLines);
+		options.add(applyThemeMenu());
 
-		// Add Tab inserts as spaces
-		tabsEmulated = new JCheckBoxMenuItem("Tab key inserts spaces");
-		tabsEmulated.addChangeListener(e -> getEditorPane().setTabsEmulated(tabsEmulated.getState()));
-		options.add(tabsEmulated);
-
-		toggleAutoCompletionMenu = new JCheckBoxMenuItem("Auto completion");
-		toggleAutoCompletionMenu.setSelected(prefService.getBoolean(TextEditor.class, "autoComplete", true));
-		toggleAutoCompletionMenu.addChangeListener(e -> toggleAutoCompletion());
-		options.add(toggleAutoCompletionMenu);
+		addSeparator(options, "Code Completions:");
+		options.add(autocompletion);
+		options.add(keylessAutocompletion);
+		options.add(fallbackAutocompletion);
 
 		options.addSeparator();
-		savePreferences = addToMenu(options, "Save Preferences", 0, 0);
-
+		appendPreferences(options);
 		mbar.add(options);
+		mbar.add(helpMenu());
 
 		// -- END MENUS --
 
 		// Add the editor and output area
-		tabbed = new JTabbedPane();
 		tabbed.addChangeListener(this);
+		new FileDrop(tabbed, files -> {
+			final ArrayList<File> filteredFiles = new ArrayList<>();
+			assembleFlatFileCollection(filteredFiles, files);
+			if (filteredFiles.isEmpty()) {
+				JOptionPane.showMessageDialog(TextEditor.this, "None of the dropped file(s) seems parseable.",
+						"Invalid Drop", JOptionPane.WARNING_MESSAGE);
+				return;
+			}
+			final boolean confirm = filteredFiles.size() < 10 || (JOptionPane.showConfirmDialog(TextEditor.this,
+					"Confirm loading of " + filteredFiles.size()+ " items?", "Confirm?",
+					JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION);
+			if (confirm) {
+				filteredFiles.forEach(f -> open(f));
+			}
+		});
 		open(null); // make sure the editor pane is added
+		getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 
-		tabbed.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
-		getContentPane().setLayout(
-			new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
-		
-		final JPanel tree_panel = new JPanel();
-		final JButton add_directory = new JButton("[+]");
-		add_directory.setToolTipText("Add a directory");
-		final JButton remove_directory = new JButton("[-]");
-		remove_directory.setToolTipText("Remove a top-level directory");
-		
-		final JTextField filter = new JTextField("filter...");
-		filter.setForeground(Color.gray);
-		filter.setToolTipText("Use leading '/' for regular expressions");
-		
-		tree = new FileSystemTree(log);
-		tree.ignoreExtension("class");
+		// Tweaks for JSplitPane
+		// TF: disable setOneTouchExpandable() due to inconsistent behavior when
+		// applying preferences at startup. Also, it does not apply to all L&Fs.
+		// Users can use the controls in the menu bar to toggle the pane
+		body.setOneTouchExpandable(false);
+		body.addPropertyChangeListener(evt -> {
+			if ("dividerLocation".equals(evt.getPropertyName())) saveWindowSizeToPrefs();
+		});
+
+		// Tweaks for FileSystemTree
+		tree.addTopLevelFoldersFrom(getEditorPane().loadFolders()); // Restore top-level directories
 		dragSource = new DragSource();
 		dragSource.createDefaultDragGestureRecognizer(tree, DnDConstants.ACTION_COPY, new DragAndDrop());
+		tree.ignoreExtension("class");
 		tree.setMinimumSize(new Dimension(200, 600));
 		tree.addLeafListener(f -> {
 			final String name = f.getName();
@@ -658,7 +672,7 @@ public class TextEditor extends JFrame implements ActionListener,
 						"Could not open the file at: " + f.getAbsolutePath());
 					return;
 				}
-				catch (Exception e) {
+				catch (final Exception e) {
 					log.error(e);
 					error("Could not open image at " + f);
 				}
@@ -671,123 +685,44 @@ public class TextEditor extends JFrame implements ActionListener,
 				open(f);
 			}
 		});
-		add_directory.addActionListener(e -> {
-			final JFileChooser c = new JFileChooser("Choose a directory");
-			c.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-			c.setFileHidingEnabled(true); // hide hidden files
-			if (JFileChooser.APPROVE_OPTION == c.showOpenDialog(getContentPane())) {
-				final File f = c.getSelectedFile();
-				if (f.isDirectory()) tree.addRootDirectory(f.getAbsolutePath(), false);
-			}
-		});
-		remove_directory.addActionListener(e -> {
-			final TreePath p = tree.getSelectionPath();
-			if (null == p) {
-				JOptionPane.showMessageDialog(TextEditor.this,
-					"Select a top-level folder first.");
-				return;
-			}
-			if (2 == p.getPathCount()) {
-				// Is a child of the root, so it's a top-level folder
-				tree.getModel().removeNodeFromParent(//
-					(FileSystemTree.Node) p.getLastPathComponent());
-			}
-			else {
-				JOptionPane.showMessageDialog(TextEditor.this,
-					"Can only remove top-level folders.");
-			}
-		});
-		filter.addFocusListener(new FocusListener() {
-			@Override
-			public void focusLost(FocusEvent e) {
-				if (0 == filter.getText().length()) {
-					filter.setForeground(Color.gray);
-					filter.setText("filter...");
-				}
-			}
-			
-			@Override
-			public void focusGained(FocusEvent e) {
-				if (filter.getForeground() == Color.gray) {
-					filter.setText("");
-					filter.setForeground(Color.black);
-				}
-			}
-		});
-		filter.addKeyListener(new KeyAdapter() {
-			Pattern pattern = null;
-			@Override
-			public void keyPressed(final KeyEvent ke) {
-				if (ke.getKeyCode() == KeyEvent.VK_ENTER) {
-					final String text = filter.getText();
-					if (0 == text.length()) {
-						tree.setFileFilter(((f) -> true)); // any
-						return;
-					}
-					if ('/' == text.charAt(0)) {
-						// Interpret as a regular expression
-						// Attempt to compile the pattern
-						try {
-							String regex = text.substring(1);
-							if ('^' != regex.charAt(1)) regex = "^.*" + regex;
-							if ('$' != regex.charAt(regex.length() -1)) regex += ".*$";
-							pattern = Pattern.compile(regex);
-							filter.setForeground(Color.black);
-						} catch (final PatternSyntaxException pse) {
-							log.warn(pse.getLocalizedMessage());
-							filter.setForeground(Color.red);
-							pattern = null;
-							return;
-						}
-						if (null != pattern) {
-							tree.setFileFilter((f) -> pattern.matcher(f.getName()).matches());
-						}
-					} else {
-						// Interpret as a literal match
-						tree.setFileFilter((f) -> -1 != f.getName().indexOf(text));
-					}
-				} else {
-					// Upon re-typing something
-					if (filter.getForeground() == Color.red) {
-						filter.setForeground(Color.black);
-					}
-				}
-			}
-		});
-		
-		// Restore top-level directories
-		tree.addTopLevelFoldersFrom(getEditorPane().loadFolders());
 
-		final GridBagLayout g = new GridBagLayout();
-		tree_panel.setLayout(g);
-		final GridBagConstraints bc = new GridBagConstraints();
-		bc.gridx = 0;
-		bc.gridy = 0;
-		bc.weightx = 0;
-		bc.weighty = 0;
-		bc.anchor = GridBagConstraints.NORTHWEST;
-		bc.fill = GridBagConstraints.NONE;
-		tree_panel.add(add_directory, bc);
-		bc.gridx = 1;
-		tree_panel.add(remove_directory, bc);
-		bc.gridx = 2;
-		bc.fill = GridBagConstraints.BOTH;
-		tree_panel.add(filter, bc);
-		bc.gridx = 0;
-		bc.gridwidth = 3;
-		bc.gridy = 1;
-		bc.weightx = 1.0;
-		bc.weighty = 1.0;
-		bc.fill = GridBagConstraints.BOTH;
-		tree_panel.add(tree, bc);
-		final JScrollPane scrolltree = new JScrollPane(tree_panel);
-		scrolltree.setBackground(Color.white);
-		scrolltree.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(0,5,0,5)));
-		scrolltree.setPreferredSize(new Dimension(200, 600));
-		body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrolltree, tabbed);
-		body.setOneTouchExpandable(true);
-		body.addPropertyChangeListener(evt -> {
-			if ("dividerLocation".equals(evt.getPropertyName())) saveWindowSizeToPrefs();
+		// Tweaks for tabbed pane
+		final JPopupMenu popup = new JPopupMenu();
+		tabbed.setComponentPopupMenu(popup);
+		final ButtonGroup bGroup = new ButtonGroup();
+		for (final String pos : new String[] { "Top", "Left", "Bottom", "Right" }) {
+			final JMenuItem jcbmi = new JCheckBoxMenuItem("Place on " + pos, "Top".equals(pos));
+			jcbmi.addItemListener(e -> {
+				switch (pos) {
+				case "Top":
+					tabbed.setTabPlacement(JTabbedPane.TOP);
+					break;
+				case "Bottom":
+					tabbed.setTabPlacement(JTabbedPane.BOTTOM);
+					break;
+				case "Left":
+					tabbed.setTabPlacement(JTabbedPane.LEFT);
+					break;
+				case "Right":
+					tabbed.setTabPlacement(JTabbedPane.RIGHT);
+					break;
+				}
+			});
+			bGroup.add(jcbmi);
+			popup.add(jcbmi);
+		}
+		tabbed.addMouseWheelListener(e -> {
+			//https://stackoverflow.com/a/38463104
+			final JTabbedPane pane = (JTabbedPane) e.getSource();
+			final int units = e.getWheelRotation();
+			final int oldIndex = pane.getSelectedIndex();
+			final int newIndex = oldIndex + units;
+			if (newIndex < 0)
+				pane.setSelectedIndex(0);
+			else if (newIndex >= pane.getTabCount())
+				pane.setSelectedIndex(pane.getTabCount() - 1);
+			else
+				pane.setSelectedIndex(newIndex);
 		});
 		getContentPane().add(body);
 
@@ -796,7 +731,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		addAccelerator(compileAndRun, KeyEvent.VK_F5, 0, true);
 		addAccelerator(nextTab, KeyEvent.VK_PAGE_DOWN, ctrl, true);
 		addAccelerator(previousTab, KeyEvent.VK_PAGE_UP, ctrl, true);
-
 		addAccelerator(increaseFontSize, KeyEvent.VK_EQUALS, ctrl | shift, true);
 
 		// make sure that the window is not closed by accident
@@ -823,8 +757,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		});
 
-		final Font font = new Font("Courier", Font.PLAIN, 12);
-		errorScreen.setFont(font);
+		// Tweaks for Console
+		errorScreen.setFont(getEditorPane().getFont());
 		errorScreen.setEditable(false);
 		errorScreen.setLineWrap(true);
 
@@ -833,8 +767,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		try {
 			threadService.invoke(() -> {
 				pack();
-				body.setDividerLocation(0.2);
-				getTab().getScreenAndPromptSplit().setDividerLocation(1.0);
+				body.setDividerLocation(0.2); // Important!: will be read as prefs. default
+				getTab().setREPLVisible(false);
 				loadPreferences();
 				pack();
 			});
@@ -865,21 +799,31 @@ public class TextEditor extends JFrame implements ActionListener,
 		open(null);
 
 		final EditorPane editorPane = getEditorPane();
+		// If dark L&F and using the default theme, assume 'dark' theme
+		applyTheme((isDarkLaF() && "default".equals(editorPane.themeName())) ? "dark" : editorPane.themeName());
+		// Ensure font sizes are consistent across all panels
+		setFontSize(getEditorPane().getFontSize());
+		// Ensure menu commands are up-to-date
+		updateUI(true);
+		// Store locations of splitpanes
+		panePositions = new int[]{body.getDividerLocation(), getTab().getDividerLocation()};
 		editorPane.requestFocus();
 	}
-	
+
 	private class DragAndDrop implements DragSourceListener, DragGestureListener {
 		@Override
-		public void dragDropEnd(DragSourceDropEvent dsde) {}
+		public void dragDropEnd(final DragSourceDropEvent dsde) {}
 
 		@Override
-		public void dragEnter(DragSourceDragEvent dsde) {
+		public void dragEnter(final DragSourceDragEvent dsde) {
 			dsde.getDragSourceContext().setCursor(DragSource.DefaultMoveNoDrop);
 		}
 
 		@Override
-		public void dragGestureRecognized(DragGestureEvent dge) {
-			TreePath path = tree.getSelectionPath();
+		public void dragGestureRecognized(final DragGestureEvent dge) {
+			final TreePath path = tree.getSelectionPath();
+			if (path == null) // nothing is currently selected
+				return;
 			final String filepath = (String)((FileSystemTree.Node) path.getLastPathComponent()).getUserObject();
 			dragSource.startDrag(dge, DragSource.DefaultCopyDrop, new Transferable() {
 				@Override
@@ -893,7 +837,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				}
 				
 				@Override
-				public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
+				public Object getTransferData(final DataFlavor flavor) throws UnsupportedFlavorException, IOException {
 					if (isDataFlavorSupported(flavor))
 						return Arrays.asList(new String[]{filepath});
 					return null;
@@ -902,12 +846,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 
 		@Override
-		public void dragExit(DragSourceEvent dse) {
+		public void dragExit(final DragSourceEvent dse) {
 			dse.getDragSourceContext().setCursor(DragSource.DefaultMoveNoDrop);
 		}
 
 		@Override
-		public void dragOver(DragSourceDragEvent dsde) {
+		public void dragOver(final DragSourceDragEvent dsde) {
 			if (tree == dsde.getSource()) {
 				dsde.getDragSourceContext().setCursor(DragSource.DefaultCopyNoDrop);
 			} else if (dsde.getDropAction() == DnDConstants.ACTION_COPY) {
@@ -918,7 +862,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 
 		@Override
-		public void dropActionChanged(DragSourceDragEvent dsde) {}
+		public void dropActionChanged(final DragSourceDragEvent dsde) {}
 	}
 
 	public LogService log() { return log; }
@@ -945,6 +889,48 @@ public class TextEditor extends JFrame implements ActionListener,
 			catch (final Throwable t) {
 				log.warn("Could not register " + info.getName(), t);
 			}
+	}
+
+	private void initializeDynamicMenuComponents() {
+
+		// Options menu. These will be updated once EditorPane is created
+		wrapLines = new JCheckBoxMenuItem("Wrap Lines", false);
+		wrapLines.setMnemonic(KeyEvent.VK_W);
+		wrapLines.addItemListener(e -> setWrapLines(wrapLines.getState()));
+		markOccurences = new JCheckBoxMenuItem("Mark Occurences", false);
+		markOccurences.setToolTipText("Highlights all occurrences of a selected element");
+		markOccurences.addItemListener(e -> setMarkOccurrences(markOccurences.getState()));
+		whiteSpace = new JCheckBoxMenuItem("Show Whitespace", false);
+		whiteSpace.addItemListener(e -> setWhiteSpaceVisible(whiteSpace.isSelected()));
+		paintTabs = new JCheckBoxMenuItem("Show Indent Guides");
+		paintTabs.addItemListener(e -> setPaintTabLines(paintTabs.getState()));
+		autocompletion = new JCheckBoxMenuItem("Enable Autocompletion", true);
+		autocompletion.setToolTipText("NB: Not all languages support this feature");
+		autocompletion.addItemListener(e -> setAutoCompletionEnabled(autocompletion.getState()));
+		keylessAutocompletion = new JCheckBoxMenuItem("Show Completions Without Ctrl+Space", false);
+		keylessAutocompletion.setToolTipText("If selected, the completion pop-up automatically appears while typing");
+		keylessAutocompletion.addItemListener(e -> setKeylessAutoCompletion(keylessAutocompletion.getState()));
+		fallbackAutocompletion = new JCheckBoxMenuItem("Use Java Completions as Fallback", false);
+		fallbackAutocompletion.setToolTipText("<HTML>If selected, Java completions will be used when scripting<br>"
+				+ "a language for which auto-completions are not available");
+		fallbackAutocompletion.addItemListener(e -> setFallbackAutoCompletion(fallbackAutocompletion.getState()));
+		themeRadioGroup = new ButtonGroup();
+
+		// Help menu. These are 'dynamic' items
+		openMacroFunctions = new JMenuItem("Open Help on Macro Function(s)...");
+		openMacroFunctions.setMnemonic(KeyEvent.VK_H);
+		openMacroFunctions.addActionListener(e -> {
+			try {
+				new MacroFunctions(this).openHelp(getTextArea().getSelectedText());
+			} catch (final IOException ex) {
+				handleException(ex);
+			}
+		});
+		openHelp = new JMenuItem("Open Help for Class (With Frames)...");
+		openHelp.setMnemonic(KeyEvent.VK_H);
+		openHelp.addActionListener( e-> openHelp(null));
+		openHelpWithoutFrames = new JMenuItem("Open Help for Class...");
+		openHelpWithoutFrames.addActionListener(e -> openHelp(null, false));
 	}
 
 	/**
@@ -1005,9 +991,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		final TextEditorTab tab = getTab();
 		final int tabDivLocation = prefService.getInt(getClass(), TAB_DIV_LOCATION, tab.getDividerLocation());
 		final int tabDivOrientation = prefService.getInt(getClass(), TAB_DIV_ORIENTATION, tab.getOrientation());
+		final int replDividerLocation = prefService.getInt(getClass(), REPL_DIV_LOCATION, tab.getScreenAndPromptSplit().getDividerLocation());
 		tab.setDividerLocation(tabDivLocation);
 		tab.setOrientation(tabDivOrientation);
-
+		tab.getScreenAndPromptSplit().setDividerLocation(replDividerLocation);
 		layoutLoading = false;
 	}
 
@@ -1032,6 +1019,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final TextEditorTab tab = getTab();
 		prefService.put(getClass(), TAB_DIV_LOCATION, tab.getDividerLocation());
 		prefService.put(getClass(), TAB_DIV_ORIENTATION, tab.getOrientation());
+		prefService.put(getClass(), REPL_DIV_LOCATION, tab.getScreenAndPromptSplit().getDividerLocation());
 	}
 
 	final public RSyntaxTextArea getTextArea() {
@@ -1362,13 +1350,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == paste) getTextArea().paste();
 		else if (source == undo) getTextArea().undoLastAction();
 		else if (source == redo) getTextArea().redoLastAction();
-		else if (source == find) findOrReplace(false);
+		else if (source == find) findOrReplace(true);
 		else if (source == findNext) findDialog.searchOrReplace(false);
 		else if (source == findPrevious) findDialog.searchOrReplace(false, false);
-		else if (source == replace) findOrReplace(true);
 		else if (source == gotoLine) gotoLine();
-		else if (source == toggleBookmark) toggleBookmark();
-		else if (source == listBookmarks) listBookmarks();
 		else if (source == selectAll) {
 			getTextArea().setCaretPosition(0);
 			getTextArea().moveCaretPosition(getTextArea().getDocument().getLength());
@@ -1380,7 +1365,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			commandService.run(ChooseTabSize.class, true, "editor", this);
 		}
 		else if (source == addImport) {
-			addImport(getSelectedClassNameOrAsk());
+			addImport(getSelectedClassNameOrAsk("Add import (complete qualified name of class/package)",
+					"Which Class to Import?"));
 		}
 		else if (source == removeUnusedImports) new TokenFunctions(getTextArea())
 			.removeUnusedImports();
@@ -1392,28 +1378,11 @@ public class TextEditor extends JFrame implements ActionListener,
 			.convertTabsToSpaces();
 		else if (source == replaceSpacesWithTabs) getTextArea()
 			.convertSpacesToTabs();
-		else if (source == clearScreen) {
-			getTab().getScreen().setText("");
-		}
 		else if (source == zapGremlins) zapGremlins();
-		else if (source == toggleAutoCompletionMenu) {
-			toggleAutoCompletion();
-		}
-		else if (source == savePreferences) {
-			getEditorPane().savePreferences(tree.getTopLevelFoldersString());
-		}
-		else if (source == openHelp) openHelp(null);
-		else if (source == openHelpWithoutFrames) openHelp(null, false);
 		else if (source == openClassOrPackageHelp) openClassOrPackageHelp(null);
-		else if (source == openMacroFunctions) try {
-			new MacroFunctions(this).openHelp(getTextArea().getSelectedText());
-		}
-		catch (final IOException e) {
-			handleException(e);
-		}
 		else if (source == extractSourceJar) extractSourceJar();
 		else if (source == openSourceForClass) {
-			final String className = getSelectedClassNameOrAsk();
+			final String className = getSelectedClassNameOrAsk("Class (Fully qualified name):", "Which Class?");
 			if (className != null) {
 				try {
 					final String url = new FileFunctions(this).getSourceURL(className);
@@ -1460,12 +1429,134 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (handleTabsMenu(source)) return;
 	}
 
-	private void toggleAutoCompletion() {
-		for (int i = 0; i < tabbed.getTabCount(); i++) {
-			final EditorPane editorPane = getEditorPane(i);
-			editorPane.setAutoCompletionEnabled(toggleAutoCompletionMenu.isSelected());
+	private void setAutoCompletionEnabled(final boolean enabled) {
+		for (int i = 0; i < tabbed.getTabCount(); i++)
+			getEditorPane(i).setAutoCompletion(enabled);
+		keylessAutocompletion.setEnabled(enabled);
+		fallbackAutocompletion.setEnabled(enabled);
+	}
+
+	private void setTabsEmulated(final boolean emulated) {
+		for (int i = 0; i < tabbed.getTabCount(); i++)
+			getEditorPane(i).setTabsEmulated(emulated);
+	}
+
+	private void setPaintTabLines(final boolean paint) {
+		for (int i = 0; i < tabbed.getTabCount(); i++)
+			getEditorPane(i).setPaintTabLines(paint);
+	}
+
+	private void setKeylessAutoCompletion(final boolean noKeyRequired) {
+		for (int i = 0; i < tabbed.getTabCount(); i++)
+			getEditorPane(i).setKeylessAutoCompletion(noKeyRequired);
+	}
+
+	private void setFallbackAutoCompletion(final boolean fallback) {
+		for (int i = 0; i < tabbed.getTabCount(); i++)
+			getEditorPane(i).setFallbackAutoCompletion(fallback);
+	}
+
+	private void setMarkOccurrences(final boolean markOccurrences) {
+		for (int i = 0; i < tabbed.getTabCount(); i++)
+			getEditorPane(i).setMarkOccurrences(markOccurrences);
+	}
+
+	private void setWhiteSpaceVisible(final boolean visible) {
+		for (int i = 0; i < tabbed.getTabCount(); i++)
+			getEditorPane(i).setWhitespaceVisible(visible);
+	}
+
+	private void setWrapLines(final boolean wrap) {
+		for (int i = 0; i < tabbed.getTabCount(); i++)
+			getEditorPane(i).setLineWrap(wrap);
+	}
+
+	private JMenu applyThemeMenu() {
+		final LinkedHashMap<String, String> map = new LinkedHashMap<>();
+		map.put("Default", "default");
+		map.put("-", "-");
+		map.put("Dark", "dark");
+		map.put("Druid", "druid");
+		map.put("Monokai", "monokai");
+		map.put("Eclipse (Light)", "eclipse");
+		map.put("IntelliJ (Light)", "idea");
+		map.put("Visual Studio (Light)", "vs");
+		themeRadioGroup = new ButtonGroup();
+		final JMenu menu = new JMenu("Theme");
+		map.forEach((k, v) -> {
+			if ("-".equals(k)) {
+				menu.addSeparator();
+				return;
+			}
+			final JRadioButtonMenuItem item = new JRadioButtonMenuItem(k);
+			item.setActionCommand(v);
+			themeRadioGroup.add(item);
+			item.addActionListener(e -> {
+				try {
+					applyTheme(v, false);
+				} catch (final IllegalArgumentException ex) {
+					JOptionPane.showMessageDialog(TextEditor.this,
+							"An exception occured. Theme could not be loaded");
+					ex.printStackTrace();
+				}
+			});
+			menu.add(item);
+		});
+		return menu;
+	}
+
+	/**
+	 * Applies a theme to all the panes of this editor.
+	 *
+	 * @param theme either "default", "dark", "druid", "eclipse", "idea", "monokai",
+	 *              "vs"
+	 * @throws IllegalArgumentException If {@code theme} is not a valid option, or
+	 *                                  the resource could not be loaded
+	 */
+	public void applyTheme(final String theme) throws IllegalArgumentException {
+		applyTheme(theme, true);
+	}
+
+	private void applyTheme(final String theme, final boolean updateUI) throws IllegalArgumentException {
+		try {
+			final Theme th = Theme
+					.load(getClass().getResourceAsStream("/org/fife/ui/rsyntaxtextarea/themes/" + theme + ".xml"));
+			for (int i = 0; i < tabbed.getTabCount(); i++) {
+				// themes include font size, so we'll need to reset that
+				final EditorPane ep = getEditorPane(i);
+				final float existingFontSize = ep.getFontSize();
+				th.apply(ep);
+				ep.setFontSize(existingFontSize);
+				ep.updateBookmarkIcon(); // update bookmark icon color
+			}
+		} catch (final Exception ex) {
+			throw new IllegalArgumentException(ex);
 		}
-		prefService.put(TextEditor.class, "autoComplete", toggleAutoCompletionMenu.isSelected());
+		this.activeTheme = theme;
+		if (updateUI && themeRadioGroup != null) {
+			final Enumeration<AbstractButton> choices = themeRadioGroup.getElements();
+			while (choices.hasMoreElements()) {
+				final AbstractButton choice = choices.nextElement();
+				if (theme.equals(choice.getActionCommand())) {
+					choice.setSelected(true);
+					break;
+				}
+			}
+		}
+	}
+
+	private void collapseSplitPane(final int pane, final boolean collapse) {
+		final JSplitPane jsp = (pane == 0)  ? body : getTab();
+		if (collapse) {
+			panePositions[pane] = jsp.getDividerLocation();
+			if (pane == 0) { // collapse to left
+				jsp.setDividerLocation(0.0d);
+			} else { // collapse to bottom
+				jsp.setDividerLocation(1.0d);
+			}
+		} else {
+			jsp.setDividerLocation(panePositions[pane]);
+		}
 	}
 
 	protected boolean handleTabsMenu(final Object source) {
@@ -1491,7 +1582,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		editorPane.requestFocus();
 		checkForOutsideChanges();
 
-		toggleWhiteSpaceLabeling.setSelected(editorPane.isWhitespaceVisible());
+		whiteSpace.setSelected(editorPane.isWhitespaceVisible());
 
 		editorPane.setLanguageByFileName(editorPane.getFileName());
 		updateLanguageMenu(editorPane.getCurrentLanguage());
@@ -1516,7 +1607,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	public void gotoLine() {
 		final String line =
-			JOptionPane.showInputDialog(this, "Line:", "Goto line...",
+			JOptionPane.showInputDialog(this, "Enter line number:", "Goto Line",
 				JOptionPane.QUESTION_MESSAGE);
 		if (line == null) return;
 		try {
@@ -1538,16 +1629,34 @@ public class TextEditor extends JFrame implements ActionListener,
 		getEditorPane().toggleBookmark();
 	}
 
-	public void listBookmarks() {
+	private Vector<Bookmark> getAllBookmarks() {
 		final Vector<Bookmark> bookmarks = new Vector<>();
-
 		for (int i = 0; i < tabbed.getTabCount(); i++) {
 			final TextEditorTab tab = (TextEditorTab) tabbed.getComponentAt(i);
 			tab.editorPane.getBookmarks(tab, bookmarks);
 		}
+		if (bookmarks.isEmpty()) {
+			JOptionPane.showMessageDialog(this, "No Bookmarks currently exist.\n"
+					+ "You can bookmark lines by clicking next to their line number.");
+		}
+		return bookmarks;
+	}
 
-		final BookmarkDialog dialog = new BookmarkDialog(this, bookmarks);
-		dialog.setVisible(true);
+	public void listBookmarks() {
+		final Vector<Bookmark> bookmarks = getAllBookmarks();
+		if (!getAllBookmarks().isEmpty()) {
+			new BookmarkDialog(this, bookmarks).setVisible(true);
+		}
+	}
+
+	void clearAllBookmarks() {
+		final Vector<Bookmark> bookmarks = getAllBookmarks();
+		if (bookmarks.isEmpty())
+			return;
+		if (JOptionPane.showConfirmDialog(TextEditor.this, "Delete all bookmarks?", "Confirm Deletion?",
+				JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+			bookmarks.forEach(bk -> bk.tab.editorPane.toggleBookmark(bk.getLineNumber()));
+		}
 	}
 
 	public boolean reload() {
@@ -1637,7 +1746,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (isBinary(file)) {
 			try {
 				uiService.show(ioService.open(file.getAbsolutePath()));
-			} catch (IOException e) {
+			} catch (final IOException e) {
 				log.error(e);
 			}
 			return null;
@@ -1645,7 +1754,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		try {
 			TextEditorTab tab = (tabbed.getTabCount() == 0) ? null : getTab();
-			TextEditorTab prior = tab;
+			final TextEditorTab prior = tab;
 			final boolean wasNew = tab != null && tab.editorPane.isNew();
 			float font_size = 0; // to set the new editor's font like the last active one, if any
 			if (!wasNew) {
@@ -1869,13 +1978,14 @@ public class TextEditor extends JFrame implements ActionListener,
 			this.scriptInfo = null;
 		}
 		getEditorPane().setLanguage(language, addHeader);
-		
 		prefService.put(getClass(), LAST_LANGUAGE, null == language? "none" : language.getLanguageName());
 
 		setTitle();
 		updateLanguageMenu(language);
-		updateTabAndFontSize(true);
+		updateUI(true);
 	}
+
+	private String lastSupportStatus = null;
 
 	void updateLanguageMenu(final ScriptLanguage language) {
 		JMenuItem item = languageMenuItems.get(language);
@@ -1883,44 +1993,58 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (!item.isSelected()) {
 			item.setSelected(true);
 		}
+		// print autocompletion status to console
+		String supportStatus = getEditorPane().getSupportStatus();
+		if (supportStatus != null && !Objects.equals(supportStatus, lastSupportStatus)) {
+			write(supportStatus);
+			lastSupportStatus = supportStatus;
+		}
 
 		final boolean isRunnable = item != noneLanguageItem;
 		final boolean isCompileable =
 			language != null && language.isCompiledLanguage();
 
-		runMenu.setVisible(isRunnable);
+		runMenu.setEnabled(isRunnable);
 		compileAndRun.setText(isCompileable ? "Compile and Run" : "Run");
 		compileAndRun.setEnabled(isRunnable);
-		runSelection.setVisible(isRunnable && !isCompileable);
-		compile.setVisible(isCompileable);
-		autoSave.setVisible(isCompileable);
-		makeJar.setVisible(isCompileable);
-		makeJarWithSource.setVisible(isCompileable);
+		runSelection.setEnabled(isRunnable && !isCompileable);
+		compile.setEnabled(isCompileable);
+		autoSave.setEnabled(isCompileable);
+		makeJar.setEnabled(isCompileable);
+		makeJarWithSource.setEnabled(isCompileable);
 
 		final boolean isJava =
 			language != null && language.getLanguageName().equals("Java");
-		addImport.setVisible(isJava);
-		removeUnusedImports.setVisible(isJava);
-		sortImports.setVisible(isJava);
-		openSourceForMenuItem.setVisible(isJava);
+		addImport.setEnabled(isJava);
+		removeUnusedImports.setEnabled(isJava);
+		sortImports.setEnabled(isJava);
+		//openSourceForMenuItem.setEnabled(isJava);
 
 		final boolean isMacro =
 			language != null && language.getLanguageName().equals("ImageJ Macro");
-		openMacroFunctions.setVisible(isMacro);
-		openSourceForClass.setVisible(!isMacro);
+		openMacroFunctions.setEnabled(isMacro);
+		openSourceForClass.setEnabled(!isMacro);
 
-		openHelp.setVisible(!isMacro && isRunnable);
-		openHelpWithoutFrames.setVisible(!isMacro && isRunnable);
-		nextError.setVisible(!isMacro && isRunnable);
-		previousError.setVisible(!isMacro && isRunnable);
+		openHelp.setEnabled(!isMacro && isRunnable);
+		openHelpWithoutFrames.setEnabled(!isMacro && isRunnable);
+		nextError.setEnabled(!isMacro && isRunnable);
+		previousError.setEnabled(!isMacro && isRunnable);
 
 		final boolean isInGit = getEditorPane().getGitDirectory() != null;
 		gitMenu.setVisible(isInGit);
 
-		updateTabAndFontSize(false);
+		updateUI(false);
 	}
 
+	/**
+	 * Use {@link #updateUI(boolean)} instead
+	 */
+	@Deprecated
 	public void updateTabAndFontSize(final boolean setByLanguage) {
+		updateUI(setByLanguage);
+	}
+
+	public void updateUI(final boolean setByLanguage) {
 		final EditorPane pane = getEditorPane();
 		if (pane.getCurrentLanguage() == null) return;
 
@@ -1965,8 +2089,13 @@ public class TextEditor extends JFrame implements ActionListener,
 				defaultSize = true;
 			}
 		}
+		markOccurences.setState(pane.getMarkOccurrences());
 		wrapLines.setState(pane.getLineWrap());
 		tabsEmulated.setState(pane.getTabsEmulated());
+		paintTabs.setState(pane.getPaintTabLines());
+		whiteSpace.setState(pane.isWhitespaceVisible());
+		autocompletion.setState(pane.isAutoCompletionEnabled());
+		keylessAutocompletion.setState(pane.isAutoCompletionKeyless());
 	}
 
 	public void setEditorPaneFileName(final String baseName) {
@@ -2212,8 +2341,17 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * Run current script with the batch processor
 	 */
 	public void runBatch() {
+		if (null == getCurrentLanguage()) {
+			error("Select a language first! Also, please note that this option\n"
+				+ "requires at least one @File parameter to be declared in the script.");
+			return;
+		}
 		// get script from current tab
 		final String script = getTab().getEditorPane().getText();
+		if (script.trim().isEmpty()) {
+			error("This option requires at least one @File parameter to be declared.");
+			return;
+		}
 		final ScriptInfo info = new ScriptInfo(context, //
 			"dummy." + getCurrentLanguage().getExtensions().get(0), //
 			new StringReader(script));
@@ -2335,7 +2473,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final String path = getPromptCommandsFilename(language);
 		final File file = new File(path);
 		try {
-			boolean exists = file.exists();
+			final boolean exists = file.exists();
 			if (!exists) {
 				// Ensure parent directories exist
 				file.getParentFile().mkdirs();
@@ -2343,7 +2481,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 			Files.write(Paths.get(path), Arrays.asList(new String[]{text, "#"}), Charset.forName("UTF-8"),
 					StandardOpenOption.APPEND, StandardOpenOption.DSYNC);
-		} catch (IOException e) {
+		} catch (final IOException e) {
 			log.error("Failed to write executed prompt command to file " + path, e);
 		}
 	}
@@ -2369,11 +2507,11 @@ public class TextEditor extends JFrame implements ActionListener,
 			final String sep = System.getProperty("line.separator"); // used fy Files.write above
 			commands.addAll(Arrays.asList(new String(bytes, Charset.forName("UTF-8")).split(sep + "#" + sep)));
 			if (0 == commands.get(commands.size()-1).length()) commands.remove(commands.size() -1); // last entry is empty
-		} catch (IOException e) {
+		} catch (final IOException e) {
 			log.error("Failed to read history of prompt commands from file " + path, e);
 			return lines;
 		} finally {
-			try { if (null != ra) ra.close(); } catch (IOException e) { log.error(e); }
+			try { if (null != ra) ra.close(); } catch (final IOException e) { log.error(e); }
 		}
 		if (commands.size() > 1000) {
 			commands = commands.subList(commands.size() - 1000, commands.size());
@@ -2389,7 +2527,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				if (!new File(path + "-tmp").renameTo(new File(path))) {
 					log.error("Could not rename command log file " + path + "-tmp to " + path);
 				}
-			} catch (Exception e) {
+			} catch (final Exception e) {
 				log.error("Failed to crop history of prompt commands file " + path, e);
 			}
 		}
@@ -2443,19 +2581,19 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 	}
 
-	public String getSelectedTextOrAsk(final String label) {
+	public String getSelectedTextOrAsk(final String msg, final String title) {
 		String selection = getTextArea().getSelectedText();
 		if (selection == null || selection.indexOf('\n') >= 0) {
-			selection =
-				JOptionPane.showInputDialog(this, label + ":", label + "...",
-					JOptionPane.QUESTION_MESSAGE);
-			if (selection == null) return null;
+			selection = JOptionPane.showInputDialog(this, msg + "\nAlternatively, select appropriate text and re-run.",
+					title, JOptionPane.QUESTION_MESSAGE);
+			if (selection == null)
+				return null;
 		}
 		return selection;
 	}
 
-	public String getSelectedClassNameOrAsk() {
-		String className = getSelectedTextOrAsk("Class name");
+	public String getSelectedClassNameOrAsk(final String msg, final String title) {
+		String className = getSelectedTextOrAsk(msg, title);
 		if (className != null) className = className.trim();
 		return className;
 	}
@@ -2466,6 +2604,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		textArea.setCaretPosition(length);
 	}
 	
+
 	public void markCompileStart() {
 		markCompileStart(true);
 	}
@@ -2617,7 +2756,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * @param withFrames
 	 */
 	public void openHelp(String className, final boolean withFrames) {
-		if (className == null) className = getSelectedClassNameOrAsk();
+		if (className == null) className = getSelectedClassNameOrAsk("Class (fully qualified name):", "Online Javadocs...");
 		if (className == null) return;
 		final Class<?> c = Types.load(className, false);
 
@@ -2681,7 +2820,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	 */
 	public void openClassOrPackageHelp(String text) {
 		if (text == null)
-			text = getSelectedClassNameOrAsk();
+			text = getSelectedClassNameOrAsk("Class or package (complete or partial name):", "Which Class/Package?");
 		if (null == text) return;
 		new Thread(new FindClassSourceAndJavadoc(text)).start(); // fork away from event dispatch thread
 	}
@@ -2701,14 +2840,18 @@ public class TextEditor extends JFrame implements ActionListener,
 				setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 			}
 			if (matches.isEmpty()) {
-				JOptionPane.showMessageDialog(getEditorPane(), "No info found for:\n'" + text +'"');
+				if (JOptionPane.showConfirmDialog(TextEditor.this,
+						"No info found for:\n'" + text + "'\nSearch for it on the web?", "Search the Web?",
+						JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+					openURL("https://duckduckgo.com/?q=" + text.trim().replace(" ", "+"));
+				}
 				return;
 			}
 			final JPanel panel = new JPanel();
 			final GridBagLayout gridbag = new GridBagLayout();
 			final GridBagConstraints c = new GridBagConstraints();
 			panel.setLayout(gridbag);
-			panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+			panel.setBorder(BorderFactory.createEmptyBorder(BORDER_SIZE, BORDER_SIZE, BORDER_SIZE, BORDER_SIZE));
 			final List<String> keys = new ArrayList<String>(matches.keySet());
 			Collections.sort(keys);
 			c.gridy = 0;
@@ -2732,13 +2875,11 @@ public class TextEditor extends JFrame implements ActionListener,
 					final JButton link = new JButton(title);
 					gridbag.setConstraints(link, c);
 					panel.add(link);
-					link.addActionListener(new ActionListener() {
-						public void actionPerformed(final ActionEvent event) {
-							try {
-								platformService.open(new URL(url));
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
+					link.addActionListener(event -> {
+						try {
+							platformService.open(new URL(url));
+						} catch (final Exception e) {
+							e.printStackTrace();
 						}
 					});
 				}
@@ -2746,13 +2887,11 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 			final JScrollPane jsp = new JScrollPane(panel);
 			//jsp.setPreferredSize(new Dimension(800, 500));
-			SwingUtilities.invokeLater(new Runnable() {
-				public void run() {
-					final JFrame frame = new JFrame(text);
-					frame.getContentPane().add(jsp);
-					frame.pack();
-					frame.setVisible(true);
-				}
+			SwingUtilities.invokeLater(() -> {
+				final JFrame frame = new JFrame(text);
+				frame.getContentPane().add(jsp);
+				frame.pack();
+				frame.setVisible(true);
 			});
 		}
 	}
@@ -2807,7 +2946,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	private void error(final String message) {
-		JOptionPane.showMessageDialog(this, message);
+		JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
 	}
 
 	public void handleException(final Throwable e) {
@@ -2911,7 +3050,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			try {
 				// Same engine, with persistent state
 				this.scriptInfo.setScript( reader );
-			} catch (IOException e) {
+			} catch (final IOException e) {
 				log.error(e);
 			}
 		}
@@ -2944,7 +3083,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		
 		final JTextArea prompt = this.getTab().getPrompt();
 		if (incremental) {
-			getTab().getScreenAndPromptSplit().setDividerLocation(0.5);
+			getTab().setREPLVisible(true);
 			prompt.addKeyListener(new KeyAdapter() {
 				private final ArrayList<String> commands = loadPromptLog(getCurrentLanguage());
 				private int index = commands.size();
@@ -2979,7 +3118,7 @@ public class TextEditor extends JFrame implements ActionListener,
 							execute(getTab(), text, true);
 							prompt.setText("");
 							screen.scrollRectToVisible(screen.modelToView(screen.getDocument().getLength()));
-						} catch (Throwable t) {
+						} catch (final Throwable t) {
 							log.error(t);
 						}
 						ke.consume(); // avoid writing the line break
@@ -3121,4 +3260,105 @@ public class TextEditor extends JFrame implements ActionListener,
 	private void changeFontSize(final JTextArea a, final float size) {
 		a.setFont(a.getFont().deriveFont(size));
 	}
+
+	private void appendPreferences(final JMenu menu) {
+		JMenuItem item = new JMenuItem("Save Preferences");
+		menu.add(item);
+		item.addActionListener(e -> {
+			getEditorPane().savePreferences(tree.getTopLevelFoldersString(), activeTheme);
+			write("Script Editor: Preferences Saved...\n");
+		});
+		item = new JMenuItem("Reset...");
+		menu.add(item);
+		item.addActionListener(e -> {
+			final int choice = JOptionPane.showConfirmDialog(TextEditor.this,
+					"Reset preferences to defaults? (a restart may be required)", "Reset?",
+					JOptionPane.OK_CANCEL_OPTION);
+			if (JOptionPane.OK_OPTION == choice) {
+				prefService.clear(EditorPane.class);
+				prefService.clear(TextEditor.class);
+				write("Script Editor: Preferences Reset.\n");
+			}
+		});
+	}
+
+	private JMenu helpMenu() {
+		final JMenu menu = new JMenu("Help");
+		addSeparator(menu, "Contextual Help:");
+		menu.add(openHelpWithoutFrames);
+		openHelpWithoutFrames.setMnemonic(KeyEvent.VK_O);
+		menu.add(openHelp);
+		openClassOrPackageHelp = addToMenu(menu, "Lookup Class or Package...", 0, 0);
+		openClassOrPackageHelp.setMnemonic(KeyEvent.VK_S);
+		menu.add(openMacroFunctions);
+		addSeparator(menu, "Online Resources:");
+		menu.add(helpMenuItem("Image.sc Forum ", "https://forum.image.sc/"));
+		menu.add(helpMenuItem("ImageJ Search Portal", "https://search.imagej.net/"));
+		//menu.addSeparator();
+		menu.add(helpMenuItem("SciJava Javadoc Portal", "https://javadoc.scijava.org/"));
+		menu.add(helpMenuItem("SciJava Maven Repository", "https://maven.scijava.org/"));
+		menu.addSeparator();
+		menu.add(helpMenuItem("Fiji on GitHub", "https://github.com/fiji"));
+		menu.add(helpMenuItem("SciJava on GitHub", "https://github.com/scijava/"));
+		menu.addSeparator();
+		menu.add(helpMenuItem("IJ1 Macro Functions", "https://imagej.nih.gov/ij/developer/macro/functions.html"));
+		menu.add(helpMenuItem("ImageJ Docs: Development", "https://imagej.net/develop/"));
+		menu.add(helpMenuItem("ImageJ Docs: Scripting", "https://imagej.net/scripting/"));
+		menu.addSeparator();
+		menu.add(helpMenuItem("ImageJ Notebook Tutorials", "https://github.com/imagej/tutorials#readme"));
+		return menu;
+	}
+
+	private JMenuItem helpMenuItem(final String label, final String url) {
+		final JMenuItem item = new JMenuItem(label);
+		item.addActionListener(e -> openURL(url));
+		return item;
+	}
+
+	private void openURL(final String url) {
+		try {
+			platformService.open(new URL(url));
+		} catch (final IOException ignored) {
+			error("<HTML>Web page could not be open. " + "Please visit<br>" + url + "<br>using your web browser.");
+		}
+	}
+
+	private static void addSeparator(final JMenu menu, final String header) {
+		final JLabel label = new JLabel(header);
+		// label.setHorizontalAlignment(SwingConstants.LEFT);
+		label.setEnabled(false);
+		label.setForeground(getDisabledComponentColor());
+		if (menu.getMenuComponentCount() > 1) {
+			menu.addSeparator();
+		}
+		menu.add(label);
+	}
+
+	private static Collection<File> assembleFlatFileCollection(final Collection<File> collection, final File[] files) {
+		if (files == null) return collection; // can happen while pressing 'Esc'!?
+		for (final File file : files) {
+			if (file == null || isBinary(file))
+				continue;
+			else if (file.isDirectory())
+				assembleFlatFileCollection(collection, file.listFiles());
+			else //if (!file.isHidden())
+				collection.add(file);
+		}
+		return collection;
+	}
+
+	private static Color getDisabledComponentColor() {
+		try {
+			return UIManager.getColor("MenuItem.disabledForeground");
+		} catch (final Exception ignored) {
+			return Color.GRAY;
+		}
+	}
+	
+	private static boolean isDarkLaF() {
+		// see https://stackoverflow.com/a/3943023
+		final Color b = new JLabel().getBackground();
+		return (b.getRed()*0.299 + b.getGreen()*0.587 + b.getBlue() *0.114) < 186;
+	}
+
 }

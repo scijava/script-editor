@@ -33,7 +33,9 @@ import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -45,6 +47,8 @@ import java.io.OutputStreamWriter;
 import java.util.Collection;
 import java.util.List;
 
+import javax.swing.ImageIcon;
+import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JViewport;
 import javax.swing.ToolTipManager;
@@ -54,13 +58,13 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultEditorKit;
 
 import org.fife.rsta.ac.LanguageSupport;
+import org.fife.rsta.ac.LanguageSupportFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Style;
 import org.fife.ui.rsyntaxtextarea.SyntaxScheme;
 import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.GutterIconInfo;
-import org.fife.ui.rtextarea.IconGroup;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.RecordableTextAction;
@@ -88,11 +92,14 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private long fileLastModified;
 	private ScriptLanguage currentLanguage;
 	private Gutter gutter;
-	private IconGroup iconGroup;
 	private int modifyCount;
 
 	private boolean undoInProgress;
 	private boolean redoInProgress;
+	private boolean autoCompletionEnabled;
+	private boolean autoCompletionJavaFallback;
+	private boolean autoCompletionWithoutKey;
+	private String supportStatus;
 
 	@Parameter
 	Context context;
@@ -111,8 +118,19 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 * Constructor.
 	 */
 	public EditorPane() {
-		setLineWrap(false);
-		setTabSize(8);
+
+		// set sensible defaults
+		setAntiAliasingEnabled(true);
+		setAutoIndentEnabled(true);
+		setBracketMatchingEnabled(true);
+		setCloseCurlyBraces(true);
+		setCloseMarkupTags(true);
+		setCodeFoldingEnabled(true);
+		setShowMatchedBracketPopup(true);
+		setClearWhitespaceLinesEnabled(false); // most folks wont't want this set?
+
+		// load preferences
+		loadPreferences();
 
 		getActionMap()
 			.put(DefaultEditorKit.nextWordAction, wordMovement(+1, false));
@@ -147,13 +165,37 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		final RTextScrollPane sp = new RTextScrollPane(this);
 		sp.setPreferredSize(new Dimension(600, 350));
 		sp.setIconRowHeaderEnabled(true);
-
 		gutter = sp.getGutter();
-		iconGroup = new IconGroup("bullets", "images/", null, "png", null);
-		gutter.setBookmarkIcon(iconGroup.getIcon("var"));
 		gutter.setBookmarkingEnabled(true);
-
+		updateBookmarkIcon();
+		gutter.setShowCollapsedRegionToolTips(true);
+		gutter.setFoldIndicatorEnabled(true);
 		return sp;
+	}
+
+	protected void updateBookmarkIcon() {
+		// this will clear existing bookmarks, so we'll need restore existing ones
+		final GutterIconInfo[] stash = gutter.getBookmarks();
+		gutter.setBookmarkIcon(createBookmarkIcon());
+		try {
+			for (final GutterIconInfo info : stash)
+				gutter.toggleBookmark(info.getMarkedOffset());
+		} catch (final BadLocationException ignored) {
+			JOptionPane.showMessageDialog(this, "Some bookmarks may have been lost.", "Lost Bookmarks",
+					JOptionPane.WARNING_MESSAGE);
+		}
+	}
+
+	private ImageIcon createBookmarkIcon() {
+		final int size = gutter.getLineNumberFont().getSize();
+		final BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+		final Graphics2D graphics = image.createGraphics();
+		graphics.setColor(gutter.getLineNumberColor());
+		graphics.fillRect(0, 0, size, size);
+		graphics.setXORMode(getCurrentLineHighlightColor());
+		graphics.drawRect(0, 0, size - 1, size - 1);
+		image.flush();
+		return new ImageIcon(image);
 	}
 
 	/**
@@ -509,18 +551,85 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setText(header += getText());
 		}
 
+		String supportLevel = "SciJava supported";
 		// try to get language support for current language, may be null.
 		support = languageSupportService.getLanguageSupport(currentLanguage);
 
-		if (support != null && autoCompletionEnabled) {
-			support.install(this);
+		// that did not work. See if there is internal support for it.
+		if (support == null) {
+			support = LanguageSupportFactory.get().getSupportFor(styleName);
+			supportLevel = "Legacy supported";
 		}
+		// that did not work, Fallback to Java
+		if (!"None".equals(languageName) && support == null && autoCompletionJavaFallback) {
+			support = languageSupportService.getLanguageSupport(scriptService.getLanguageByName("Java"));
+			supportLevel = "N/A. Using Java as fallback";
+		}
+		if (support != null) {
+			support.setAutoCompleteEnabled(autoCompletionEnabled);
+			support.setAutoActivationEnabled(autoCompletionWithoutKey);
+			support.setAutoActivationDelay(200);
+			support.install(this);
+			if (!autoCompletionEnabled)
+				supportLevel += " but currently disabled\n";
+			else {
+				supportLevel += " triggered by Ctrl+Space";
+				if (autoCompletionWithoutKey)
+					supportLevel += " & auto-display ";
+				supportLevel += "\n";
+			}
+		} else {
+			supportLevel = "N/A";
+		}
+		supportStatus = "Active language: " + languageName + "\nAutocompletion: " + supportLevel;
 	}
 
-	private boolean autoCompletionEnabled = true;
-	public void setAutoCompletionEnabled(boolean value) {
-		autoCompletionEnabled = value;
-		setLanguage(currentLanguage);
+	/**
+	 * Toggles whether auto-completion is enabled.
+	 * 
+	 * @param enabled Whether auto-activation is enabled.
+	 */
+	public void setAutoCompletion(final boolean enabled) {
+		autoCompletionEnabled = enabled;
+		if (currentLanguage != null)
+			setLanguage(currentLanguage);
+	}
+
+	/**
+	 * Toggles whether auto-completion should adopt Java completions if the current
+	 * language does not support auto-completion.
+	 * 
+	 * @param enabled Whether Java should be enabled as fallback language for
+	 *                auto-completion
+	 */
+	void setFallbackAutoCompletion(final boolean value) {
+		autoCompletionJavaFallback = value;
+		if (autoCompletionEnabled && currentLanguage != null)
+			setLanguage(currentLanguage);
+	}
+
+	/**
+	 * Toggles whether auto-activation of auto-completion is enabled. Ignored if
+	 * auto-completion is not enabled.
+	 *
+	 * @param enabled Whether auto-activation is enabled.
+	 */
+	void setKeylessAutoCompletion(final boolean enabled) {
+		autoCompletionWithoutKey = enabled;
+		if (autoCompletionEnabled && currentLanguage != null)
+			setLanguage(currentLanguage);
+	}
+
+	public boolean isAutoCompletionEnabled() {
+		return autoCompletionEnabled;
+	}
+
+	public boolean isAutoCompletionKeyless() {
+		return autoCompletionWithoutKey;
+	}
+
+	public boolean isAutoCompletionFallbackEnabled() {
+		return autoCompletionJavaFallback;
 	}
 
 	/**
@@ -575,6 +684,12 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		final float size = Math.max(5, font.getSize2D() * factor);
 		setFont(font.deriveFont(size));
 		setSyntaxScheme(scheme);
+		// Adjust gutter size
+		if (gutter != null) {
+			final float lnSize = size * 0.8f;
+			gutter.setLineNumberFont(font.deriveFont(lnSize));
+			updateBookmarkIcon();
+		}
 		Component parent = getParent();
 		if (parent instanceof JViewport) {
 			parent = parent.getParent();
@@ -611,7 +726,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			}
 			catch (final BadLocationException e) {
 				/* ignore */
-				log.error("Cannot toggle bookmark at this location.");
+				JOptionPane.showMessageDialog(this, "Cannot toggle bookmark at this location.", "Error",
+						JOptionPane.ERROR_MESSAGE);
 			}
 		}
 	}
@@ -709,21 +825,50 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public static final String LINE_WRAP_PREFS = "script.editor.WrapLines";
 	public static final String TAB_SIZE_PREFS = "script.editor.TabSize";
 	public static final String TABS_EMULATED_PREFS = "script.editor.TabsEmulated";
+	public static final String WHITESPACE_VISIBLE_PREFS = "script.editor.Whitespace";
+	public static final String TABLINES_VISIBLE_PREFS = "script.editor.Tablines";
+	public static final String THEME_PREFS = "script.editor.theme";
+	public static final String AUTOCOMPLETE_PREFS = "script.editor.AC";
+	public static final String AUTOCOMPLETE_KEYLESS_PREFS = "script.editor.ACNoKey";
+	public static final String AUTOCOMPLETE_FALLBACK_PREFS = "script.editor.ACFallback";
+	public static final String MARK_OCCURRENCES_PREFS = "script.editor.Occurrences";
 	public static final String FOLDERS_PREFS = "script.editor.folders";
-
 	public static final int DEFAULT_TAB_SIZE = 4;
+	public static final String DEFAULT_THEME = "default";
 
 	/**
-	 * Loads the preferences for the Tab and apply them.
+	 * Loads and applies the preferences for the tab (theme excluded).
+	 * @see TextEditor#applyTheme(String)
 	 */
 	public void loadPreferences() {
-		resetTabSize();
-		setFontSize(prefService.getFloat(getClass(), FONT_SIZE_PREFS, getFontSize()));
-		setLineWrap(prefService.getBoolean(getClass(), LINE_WRAP_PREFS, getLineWrap()));
-		setTabsEmulated(prefService.getBoolean(getClass(), TABS_EMULATED_PREFS,
-			getTabsEmulated()));
+		if (prefService == null) {
+			setLineWrap(false);
+			setTabSize(DEFAULT_TAB_SIZE);
+			setLineWrap(false);
+			setTabsEmulated(false);
+			setPaintTabLines(false);
+			setAutoCompletion(true);
+			setKeylessAutoCompletion(true); // true for backwards compatibility with IJ1 macro auto-completion
+			setFallbackAutoCompletion(false);
+			setMarkOccurrences(false);
+		} else {
+			resetTabSize();
+			setFontSize(prefService.getFloat(getClass(), FONT_SIZE_PREFS, getFontSize()));
+			setLineWrap(prefService.getBoolean(getClass(), LINE_WRAP_PREFS, getLineWrap()));
+			setTabsEmulated(prefService.getBoolean(getClass(), TABS_EMULATED_PREFS, getTabsEmulated()));
+			setWhitespaceVisible(prefService.getBoolean(getClass(), WHITESPACE_VISIBLE_PREFS, isWhitespaceVisible()));
+			setPaintTabLines(prefService.getBoolean(getClass(), TABLINES_VISIBLE_PREFS, getPaintTabLines()));
+			setAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_PREFS, true));
+			setKeylessAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_KEYLESS_PREFS, true)); // true for backwards compatibility with IJ1 macro
+			setFallbackAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, false));
+			setMarkOccurrences(prefService.getBoolean(getClass(), MARK_OCCURRENCES_PREFS, false));
+		}
 	}
-	
+
+	public String themeName() {
+		return prefService.get(getClass(), THEME_PREFS, DEFAULT_THEME);
+	}
+
 	public String loadFolders() {
 		return prefService.get(getClass(), FOLDERS_PREFS, System.getProperty("user.home"));
 	}
@@ -731,12 +876,18 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	/**
 	 * Retrieves and saves the preferences to the persistent store
 	 */
-	public void savePreferences(final String top_folders) {
+	public void savePreferences(final String top_folders, final String theme) {
 		prefService.put(getClass(), TAB_SIZE_PREFS, getTabSize());
 		prefService.put(getClass(), FONT_SIZE_PREFS, getFontSize());
 		prefService.put(getClass(), LINE_WRAP_PREFS, getLineWrap());
 		prefService.put(getClass(), TABS_EMULATED_PREFS, getTabsEmulated());
+		prefService.put(getClass(), WHITESPACE_VISIBLE_PREFS, isWhitespaceVisible());
+		prefService.put(getClass(), TABLINES_VISIBLE_PREFS, getPaintTabLines());
+		prefService.put(getClass(), AUTOCOMPLETE_PREFS, isAutoCompletionEnabled());
+		prefService.put(getClass(), AUTOCOMPLETE_KEYLESS_PREFS, isAutoCompletionKeyless());
+		prefService.put(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, isAutoCompletionFallbackEnabled());
 		if (null != top_folders) prefService.put(getClass(), FOLDERS_PREFS, top_folders);
+		if (null != theme) prefService.put(getClass(), THEME_PREFS, theme);
 	}
 
 	/**
@@ -744,6 +895,10 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 */
 	public void resetTabSize() {
 		setTabSize(prefService.getInt(getClass(), TAB_SIZE_PREFS, DEFAULT_TAB_SIZE));
+	}
+
+	String getSupportStatus() {
+		return supportStatus;
 	}
 
 }
