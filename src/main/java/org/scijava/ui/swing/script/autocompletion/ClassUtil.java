@@ -30,6 +30,7 @@ package org.scijava.ui.swing.script.autocompletion;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -423,6 +424,39 @@ public class ClassUtil {
 		summary.append("<DL>");
 		summary.append("<DT><b>Returns:</b>");
 		summary.append("<DD>").append(method.getReturnType().getSimpleName());
+		summary.append("<DT><b>Defined in:</b>");
+		summary.append("<DD>").append(getJavaDocLink(c));
+		summary.append("</DL>");
+		return summary.toString();
+	}
+	
+	/**
+	 * Assembles an HTML-formatted auto-completion summary with functional
+	 * hyperlinks
+	 *
+	 * @param constructor   the constructor being documented
+	 * @param c        the class being documented. Expected to be documented at the
+	 *                 Scijava API documentation portal.
+	 * @return the completion summary
+	 */
+	protected static String getSummaryCompletion(final Constructor<?> constructor, final Class<?> c) {
+		final StringBuffer summary = new StringBuffer();
+		final StringBuffer replacementHeader = new StringBuffer(c.getSimpleName());
+		final int bIndex = replacementHeader.length(); // remember '(' position
+		replacementHeader.append("(");
+		final Parameter[] params = constructor.getParameters();
+		if (params.length > 0) {
+			for (final Parameter parameter : params) {
+				replacementHeader.append(parameter.getType().getSimpleName()).append(" ").append(parameter.getName()).append(", ");
+			}
+			replacementHeader.setLength(replacementHeader.length() - 2); // remove trailing ', ';
+		}
+		replacementHeader.append(")");
+		replacementHeader.replace(bIndex, bIndex + 1, "</b>("); // In header, highlight only method name for extra contrast
+		summary.append("<b>").append(replacementHeader);
+		summary.append("<DL>");
+		summary.append("<DT><b>Intantiates:</b>");
+		summary.append("<DD>").append(c.getSimpleName());
 		summary.append("<DT><b>Defined in:</b>");
 		summary.append("<DD>").append(getJavaDocLink(c));
 		summary.append("</DL>");

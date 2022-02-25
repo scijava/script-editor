@@ -28,6 +28,7 @@
  */
 package org.scijava.ui.swing.script.autocompletion;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -65,6 +66,12 @@ public class CompletionText {
 		this(replacementText, ClassUtil.getSummaryCompletion(m, c), null);
 		this.method_args = Arrays.asList(m.getParameters());
 		this.method_returnType = m.getReturnType().getCanonicalName();
+	}
+	
+	public CompletionText(final String replacementText, final Class<?> c, final Constructor<?> constructor) {
+		this(replacementText, ClassUtil.getSummaryCompletion(constructor, c), null);
+		this.method_args = Arrays.asList(constructor.getParameters());
+		this.method_returnType = c.getCanonicalName();
 	}
 
 	public String getReplacementText() {
