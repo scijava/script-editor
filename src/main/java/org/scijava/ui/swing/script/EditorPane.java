@@ -63,6 +63,7 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Style;
 import org.fife.ui.rsyntaxtextarea.SyntaxScheme;
+import org.fife.ui.rsyntaxtextarea.Theme;
 import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.GutterIconInfo;
 import org.fife.ui.rtextarea.RTextArea;
@@ -837,8 +838,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public static final String DEFAULT_THEME = "default";
 
 	/**
-	 * Loads and applies the preferences for the tab (theme excluded).
-	 * @see TextEditor#applyTheme(String)
+	 * Loads and applies the preferences for the tab
 	 */
 	public void loadPreferences() {
 		if (prefService == null) {
@@ -862,11 +862,45 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setKeylessAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_KEYLESS_PREFS, true)); // true for backwards compatibility with IJ1 macro
 			setFallbackAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, false));
 			setMarkOccurrences(prefService.getBoolean(getClass(), MARK_OCCURRENCES_PREFS, false));
+			applyTheme(themeName());
+		}
+	}
+
+	/**
+	 * Applies a theme to this pane.
+	 *
+	 * @param theme either "default", "dark", "druid", "eclipse", "idea", "monokai",
+	 *              "vs"
+	 * @throws IllegalArgumentException If {@code theme} is not a valid option, or
+	 *                                  the resource could not be loaded
+	 */
+	public void applyTheme(final String theme) throws IllegalArgumentException {
+		try {
+			applyTheme(getTheme(theme));
+		} catch (final Exception ex) {
+			throw new IllegalArgumentException(ex);
 		}
 	}
 
 	public String themeName() {
 		return prefService.get(getClass(), THEME_PREFS, DEFAULT_THEME);
+	}
+
+	private void applyTheme(final Theme th) throws IllegalArgumentException {
+		// themes include font size, so we'll need to reset that
+		final float existingFontSize = getFontSize();
+		th.apply(this);
+		setFontSize(existingFontSize);
+		updateBookmarkIcon(); // update bookmark icon color
+	}
+
+	private static Theme getTheme(final String theme) throws IllegalArgumentException {
+		try {
+			return Theme
+					.load(TextEditor.class.getResourceAsStream("/org/fife/ui/rsyntaxtextarea/themes/" + theme + ".xml"));
+		} catch (final Exception ex) {
+			throw new IllegalArgumentException(ex);
+		}
 	}
 
 	public String loadFolders() {

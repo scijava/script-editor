@@ -132,7 +132,6 @@ import javax.swing.tree.TreePath;
 
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fife.ui.rsyntaxtextarea.Theme;
 import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
 import org.scijava.Context;
 import org.scijava.app.AppService;
@@ -1494,9 +1493,11 @@ public class TextEditor extends JFrame implements ActionListener,
 			item.addActionListener(e -> {
 				try {
 					applyTheme(v, false);
+					// make the choice available for the next tab
+					prefService.put(EditorPane.class, EditorPane.THEME_PREFS, v);
 				} catch (final IllegalArgumentException ex) {
 					JOptionPane.showMessageDialog(TextEditor.this,
-							"An exception occured. Theme could not be loaded");
+							"An exception occured. Theme could not be loaded.");
 					ex.printStackTrace();
 				}
 			});
@@ -1519,21 +1520,22 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private void applyTheme(final String theme, final boolean updateUI) throws IllegalArgumentException {
 		try {
-			final Theme th = Theme
-					.load(getClass().getResourceAsStream("/org/fife/ui/rsyntaxtextarea/themes/" + theme + ".xml"));
 			for (int i = 0; i < tabbed.getTabCount(); i++) {
-				// themes include font size, so we'll need to reset that
-				final EditorPane ep = getEditorPane(i);
-				final float existingFontSize = ep.getFontSize();
-				th.apply(ep);
-				ep.setFontSize(existingFontSize);
-				ep.updateBookmarkIcon(); // update bookmark icon color
+				getEditorPane(i).applyTheme(theme);
 			}
 		} catch (final Exception ex) {
+			activeTheme = "default";
+			updateThemeControls("default");
+			writeError("Could not load theme. See Console for details.");
+			updateThemeControls(activeTheme);
 			throw new IllegalArgumentException(ex);
 		}
-		this.activeTheme = theme;
-		if (updateUI && themeRadioGroup != null) {
+		activeTheme = theme;
+		if (updateUI) updateThemeControls(theme);
+	}
+
+	private void updateThemeControls(final String theme) {
+		if (themeRadioGroup != null) {
 			final Enumeration<AbstractButton> choices = themeRadioGroup.getElements();
 			while (choices.hasMoreElements()) {
 				final AbstractButton choice = choices.nextElement();
