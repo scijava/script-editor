@@ -54,6 +54,8 @@ import javax.swing.JViewport;
 import javax.swing.ToolTipManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultEditorKit;
 
@@ -71,6 +73,7 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.RecordableTextAction;
 import org.scijava.Context;
 import org.scijava.log.LogService;
+import org.scijava.platform.PlatformService;
 import org.scijava.plugin.Parameter;
 import org.scijava.prefs.PrefService;
 import org.scijava.script.ScriptHeaderService;
@@ -113,6 +116,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	@Parameter
 	private PrefService prefService;
 	@Parameter
+	private PlatformService platformService;
+	@Parameter
 	private LogService log;
 	
 	/**
@@ -129,6 +134,22 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		setCodeFoldingEnabled(true);
 		setShowMatchedBracketPopup(true);
 		setClearWhitespaceLinesEnabled(false); // most folks wont't want this set?
+		// If a URL exists in commentaries this allows opening it using ctrl+click 
+		setHyperlinksEnabled(true);
+		addHyperlinkListener(new HyperlinkListener() {
+
+			@Override
+			public void hyperlinkUpdate(final HyperlinkEvent hle) {
+				if (HyperlinkEvent.EventType.ACTIVATED.equals(hle.getEventType())) {
+					try {
+						platformService.open(hle.getURL());
+					}
+					catch (final IOException exc) {
+						//ignored
+					}
+				}
+			}
+		});
 
 		// load preferences
 		loadPreferences();
