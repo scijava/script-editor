@@ -518,6 +518,22 @@ public class TextEditor extends JFrame implements ActionListener,
 		final JCheckBoxMenuItem jcmi2 = new JCheckBoxMenuItem("Console", true);
 		jcmi2.addItemListener(e -> collapseSplitPane(1, !jcmi2.isSelected()));
 		tabsMenu.add(jcmi2);
+		final JMenuItem mi = new JMenuItem("Reset Layout...");
+		mi.addActionListener(e -> {
+			final int choice = JOptionPane.showConfirmDialog(TextEditor.this,//
+					"Reset Location of Console and File Explorer?",
+					"Reset Layout?", JOptionPane.OK_CANCEL_OPTION);
+			if (JOptionPane.OK_OPTION == choice) {
+				body.setDividerLocation(.2d);
+				getTab().setDividerLocation(.75d);
+				if (incremental)
+					getTab().setREPLVisible(incremental);
+				getTab().getScreenAndPromptSplit().setDividerLocation(.5d);
+				jcmi1.setSelected(true);
+				jcmi2.setSelected(true);
+			}
+		});
+		tabsMenu.add(mi);
 		addSeparator(tabsMenu, "Tabs:");
 		nextTab = addToMenu(tabsMenu, "Next Tab", KeyEvent.VK_PAGE_DOWN, ctrl);
 		nextTab.setMnemonic(KeyEvent.VK_N);
@@ -636,10 +652,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 
 		// Tweaks for JSplitPane
-		// TF: disable setOneTouchExpandable() due to inconsistent behavior when
-		// applying preferences at startup. Also, it does not apply to all L&Fs.
-		// Users can use the controls in the menu bar to toggle the pane
-		body.setOneTouchExpandable(false);
+		body.setOneTouchExpandable(true);
 		body.addPropertyChangeListener(evt -> {
 			if ("dividerLocation".equals(evt.getPropertyName())) saveWindowSizeToPrefs();
 		});

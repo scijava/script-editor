@@ -88,10 +88,7 @@ public class TextEditorTab extends JSplitPane {
 	public TextEditorTab(final TextEditor textEditor) {
 		super(JSplitPane.VERTICAL_SPLIT);
 		super.setResizeWeight(350.0 / 430.0);
-		// TF: disable setOneTouchExpandable() due to inconsistent behavior when
-		// applying preferences at startup. Also, it does not apply to all L&Fs.
-		// Users can use the controls in the menu bar to toggle the pane
-		this.setOneTouchExpandable(false);
+		setOneTouchExpandable(true);
 
 		this.textEditor = textEditor;
 		editorPane = new EditorPane();
