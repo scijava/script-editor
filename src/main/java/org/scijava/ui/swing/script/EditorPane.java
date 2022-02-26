@@ -29,12 +29,15 @@
 
 package org.scijava.ui.swing.script;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -71,6 +74,8 @@ import org.fife.ui.rtextarea.GutterIconInfo;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.RecordableTextAction;
+import org.fife.ui.rtextarea.SearchContext;
+import org.fife.ui.rtextarea.SearchEngine;
 import org.scijava.Context;
 import org.scijava.log.LogService;
 import org.scijava.platform.PlatformService;
@@ -164,6 +169,42 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			wordMovement(-1, true));
 		ToolTipManager.sharedInstance().registerComponent(this);
 		getDocument().addDocumentListener(this);
+	
+		addMouseListener(new MouseAdapter() {
+
+			SearchContext context;
+
+			@Override
+			public void mousePressed(final MouseEvent me) {
+
+				// 2022.02 TF: 'Mark All' occurrences is quite awkward. What is
+				// marked is language-specific and the defaults are restricted
+				// to certain identifiers. We'll hack things so that it works
+				// for any selection by double-click. See
+				// https://github.com/bobbylight/RSyntaxTextArea/issues/88
+				if (getMarkOccurrences() && 2 == me.getClickCount()) {
+
+					// Do nothing if getMarkOccurrences() is unset or no selection exists
+					final String str = getSelectedText();
+					if (str == null) return;
+
+					if (context != null && str.equals(context.getSearchFor())) {
+						// Selection is the previously 'marked all' scope. Clear it
+						SearchEngine.markAll(EditorPane.this, new SearchContext());
+						context = null;
+					} else {
+						// Use SearchEngine for 'mark all'
+						final Color stashedColor = getMarkAllHighlightColor();
+						setMarkAllHighlightColor(getMarkOccurrencesColor());
+						context = new SearchContext(str, true);
+						context.setMarkAll(true);
+						context.setWholeWord(true);
+						SearchEngine.markAll(EditorPane.this, context);
+						setMarkAllHighlightColor(stashedColor);
+					}
+				}
+			}
+		});
 	}
 
 	@Override

@@ -29,6 +29,7 @@
 
 package org.scijava.ui.swing.script;
 
+import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -56,6 +57,7 @@ import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.text.JTextComponent;
 
+import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.scijava.ui.swing.script.TextEditor.Executer;
 
 /**
@@ -297,8 +299,19 @@ public class TextEditorTab extends JSplitPane {
 		});
 
 		screenAndPromptSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, bottom, prompt_panel);
-		
-		super.setLeftComponent(editorPane.wrappedInScrollbars());
+	
+		// Enable ErrorSrip à la Eclipse. This will keep track of lines with 'Mark All'
+		// occurrences as well as lines associated with ParserNotice.Level.WARNING and
+		// ParserNotice.Level.ERROR. NB: As is, the end of the strip corresponds to the
+		// last line of text in the text area: E.g., for a text area with just 3 lines,
+		// line 2 will be marked at the strip's half height
+		final ErrorStrip es = new ErrorStrip(editorPane);
+		es.setShowMarkAll(true);
+		es.setShowMarkedOccurrences(true);
+		final JPanel holder = new JPanel(new BorderLayout());
+		holder.add(editorPane.wrappedInScrollbars());
+		holder.add(es, BorderLayout.LINE_END);
+		super.setLeftComponent(holder);
 		super.setRightComponent(screenAndPromptSplit);
 		screenAndPromptSplit.setDividerLocation(1.0);
 
