@@ -31,6 +31,7 @@ package org.scijava.ui.swing.script;
 
 import java.awt.Color;
 import java.awt.Cursor;
+import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -331,6 +332,21 @@ public class TextEditor extends JFrame implements ActionListener,
 		makeJarWithSource = addToMenu(file, "Export as JAR (With Source)", 0, 0);
 		makeJarWithSource.setMnemonic(KeyEvent.VK_X);
 		file.addSeparator();
+		final JMenuItem jmi = new JMenuItem("Show in System Explorer");
+		jmi.addActionListener(e -> {
+			final File f = getEditorPane().getFile();
+			if (f == null) {
+				error(getEditorPane().getFileName() + "\nhas not been saved or its file is not available.");
+			} else {
+				try {
+					Desktop.getDesktop().open(f.getParentFile());
+				} catch (final Exception | Error ignored) {
+					error(getEditorPane().getFileName() + " does not seem to be accessible.");
+				}
+			}
+		});
+		file.add(jmi);
+		file.addSeparator();
 		close = addToMenu(file, "Close", KeyEvent.VK_W, ctrl);
 
 		mbar.add(file);
@@ -371,6 +387,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		removeTrailingWhitespace = addToMenu(edit, "Remove Trailing Whitespace", 0, 0);
 		removeTrailingWhitespace.setMnemonic(KeyEvent.VK_W);
 		zapGremlins = addToMenu(edit, "Zap Gremlins", 0, 0);
+		zapGremlins.setToolTipText("Removes invalid (non-printable) ASCII characters");
 
 		mbar.add(edit);
 
@@ -417,7 +434,16 @@ public class TextEditor extends JFrame implements ActionListener,
 				break;
 			}
 			if (shortcut > 0) item.setMnemonic(shortcut);
-			item.addActionListener(e -> setLanguage(language, true));
+			if (noneLanguageItem == item) {
+				item.addActionListener(e -> {
+					setLanguage(language, true);
+					// Update console here to bypass printing this message at startup
+					// The first initialized tab will always have "None" as language
+					write("Active language: None");
+				});
+			} else {
+				item.addActionListener(e -> setLanguage(language, true));
+			}
 
 			group.add(item);
 			languages.add(item);
@@ -512,10 +538,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		tabsMenu = new JMenu("Window");
 		tabsMenu.setMnemonic(KeyEvent.VK_W);
 		addSeparator(tabsMenu, "Panes:");
-		final JCheckBoxMenuItem jcmi1 = new JCheckBoxMenuItem("File Explorer", true);
+		final JCheckBoxMenuItem jcmi1 = new JCheckBoxMenuItem("File Explorer", isLeftPaneExpanded(body));
 		jcmi1.addItemListener(e -> collapseSplitPane(0, !jcmi1.isSelected()));
 		tabsMenu.add(jcmi1);
-		final JCheckBoxMenuItem jcmi2 = new JCheckBoxMenuItem("Console", true);
+		final JCheckBoxMenuItem jcmi2 = new JCheckBoxMenuItem("Console", true); // Console not yet initialized
 		jcmi2.addItemListener(e -> collapseSplitPane(1, !jcmi2.isSelected()));
 		tabsMenu.add(jcmi2);
 		final JMenuItem mi = new JMenuItem("Reset Layout...");
@@ -525,10 +551,11 @@ public class TextEditor extends JFrame implements ActionListener,
 					"Reset Layout?", JOptionPane.OK_CANCEL_OPTION);
 			if (JOptionPane.OK_OPTION == choice) {
 				body.setDividerLocation(.2d);
-				getTab().setDividerLocation(.75d);
+				getTab().setOrientation(JSplitPane.VERTICAL_SPLIT);
+				getTab().setDividerLocation((incremental) ? .7d : .75d);
 				if (incremental)
-					getTab().setREPLVisible(incremental);
-				getTab().getScreenAndPromptSplit().setDividerLocation(.5d);
+					getTab().getScreenAndPromptSplit().setDividerLocation(.5d);
+				getTab().setREPLVisible(incremental);
 				jcmi1.setSelected(true);
 				jcmi2.setSelected(true);
 			}
@@ -781,7 +808,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				pack();
 				body.setDividerLocation(0.2); // Important!: will be read as prefs. default
 				getTab().setREPLVisible(false);
-				loadPreferences();
+				loadWindowSizePreferences();
 				pack();
 			});
 		}
@@ -911,7 +938,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		wrapLines.addItemListener(e -> setWrapLines(wrapLines.getState()));
 		markOccurences = new JCheckBoxMenuItem("Mark Occurences", false);
 		markOccurences.setToolTipText("Highlights all occurrences of a double-clicked string or selected\n"
-				+ " element. Hits are highlighted on the Editor's rightmost side");
+				+ "element. Hits are highlighted on the Editor's rightmost side");
 		markOccurences.addItemListener(e -> setMarkOccurrences(markOccurences.getState()));
 		whiteSpace = new JCheckBoxMenuItem("Show Whitespace", false);
 		whiteSpace.addItemListener(e -> setWhiteSpaceVisible(whiteSpace.isSelected()));
@@ -981,7 +1008,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * Loads the Script Editor layout from persisted storage.
 	 * @see #saveWindowSizeToPrefs()
 	 */
-	public void loadPreferences() {
+	public void loadWindowSizePreferences() {
 		layoutLoading = true;
 
 		final Dimension dim = getSize();
@@ -1396,7 +1423,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == openClassOrPackageHelp) openClassOrPackageHelp(null);
 		else if (source == extractSourceJar) extractSourceJar();
 		else if (source == openSourceForClass) {
-			final String className = getSelectedClassNameOrAsk("Class (Fully qualified name):", "Which Class?");
+			final String className = getSelectedClassNameOrAsk("Class (fully qualified name):", "Which Class?");
 			if (className != null) {
 				try {
 					final String url = new FileFunctions(this).getSourceURL(className);
@@ -1573,7 +1600,26 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		} else {
 			jsp.setDividerLocation(panePositions[pane]);
+			// Check if user collapsed pane manually (stashed panePosition is invalid)
+			final boolean expanded = (pane == 0) ? isLeftPaneExpanded(jsp) : isRightOrBottomPaneExpanded(jsp);
+			if (!expanded
+				//	&& JOptionPane.OK_OPTION == JOptionPane.showConfirmDialog(TextEditor.this, //
+				//	"Expand to default position?", "Expand to Defaults?", JOptionPane.OK_CANCEL_OPTION)
+				) {
+				jsp.setDividerLocation((pane == 0) ? .2d : .75d);
+				panePositions[pane] = jsp.getDividerLocation();
+			}
 		}
+	}
+
+	private boolean isLeftPaneExpanded(final JSplitPane pane) {
+		return pane.isVisible() && pane.getLeftComponent().getWidth() > 0;
+	}
+
+	private boolean isRightOrBottomPaneExpanded(final JSplitPane pane) {
+		final int dim = (pane.getOrientation() == JSplitPane.VERTICAL_SPLIT) ? pane.getRightComponent().getHeight()
+				: pane.getRightComponent().getWidth();
+		return pane.isVisible() && dim > 0;
 	}
 
 	protected boolean handleTabsMenu(final Object source) {
@@ -2598,18 +2644,19 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 	}
 
-	public String getSelectedTextOrAsk(final String msg, final String title) {
+	private String getSelectedTextOrAsk(final String msg, final String title) {
 		String selection = getTextArea().getSelectedText();
 		if (selection == null || selection.indexOf('\n') >= 0) {
-			selection = JOptionPane.showInputDialog(this, msg + "\nAlternatively, select appropriate text and re-run.",
-					title, JOptionPane.QUESTION_MESSAGE);
+			selection = JOptionPane.showInputDialog(this,
+					msg + "\nAlternatively, select a class declaration and re-run.", title,
+					JOptionPane.QUESTION_MESSAGE);
 			if (selection == null)
 				return null;
 		}
 		return selection;
 	}
 
-	public String getSelectedClassNameOrAsk(final String msg, final String title) {
+	private String getSelectedClassNameOrAsk(final String msg, final String title) {
 		String className = getSelectedTextOrAsk(msg, title);
 		if (className != null) className = className.trim();
 		return className;
@@ -2831,9 +2878,10 @@ public class TextEditor extends JFrame implements ActionListener,
 			handleException(e);
 		}
 	}
-	
+
 	/**
-	 * @param text Either a classname, or a partial class name, or package name or any part of the fully qualified class name.
+	 * @param text Either a classname, or a partial class name, or package name or
+	 *             any part of the fully qualified class name.
 	 */
 	public void openClassOrPackageHelp(String text) {
 		if (text == null)
@@ -2841,7 +2889,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (null == text) return;
 		new Thread(new FindClassSourceAndJavadoc(text)).start(); // fork away from event dispatch thread
 	}
-	
+
 	public class FindClassSourceAndJavadoc implements Runnable {
 		private final String text;
 		public FindClassSourceAndJavadoc(final String text) {
@@ -3283,6 +3331,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		menu.add(item);
 		item.addActionListener(e -> {
 			getEditorPane().savePreferences(tree.getTopLevelFoldersString(), activeTheme);
+			saveWindowSizeToPrefs();
 			write("Script Editor: Preferences Saved...\n");
 		});
 		item = new JMenuItem("Reset...");
@@ -3371,7 +3420,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			return Color.GRAY;
 		}
 	}
-	
+
 	private static boolean isDarkLaF() {
 		// see https://stackoverflow.com/a/3943023
 		final Color b = new JLabel().getBackground();

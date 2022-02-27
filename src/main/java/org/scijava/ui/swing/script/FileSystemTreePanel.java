@@ -281,6 +281,10 @@ class FileSystemTreePanel extends JPanel {
 		popup.addSeparator();
 		JMenuItem jmi = new JMenuItem("Reset Filter");
 		jmi.addActionListener(e -> {
+			jcbmi1.setSelected(false);
+			setCaseSensitive(false);
+			jcbmi2.setSelected(false);
+			setRegexEnabled(false);
 			searchField.setText("");
 			tree.setFileFilter(((f) -> true));
 		});

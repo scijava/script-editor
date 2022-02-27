@@ -43,6 +43,8 @@ import java.awt.dnd.DropTargetEvent;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.io.File;
 import java.util.List;
 
@@ -283,7 +285,7 @@ public class TextEditorTab extends JSplitPane {
 		bc.weighty = 1;
 		bc.gridwidth = 4;
 		prompt_panel.add(prompt, bc);
-		
+
 		incremental.addActionListener(ae -> {
 			if (incremental.isSelected() && null == textEditor.getCurrentLanguage()) {
 				incremental.setSelected(false);
@@ -299,7 +301,13 @@ public class TextEditorTab extends JSplitPane {
 		});
 
 		screenAndPromptSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, bottom, prompt_panel);
-	
+		prompt_panel.addComponentListener(new ComponentAdapter() {
+			@Override
+			public void componentResized(final ComponentEvent e) {
+				if (prompt_panel.getHeight() ==0) incremental.setSelected(false);
+			}
+		});
+
 		// Enable ErrorSrip à la Eclipse. This will keep track of lines with 'Mark All'
 		// occurrences as well as lines associated with ParserNotice.Level.WARNING and
 		// ParserNotice.Level.ERROR. NB: As is, the end of the strip corresponds to the
@@ -330,10 +338,15 @@ public class TextEditorTab extends JSplitPane {
 	void setREPLVisible(final boolean visible) {
 		SwingUtilities.invokeLater(() -> {
 			if (visible) {
-				if (getScreenAndPromptSplit().getDividerLocation() <= getScreenAndPromptSplit().getMinimumDividerLocation())
-					getScreenAndPromptSplit().setDividerLocation(.5d); // half of panel's height
-				else
+				// If stashed location of divider is invalid, set divider to half of panel's height and re-stash
+				if (screenAndPromptSplitDividerLocation <= 0
+						|| screenAndPromptSplitDividerLocation <= getScreenAndPromptSplit().getMinimumDividerLocation()
+						|| screenAndPromptSplitDividerLocation >= getScreenAndPromptSplit().getMaximumDividerLocation()) {
+					getScreenAndPromptSplit().setDividerLocation(.5d);
+					screenAndPromptSplitDividerLocation = getScreenAndPromptSplit().getDividerLocation();
+				} else {
 					getScreenAndPromptSplit().setDividerLocation(screenAndPromptSplitDividerLocation);
+				}
 			} else { // collapse to bottom
 				screenAndPromptSplitDividerLocation = getScreenAndPromptSplit().getDividerLocation();
 				getScreenAndPromptSplit().setDividerLocation(1f);
