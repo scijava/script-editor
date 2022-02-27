@@ -614,6 +614,10 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setText(header += getText());
 		}
 
+		if ("None".equals(languageName) ) {
+			supportStatus = null; // no need to update console
+			return;
+		}
 		String supportLevel = "SciJava supported";
 		// try to get language support for current language, may be null.
 		support = languageSupportService.getLanguageSupport(currentLanguage);
@@ -624,14 +628,13 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			supportLevel = "Legacy supported";
 		}
 		// that did not work, Fallback to Java
-		if (!"None".equals(languageName) && support == null && autoCompletionJavaFallback) {
+		if (support == null && autoCompletionJavaFallback) {
 			support = languageSupportService.getLanguageSupport(scriptService.getLanguageByName("Java"));
 			supportLevel = "N/A. Using Java as fallback";
 		}
 		if (support != null) {
 			support.setAutoCompleteEnabled(autoCompletionEnabled);
 			support.setAutoActivationEnabled(autoCompletionWithoutKey);
-			support.setAutoActivationDelay(200);
 			support.install(this);
 			if (!autoCompletionEnabled)
 				supportLevel += " but currently disabled\n";

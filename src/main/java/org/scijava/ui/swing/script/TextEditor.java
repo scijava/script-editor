@@ -910,14 +910,16 @@ public class TextEditor extends JFrame implements ActionListener,
 		wrapLines.setMnemonic(KeyEvent.VK_W);
 		wrapLines.addItemListener(e -> setWrapLines(wrapLines.getState()));
 		markOccurences = new JCheckBoxMenuItem("Mark Occurences", false);
-		markOccurences.setToolTipText("Highlights all occurrences of a selected element");
+		markOccurences.setToolTipText("Highlights all occurrences of a double-clicked string or selected\n"
+				+ " element. Hits are highlighted on the Editor's rightmost side");
 		markOccurences.addItemListener(e -> setMarkOccurrences(markOccurences.getState()));
 		whiteSpace = new JCheckBoxMenuItem("Show Whitespace", false);
 		whiteSpace.addItemListener(e -> setWhiteSpaceVisible(whiteSpace.isSelected()));
 		paintTabs = new JCheckBoxMenuItem("Show Indent Guides");
+		paintTabs.setToolTipText("Show 'tab lines' for leading whitespace");
 		paintTabs.addItemListener(e -> setPaintTabLines(paintTabs.getState()));
 		autocompletion = new JCheckBoxMenuItem("Enable Autocompletion", true);
-		autocompletion.setToolTipText("NB: Not all languages support this feature");
+		autocompletion.setToolTipText("Whether code completion should be used.\nNB: Not all languages support this feature");
 		autocompletion.addItemListener(e -> setAutoCompletionEnabled(autocompletion.getState()));
 		keylessAutocompletion = new JCheckBoxMenuItem("Show Completions Without Ctrl+Space", false);
 		keylessAutocompletion.setToolTipText("If selected, the completion pop-up automatically appears while typing");
