@@ -973,7 +973,10 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	}
 
 	/**
-	 * Retrieves and saves the preferences to the persistent store
+	 * Retrieves and saves the preferences to the persistent store.
+	 *
+	 * @param top_folders the File Explorer's pane top folder paths (":" separated list)
+	 * @param theme the Script Editor's theme
 	 */
 	public void savePreferences(final String top_folders, final String theme) {
 		prefService.put(getClass(), TAB_SIZE_PREFS, getTabSize());

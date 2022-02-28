@@ -621,8 +621,8 @@ public class FileDrop {
 	 * all components contained within <var>c</var> if <var>c</var> is a
 	 * {@link java.awt.Container}.
 	 *
-	 * @param c
-	 *            The component to unregister as a drop target
+	 * @param c            The component to unregister as a drop target
+	 * @return true, if successful
 	 * @since 1.0
 	 */
 	public static boolean remove(final java.awt.Component c) {
@@ -634,13 +634,11 @@ public class FileDrop {
 	 * the all children. You should call this if you add and remove components
 	 * after you've set up the drag-and-drop.
 	 *
-	 * @param out
-	 *            Optional {@link java.io.PrintStream} for logging drag and drop
+	 * @param out            Optional {@link java.io.PrintStream} for logging drag and drop
 	 *            messages
-	 * @param c
-	 *            The component to unregister
-	 * @param recursive
-	 *            Recursively unregister components within a container
+	 * @param c            The component to unregister
+	 * @param recursive            Recursively unregister components within a container
+	 * @return true, if successful
 	 * @since 1.0
 	 */
 	protected static boolean remove(final java.io.PrintStream out, final java.awt.Component c,

@@ -678,7 +678,7 @@ public class MatlabTokenMaker extends AbstractJFlexTokenMaker {
 	}
 
 	/**
-	 * Returns the text matched by the current regular expression.
+	 * @return the text matched by the current regular expression.
 	 */
 	public final String yytext() {
 		return new String(zzBuffer, zzStartRead, zzMarkedPos - zzStartRead);
@@ -697,7 +697,7 @@ public class MatlabTokenMaker extends AbstractJFlexTokenMaker {
 	}
 
 	/**
-	 * Returns the length of the matched text region.
+	 * @return the length of the matched text region
 	 */
 	public final int yylength() {
 		return zzMarkedPos - zzStartRead;

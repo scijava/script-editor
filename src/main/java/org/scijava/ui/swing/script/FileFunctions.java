@@ -156,8 +156,12 @@ public class FileFunctions {
 	}
 
 	/**
-	 * @deprecated Use {@link #getSourceURL(String)} instead.
+	 * Gets the source path.
+	 *
+	 * @param className the class name
+	 * @return the source path
 	 * @throws ClassNotFoundException
+	 * @deprecated Use {@link #getSourceURL(String)} instead.
 	 */
 	@Deprecated
 	public String getSourcePath(
@@ -266,7 +270,11 @@ public class FileFunctions {
 	}
 
 	/**
-	 * Get a list of files from a directory (recursively)
+	 * Get a list of files from a directory (recursively).
+	 *
+	 * @param directory the directory to be parsed
+	 * @param prefix a prefix to prepend to filenames
+	 * @param result List holding filenames
 	 */
 	public void listFilesRecursively(final File directory, final String prefix,
 		final List<String> result)
@@ -279,9 +287,12 @@ public class FileFunctions {
 	}
 
 	/**
-	 * Get a list of files from a directory or within a .jar file The returned
-	 * items will only have the base path, to get at the full URL you have to
-	 * prefix the url passed to the function.
+	 * Get a list of files from a directory or within a .jar file The returned items
+	 * will only have the base path, to get at the full URL you have to prefix the
+	 * url passed to the function.
+	 *
+	 * @param url the string specifying the resource
+	 * @return the list of files
 	 */
 	public List<String> getResourceList(String url) {
 		final List<String> result = new ArrayList<>();

@@ -1046,7 +1046,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * size when it's resized, however, we don't want to automatically save the
 	 * font, tab size, etc. without the user pressing "Save Preferences"
 	 * </p>
-	 * @see #loadPreferences()
+	 * @see #loadWindowSizePreferences()
 	 */
 	public void saveWindowSizeToPrefs() {
 		if (layoutLoading) return;

@@ -136,10 +136,9 @@ public class FileSystemTree extends JTree
 		}
 
 		/**
-		 * 
-		 * @param sort
+		 * @param sort whether result should be sorted
 		 * @param file_filter Applies to leafs, not to directories.
-		 * @return
+		 * @return the array denoting children files
 		 */
 		public File[] updatedChildrenFiles(final boolean sort, final FileFilter file_filter) {
 			final File file = new File(this.path);
@@ -160,6 +159,9 @@ public class FileSystemTree extends JTree
 
 		/**
 		 * If it's a directory, add a Node for each of its visible files.
+		 *
+		 * @param model       the tree model
+		 * @param file_filter Applies to leafs, not to directories.
 		 */
 		public synchronized void populateChildren(final DefaultTreeModel model, final FileFilter file_filter) {
 			try {
