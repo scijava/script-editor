@@ -893,6 +893,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public static final String TABS_EMULATED_PREFS = "script.editor.TabsEmulated";
 	public static final String WHITESPACE_VISIBLE_PREFS = "script.editor.Whitespace";
 	public static final String TABLINES_VISIBLE_PREFS = "script.editor.Tablines";
+	public static final String MARGIN_VISIBLE_PREFS = "script.editor.Margin";
 	public static final String THEME_PREFS = "script.editor.theme";
 	public static final String AUTOCOMPLETE_PREFS = "script.editor.AC";
 	public static final String AUTOCOMPLETE_KEYLESS_PREFS = "script.editor.ACNoKey";
@@ -927,6 +928,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setKeylessAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_KEYLESS_PREFS, true)); // true for backwards compatibility with IJ1 macro
 			setFallbackAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, false));
 			setMarkOccurrences(prefService.getBoolean(getClass(), MARK_OCCURRENCES_PREFS, false));
+			setMarginLineEnabled(prefService.getBoolean(getClass(), MARGIN_VISIBLE_PREFS, false));
 			applyTheme(themeName());
 		}
 	}
@@ -988,6 +990,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		prefService.put(getClass(), AUTOCOMPLETE_PREFS, isAutoCompletionEnabled());
 		prefService.put(getClass(), AUTOCOMPLETE_KEYLESS_PREFS, isAutoCompletionKeyless());
 		prefService.put(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, isAutoCompletionFallbackEnabled());
+		prefService.put(getClass(), MARGIN_VISIBLE_PREFS, isMarginLineEnabled());
+		prefService.put(getClass(), MARK_OCCURRENCES_PREFS, getMarkOccurrences());
 		if (null != top_folders) prefService.put(getClass(), FOLDERS_PREFS, top_folders);
 		if (null != theme) prefService.put(getClass(), THEME_PREFS, theme);
 	}

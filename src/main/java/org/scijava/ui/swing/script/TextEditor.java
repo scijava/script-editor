@@ -231,7 +231,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	private FindAndReplaceDialog findDialog;
 	private JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport,
 			autocompletion, fallbackAutocompletion, keylessAutocompletion,
-			markOccurences, paintTabs, whiteSpace;
+			markOccurences, paintTabs, whiteSpace, marginLine;
 	private ButtonGroup themeRadioGroup;
 	private JTextArea errorScreen = new JTextArea();
 
@@ -538,10 +538,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		tabsMenu = new JMenu("Window");
 		tabsMenu.setMnemonic(KeyEvent.VK_W);
 		addSeparator(tabsMenu, "Panes:");
-		final JCheckBoxMenuItem jcmi1 = new JCheckBoxMenuItem("File Explorer", isLeftPaneExpanded(body));
+		// Assume initial status from prefs or panel visibility
+		final JCheckBoxMenuItem jcmi1 = new JCheckBoxMenuItem("File Explorer",
+				prefService.getInt(getClass(), MAIN_DIV_LOCATION, body.getDividerLocation()) > 0
+						|| isLeftPaneExpanded(body));
 		jcmi1.addItemListener(e -> collapseSplitPane(0, !jcmi1.isSelected()));
 		tabsMenu.add(jcmi1);
-		final JCheckBoxMenuItem jcmi2 = new JCheckBoxMenuItem("Console", true); // Console not yet initialized
+		// Console not initialized. Assume it is displayed if no prefs read
+		final JCheckBoxMenuItem jcmi2 = new JCheckBoxMenuItem("Console",
+				prefService.getInt(getClass(), TAB_DIV_LOCATION, 1) > 0);
 		jcmi2.addItemListener(e -> collapseSplitPane(1, !jcmi2.isSelected()));
 		tabsMenu.add(jcmi2);
 		final JMenuItem mi = new JMenuItem("Reset Layout...");
@@ -640,9 +645,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		replaceTabsWithSpaces = addToMenu(options, "Replace Tabs With Spaces", 0, 0);
 
 		addSeparator(options, "View:");
-		options.add(whiteSpace);
-		options.add(paintTabs);
 		options.add(markOccurences);
+		options.add(paintTabs);
+		options.add(marginLine);
+		options.add(whiteSpace);
 		options.add(wrapLines);
 		options.add(applyThemeMenu());
 
@@ -935,15 +941,18 @@ public class TextEditor extends JFrame implements ActionListener,
 		// Options menu. These will be updated once EditorPane is created
 		wrapLines = new JCheckBoxMenuItem("Wrap Lines", false);
 		wrapLines.setMnemonic(KeyEvent.VK_W);
+		marginLine = new JCheckBoxMenuItem("Show Margin Line", false);
+		marginLine.setToolTipText("Displays right margin at column 80");
+		marginLine.addItemListener(e -> setMarginLineEnabled(marginLine.getState()));
 		wrapLines.addItemListener(e -> setWrapLines(wrapLines.getState()));
 		markOccurences = new JCheckBoxMenuItem("Mark Occurences", false);
-		markOccurences.setToolTipText("Highlights all occurrences of a double-clicked string or selected\n"
-				+ "element. Hits are highlighted on the Editor's rightmost side");
+		markOccurences.setToolTipText("Allows for all occurrences of a double-clicked string to be"
+				+ " highlighted.\nLines with hits are marked on the Editor's notification strip");
 		markOccurences.addItemListener(e -> setMarkOccurrences(markOccurences.getState()));
 		whiteSpace = new JCheckBoxMenuItem("Show Whitespace", false);
 		whiteSpace.addItemListener(e -> setWhiteSpaceVisible(whiteSpace.isSelected()));
 		paintTabs = new JCheckBoxMenuItem("Show Indent Guides");
-		paintTabs.setToolTipText("Show 'tab lines' for leading whitespace");
+		paintTabs.setToolTipText("Displays 'tab lines' for leading whitespace");
 		paintTabs.addItemListener(e -> setPaintTabLines(paintTabs.getState()));
 		autocompletion = new JCheckBoxMenuItem("Enable Autocompletion", true);
 		autocompletion.setToolTipText("Whether code completion should be used.\nNB: Not all languages support this feature");
@@ -1512,6 +1521,11 @@ public class TextEditor extends JFrame implements ActionListener,
 			getEditorPane(i).setLineWrap(wrap);
 	}
 
+	private void setMarginLineEnabled(final boolean enabled) {
+		for (int i = 0; i < tabbed.getTabCount(); i++)
+			getEditorPane(i).setMarginLineEnabled(enabled);
+	}
+
 	private JMenu applyThemeMenu() {
 		final LinkedHashMap<String, String> map = new LinkedHashMap<>();
 		map.put("Default", "default");
@@ -1645,7 +1659,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		editorPane.requestFocus();
 		checkForOutsideChanges();
 
-		whiteSpace.setSelected(editorPane.isWhitespaceVisible());
+		//whiteSpace.setSelected(editorPane.isWhitespaceVisible());
 
 		editorPane.setLanguageByFileName(editorPane.getFileName());
 		updateLanguageMenu(editorPane.getCurrentLanguage());
@@ -2154,10 +2168,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		markOccurences.setState(pane.getMarkOccurrences());
 		wrapLines.setState(pane.getLineWrap());
+		marginLine.setState(pane.isMarginLineEnabled());
 		tabsEmulated.setState(pane.getTabsEmulated());
 		paintTabs.setState(pane.getPaintTabLines());
 		whiteSpace.setState(pane.isWhitespaceVisible());
 		autocompletion.setState(pane.isAutoCompletionEnabled());
+		fallbackAutocompletion.setState(pane.isAutoCompletionFallbackEnabled());
 		keylessAutocompletion.setState(pane.isAutoCompletionKeyless());
 	}
 
