@@ -102,9 +102,12 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 import javax.swing.AbstractAction;
 import javax.swing.AbstractButton;
+import javax.swing.Action;
+import javax.swing.ActionMap;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
+import javax.swing.InputMap;
 import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComponent;
@@ -136,7 +139,13 @@ import javax.swing.tree.TreePath;
 
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit;
 import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
+import org.fife.ui.rtextarea.ClipboardHistory;
+import org.fife.ui.rtextarea.RTextAreaEditorKit;
+import org.fife.ui.rtextarea.RTextAreaEditorKit.SetReadOnlyAction;
+import org.fife.ui.rtextarea.RTextAreaEditorKit.SetWritableAction;
+import org.fife.ui.rtextarea.RecordableTextAction;
 import org.scijava.Context;
 import org.scijava.app.AppService;
 import org.scijava.batch.BatchService;
@@ -335,6 +344,16 @@ public class TextEditor extends JFrame implements ActionListener,
 		makeJarWithSource = addToMenu(file, "Export as JAR (With Source)", 0, 0);
 		makeJarWithSource.setMnemonic(KeyEvent.VK_X);
 		file.addSeparator();
+		final JCheckBoxMenuItem lock = new JCheckBoxMenuItem("Lock File (Make Read Only)");
+		file.add(lock);
+		lock.addActionListener( e -> {
+			if (lock.isSelected()) {
+				new SetReadOnlyAction().actionPerformedImpl(e, getTextArea());
+			} else {
+				new SetWritableAction().actionPerformedImpl(e, getTextArea());
+			}
+		});
+		file.addSeparator();
 		final JMenuItem jmi = new JMenuItem("Show in System Explorer");
 		jmi.addActionListener(e -> {
 			final File f = getEditorPane().getFile();
@@ -364,7 +383,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		selectAll = addToMenu(edit, "Select All", KeyEvent.VK_A, ctrl);
 		cut = addToMenu(edit, "Cut", KeyEvent.VK_X, ctrl);
 		copy = addToMenu(edit, "Copy", KeyEvent.VK_C, ctrl);
+		addMappedActionToMenu(edit, "Copy as Styled Text",
+				RSyntaxTextAreaEditorKit.rstaCopyAsStyledTextAction);
 		paste = addToMenu(edit, "Paste", KeyEvent.VK_V, ctrl);
+		final JMenuItem clipHistory = addMappedActionToMenu(edit, "Paste from History...",
+				RTextAreaEditorKit.clipboardHistoryAction);
+		clipHistory.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_V, ctrl + shift));
 		addSeparator(edit, "Find:");
 		find = addToMenu(edit, "Find/Replace...", KeyEvent.VK_F, ctrl);
 		find.setMnemonic(KeyEvent.VK_F);
@@ -377,6 +401,17 @@ public class TextEditor extends JFrame implements ActionListener,
 		gotoLine = addToMenu(edit, "Goto Line...", KeyEvent.VK_G, ctrl);
 		gotoLine.setMnemonic(KeyEvent.VK_G);
 
+		final JMenuItem gotoType = new JMenuItem("Goto Type...");
+		gotoType.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_G, ctrl + shift)); // default is Ctrl+Shift+O
+		gotoType.addActionListener(e -> {
+			try {
+				getTextArea().getActionMap().get("GoToType").actionPerformed(e);
+			} catch (final Exception | Error ignored) {
+				error("\"Goto Type\" not availabe for current scripting language.");
+			}
+		});
+		edit.add(gotoType);
+
 		final JMenuItem toggleBookmark = addToMenu(edit, "Toggle Bookmark", KeyEvent.VK_B, ctrl);
 		toggleBookmark.setMnemonic(KeyEvent.VK_B);
 		toggleBookmark.addActionListener( e -> toggleBookmark());
@@ -387,8 +422,11 @@ public class TextEditor extends JFrame implements ActionListener,
 		clearBookmarks.addActionListener(e -> clearAllBookmarks());
 
 		addSeparator(edit, "Utilities:");
+		final JMenuItem commentJMI = addMappedActionToMenu(edit, "Comment/Uncomment Selection",
+				RSyntaxTextAreaEditorKit.rstaToggleCommentAction);
+		commentJMI.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_SLASH, ctrl + shift));
+		addMappedActionToMenu(edit, "Insert Time Stamp", RTextAreaEditorKit.rtaTimeDateAction);
 		removeTrailingWhitespace = addToMenu(edit, "Remove Trailing Whitespace", 0, 0);
-		removeTrailingWhitespace.setMnemonic(KeyEvent.VK_W);
 		zapGremlins = addToMenu(edit, "Zap Gremlins", 0, 0);
 		zapGremlins.setToolTipText("Removes invalid (non-printable) ASCII characters");
 
@@ -1134,6 +1172,24 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (key != 0) item.setAccelerator(KeyStroke.getKeyStroke(key, modifiers));
 		item.addActionListener(this);
 		return item;
+	}
+
+	private JMenuItem addMappedActionToMenu(final JMenu menu, String label, String actionID) {
+		final JMenuItem jmi = new JMenuItem(label);
+		jmi.addActionListener(e -> {
+			if (RTextAreaEditorKit.clipboardHistoryAction.equals(actionID)
+					&& ClipboardHistory.get().getHistory().isEmpty()) {
+				warn("The internal clipboard manager is empty.");
+				return;
+			}
+			try {
+				getTextArea().getActionMap().get(actionID).actionPerformed(e);
+			} catch (final Exception | Error ignored) {
+				error("\"" + label + "\" not availabe for current scripting language.");
+			}
+		});
+		menu.add(jmi);
+		return jmi;
 	}
 
 	protected static class AcceleratorTriplet {

@@ -50,28 +50,44 @@ import java.io.OutputStreamWriter;
 import java.util.Collection;
 import java.util.List;
 
+import javax.swing.Action;
 import javax.swing.ImageIcon;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JViewport;
+import javax.swing.KeyStroke;
 import javax.swing.ToolTipManager;
+import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 import javax.swing.text.BadLocationException;
+import javax.swing.text.Caret;
 import javax.swing.text.DefaultEditorKit;
+import javax.swing.text.Document;
+import javax.swing.text.Element;
+import javax.swing.text.Segment;
 
 import org.fife.rsta.ac.LanguageSupport;
 import org.fife.rsta.ac.LanguageSupportFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit.CopyAsStyledTextAction;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit.ToggleCommentAction;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit.DecreaseIndentAction;
+import org.fife.ui.rtextarea.RTextAreaEditorKit.*;
 import org.fife.ui.rsyntaxtextarea.Style;
 import org.fife.ui.rsyntaxtextarea.SyntaxScheme;
 import org.fife.ui.rsyntaxtextarea.Theme;
 import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.GutterIconInfo;
 import org.fife.ui.rtextarea.RTextArea;
+import org.fife.ui.rtextarea.RTextAreaEditorKit;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.RecordableTextAction;
 import org.fife.ui.rtextarea.SearchContext;
@@ -155,21 +171,28 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 				}
 			}
 		});
-
+		
 		// load preferences
 		loadPreferences();
 
-		getActionMap()
-			.put(DefaultEditorKit.nextWordAction, wordMovement(+1, false));
-		getActionMap().put(DefaultEditorKit.selectionNextWordAction,
-			wordMovement(+1, true));
-		getActionMap().put(DefaultEditorKit.previousWordAction,
-			wordMovement(-1, false));
+		// Register recordable actions
+		getActionMap().put(DefaultEditorKit.nextWordAction, wordMovement("Next-Word-Action", +1, false));
+		getActionMap().put(DefaultEditorKit.selectionNextWordAction, wordMovement("Next-Word-Select-Action", +1, true));
+		getActionMap().put(DefaultEditorKit.previousWordAction, wordMovement("Prev-Word-Action", -1, false));
 		getActionMap().put(DefaultEditorKit.selectionPreviousWordAction,
-			wordMovement(-1, true));
+				wordMovement("Prev-Word-Select-Action", -1, true));
+		getActionMap().put(RTextAreaEditorKit.rtaTimeDateAction, new TimeDateAction());
+		if (getActionMap().get(RTextAreaEditorKit.clipboardHistoryAction) != null)
+			getActionMap().put(RTextAreaEditorKit.clipboardHistoryAction, new ClipboardHistoryAction());
+		if (getActionMap().get(RSyntaxTextAreaEditorKit.rstaToggleCommentAction) != null)
+			getActionMap().put(RSyntaxTextAreaEditorKit.rstaToggleCommentAction, new ToggleCommentAction());
+		if (getActionMap().get(RSyntaxTextAreaEditorKit.rstaCopyAsStyledTextAction) != null)
+			getActionMap().put(RSyntaxTextAreaEditorKit.rstaCopyAsStyledTextAction, new CopyAsStyledTextAction());
+
+		adjustPopupMenu();
+
 		ToolTipManager.sharedInstance().registerComponent(this);
 		getDocument().addDocumentListener(this);
-	
 		addMouseListener(new MouseAdapter() {
 
 			SearchContext context;
@@ -205,6 +228,32 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 				}
 			}
 		});
+	}
+
+	private void adjustPopupMenu() {
+		final JPopupMenu popup = super.getPopupMenu();
+		JMenu menu = new JMenu("Move");
+		popup.add(menu);
+		menu.add(getMenuItem("Decrease Indent", new DecreaseIndentAction()));
+		menu.add(getMenuItem("Increase Indent", new IncreaseIndentAction()));
+		menu.addSeparator();
+		menu.add(getMenuItem("Move Up", new LineMoveAction(RTextAreaEditorKit.rtaLineUpAction, -1)));
+		menu.add(getMenuItem("Move Down", new LineMoveAction(RTextAreaEditorKit.rtaLineDownAction, 1)));
+		menu = new JMenu("Transform");
+		popup.add(menu);
+		menu.add(getMenuItem("Camel Case", new CamelCaseAction()));
+		menu.add(getMenuItem("Invert Case", new InvertSelectionCaseAction()));
+		menu.add(getMenuItem("Lower Case", new LowerSelectionCaseAction()));
+		menu.add(getMenuItem("Upper Case", new UpperSelectionCaseAction()));
+	}
+
+	private JMenuItem getMenuItem(final String label, final RecordableTextAction a) {
+		JMenuItem item = new JMenuItem(a);
+		item.setAccelerator((KeyStroke) a.getValue(Action.ACCELERATOR_KEY));
+		if (getActionMap().get(a.getName()) == null)
+			getActionMap().put(a.getName(), a); // make it recordable
+		item.setText(label);
+		return item;
 	}
 
 	@Override
@@ -261,16 +310,21 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		return new ImageIcon(image);
 	}
 
-	/**
-	 * TODO
-	 *
-	 * @param direction
-	 * @param select
-	 * @return
-	 */
-	RecordableTextAction wordMovement(final int direction, final boolean select) {
-		final String id = "WORD_MOVEMENT_" + select + direction;
+	RecordableTextAction wordMovement(final String id, final int direction, final boolean select) {
 		return new RecordableTextAction(id) {
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public String getDescription() {
+				final StringBuilder sb = new StringBuilder();
+				if (direction > 0)
+					sb.append("Next");
+				else
+					sb.append("Previous");
+				sb.append("Word");
+				if (select) sb.append("Select");
+				return sb.toString();
+			}
 
 			@Override
 			public void actionPerformedImpl(final ActionEvent e,
@@ -1005,6 +1059,141 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	String getSupportStatus() {
 		return supportStatus;
+	}
+
+	static class CamelCaseAction extends RecordableTextAction {
+		private static final long serialVersionUID = 1L;
+
+		CamelCaseAction() {
+			super("RTA.CamelCaseAction");
+		}
+
+		@Override
+		public void actionPerformedImpl(final ActionEvent e, final RTextArea textArea) {
+			if (!textArea.isEditable() || !textArea.isEnabled()) {
+				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+				return;
+			}
+			final String selection = textArea.getSelectedText();
+			if (selection != null) {
+				final String[] words = selection.split("[\\W_]+");
+				final StringBuilder buffer = new StringBuilder();
+				for (int i = 0; i < words.length; i++) {
+					String word = words[i];
+					if (i == 0) {
+						word = word.isEmpty() ? word : word.toLowerCase();
+					} else {
+						word = word.isEmpty() ? word
+								: Character.toUpperCase(word.charAt(0)) + word.substring(1).toLowerCase();
+					}
+					buffer.append(word);
+				}
+				textArea.replaceSelection(buffer.toString());
+			}
+			textArea.requestFocusInWindow();
+		}
+
+		@Override
+		public String getMacroID() {
+			return getName();
+		}
+
+	}
+
+	/** Modified from DecreaseIndentAction */
+	static class IncreaseIndentAction extends RecordableTextAction {
+
+		private static final long serialVersionUID = 1L;
+
+		private final Segment s;
+
+		public IncreaseIndentAction() {
+			super("RSTA.IncreaseIndentAction");
+			s = new Segment();
+		}
+
+		@Override
+		public void actionPerformedImpl(final ActionEvent e, final RTextArea textArea) {
+
+			if (!textArea.isEditable() || !textArea.isEnabled()) {
+				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+				return;
+			}
+
+			final Document document = textArea.getDocument();
+			final Element map = document.getDefaultRootElement();
+			final Caret c = textArea.getCaret();
+			int dot = c.getDot();
+			int mark = c.getMark();
+			int line1 = map.getElementIndex(dot);
+			final int tabSize = textArea.getTabSize();
+			final StringBuilder sb = new StringBuilder();
+			if (textArea.getTabsEmulated()) {
+				while (sb.length() < tabSize) {
+					sb.append(' ');
+				}
+			} else {
+				sb.append('\t');
+			}
+			final String paddingString = sb.toString();
+
+			// If there is a selection, indent all lines in the selection.
+			// Otherwise, indent the line the caret is on.
+			if (dot != mark) {
+				final int line2 = map.getElementIndex(mark);
+				dot = Math.min(line1, line2);
+				mark = Math.max(line1, line2);
+				Element elem;
+				textArea.beginAtomicEdit();
+				try {
+					for (line1 = dot; line1 < mark; line1++) {
+						elem = map.getElement(line1);
+						handleIncreaseIndent(elem, document, paddingString);
+					}
+					// Don't do the last line if the caret is at its
+					// beginning. We must call getDot() again and not just
+					// use 'dot' as the caret's position may have changed
+					// due to the insertion of the tabs above.
+					elem = map.getElement(mark);
+					final int start = elem.getStartOffset();
+					if (Math.max(c.getDot(), c.getMark()) != start) {
+						handleIncreaseIndent(elem, document, paddingString);
+					}
+				} catch (final BadLocationException ble) {
+					ble.printStackTrace();
+					UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+				} finally {
+					textArea.endAtomicEdit();
+				}
+			} else {
+				final Element elem = map.getElement(line1);
+				try {
+					handleIncreaseIndent(elem, document, paddingString);
+				} catch (final BadLocationException ble) {
+					ble.printStackTrace();
+					UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+				}
+			}
+
+		}
+
+		@Override
+		public final String getMacroID() {
+			return getName();
+		}
+
+		private void handleIncreaseIndent(final Element elem, final Document doc, final String pad)
+				throws BadLocationException {
+			final int start = elem.getStartOffset();
+			int end = elem.getEndOffset() - 1; // Why always true??
+			doc.getText(start, end - start, s);
+			final int i = s.offset;
+			end = i + s.count;
+			if (end > i || (end == i && i == 0)) {
+				doc.insertString(start, pad, null);
+			}
+		}
+
 	}
 
 }
