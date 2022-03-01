@@ -1138,7 +1138,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		for (final PluginInfo<SyntaxHighlighter> info : pluginService
 			.getPluginsOfType(SyntaxHighlighter.class))
 			try {
-				tokenMakerFactory.putMapping("text/" + info.getName(), info
+				tokenMakerFactory.putMapping("text/" + info.getName().toLowerCase().replace(' ', '-'), info
 					.getClassName());
 			}
 			catch (final Throwable t) {
