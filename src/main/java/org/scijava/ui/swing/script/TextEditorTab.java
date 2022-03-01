@@ -51,7 +51,6 @@ import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
@@ -273,7 +272,7 @@ public class TextEditorTab extends JSplitPane {
 					+ "Page UP/DOWN, and Shift+up/down arrows work like arrow\n"
 					+ "keys before for caret movement within a multi-line prompt."
 					;
-			JOptionPane.showMessageDialog(textEditor, msg, "REPL Help", JOptionPane.INFORMATION_MESSAGE);
+			textEditor.info(msg, "REPL Help");
 		});
 		prompt_panel.add(prompt_help, bc);
 		
@@ -289,8 +288,7 @@ public class TextEditorTab extends JSplitPane {
 		incremental.addActionListener(ae -> {
 			if (incremental.isSelected() && null == textEditor.getCurrentLanguage()) {
 				incremental.setSelected(false);
-				JOptionPane.showMessageDialog(TextEditorTab.this,
-					"Select a language first!");
+				textEditor.error("Select a language first!");
 				return;
 			}
 			textEditor.setIncremental(incremental.isSelected());

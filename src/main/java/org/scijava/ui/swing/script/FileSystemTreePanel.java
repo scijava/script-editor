@@ -290,7 +290,7 @@ class FileSystemTreePanel extends JPanel {
 		});
 		popup.add(jmi);
 		popup.addSeparator();
-		jmi = new JMenuItem("About File Explorer ...");
+		jmi = new JMenuItem("About File Explorer...");
 		jmi.addActionListener(e -> showHelpMsg());
 		popup.add(jmi);
 		options.addActionListener(e -> popup.show(options, options.getWidth() / 2, options.getHeight() / 2));

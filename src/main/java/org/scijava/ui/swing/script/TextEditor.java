@@ -107,6 +107,8 @@ import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JComponent;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
@@ -120,6 +122,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
+import javax.swing.JTextPane;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
@@ -341,7 +344,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				try {
 					Desktop.getDesktop().open(f.getParentFile());
 				} catch (final Exception | Error ignored) {
-					error(getEditorPane().getFileName() + " does not seem to be accessible.");
+					error(getEditorPane().getFileName() + "\ndoes not seem to be accessible.");
 				}
 			}
 		});
@@ -670,8 +673,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			final ArrayList<File> filteredFiles = new ArrayList<>();
 			assembleFlatFileCollection(filteredFiles, files);
 			if (filteredFiles.isEmpty()) {
-				JOptionPane.showMessageDialog(TextEditor.this, "None of the dropped file(s) seems parseable.",
-						"Invalid Drop", JOptionPane.WARNING_MESSAGE);
+				warn("None of the dropped file(s) seems parseable.");
 				return;
 			}
 			final boolean confirm = filteredFiles.size() < 10 || (JOptionPane.showConfirmDialog(TextEditor.this,
@@ -713,13 +715,12 @@ public class TextEditor extends JFrame implements ActionListener,
 					final Object o = ioService.open(f.getAbsolutePath());
 					// Open in whatever way possible
 					if (null != o) uiService.show(o);
-					else JOptionPane.showMessageDialog(TextEditor.this,
-						"Could not open the file at: " + f.getAbsolutePath());
+					else error("Could not open the file at\n" + f.getAbsolutePath());
 					return;
 				}
 				catch (final Exception e) {
 					log.error(e);
-					error("Could not open image at " + f);
+					error("Could not open file at\n" + f);
 				}
 			}
 			// Ask:
@@ -1552,8 +1553,7 @@ public class TextEditor extends JFrame implements ActionListener,
 					// make the choice available for the next tab
 					prefService.put(EditorPane.class, EditorPane.THEME_PREFS, v);
 				} catch (final IllegalArgumentException ex) {
-					JOptionPane.showMessageDialog(TextEditor.this,
-							"An exception occured. Theme could not be loaded.");
+					error("Theme could not be loaded. See Console for details.");
 					ex.printStackTrace();
 				}
 			});
@@ -1713,8 +1713,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			tab.editorPane.getBookmarks(tab, bookmarks);
 		}
 		if (bookmarks.isEmpty()) {
-			JOptionPane.showMessageDialog(this, "No Bookmarks currently exist.\n"
-					+ "You can bookmark lines by clicking next to their line number.");
+			info("No Bookmarks currently exist.\nYou can bookmark lines by clicking next to their line number.",
+					"No Bookmarks");
 		}
 		return bookmarks;
 	}
@@ -3026,8 +3026,23 @@ public class TextEditor extends JFrame implements ActionListener,
 		errorScreen.insert(message, errorScreen.getDocument().getLength());
 	}
 
-	private void error(final String message) {
+	void error(final String message) {
 		JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
+	}
+
+	void warn(final String message) {
+		JOptionPane.showMessageDialog(this, message, "Warning", JOptionPane.WARNING_MESSAGE);
+	}
+
+	void info(final String message, final String title) {
+		JOptionPane.showMessageDialog(this, message, title, JOptionPane.INFORMATION_MESSAGE);
+	}
+
+	boolean confirm(final String message, final String title, final String yesButtonLabel) {
+		return JOptionPane.showOptionDialog(this, message, title, JOptionPane.YES_NO_OPTION,
+				JOptionPane.QUESTION_MESSAGE, null, // no custom Icon
+				new String[] { yesButtonLabel, "Cancel" }, // titles of buttons
+				yesButtonLabel) == JOptionPane.OK_OPTION;
 	}
 
 	public void handleException(final Throwable e) {
@@ -3061,7 +3076,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final String msg =
 			count > 0 ? "Zap Gremlins converted " + count +
 				" invalid characters to spaces" : "No invalid characters found!";
-		JOptionPane.showMessageDialog(this, msg);
+		info(msg, "Zap Gremlins");
 		return count;
 	}
 
