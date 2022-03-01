@@ -557,6 +557,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		openSourceForClass.setMnemonic(KeyEvent.VK_J);
 		//openSourceForMenuItem = addToMenu(toolsMenu, "Open Java File for Menu Item...", 0, 0);
 		//openSourceForMenuItem.setMnemonic(KeyEvent.VK_M);
+		addScritpEditorMacroCommands(toolsMenu);
 		mbar.add(toolsMenu);
 
 		// -- Git menu --
@@ -892,6 +893,174 @@ public class TextEditor extends JFrame implements ActionListener,
 		// Store locations of splitpanes
 		panePositions = new int[]{body.getDividerLocation(), getTab().getDividerLocation()};
 		editorPane.requestFocus();
+	}
+
+	private void addScritpEditorMacroCommands(final JMenu menu) {
+		addSeparator(menu, "Script Editor Macros:");
+		final JMenuItem startMacro = new JMenuItem("Start/Resume Macro Recording");
+		startMacro.addActionListener(e -> {
+			final String state = (RTextArea.getCurrentMacro() == null) ? "on" : "resumed";
+			write("Script Editor: Macro recording " + state);
+			RTextArea.beginRecordingMacro();
+		});
+		menu.add(startMacro);
+		final JMenuItem pauseMacro = new JMenuItem("Pause Macro Recording...");
+		pauseMacro.addActionListener(e -> {
+			if (!RTextArea.isRecordingMacro() || RTextArea.getCurrentMacro() == null) {
+				warn("No Script Editor Macro recording exists.");
+			} else {
+				RTextArea.endRecordingMacro();
+				final int nSteps = RTextArea.getCurrentMacro().getMacroRecords().size();
+				write("Script Editor: Macro recording off: " + nSteps + " event(s)/action(s) recorded.");
+				if (nSteps == 0) {
+					RTextArea.loadMacro(null);
+				}
+			}
+		});
+		menu.add(pauseMacro);
+		final JMenuItem endMacro = new JMenuItem("Stop/Save Recording...");
+		endMacro.addActionListener(e -> {
+			pauseMacro.doClick();
+			if (RTextArea.getCurrentMacro() != null) {
+				final File fileToSave = getMacroFile(false);
+				if (fileToSave != null) {
+					try {
+						RTextArea.getCurrentMacro().saveToFile(fileToSave);
+					} catch (final IOException e1) {
+						error(e1.getMessage());
+						e1.printStackTrace();
+					}
+				}
+			}
+		});
+		menu.add(endMacro);
+		final JMenuItem clearMacro = new JMenuItem("Clear Recorded Macro...");
+		clearMacro.addActionListener(e -> {
+			if (RTextArea.getCurrentMacro() == null) {
+				warn("Nothing to clear: No macro has been recorded.");
+				return;
+			}
+			if (confirm("Clear Recorded Macro(s)?", "Clear Recording(s)?", "Clear")) {
+				RTextArea.loadMacro(null);
+				write("Script Editor: Recorded macro(s) cleared.");
+			}
+		});
+		menu.add(clearMacro);
+		final JMenuItem playMacro = new JMenuItem("Run Recorded Macro");
+		playMacro.setToolTipText("Runs current recordings. Prompts for\nrecordings file if no recordings exist");
+		playMacro.addActionListener(e -> {
+			if (null == RTextArea.getCurrentMacro()) {
+				final File fileToOpen = getMacroFile(true);
+				if (fileToOpen != null) {
+					try {
+						RTextArea.loadMacro(new Macro(fileToOpen));
+					} catch (final IOException e1) {
+						error(e1.getMessage());
+						e1.printStackTrace();
+					}
+				}
+			}
+			if (RTextArea.isRecordingMacro()) {
+				if (confirm("Recording must be paused before execution. Pause recording now?", "Pause and Run?",
+						"Pause and Run")) {
+					RTextArea.endRecordingMacro();
+					write("Script Editor: Recording paused");
+				} else {
+					return;
+				}
+			}
+			if (RTextArea.getCurrentMacro() != null) {
+				final int actions = RTextArea.getCurrentMacro().getMacroRecords().size();
+				write("Script Editor: Running recorded macro [" + actions + " event(s)/action(s)]");
+				try {
+					getTextArea().playbackLastMacro();
+				} catch (final Exception | Error ex) {
+					error("An Exception occured while running macro. See Console for details");
+					ex.printStackTrace();
+				}
+			}
+		});
+		menu.add(playMacro);
+	}
+
+	private File getMacroFile(final boolean openOtherwiseSave) {
+		final String msg = (openOtherwiseSave) ? "No macros have been recorded. Load macro from file?"
+				: "Recording Stopped. Save recorded macro to local file?";
+		final String title = (openOtherwiseSave) ? "Load from File?" : "Save to File?";
+		final String yesLabel = (openOtherwiseSave) ? "Load" : "Save";
+		if (confirm(msg, title, yesLabel)) {
+			File dir = appService.getApp().getBaseDirectory();
+			final String filename = "RecordedScriptEditorMacro.xml";
+			if (getEditorPane().getFile() != null) {
+				dir = getEditorPane().getFile().getParentFile();
+			}
+			return uiService.chooseFile(new File(dir, filename),
+					(openOtherwiseSave) ? FileWidget.OPEN_STYLE : FileWidget.SAVE_STYLE);
+		}
+		return null;
+	}
+
+	private void displayRecordableMap() {
+		final ActionMap inputMap = getTextArea().getActionMap();
+		Object[] keys = inputMap.allKeys();
+		final ArrayList<String> lines = new ArrayList<>();
+		if (keys != null) {
+			for (int i = 0; i < keys.length; i++) {
+				final Object obj = inputMap.get(keys[i]);
+				if (!(obj instanceof RecordableTextAction))
+					continue;
+				String objString = (String) ((RecordableTextAction) obj).getValue(Action.NAME);
+				objString = cleanseActionDescription(objString);
+				lines.add("<li>" + capitalize(objString) + "</li>");
+			}
+			Collections.sort(lines, String.CASE_INSENSITIVE_ORDER);
+		}
+		showHTMLDialog("Script Editor Recordable Actions/Events", "<HTML><ol>" + String.join("", lines) + "</dl>");
+	}
+
+	private void displayKeyMap() {
+		final InputMap inputMap = getTextArea().getInputMap(JComponent.WHEN_FOCUSED);
+		final KeyStroke[] keys = inputMap.allKeys();
+		final ArrayList<String> lines = new ArrayList<>();
+		if (keys != null) {
+			for (int i = 0; i < keys.length; i++) {
+				final KeyStroke key = keys[i];
+				String keyString = key.toString().replace("pressed", "");
+				if (keyString.startsWith("typed "))
+					continue; // ignore 'regular keystrokes'
+				final Object obj = inputMap.get(key);
+				String objString;
+				if (obj instanceof AbstractAction) {
+					objString = (String) ((AbstractAction) obj).getValue(Action.NAME);
+				} else if (obj instanceof AbstractButton) {
+					objString = ((AbstractButton) obj).getText();
+				} else {
+					objString = obj.toString();
+				}
+				objString = cleanseActionDescription(objString);
+				keyString = keyString.replace("ctrl", "Ctrl");
+				keyString = keyString.replace("shift", "Shift");
+				keyString = keyString.replace("alt", "Alt");
+				lines.add("<dt><b>" + keyString + "</b></dt>" + "<dd>" + capitalize(objString) + "</dd>");
+			}
+			Collections.sort(lines, String.CASE_INSENSITIVE_ORDER);
+		}
+		showHTMLDialog("Script Editor Key Bindings", "<HTML><dl>" + String.join("", lines) + "</dl>");
+	}
+
+	private String cleanseActionDescription(String actionId) {
+		if (actionId.startsWith("RTA."))
+			actionId = actionId.substring(4);
+		else if (actionId.startsWith("RSTA."))
+			actionId = actionId.substring(5);
+		if (actionId.endsWith("Action"))
+			actionId = actionId.substring(0, actionId.length() - 6);
+		actionId = actionId.replace("-", " ");
+		return actionId.replaceAll("([A-Z])", " $1"); // CamelCase to Camel Case
+	}
+
+	private String capitalize(final String string) {
+		return string.substring(0, 1).toUpperCase() + string.substring(1);
 	}
 
 	private class DragAndDrop implements DragSourceListener, DragGestureListener {
@@ -3101,6 +3270,30 @@ public class TextEditor extends JFrame implements ActionListener,
 				yesButtonLabel) == JOptionPane.OK_OPTION;
 	}
 
+	void showHTMLDialog(final String title, final String htmlContents) {
+		final JTextPane f = new JTextPane();
+		f.setContentType("text/html");
+		f.setEditable(false);
+		f.setBackground(null);
+		f.setBorder(null);
+		f.setText(htmlContents);
+		final JScrollPane sp = new JScrollPane(f);
+		final JOptionPane pane = new JOptionPane(sp);
+		final JDialog dialog = pane.createDialog(this, title);
+		dialog.setResizable(true);
+		dialog.pack();
+		dialog.setPreferredSize(
+				new Dimension((int) f.getPreferredSize().getWidth() + sp.getVerticalScrollBar().getWidth() * 4,
+						(int) Math.min(getPreferredSize().getHeight() * .75, sp.getPreferredSize().getHeight())));
+		pane.addPropertyChangeListener(JOptionPane.VALUE_PROPERTY, ignored -> {
+			dialog.dispose();
+		});
+		dialog.pack();
+		dialog.setModal(false);
+		dialog.setLocationRelativeTo(this);
+		dialog.setVisible(true);
+	}
+
 	public void handleException(final Throwable e) {
 		handleException(e, errorScreen);
 		getTab().showErrors();
@@ -3437,6 +3630,13 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private JMenu helpMenu() {
 		final JMenu menu = new JMenu("Help");
+		addSeparator(menu, "Offline Help:");
+		JMenuItem item = new JMenuItem("List Shortcuts...");
+		item.addActionListener(e -> displayKeyMap());
+		menu.add(item);
+		item = new JMenuItem("List Recordable Actions...");
+		item.addActionListener(e -> displayRecordableMap());
+		menu.add(item);
 		addSeparator(menu, "Contextual Help:");
 		menu.add(openHelpWithoutFrames);
 		openHelpWithoutFrames.setMnemonic(KeyEvent.VK_O);
