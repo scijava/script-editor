@@ -47,8 +47,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.net.URL;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.swing.Action;
 import javax.swing.ImageIcon;
@@ -78,9 +82,8 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit.CopyAsStyledTextAction;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit.ToggleCommentAction;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit.DecreaseIndentAction;
-import org.fife.ui.rtextarea.RTextAreaEditorKit.*;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit.ToggleCommentAction;
 import org.fife.ui.rsyntaxtextarea.Style;
 import org.fife.ui.rsyntaxtextarea.SyntaxScheme;
 import org.fife.ui.rsyntaxtextarea.Theme;
@@ -88,6 +91,12 @@ import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.GutterIconInfo;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextAreaEditorKit;
+import org.fife.ui.rtextarea.RTextAreaEditorKit.ClipboardHistoryAction;
+import org.fife.ui.rtextarea.RTextAreaEditorKit.InvertSelectionCaseAction;
+import org.fife.ui.rtextarea.RTextAreaEditorKit.LineMoveAction;
+import org.fife.ui.rtextarea.RTextAreaEditorKit.LowerSelectionCaseAction;
+import org.fife.ui.rtextarea.RTextAreaEditorKit.TimeDateAction;
+import org.fife.ui.rtextarea.RTextAreaEditorKit.UpperSelectionCaseAction;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.RecordableTextAction;
 import org.fife.ui.rtextarea.SearchContext;
@@ -171,7 +180,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 				}
 			}
 		});
-		
+
 		// load preferences
 		loadPreferences();
 
@@ -207,9 +216,10 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 				// https://github.com/bobbylight/RSyntaxTextArea/issues/88
 				if (getMarkOccurrences() && 2 == me.getClickCount()) {
 
-					// Do nothing if getMarkOccurrences() is unset or no selection exists
+					// Do nothing if getMarkOccurrences() is unset or no valid
+					// selection exists (we'll skip white space selection)
 					final String str = getSelectedText();
-					if (str == null) return;
+					if (str == null || str.trim().isEmpty()) return;
 
 					if (context != null && str.equals(context.getSearchFor())) {
 						// Selection is the previously 'marked all' scope. Clear it
@@ -234,17 +244,24 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		final JPopupMenu popup = super.getPopupMenu();
 		JMenu menu = new JMenu("Move");
 		popup.add(menu);
-		menu.add(getMenuItem("Decrease Indent", new DecreaseIndentAction()));
-		menu.add(getMenuItem("Increase Indent", new IncreaseIndentAction()));
-		menu.addSeparator();
+		menu.add(getMenuItem("Shift Left (Decrease Indent)", new DecreaseIndentAction()));
+		menu.add(getMenuItem("Shift Right (Increase Indent)", new IncreaseIndentAction()));
+			menu.addSeparator();
 		menu.add(getMenuItem("Move Up", new LineMoveAction(RTextAreaEditorKit.rtaLineUpAction, -1)));
 		menu.add(getMenuItem("Move Down", new LineMoveAction(RTextAreaEditorKit.rtaLineDownAction, 1)));
 		menu = new JMenu("Transform");
 		popup.add(menu);
-		menu.add(getMenuItem("Camel Case", new CamelCaseAction()));
 		menu.add(getMenuItem("Invert Case", new InvertSelectionCaseAction()));
+		menu.addSeparator();
+		menu.add(getMenuItem("Camel Case", new CamelCaseAction()));
 		menu.add(getMenuItem("Lower Case", new LowerSelectionCaseAction()));
+		menu.add(getMenuItem("Lower Case ('_' Sep.)", new LowerCaseUnderscoreAction()));
+		menu.add(getMenuItem("Title Case", new TitleCaseAction()));
 		menu.add(getMenuItem("Upper Case", new UpperSelectionCaseAction()));
+		menu = new JMenu("Actions");
+		popup.add(menu);
+		menu.add(getMenuItem("Open URL Under Cursor", new OpenLinkUnderCursor()));
+		menu.add(getMenuItem("Search the Web for Selected Text", new SearchWebOnSelectedText()));
 	}
 
 	private JMenuItem getMenuItem(final String label, final RecordableTextAction a) {
@@ -1061,6 +1078,17 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		return supportStatus;
 	}
 
+	private void openLinkInBrowser(String link) {
+		try {
+			if (!link.startsWith("http"))
+				link = "https://" + link; // or it won't work
+			platformService.open(new URL(link));
+		} catch (final IOException exc) {
+			UIManager.getLookAndFeel().provideErrorFeedback(this);
+			System.out.println(exc.getMessage());
+		}
+	}
+
 	static class CamelCaseAction extends RecordableTextAction {
 		private static final long serialVersionUID = 1L;
 
@@ -1090,6 +1118,68 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 				}
 				textArea.replaceSelection(buffer.toString());
 			}
+			textArea.requestFocusInWindow();
+		}
+
+		@Override
+		public String getMacroID() {
+			return getName();
+		}
+
+	}
+
+	static class TitleCaseAction extends RecordableTextAction {
+		private static final long serialVersionUID = 1L;
+
+		TitleCaseAction() {
+			super("RTA.TitleCaseAction");
+		}
+
+		@Override
+		public void actionPerformedImpl(final ActionEvent e, final RTextArea textArea) {
+			if (!textArea.isEditable() || !textArea.isEnabled()) {
+				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+				return;
+			}
+			final String selection = textArea.getSelectedText();
+			if (selection != null) {
+				final String[] words = selection.split("[\\W_]+");
+				final StringBuilder buffer = new StringBuilder();
+				for (int i = 0; i < words.length; i++) {
+					String word = words[i];
+					word = word.isEmpty() ? word
+								: Character.toUpperCase(word.charAt(0)) + word.substring(1).toLowerCase();
+					buffer.append(word);
+					if (i < words.length-1) buffer.append(" ");
+				}
+				textArea.replaceSelection(buffer.toString());
+			}
+			textArea.requestFocusInWindow();
+		}
+
+		@Override
+		public String getMacroID() {
+			return getName();
+		}
+
+	}
+
+	static class LowerCaseUnderscoreAction extends RecordableTextAction {
+		private static final long serialVersionUID = 1L;
+
+		LowerCaseUnderscoreAction() {
+			super("RTA.LowerCaseUnderscoreSep.Action");
+		}
+
+		@Override
+		public void actionPerformedImpl(final ActionEvent e, final RTextArea textArea) {
+			if (!textArea.isEditable() || !textArea.isEnabled()) {
+				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+				return;
+			}
+			final String selection = textArea.getSelectedText();
+			if (selection != null)
+				textArea.replaceSelection(selection.trim().replaceAll("\\s", "_").toLowerCase());
 			textArea.requestFocusInWindow();
 		}
 
@@ -1196,4 +1286,118 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	}
 
+	class SearchWebOnSelectedText extends RecordableTextAction {
+		private static final long serialVersionUID = 1L;
+
+		SearchWebOnSelectedText() {
+			super("RTA.SearchWebOnSelectedTextAction");
+		}
+
+		@Override
+		public void actionPerformedImpl(final ActionEvent e, final RTextArea textArea) {
+			if (!textArea.isEditable() || !textArea.isEnabled()) {
+				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+				return;
+			}
+			final String selection = textArea.getSelectedText();
+			if (selection == null) {
+				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+			} else {
+				final String link = "https://duckduckgo.com/?q=" + selection.trim().replace(" ", "+");
+				openLinkInBrowser(link);
+			}
+			textArea.requestFocusInWindow();
+		}
+
+		@Override
+		public String getMacroID() {
+			return getName();
+		}
+
+	}
+
+	class OpenLinkUnderCursor extends RecordableTextAction {
+		private static final long serialVersionUID = 1L;
+
+		OpenLinkUnderCursor() {
+			super("RTA.OpenLinkUnderCursor.Action");
+		}
+
+		@Override
+		public void actionPerformedImpl(final ActionEvent e, final RTextArea textArea) {
+			if (!textArea.isEditable() || !textArea.isEnabled()) {
+				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+				return;
+			}
+			String link = new CursorUtils(textArea).getLinkAtCursor();
+			if (link == null) {
+				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+			} else {
+				openLinkInBrowser(link);
+			}
+			textArea.requestFocusInWindow();
+		}
+
+		@Override
+		public String getMacroID() {
+			return getName();
+		}
+
+	}
+
+	private static class CursorUtils {
+
+		final List<String> SPACE_SEPARATORS = Arrays.asList(" ", "\t", "\f", "\n", "\r");
+		final String URL_REGEX = "^((https?|ftp)://|(www|ftp)\\.)?[a-z0-9-]+(\\.[a-z0-9-]+)+([/?].*)?$";
+		final Pattern pattern = Pattern.compile(URL_REGEX);
+		final RTextArea pane;
+
+		private CursorUtils(RTextArea textArea) {
+			this.pane = textArea;
+		}
+	
+		String getLineAtCursor() {
+			final int start = pane.getLineStartOffsetOfCurrentLine();
+			final int end = pane.getLineEndOffsetOfCurrentLine();
+			try {
+				return pane.getDocument().getText(start, end - start);
+			} catch (BadLocationException ignored) {
+				// do nothing
+			}
+			return null;
+		}
+
+		String getWordAtCursor() {
+			final String text = getLineAtCursor();
+			final int pos = pane.getCaretOffsetFromLineStart();
+			final int wordStart = getWordStart(text, pos);
+			final int wordEnd = getWordEnd(text, pos);
+			return text.substring(wordStart, wordEnd);
+		}
+
+		String getLinkAtCursor() {
+			String text = getWordAtCursor();
+			if (text == null)
+				return null;
+			final Matcher m = pattern.matcher(text);
+			return (m.find()) ? m.group() : null;
+		}
+
+		int getWordStart(final String text, final int location) {
+			int wordStart = location;
+			while (wordStart > 0 && !SPACE_SEPARATORS.contains(text.substring(wordStart - 1, wordStart))) {
+				wordStart--;
+			}
+			return wordStart;
+		}
+
+		int getWordEnd(final String text, final int location) {
+			int wordEnd = location;
+			while (wordEnd < text.length() - 1
+					&& !SPACE_SEPARATORS.contains(text.substring(wordEnd, wordEnd + 1))) {
+				wordEnd++;
+			}
+			return wordEnd;
+		}
+	}
 }

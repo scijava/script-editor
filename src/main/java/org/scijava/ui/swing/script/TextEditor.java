@@ -346,7 +346,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		makeJarWithSource = addToMenu(file, "Export as JAR (With Source)", 0, 0);
 		makeJarWithSource.setMnemonic(KeyEvent.VK_X);
 		file.addSeparator();
-		final JCheckBoxMenuItem lock = new JCheckBoxMenuItem("Lock File (Make Read Only)");
+		final JCheckBoxMenuItem lock = new JCheckBoxMenuItem("Lock (Make Read Only)");
 		file.add(lock);
 		lock.addActionListener( e -> {
 			if (lock.isSelected()) {
@@ -355,11 +355,25 @@ public class TextEditor extends JFrame implements ActionListener,
 				new SetWritableAction().actionPerformedImpl(e, getTextArea());
 			}
 		});
+		JMenuItem jmi = new JMenuItem("Revert");
+		jmi.addActionListener(e -> {
+			if (lock.isSelected()) {
+				error("File is locked (read only).");
+				return;
+			}
+			final File f = getEditorPane().getFile();
+			if (f == null || !f.exists()) {
+				error(getEditorPane().getFileName() + "\nhas not been saved or its file is not available.");
+			} else {
+				reloadRevert("Revert to Saved File? Any unsaved changes will be lost.", "Revert");
+			}
+		});
+		file.add(jmi);
 		file.addSeparator();
-		final JMenuItem jmi = new JMenuItem("Show in System Explorer");
+		jmi = new JMenuItem("Show in System Explorer");
 		jmi.addActionListener(e -> {
 			final File f = getEditorPane().getFile();
-			if (f == null) {
+			if (f == null || !f.exists()) {
 				error(getEditorPane().getFileName() + "\nhas not been saved or its file is not available.");
 			} else {
 				try {
@@ -1200,8 +1214,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	public void checkForOutsideChanges() {
 		final EditorPane editorPane = getEditorPane();
 		if (editorPane.wasChangedOutside()) {
-			reload("The file " + editorPane.getFile().getName() +
-				" was changed outside of the editor");
+			reload(editorPane.getFile().getName() +
+				"\nwas changed outside of the editor.");
 		}
 
 	}
@@ -1968,15 +1982,19 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public boolean reload(final String message) {
+		return reloadRevert(message, "Reload");
+	}
+
+	private boolean reloadRevert(final String message, final String title) {
 		final EditorPane editorPane = getEditorPane();
 
 		final File file = editorPane.getFile();
 		if (file == null || !file.exists()) return true;
 
 		final boolean modified = editorPane.fileChanged();
-		final String[] options = { "Reload", "Do not reload" };
-		if (modified) options[0] = "Reload (discarding changes)";
-		switch (JOptionPane.showOptionDialog(this, message, "Reload",
+		final String[] options = { title, "Do Not " + title };
+		if (modified) options[0] = title + " (Discard Changes)";
+		switch (JOptionPane.showOptionDialog(this, message, title + "?",
 			JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE, null, options,
 			options[0])) {
 			case 0:
