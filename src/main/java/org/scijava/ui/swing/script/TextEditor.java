@@ -537,7 +537,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		nextError.setMnemonic(KeyEvent.VK_N);
 		previousError = addToMenu(runMenu, "Previous Error", KeyEvent.VK_F4, shift);
 		previousError.setMnemonic(KeyEvent.VK_P);
-
+		final JMenuItem clearHighlights = new JMenuItem("Clear Highlighted Errors");
+		clearHighlights.addActionListener(e -> getEditorPane().getErrorHighlighter().reset());
+		runMenu.add(clearHighlights);
 		runMenu.addSeparator();
 
 		kill = addToMenu(runMenu, "Kill Running Script...", 0, 0);
@@ -1605,6 +1607,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		return false;
 	}
 
+	private boolean isJava(final ScriptLanguage language) {
+		return language != null && language.getLanguageName().equals("Java");
+	}
+
 	@Override
 	public void actionPerformed(final ActionEvent ae) {
 		final Object source = ae.getSource();
@@ -1625,8 +1631,18 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == compileAndRun) runText();
 		else if (source == compile) compile();
 		else if (source == runSelection) runText(true);
-		else if (source == nextError) new Thread(() -> nextError(true)).start();
-		else if (source == previousError) new Thread(() -> nextError(false)).start();
+		else if (source == nextError) {
+			if (isJava(getEditorPane().getCurrentLanguage()))
+				new Thread(() -> nextError(true)).start();
+			else
+				getEditorPane().getErrorHighlighter().gotoNextError();
+		}
+		else if (source == previousError) {
+			if (isJava(getEditorPane().getCurrentLanguage()))
+				new Thread(() -> nextError(false)).start();
+			else
+				getEditorPane().getErrorHighlighter().gotoPreviousError();
+		}
 		else if (source == kill) chooseTaskToKill();
 		else if (source == close) if (tabbed.getTabCount() < 2) processWindowEvent(new WindowEvent(
 			this, WindowEvent.WINDOW_CLOSING));
@@ -2693,6 +2709,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				text = null;
 			}
 			else text = selected + "\n"; // Ensure code blocks are terminated
+			getEditorPane().getErrorHighlighter().setSelectedCodeExecution(true);
 		}
 		else {
 			text = tab.getEditorPane().getText();
@@ -2873,9 +2890,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 			@Override
 			public void execute() {
-				try (final Reader reader = evalScript(getEditorPane().getFile()
-					.getPath(), new FileReader(file), output, errors))
-				{
+				try (final Reader reader = evalScript(file.getPath(), new FileReader(file), output, errors)) {
 					output.flush();
 					errors.flush();
 					markCompileEnd();
@@ -3317,6 +3332,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	public void handleException(final Throwable e) {
 		handleException(e, errorScreen);
 		getTab().showErrors();
+		getEditorPane().getErrorHighlighter().parse(e);
 	}
 
 	public static void
@@ -3384,7 +3400,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	private Reader evalScript(final String filename, Reader reader,
-		final Writer output, final Writer errors) throws ModuleException
+		final Writer output, final JTextAreaWriter errors) throws ModuleException
 	{
 		final ScriptLanguage language = getCurrentLanguage();
 		
@@ -3424,6 +3440,11 @@ public class TextEditor extends JFrame implements ActionListener,
 		this.module.setOutputWriter(output);
 		this.module.setErrorWriter(errors);
 
+		// prepare the highlighter
+		getEditorPane().getErrorHighlighter().setEnabled(!respectAutoImports);
+		getEditorPane().getErrorHighlighter().reset();
+		getEditorPane().getErrorHighlighter().setWriter(errors);
+
 		// execute the script
 		try {
 			moduleService.run(module, true).get();
@@ -3433,6 +3454,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		catch (final ExecutionException e) {
 			log.error(e);
+		} finally {
+			getEditorPane().getErrorHighlighter().parse();
 		}
 		return reader;
 	}

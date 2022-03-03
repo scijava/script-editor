@@ -198,7 +198,10 @@ public class TextEditorTab extends JSplitPane {
 		bc.weightx = 0;
 		bc.anchor = GridBagConstraints.NORTHEAST;
 		final JButton clear = new JButton("Clear");
-		clear.addActionListener(ae -> getScreen().setText(""));
+		clear.addActionListener(ae -> {
+			getScreen().setText("");
+			if (showingErrors) editorPane.getErrorHighlighter().reset();
+		});
 		bottom.add(clear, bc);
 		
 		bc.gridx = 7;

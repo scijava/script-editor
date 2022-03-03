@@ -134,6 +134,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private boolean autoCompletionJavaFallback;
 	private boolean autoCompletionWithoutKey;
 	private String supportStatus;
+	private final ErrorParser errorHighlighter;
+
 
 	@Parameter
 	Context context;
@@ -154,6 +156,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 * Constructor.
 	 */
 	public EditorPane() {
+
+		errorHighlighter= new ErrorParser(this);
 
 		// set sensible defaults
 		setAntiAliasingEnabled(true);
@@ -1087,6 +1091,10 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			UIManager.getLookAndFeel().provideErrorFeedback(this);
 			System.out.println(exc.getMessage());
 		}
+	}
+
+	ErrorParser getErrorHighlighter() {
+		return errorHighlighter;
 	}
 
 	static class CamelCaseAction extends RecordableTextAction {
