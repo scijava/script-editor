@@ -34,11 +34,11 @@ import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Graphics2D;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -55,7 +55,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.swing.Action;
-import javax.swing.ImageIcon;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -87,6 +86,7 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit.ToggleCommentAction;
 import org.fife.ui.rsyntaxtextarea.Style;
 import org.fife.ui.rsyntaxtextarea.SyntaxScheme;
 import org.fife.ui.rsyntaxtextarea.Theme;
+import org.fife.ui.rsyntaxtextarea.parser.TaskTagParser;
 import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.GutterIconInfo;
 import org.fife.ui.rtextarea.RTextArea;
@@ -95,7 +95,9 @@ import org.fife.ui.rtextarea.RTextAreaEditorKit.ClipboardHistoryAction;
 import org.fife.ui.rtextarea.RTextAreaEditorKit.InvertSelectionCaseAction;
 import org.fife.ui.rtextarea.RTextAreaEditorKit.LineMoveAction;
 import org.fife.ui.rtextarea.RTextAreaEditorKit.LowerSelectionCaseAction;
+import org.fife.ui.rtextarea.RTextAreaEditorKit.NextBookmarkAction;
 import org.fife.ui.rtextarea.RTextAreaEditorKit.TimeDateAction;
+import org.fife.ui.rtextarea.RTextAreaEditorKit.ToggleBookmarkAction;
 import org.fife.ui.rtextarea.RTextAreaEditorKit.UpperSelectionCaseAction;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.RecordableTextAction;
@@ -184,7 +186,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 				}
 			}
 		});
-
+		// Add support for TODO, FIXME, HACK
+		addParser(new TaskTagParser());
 		// load preferences
 		loadPreferences();
 
@@ -201,6 +204,11 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			getActionMap().put(RSyntaxTextAreaEditorKit.rstaToggleCommentAction, new ToggleCommentAction());
 		if (getActionMap().get(RSyntaxTextAreaEditorKit.rstaCopyAsStyledTextAction) != null)
 			getActionMap().put(RSyntaxTextAreaEditorKit.rstaCopyAsStyledTextAction, new CopyAsStyledTextAction());
+
+		// Fix conflicts with historical shortcuts: override defaults
+		getActionMap().put(RTextAreaEditorKit.rtaNextBookmarkAction, new NextBookMarkActionImpl(RTextAreaEditorKit.rtaNextBookmarkAction, true));
+		getActionMap().put(RTextAreaEditorKit.rtaPrevBookmarkAction, new NextBookMarkActionImpl(RTextAreaEditorKit.rtaPrevBookmarkAction, false));
+		getActionMap().put(RTextAreaEditorKit.rtaToggleBookmarkAction, new ToggleBookmarkActionImpl());
 
 		adjustPopupMenu();
 
@@ -300,35 +308,10 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		sp.setIconRowHeaderEnabled(true);
 		gutter = sp.getGutter();
 		gutter.setBookmarkingEnabled(true);
-		updateBookmarkIcon();
 		gutter.setShowCollapsedRegionToolTips(true);
 		gutter.setFoldIndicatorEnabled(true);
+		GutterUtils.updateIcons(gutter);
 		return sp;
-	}
-
-	protected void updateBookmarkIcon() {
-		// this will clear existing bookmarks, so we'll need restore existing ones
-		final GutterIconInfo[] stash = gutter.getBookmarks();
-		gutter.setBookmarkIcon(createBookmarkIcon());
-		try {
-			for (final GutterIconInfo info : stash)
-				gutter.toggleBookmark(info.getMarkedOffset());
-		} catch (final BadLocationException ignored) {
-			JOptionPane.showMessageDialog(this, "Some bookmarks may have been lost.", "Lost Bookmarks",
-					JOptionPane.WARNING_MESSAGE);
-		}
-	}
-
-	private ImageIcon createBookmarkIcon() {
-		final int size = gutter.getLineNumberFont().getSize();
-		final BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
-		final Graphics2D graphics = image.createGraphics();
-		graphics.setColor(gutter.getLineNumberColor());
-		graphics.fillRect(0, 0, size, size);
-		graphics.setXORMode(getCurrentLineHighlightColor());
-		graphics.drawRect(0, 0, size - 1, size - 1);
-		image.flush();
-		return new ImageIcon(image);
 	}
 
 	RecordableTextAction wordMovement(final String id, final int direction, final boolean select) {
@@ -690,8 +673,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		}
 
 		if ("None".equals(languageName) ) {
-			supportStatus = null; // no need to update console
-			return;
+			supportStatus = "Active language: None";
+			return; // no need to update console any further
 		}
 		String supportLevel = "SciJava supported";
 		// try to get language support for current language, may be null.
@@ -829,7 +812,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		if (gutter != null) {
 			final float lnSize = size * 0.8f;
 			gutter.setLineNumberFont(font.deriveFont(lnSize));
-			updateBookmarkIcon();
+			GutterUtils.updateIcons(gutter);
 		}
 		Component parent = getParent();
 		if (parent instanceof JViewport) {
@@ -1033,7 +1016,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		final float existingFontSize = getFontSize();
 		th.apply(this);
 		setFontSize(existingFontSize);
-		updateBookmarkIcon(); // update bookmark icon color
+		GutterUtils.updateIcons(gutter);
 	}
 
 	private static Theme getTheme(final String theme) throws IllegalArgumentException {
@@ -1196,6 +1179,33 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			return getName();
 		}
 
+	}
+
+	/** solves hot-key conflicts with historical shortcuts */
+	static class NextBookMarkActionImpl extends NextBookmarkAction {
+		private static final long serialVersionUID = 1L;
+
+		public NextBookMarkActionImpl(String name, boolean forward) {
+			super(name, forward);
+			final KeyStroke keystroke =  KeyStroke.getKeyStroke(KeyEvent.VK_F2, (forward) ? 0 : ActionEvent.SHIFT_MASK);
+			setAccelerator(keystroke);
+		}
+		
+	}
+	/** solves hot-key conflicts with historical shortcuts */
+	class ToggleBookmarkActionImpl extends ToggleBookmarkAction {
+		private static final long serialVersionUID = 1L;
+
+		public ToggleBookmarkActionImpl() {
+			super();
+			final KeyStroke keystroke =  KeyStroke.getKeyStroke(KeyEvent.VK_F2, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask());
+			setAccelerator(keystroke);
+		}
+
+		@Override
+		public void actionPerformedImpl(ActionEvent e, RTextArea textArea) {
+			toggleBookmark();
+		}
 	}
 
 	/** Modified from DecreaseIndentAction */

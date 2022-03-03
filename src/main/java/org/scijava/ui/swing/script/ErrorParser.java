@@ -172,11 +172,11 @@ public class ErrorParser {
 		// Do nothing if disabled, or if only selected text was evaluated in the
 		// script but we don't know where in the document such selection occurred
 		if (!enabled) {
-			abort("When Auto-imports are active errors are not tractable in the Editor");
+			abort("Execution errors are not highlighted when auto-imports are active");
 			return;
 		}
 		if (lineOffset == -1) {
-			abort("Code selection unknown: Erros are not tractable in the Editor");
+			abort("Code selection unknown: Erros are not highlighted in the Editor");
 			return;
 		}
 		final ScriptLanguage lang = editorPane.getCurrentLanguage();
@@ -254,8 +254,11 @@ public class ErrorParser {
 	}
 
 	private void abort(final String msg) {
-		if (writer != null)
-			writer.textArea.insert("[WARNING] " + msg + "\n", lengthOfJTextAreaWriter);
+		if (writer != null) {
+			String finalMsg = "[WARNING] " + msg + "\n";
+			finalMsg +=  "[WARNING] Error line(s) below may not match line numbers in the editor\n";
+			writer.textArea.insert(finalMsg, lengthOfJTextAreaWriter);
+		}
 		errorLines = null;
 	}
 
