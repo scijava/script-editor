@@ -146,6 +146,7 @@ public class TextEditorTab extends JSplitPane {
 		screen.setEditable(false);
 		screen.setLineWrap(true);
 		screen.setFont(getEditorPane().getFont());
+		textEditor.applyConsolePopupMenu(screen);
 
 		final JPanel bottom = new JPanel();
 		bottom.setLayout(new GridBagLayout());
@@ -232,7 +233,7 @@ public class TextEditorTab extends JSplitPane {
 		bc.gridwidth = 8;
 		scroll = new JScrollPane(screen);
 		bottom.add(scroll, bc);
-		
+
 		prompt.setEnabled(false);
 		
 		final JPanel prompt_panel = new JPanel();
@@ -330,7 +331,7 @@ public class TextEditorTab extends JSplitPane {
 				textEditor.saveWindowSizeToPrefs();
 		});
 	}
-	
+
 	// Package-private
 	JSplitPane getScreenAndPromptSplit() {
 		return screenAndPromptSplit;

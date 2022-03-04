@@ -44,6 +44,7 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.WindowConstants;
 
@@ -63,6 +64,7 @@ public class FindAndReplaceDialog extends JDialog implements ActionListener {
 	JLabel replaceLabel;
 	JCheckBox matchCase, wholeWord, markAll, regex, forward;
 	JButton findNext, replace, replaceAll, cancel;
+	private boolean restrictToConsole;
 
 	public FindAndReplaceDialog(final TextEditor editor) {
 		super(editor);
@@ -131,20 +133,32 @@ public class FindAndReplaceDialog extends JDialog implements ActionListener {
 		replaceField.addKeyListener(listener);
 	}
 
-	protected RSyntaxTextArea getTextArea() {
-		return textEditor.getTextArea();
+	private JTextArea getSearchArea() {
+		if (restrictToConsole) {
+			if (textEditor.getTab().showingErrors)
+				return textEditor.getErrorScreen();
+			else
+				return textEditor.getTab().getScreen();
+		}
+		return getTextArea();
+	}
+
+	final public RSyntaxTextArea getTextArea() {
+		return textEditor.getEditorPane();
 	}
 
 	@Override
 	public void show(final boolean replace) {
-		setTitle(replace ? "Find/Replace" : "Find");
+		if (replace && restrictToConsole)
+			throw new IllegalArgumentException("replace is not compatible with restrictToConsole");
+		updateTitle();
 		replaceLabel.setEnabled(replace);
 		replaceField.setEnabled(replace);
 		replaceField.setBackground(replace ? searchField.getBackground()
 			: getRootPane().getBackground());
 		this.replace.setEnabled(replace);
 		replaceAll.setEnabled(replace);
-
+		markAll.setEnabled(!restrictToConsole);
 		searchField.selectAll();
 		replaceField.selectAll();
 		getRootPane().setDefaultButton(findNext);
@@ -210,9 +224,24 @@ public class FindAndReplaceDialog extends JDialog implements ActionListener {
 		return searchOrReplace(replace, forward.isSelected());
 	}
 
+	public void setRestrictToConsole(final boolean restrict) {
+		restrictToConsole = restrict;
+		markAll.setEnabled(!restrict);
+		updateTitle();
+	}
+
+	private void updateTitle() {
+		String title = "Find";
+		if (isReplace())
+			title +="/Replace";
+		if (restrictToConsole)
+			title += " in Console";
+		setTitle(title);
+	}
+
 	public boolean searchOrReplace(final boolean replace, final boolean forward) {
 		if (searchOrReplaceFromHere(replace, forward)) return true;
-		final RSyntaxTextArea textArea = getTextArea();
+		final JTextArea textArea = getSearchArea();
 		final int caret = textArea.getCaretPosition();
 		textArea.setCaretPosition(forward ? 0 : textArea.getDocument().getLength());
 		if (searchOrReplaceFromHere(replace, forward)) return true;
@@ -233,20 +262,22 @@ public class FindAndReplaceDialog extends JDialog implements ActionListener {
 		context.setMatchCase(matchCase.isSelected());
 		context.setWholeWord(wholeWord.isSelected());
 		context.setRegularExpression(regex.isSelected());
+		context.setMarkAll(markAll.isSelected() && !restrictToConsole);
 		return context;
 	}
 
 	protected boolean searchOrReplaceFromHere(final boolean replace,
 		final boolean forward)
 	{
-		final RSyntaxTextArea textArea = getTextArea();
 		final SearchContext context = getSearchContext(forward);
-		return (replace ? SearchEngine.replace(textArea, context) : SearchEngine
-			.find(textArea, context)).wasFound();
+		if (replace) {
+			return SearchEngine.replace(getTextArea(), context).wasFound();
+		}
+		return SearchEngine.find(getSearchArea(), context).wasFound();
 	}
 
 	public boolean isReplace() {
-		return replace.isEnabled();
+		return (restrictToConsole) ? false : replace.isEnabled();
 	}
 
 	/**

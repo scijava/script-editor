@@ -104,7 +104,6 @@ import javax.swing.AbstractAction;
 import javax.swing.AbstractButton;
 import javax.swing.Action;
 import javax.swing.ActionMap;
-import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.InputMap;
@@ -134,6 +133,8 @@ import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
+import javax.swing.text.DefaultHighlighter;
+import javax.swing.text.DefaultHighlighter.DefaultHighlightPainter;
 import javax.swing.text.Position;
 import javax.swing.tree.TreePath;
 
@@ -203,7 +204,7 @@ public class TextEditor extends JFrame implements ActionListener,
 {
 
 	private static final Set<String> TEMPLATE_PATHS = new HashSet<>();
-	private static final int BORDER_SIZE = 4;
+//	private static final int BORDER_SIZE = 4;
 	public static final String AUTO_IMPORT_PREFS = "script.editor.AutoImport";
 	public static final String WINDOW_HEIGHT = "script.editor.height";
 	public static final String WINDOW_WIDTH = "script.editor.width";
@@ -866,6 +867,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		errorScreen.setFont(getEditorPane().getFont());
 		errorScreen.setEditable(false);
 		errorScreen.setLineWrap(true);
+		applyConsolePopupMenu(errorScreen);
 
 		setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 
@@ -1661,8 +1663,14 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == undo) getTextArea().undoLastAction();
 		else if (source == redo) getTextArea().redoLastAction();
 		else if (source == find) findOrReplace(true);
-		else if (source == findNext) findDialog.searchOrReplace(false);
-		else if (source == findPrevious) findDialog.searchOrReplace(false, false);
+		else if (source == findNext) {
+			findDialog.setRestrictToConsole(false);
+			findDialog.searchOrReplace(false);
+		}
+		else if (source == findPrevious) {
+			findDialog.setRestrictToConsole(false);
+			findDialog.searchOrReplace(false, false);
+		}
 		else if (source == gotoLine) gotoLine();
 		else if (source == selectAll) {
 			getTextArea().setCaretPosition(0);
@@ -1940,6 +1948,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	public void findOrReplace(final boolean doReplace) {
 		findDialog.setLocationRelativeTo(this);
+		findDialog.setRestrictToConsole(false);
 
 		// override search pattern only if
 		// there is sth. selected
@@ -3743,6 +3752,64 @@ public class TextEditor extends JFrame implements ActionListener,
 		} catch (final IOException ignored) {
 			error("<HTML>Web page could not be open. " + "Please visit<br>" + url + "<br>using your web browser.");
 		}
+	}
+
+	protected void applyConsolePopupMenu(final JTextArea textArea) {
+		final JPopupMenu popup = new JPopupMenu();
+		textArea.setComponentPopupMenu(popup);
+		JMenuItem jmi = new JMenuItem("Search " + ((textArea == errorScreen) ? "Erros" : "Outputs"));
+		popup.add(jmi);
+		jmi.addActionListener(e -> {
+			findDialog.setLocationRelativeTo(this);
+			findDialog.setRestrictToConsole(true);
+			final String text = textArea.getSelectedText();
+			if (text != null) findDialog.setSearchPattern(text);
+			findDialog.show(false);
+		});
+		jmi = new JMenuItem("Search Script for Selected Text");
+		popup.add(jmi);
+		jmi.addActionListener(e -> {
+			final String text = textArea.getSelectedText();
+			if (text == null) {
+				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+			} else {
+				findDialog.setLocationRelativeTo(this);
+				findDialog.setRestrictToConsole(false);
+				if (text != null) findDialog.setSearchPattern(text);
+				findDialog.show(false);
+			}
+		});
+		popup.addSeparator();
+
+		jmi = new JMenuItem("Clear Selected Text...");
+		popup.add(jmi);
+		jmi.addActionListener(e -> {
+			if (textArea.getSelectedText() == null)
+				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+			else 
+				textArea.replaceSelection("");
+		});
+		final DefaultHighlighter highlighter =  (DefaultHighlighter)textArea.getHighlighter();
+		highlighter.setDrawsLayeredHighlights(false);
+		jmi = new JMenuItem("Highlight Selected Text...");
+		popup.add(jmi);
+		jmi.addActionListener(e -> {
+			try {
+				final Color color = (textArea == errorScreen) ? Color.YELLOW : Color.CYAN;
+				final DefaultHighlightPainter painter = new DefaultHighlighter.DefaultHighlightPainter(color);
+				textArea.getHighlighter().addHighlight(textArea.getSelectionStart(), textArea.getSelectionEnd(), painter);
+				textArea.setCaretPosition(textArea.getSelectionEnd());
+				textArea.getHighlighter();
+			} catch (final BadLocationException ignored) {
+				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+			}
+		});
+		jmi = new JMenuItem("Clear highlights...");
+		popup.add(jmi);
+		jmi.addActionListener(e -> {
+			textArea.getHighlighter().removeAllHighlights();
+		});
+		popup.add(jmi);
 	}
 
 	private static void addSeparator(final JMenu menu, final String header) {
