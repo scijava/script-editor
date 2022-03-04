@@ -194,6 +194,9 @@ public class ErrorParser {
 		// HACK scala code seems to always be pre-pended by some 10 lines of code(!?).
 		if ("Scala".equals(lang.getLanguageName()))
 			lineOffset += 10;
+		// HACK and R by one (!?)
+		else if ("R".equals(lang.getLanguageName()))	
+			lineOffset += 1;
 
 		errorLines = new TreeSet<>();
 		final StringTokenizer tokenizer = new StringTokenizer(errorLog, "\n");
