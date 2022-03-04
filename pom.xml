@@ -10,7 +10,7 @@
 	</parent>
 
 	<artifactId>script-editor</artifactId>
-	<version>0.7.1-SNAPSHOT</version>
+	<version>0.7.2-SNAPSHOT</version>
 
 	<name>SciJava Script Editor</name>
 	<description>Script Editor and Interpreter for SciJava script languages.</description>
