@@ -194,9 +194,6 @@ public class ErrorParser {
 		// HACK scala code seems to always be pre-pended by some 10 lines of code(!?).
 		if ("Scala".equals(lang.getLanguageName()))
 			lineOffset += 10;
-		// HACK and R by one (!?)
-		else if ("R".equals(lang.getLanguageName()))	
-			lineOffset += 1;
 
 		errorLines = new TreeSet<>();
 		final StringTokenizer tokenizer = new StringTokenizer(errorLog, "\n");
@@ -228,7 +225,6 @@ public class ErrorParser {
 			|| lineText.indexOf(".tools.nsc.") > -1 // scala
 			|| lineText.indexOf("at bsh.") > -1 // beanshel
 			|| lineText.indexOf("$Recompilation$") > -1 // javascript
-			|| lineText.indexOf("at org.renjin.") > -1 // R: The only thing useful in traces are Syntax errors!?
 		) {//
 			return;
 		}
@@ -242,7 +238,7 @@ public class ErrorParser {
 	}
 
 	private void extractLineIndicesFromFilteredTextLines(final String lineText, final Collection<Integer> errorLines) {
-//		System.out.println("  Section being matched: " + lineText);
+//		System.out.println("Section being matched: " + lineText);
 		final Pattern pattern = Pattern.compile(":(\\d+)|line\\D*(\\d+)", Pattern.CASE_INSENSITIVE);
 		final Matcher matcher = pattern.matcher(lineText);
 
@@ -251,8 +247,8 @@ public class ErrorParser {
 				final String firstGroup = matcher.group(1);
 				final String lastGroup = matcher.group(matcher.groupCount());
 				final String group = (firstGroup == null) ? lastGroup : firstGroup;
-//				System.out.println("  firstGroup: " + firstGroup);
-//				System.out.println("  lastGroup: " + lastGroup);
+//				System.out.println("firstGroup: " + firstGroup);
+//				System.out.println("lastGroup: " + lastGroup);
 
 				final int lineNumber = Integer.valueOf(group.trim());
 				if (lineNumber > 0)
@@ -302,8 +298,7 @@ public class ErrorParser {
 	private void abort(final String msg, final boolean offsetNotice) {
 		if (writer != null) {
 			String finalMsg = "[WARNING] " + msg + "\n";
-			if (offsetNotice)
-				finalMsg += "[WARNING] Error line(s) below may not match line numbers in the editor\n";
+			finalMsg += "[WARNING] Error line(s) below may not match line numbers in the editor\n";
 			writer.textArea.insert(finalMsg, lengthOfJTextAreaWriter);
 		}
 		errorLines = null;
@@ -380,15 +375,14 @@ public class ErrorParser {
 		final String python = "File \"New_.py\", line 51, in <module>";
 		final String ruby = "<main> at Batch_Convert.rb:51";
 		final String scala = " at line number 51 at column number 18";
-		final String beanshell = "or class name: Dummy : at Line: 51 : in file: ";
+		final String beanshell = "or class name: Systesm : at Line: 51 : in file: ";
 		final String javascript = "	at jdk.nashorn.internal.scripts.Script$15$Greeting.:program(Greeting.js:51)";
-		final String r = "org.renjin.parser.ParseException: Syntax error at line 51 char 2: syntax error, unexpected ',', expecting '\\n' or ';'";
-		Arrays.asList(groovy, python, ruby, scala, beanshell, javascript, r).forEach(lang -> {
+		Arrays.asList(groovy, python, ruby, scala, beanshell, javascript).forEach(lang -> {
 			final ErrorParser parser = new ErrorParser(new EditorPane());
 			final TreeSet<Integer> errorLines = new TreeSet<>();
 			parser.extractLineIndicesFromFilteredTextLines(lang, errorLines);
 			assert (errorLines.first() == 50);
-			System.out.println((errorLines.first() == 50) + ": " + lang);
+			System.out.println((errorLines.first() == 50) + ": <<" + lang + ">> ");
 		});
 	}
 }

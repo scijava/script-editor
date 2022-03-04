@@ -3766,19 +3766,6 @@ public class TextEditor extends JFrame implements ActionListener,
 			if (text != null) findDialog.setSearchPattern(text);
 			findDialog.show(false);
 		});
-		jmi = new JMenuItem("Search Script for Selected Text");
-		popup.add(jmi);
-		jmi.addActionListener(e -> {
-			final String text = textArea.getSelectedText();
-			if (text == null) {
-				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
-			} else {
-				findDialog.setLocationRelativeTo(this);
-				findDialog.setRestrictToConsole(false);
-				if (text != null) findDialog.setSearchPattern(text);
-				findDialog.show(false);
-			}
-		});
 		popup.addSeparator();
 
 		jmi = new JMenuItem("Clear Selected Text...");
@@ -3789,8 +3776,6 @@ public class TextEditor extends JFrame implements ActionListener,
 			else 
 				textArea.replaceSelection("");
 		});
-		final DefaultHighlighter highlighter =  (DefaultHighlighter)textArea.getHighlighter();
-		highlighter.setDrawsLayeredHighlights(false);
 		jmi = new JMenuItem("Highlight Selected Text...");
 		popup.add(jmi);
 		jmi.addActionListener(e -> {
@@ -3799,8 +3784,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				final DefaultHighlightPainter painter = new DefaultHighlighter.DefaultHighlightPainter(color);
 				textArea.getHighlighter().addHighlight(textArea.getSelectionStart(), textArea.getSelectionEnd(), painter);
 				textArea.setCaretPosition(textArea.getSelectionEnd());
-				textArea.getHighlighter();
-			} catch (final BadLocationException ignored) {
+			} catch (BadLocationException ignored) {
 				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
 			}
 		});
