@@ -55,13 +55,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.swing.Action;
+import javax.swing.ButtonGroup;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
+import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JViewport;
 import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
@@ -137,6 +140,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private boolean autoCompletionWithoutKey;
 	private String supportStatus;
 	private final ErrorParser errorHighlighter;
+	private final JMenu noneLangSyntaxMenu;
 
 
 	@Parameter
@@ -210,6 +214,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		getActionMap().put(RTextAreaEditorKit.rtaPrevBookmarkAction, new NextBookMarkActionImpl(RTextAreaEditorKit.rtaPrevBookmarkAction, false));
 		getActionMap().put(RTextAreaEditorKit.rtaToggleBookmarkAction, new ToggleBookmarkActionImpl());
 
+		noneLangSyntaxMenu = geSyntaxForNoneLang();
 		adjustPopupMenu();
 
 		ToolTipManager.sharedInstance().registerComponent(this);
@@ -274,6 +279,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		popup.add(menu);
 		menu.add(getMenuItem("Open URL Under Cursor", new OpenLinkUnderCursor()));
 		menu.add(getMenuItem("Search the Web for Selected Text", new SearchWebOnSelectedText()));
+		popup.addSeparator();
+		popup.add(noneLangSyntaxMenu);
 	}
 
 	private JMenuItem getMenuItem(final String label, final RecordableTextAction a) {
@@ -282,6 +289,36 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		if (getActionMap().get(a.getName()) == null)
 			getActionMap().put(a.getName(), a); // make it recordable
 		item.setText(label);
+		return item;
+	}
+
+	private JMenu geSyntaxForNoneLang() {
+		final JMenu menu = new JMenu("Non-executable Syntax");
+		menu.setToolTipText("Markup languages when scripting language is none");
+		final ButtonGroup bg = new ButtonGroup();
+		menu.add(getSyntaxItem(bg, "None", SYNTAX_STYLE_NONE));
+		bg.getElements().nextElement().setSelected(true); //select none
+		menu.addSeparator();
+		menu.add(getSyntaxItem(bg, "CSS", SYNTAX_STYLE_CSS));
+		menu.add(getSyntaxItem(bg, "HTML", SYNTAX_STYLE_HTML));
+		menu.add(getSyntaxItem(bg, "JSON", SYNTAX_STYLE_JSON));
+		//menu.add(getSyntaxItem(bg, "sh", SYNTAX_STYLE_UNIX_SHELL));
+		menu.add(getSyntaxItem(bg, "XML", SYNTAX_STYLE_XML));
+		return menu;
+	}
+
+	private JMenuItem getSyntaxItem(final ButtonGroup bg, final String label, final String syntaxId) {
+		final JRadioButtonMenuItem item = new JRadioButtonMenuItem(label);
+		bg.add(item);
+		item.addActionListener(e -> {
+			if (getCurrentLanguage() == null) {
+				setSyntaxEditingStyle(syntaxId);
+			} else {
+				log.error("[BUG] Unknown state: Non-executable syntaxes cannot be applied to valid languages");
+				bg.getElements().nextElement().setSelected(true); //select none
+				setSyntaxEditingStyle(SYNTAX_STYLE_NONE);
+			}
+		});
 		return item;
 	}
 
@@ -672,6 +709,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setText(header += getText());
 		}
 
+		noneLangSyntaxMenu.setEnabled(language == null);
 		if ("None".equals(languageName) ) {
 			supportStatus = "Active language: None";
 			return; // no need to update console any further
