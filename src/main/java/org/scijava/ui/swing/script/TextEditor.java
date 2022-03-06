@@ -33,6 +33,7 @@ import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Desktop;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Toolkit;
@@ -314,6 +315,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		tabbed = new JTabbedPane();
 		tree = new FileSystemTree(log);
 		body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new FileSystemTreePanel(tree, context), tabbed);
+		try {// on Aqua L&F, 'one touch arrows' collide with borderless options button, which in turn are
+			// needed for proper resize of the search panel. Grrrrr....
+			if ("com.apple.laf.AquaLookAndFeel".equals(UIManager.getLookAndFeel().getClass().getName())) {
+				body.setOneTouchExpandable(false);
+			}
+		} catch (final Exception ignored) {
+			// do nothing
+		}
+
 		// These items are dynamic and need to be initialized before EditorPane creation
 		initializeDynamicMenuComponents();
 
@@ -549,7 +559,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		toolsMenu = new JMenu("Tools");
 		toolsMenu.setMnemonic(KeyEvent.VK_O);
-		addSeparator(toolsMenu, "Imports");
+		addSeparator(toolsMenu, "Imports:");
 		addImport = addToMenu(toolsMenu, "Add Import...", 0, 0);
 		addImport.setMnemonic(KeyEvent.VK_I);
 		respectAutoImports = prefService.getBoolean(getClass(), AUTO_IMPORT_PREFS, false);
@@ -3781,7 +3791,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		});
 		popup.addSeparator();
 
-		jmi = new JMenuItem("Clear Selected Text...");
+		jmi = new JMenuItem("Clear Selected Text");
 		popup.add(jmi);
 		jmi.addActionListener(e -> {
 			if (textArea.getSelectedText() == null)
@@ -3791,7 +3801,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		});
 		final DefaultHighlighter highlighter =  (DefaultHighlighter)textArea.getHighlighter();
 		highlighter.setDrawsLayeredHighlights(false);
-		jmi = new JMenuItem("Highlight Selected Text...");
+		jmi = new JMenuItem("Highlight Selected Text");
 		popup.add(jmi);
 		jmi.addActionListener(e -> {
 			try {
@@ -3804,7 +3814,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
 			}
 		});
-		jmi = new JMenuItem("Clear highlights...");
+		jmi = new JMenuItem("Clear Highlights");
 		popup.add(jmi);
 		jmi.addActionListener(e -> {
 			textArea.getHighlighter().removeAllHighlights();
@@ -3813,14 +3823,27 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	private static void addSeparator(final JMenu menu, final String header) {
-		final JLabel label = new JLabel(header);
-		// label.setHorizontalAlignment(SwingConstants.LEFT);
-		label.setEnabled(false);
-		label.setForeground(getDisabledComponentColor());
 		if (menu.getMenuComponentCount() > 1) {
 			menu.addSeparator();
 		}
-		menu.add(label);
+		try { // on Aqua L&F the label is never rendered. It seems only menu items with an actual
+			// actionlistener are registered on the menubar!?
+			if ("com.apple.laf.AquaLookAndFeel".equals(UIManager.getLookAndFeel().getClass().getName())) {
+				final JMenuItem label = new JMenuItem("↓ " + header);
+				label.setEnabled(false);
+				label.setFont(label.getFont().deriveFont(Font.ITALIC)); // ignored
+				label.addActionListener(e ->  label.setActionCommand("dummy")); 
+				menu.add(label);
+			} else {
+				final JLabel label = new JLabel(header);
+				// label.setHorizontalAlignment(SwingConstants.LEFT);
+				label.setEnabled(false);
+				label.setForeground(getDisabledComponentColor());
+				menu.add(label);
+			}
+		} catch (final Exception ignored) {
+			// do nothing
+		}
 	}
 
 	private static Collection<File> assembleFlatFileCollection(final Collection<File> collection, final File[] files) {

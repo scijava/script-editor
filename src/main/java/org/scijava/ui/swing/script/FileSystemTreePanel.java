@@ -52,6 +52,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 
+import javax.swing.BorderFactory;
 import javax.swing.FocusManager;
 import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
@@ -62,6 +63,7 @@ import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+import javax.swing.UIManager;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 
@@ -199,11 +201,23 @@ class FileSystemTreePanel extends JPanel {
 
 	private JButton thinButton(final String label) {
 		final JButton b = new JButton(label);
-		final double FACTOR = .25;
-		final Insets insets =b.getMargin();
-		b.setMargin(new Insets(insets.top, (int) (insets.left *
-			FACTOR), insets.bottom, (int) (insets.right * FACTOR)));
-		//b.setBorder(null);
+		try {
+			if ("com.apple.laf.AquaLookAndFeel".equals(UIManager.getLookAndFeel().getClass().getName())) {
+				b.setOpaque(true);
+				b.setBackground(new JPanel().getBackground());
+				b.setBorderPainted(false);
+				b.setBorder(BorderFactory.createEmptyBorder());
+				b.setMargin(new Insets(0, 2, 0, 2));
+			} else {
+				final double FACTOR = .25;
+				final Insets insets = b.getMargin();
+				b.setMargin(new Insets(insets.top, (int) (insets.left * FACTOR), insets.bottom,
+						(int) (insets.right * FACTOR)));
+			}
+		} catch (final Exception ignored) {
+			// do nothing
+		}
+		// b.setBorder(null);
 		// set height to that of searchField. Do not allow vertical resizing
 		b.setPreferredSize(new Dimension(b.getPreferredSize().width, (int) searchField.getPreferredSize().getHeight()));
 		b.setMaximumSize(new Dimension(b.getMaximumSize().width, (int) searchField.getPreferredSize().getHeight()));
@@ -360,7 +374,7 @@ class FileSystemTreePanel extends JPanel {
 	}
 
 	private void showHelpMsg() {
-		final String msg = "<HTML><div WIDTH=650>" //
+		final String msg = "<HTML><div WIDTH=500>" //
 				+ "<p><b>Overview</b></p>" //
 				+ "<p>The File Explorer pane provides a direct view of selected folders. Changes in " //
 				+ "the native file system are synchronized in real time.</p>" //

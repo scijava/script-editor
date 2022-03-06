@@ -301,7 +301,7 @@ public class ErrorParser {
 	private void abort(final String msg, final boolean offsetNotice) {
 		if (writer != null) {
 			String finalMsg = "[WARNING] " + msg + "\n";
-			finalMsg += "[WARNING] Error line(s) below may not match line numbers in the editor\n";
+			finalMsg += "[WARNING] Reported error line(s) may not match line numbers in the editor\n";
 			writer.textArea.insert(finalMsg, lengthOfJTextAreaWriter);
 		}
 		errorLines = null;
