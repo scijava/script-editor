@@ -235,7 +235,8 @@ public class TextEditorTab extends JSplitPane {
 		bottom.add(scroll, bc);
 
 		prompt.setEnabled(false);
-		
+		prompt.setFont(getEditorPane().getFont());
+
 		final JPanel prompt_panel = new JPanel();
 		prompt_panel.setMinimumSize(new Dimension(0, 0));
 		prompt_panel.setVisible(false);
@@ -303,12 +304,6 @@ public class TextEditorTab extends JSplitPane {
 		});
 
 		screenAndPromptSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, bottom, prompt_panel);
-		prompt_panel.addComponentListener(new ComponentAdapter() {
-			@Override
-			public void componentResized(final ComponentEvent e) {
-				if (prompt_panel.getHeight() ==0) incremental.setSelected(false);
-			}
-		});
 
 		// Enable ErrorSrip à la Eclipse. This will keep track of lines with 'Mark All'
 		// occurrences as well as lines associated with ParserNotice.Level.WARNING and
@@ -353,6 +348,7 @@ public class TextEditorTab extends JSplitPane {
 				screenAndPromptSplitDividerLocation = getScreenAndPromptSplit().getDividerLocation();
 				getScreenAndPromptSplit().setDividerLocation(1f);
 			}
+			incremental.setSelected(visible);
 		});
 	}
 
@@ -383,6 +379,8 @@ public class TextEditorTab extends JSplitPane {
 			runit.setEnabled(true);
 			killit.setEnabled(false);
 			setExecutor(null);
+			if(incremental.isSelected())
+				prompt.requestFocusInWindow();
 		});
 	}
 

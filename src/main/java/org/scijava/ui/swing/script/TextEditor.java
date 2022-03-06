@@ -2356,7 +2356,11 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	void updateLanguageMenu(final ScriptLanguage language) {
 		JMenuItem item = languageMenuItems.get(language);
-		if (item == null) item = noneLanguageItem;
+		if (item == null) {
+			// is none
+			item = noneLanguageItem;
+			setIncremental(false);
+		}
 		if (!item.isSelected()) {
 			item.setSelected(true);
 		}
@@ -3494,14 +3498,14 @@ public class TextEditor extends JFrame implements ActionListener,
 	
 	public void setIncremental(final boolean incremental) {
 		
-		if (null == getCurrentLanguage()) {
+		if (incremental && null == getCurrentLanguage()) {
 			error("Select a language first!");
 			return;
 		}
 		
 		this.incremental = incremental;
 		
-		final JTextArea prompt = this.getTab().getPrompt();
+		final JTextArea prompt = getTab().getPrompt();
 		if (incremental) {
 			getTab().setREPLVisible(true);
 			prompt.addKeyListener(new KeyAdapter() {
@@ -3540,6 +3544,7 @@ public class TextEditor extends JFrame implements ActionListener,
 							screen.scrollRectToVisible(screen.modelToView(screen.getDocument().getLength()));
 						} catch (final Throwable t) {
 							log.error(t);
+							prompt.requestFocusInWindow();
 						}
 						ke.consume(); // avoid writing the line break
 						return;
@@ -3603,7 +3608,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			for (final KeyListener kl : prompt.getKeyListeners()) {
 				prompt.removeKeyListener(kl);
 			}
-			getTab().getScreenAndPromptSplit().setDividerLocation(1.0);
+			getTab().setREPLVisible(false);
 		}
 	}
 

@@ -157,7 +157,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private PlatformService platformService;
 	@Parameter
 	private LogService log;
-	
+
 	/**
 	 * Constructor.
 	 */
@@ -526,7 +526,9 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 				string.append(buffer, 0, count);
 			}
 			reader.close();
-			setText(string.toString());
+			SwingUtilities.invokeLater(() -> {
+				setText(string.toString()); // otherwise GUI freezes!??
+			});
 			curFile = file;
 			if (line > getLineCount()) line = getLineCount() - 1;
 			try {
