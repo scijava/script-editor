@@ -299,11 +299,15 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		menu.add(getSyntaxItem(bg, "None", SYNTAX_STYLE_NONE));
 		bg.getElements().nextElement().setSelected(true); //select none
 		menu.addSeparator();
+		menu.add(getSyntaxItem(bg, "BAT", SYNTAX_STYLE_WINDOWS_BATCH));
 		menu.add(getSyntaxItem(bg, "CSS", SYNTAX_STYLE_CSS));
+		menu.add(getSyntaxItem(bg, "Dockerfile", SYNTAX_STYLE_DOCKERFILE));
 		menu.add(getSyntaxItem(bg, "HTML", SYNTAX_STYLE_HTML));
 		menu.add(getSyntaxItem(bg, "JSON", SYNTAX_STYLE_JSON));
-		//menu.add(getSyntaxItem(bg, "sh", SYNTAX_STYLE_UNIX_SHELL));
+		menu.add(getSyntaxItem(bg, "Makefile", SYNTAX_STYLE_MAKEFILE));
+		menu.add(getSyntaxItem(bg, "SH", SYNTAX_STYLE_UNIX_SHELL));
 		menu.add(getSyntaxItem(bg, "XML", SYNTAX_STYLE_XML));
+		menu.add(getSyntaxItem(bg, "YAML", SYNTAX_STYLE_YAML));
 		return menu;
 	}
 

@@ -424,7 +424,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		findPrevious = addToMenu(edit, "Find Previous", KeyEvent.VK_F3, shift);
 		findPrevious.setMnemonic(KeyEvent.VK_P);
 
-		addSeparator(edit, "Goto:");
+		addMenubarSeparator(edit, "Goto:");
 		gotoLine = addToMenu(edit, "Goto Line...", KeyEvent.VK_G, ctrl);
 		gotoLine.setMnemonic(KeyEvent.VK_G);
 
@@ -559,7 +559,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		toolsMenu = new JMenu("Tools");
 		toolsMenu.setMnemonic(KeyEvent.VK_O);
-		addSeparator(toolsMenu, "Imports:");
+		addMenubarSeparator(toolsMenu, "Imports:");
 		addImport = addToMenu(toolsMenu, "Add Import...", 0, 0);
 		addImport.setMnemonic(KeyEvent.VK_I);
 		respectAutoImports = prefService.getBoolean(getClass(), AUTO_IMPORT_PREFS, false);
@@ -580,7 +580,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		sortImports = addToMenu(toolsMenu, "Sort Imports", 0, 0);
 		sortImports.setMnemonic(KeyEvent.VK_S);
 
-		addSeparator(toolsMenu, "Source & APIs:");
+		addMenubarSeparator(toolsMenu, "Source & APIs:");
 		extractSourceJar = addToMenu(toolsMenu, "Extract Source Jar...", 0, 0);
 		extractSourceJar.setMnemonic(KeyEvent.VK_E);
 		openSourceForClass = addToMenu(toolsMenu, "Open Java File for Class...", 0, 0);
@@ -609,7 +609,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		// -- Window Menu (previously labeled as Tabs menu --
 		tabsMenu = new JMenu("Window");
 		tabsMenu.setMnemonic(KeyEvent.VK_W);
-		addSeparator(tabsMenu, "Panes:");
+		addMenubarSeparator(tabsMenu, "Panes:");
 		// Assume initial status from prefs or panel visibility
 		final JCheckBoxMenuItem jcmi1 = new JCheckBoxMenuItem("File Explorer",
 				prefService.getInt(getClass(), MAIN_DIV_LOCATION, body.getDividerLocation()) > 0
@@ -638,7 +638,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		});
 		tabsMenu.add(mi);
-		addSeparator(tabsMenu, "Tabs:");
+		addMenubarSeparator(tabsMenu, "Tabs:");
 		nextTab = addToMenu(tabsMenu, "Next Tab", KeyEvent.VK_PAGE_DOWN, ctrl);
 		nextTab.setMnemonic(KeyEvent.VK_N);
 		previousTab =
@@ -655,7 +655,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		options.setMnemonic(KeyEvent.VK_O);
 
 		// Font adjustments
-		addSeparator(options, "Font:");
+		addMenubarSeparator(options, "Font:");
 		decreaseFontSize =
 			addToMenu(options, "Decrease Font Size", KeyEvent.VK_MINUS, ctrl);
 		decreaseFontSize.setMnemonic(KeyEvent.VK_D);
@@ -689,7 +689,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		fontSizeMenu.add(chooseFontSize);
 		options.add(fontSizeMenu);
 
-		addSeparator(options, "Indentation:");
+		addMenubarSeparator(options, "Indentation:");
 		tabsEmulated = new JCheckBoxMenuItem("Indent Using Spaces");
 		tabsEmulated.setMnemonic(KeyEvent.VK_S);
 		tabsEmulated.addItemListener(e -> setTabsEmulated(tabsEmulated.getState()));
@@ -716,7 +716,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		replaceSpacesWithTabs = addToMenu(options, "Replace Spaces With Tabs", 0, 0);
 		replaceTabsWithSpaces = addToMenu(options, "Replace Tabs With Spaces", 0, 0);
 
-		addSeparator(options, "View:");
+		addMenubarSeparator(options, "View:");
 		options.add(markOccurences);
 		options.add(paintTabs);
 		options.add(marginLine);
@@ -724,7 +724,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		options.add(wrapLines);
 		options.add(applyThemeMenu());
 
-		addSeparator(options, "Code Completions:");
+		addMenubarSeparator(options, "Code Completions:");
 		options.add(autocompletion);
 		options.add(keylessAutocompletion);
 		options.add(fallbackAutocompletion);
@@ -876,7 +876,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		// Tweaks for Console
 		errorScreen.setFont(getEditorPane().getFont());
 		errorScreen.setEditable(false);
-		errorScreen.setLineWrap(true);
+		errorScreen.setLineWrap(false);
 		applyConsolePopupMenu(errorScreen);
 
 		setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -928,7 +928,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	private void addScritpEditorMacroCommands(final JMenu menu) {
-		addSeparator(menu, "Script Editor Macros:");
+		addMenubarSeparator(menu, "Script Editor Macros:");
 		final JMenuItem startMacro = new JMenuItem("Start/Resume Macro Recording");
 		startMacro.addActionListener(e -> {
 			final String state = (RTextArea.getCurrentMacro() == null) ? "on" : "resumed";
@@ -2443,6 +2443,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				defaultSize = true;
 			}
 		}
+		getTab().prompt.setTabSize(getEditorPane().getTabSize());
 		final int fontSize = (int) pane.getFontSize();
 		defaultSize = false;
 		for (int i = 0; i < fontSizeMenu.getItemCount(); i++) {
@@ -3707,7 +3708,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private JMenu helpMenu() {
 		final JMenu menu = new JMenu("Help");
-		addSeparator(menu, "Offline Help:");
+		addMenubarSeparator(menu, "Offline Help:");
 		JMenuItem item = new JMenuItem("List Shortcuts...");
 		item.addActionListener(e -> displayKeyMap());
 		menu.add(item);
@@ -3730,14 +3731,14 @@ public class TextEditor extends JFrame implements ActionListener,
 				+ "</ul>");
 		});
 		menu.add(item);
-		addSeparator(menu, "Contextual Help:");
+		addMenubarSeparator(menu, "Contextual Help:");
 		menu.add(openHelpWithoutFrames);
 		openHelpWithoutFrames.setMnemonic(KeyEvent.VK_O);
 		menu.add(openHelp);
 		openClassOrPackageHelp = addToMenu(menu, "Lookup Class or Package...", 0, 0);
 		openClassOrPackageHelp.setMnemonic(KeyEvent.VK_S);
 		menu.add(openMacroFunctions);
-		addSeparator(menu, "Online Resources:");
+		addMenubarSeparator(menu, "Online Resources:");
 		menu.add(helpMenuItem("Image.sc Forum ", "https://forum.image.sc/"));
 		menu.add(helpMenuItem("ImageJ Search Portal", "https://search.imagej.net/"));
 		//menu.addSeparator();
@@ -3772,7 +3773,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	protected void applyConsolePopupMenu(final JTextArea textArea) {
 		final JPopupMenu popup = new JPopupMenu();
 		textArea.setComponentPopupMenu(popup);
-		JMenuItem jmi = new JMenuItem("Search " + ((textArea == errorScreen) ? "Erros" : "Outputs"));
+		JMenuItem jmi = new JMenuItem("Search " + ((textArea == errorScreen) ? "Erros..." : "Outputs..."));
 		popup.add(jmi);
 		jmi.addActionListener(e -> {
 			findDialog.setLocationRelativeTo(this);
@@ -3781,7 +3782,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			if (text != null) findDialog.setSearchPattern(text);
 			findDialog.show(false);
 		});
-		jmi = new JMenuItem("Search Script for Selected Text");
+		jmi = new JMenuItem("Search Script for Selected Text...");
 		popup.add(jmi);
 		jmi.addActionListener(e -> {
 			final String text = textArea.getSelectedText();
@@ -3810,7 +3811,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		popup.add(jmi);
 		jmi.addActionListener(e -> {
 			try {
-				final Color color = (textArea == errorScreen) ? Color.YELLOW : Color.CYAN;
+				final Color taint = (textArea == errorScreen) ? Color.RED : textArea.getSelectionColor();
+				final Color color = ErrorParser.averageColors(textArea.getBackground(), taint);
 				final DefaultHighlightPainter painter = new DefaultHighlighter.DefaultHighlightPainter(color);
 				textArea.getHighlighter().addHighlight(textArea.getSelectionStart(), textArea.getSelectionEnd(), painter);
 				textArea.setCaretPosition(textArea.getSelectionEnd());
@@ -3821,13 +3823,14 @@ public class TextEditor extends JFrame implements ActionListener,
 		});
 		jmi = new JMenuItem("Clear Highlights");
 		popup.add(jmi);
-		jmi.addActionListener(e -> {
-			textArea.getHighlighter().removeAllHighlights();
-		});
-		popup.add(jmi);
+		jmi.addActionListener(e -> textArea.getHighlighter().removeAllHighlights());
+		popup.addSeparator();
+		final JCheckBoxMenuItem jmc = new JCheckBoxMenuItem("Wrap Lines");
+		popup.add(jmc);
+		jmc.addActionListener( e -> textArea.setLineWrap(jmc.isSelected()));
 	}
 
-	private static void addSeparator(final JMenu menu, final String header) {
+	private static void addMenubarSeparator(final JMenu menu, final String header) {
 		if (menu.getMenuComponentCount() > 1) {
 			menu.addSeparator();
 		}
@@ -3849,6 +3852,18 @@ public class TextEditor extends JFrame implements ActionListener,
 		} catch (final Exception ignored) {
 			// do nothing
 		}
+	}
+
+	static void addPopupMenuSeparator(final JPopupMenu menu, final String header) {
+		if (menu.getComponentCount() > 1) {
+			menu.addSeparator();
+		}
+		final JLabel label = new JLabel(header);
+		// label.setHorizontalAlignment(SwingConstants.LEFT);
+		label.setEnabled(false);
+		label.setForeground(getDisabledComponentColor());
+		menu.add(label);
+
 	}
 
 	private static Collection<File> assembleFlatFileCollection(final Collection<File> collection, final File[] files) {

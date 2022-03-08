@@ -43,8 +43,6 @@ import java.awt.dnd.DropTargetEvent;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.io.File;
 import java.util.List;
 
@@ -144,7 +142,7 @@ public class TextEditorTab extends JSplitPane {
 
 		// tweaks for console
 		screen.setEditable(false);
-		screen.setLineWrap(true);
+		screen.setLineWrap(false);
 		screen.setFont(getEditorPane().getFont());
 		textEditor.applyConsolePopupMenu(screen);
 
@@ -176,7 +174,7 @@ public class TextEditorTab extends JSplitPane {
 		bottom.add(killit, bc);
 
 		bc.gridx = 3;
-		incremental = new JCheckBox("Persistent");
+		incremental = new JCheckBox("REPL");
 		incremental.setEnabled(true);
 		incremental.setSelected(false);
 		bottom.add(incremental, bc);
@@ -236,6 +234,7 @@ public class TextEditorTab extends JSplitPane {
 
 		prompt.setEnabled(false);
 		prompt.setFont(getEditorPane().getFont());
+		prompt.setTabSize(editorPane.getTabSize());
 
 		final JPanel prompt_panel = new JPanel();
 		prompt_panel.setMinimumSize(new Dimension(0, 0));

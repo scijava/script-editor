@@ -351,11 +351,15 @@ public class ErrorParser {
 		}
 
 	}
-
 	private Color highlightColor() {
 		// https://stackoverflow.com/a/29576746
 		final Color c1 = editorPane.getCurrentLineHighlightColor();
 		final Color c2 = (editorPane.getBackground() == null) ? COLOR : editorPane.getBackground();
+		return averageColors(c1, c2);
+	}
+
+	protected static Color averageColors(final Color c1, final Color c2) {
+		// https://stackoverflow.com/a/29576746
 		final int r = (int) Math.sqrt( (Math.pow(c1.getRed(), 2) + Math.pow(c2.getRed(), 2)) / 2);
 		final int g = (int) Math.sqrt( (Math.pow(c1.getGreen(), 2) + Math.pow(c2.getGreen(), 2)) / 2);
 		final int b = (int) Math.sqrt( (Math.pow(c1.getBlue(), 2) + Math.pow(c2.getGreen(), 2)) / 2);
