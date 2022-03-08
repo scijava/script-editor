@@ -34,9 +34,7 @@ import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
-import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
@@ -63,7 +61,6 @@ import javax.swing.JPopupMenu;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JViewport;
-import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
@@ -72,20 +69,11 @@ import javax.swing.event.DocumentListener;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 import javax.swing.text.BadLocationException;
-import javax.swing.text.Caret;
-import javax.swing.text.DefaultEditorKit;
-import javax.swing.text.Document;
-import javax.swing.text.Element;
-import javax.swing.text.Segment;
 
 import org.fife.rsta.ac.LanguageSupport;
 import org.fife.rsta.ac.LanguageSupportFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit.CopyAsStyledTextAction;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit.DecreaseIndentAction;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit.ToggleCommentAction;
 import org.fife.ui.rsyntaxtextarea.Style;
 import org.fife.ui.rsyntaxtextarea.SyntaxScheme;
 import org.fife.ui.rsyntaxtextarea.Theme;
@@ -93,15 +81,6 @@ import org.fife.ui.rsyntaxtextarea.parser.TaskTagParser;
 import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.GutterIconInfo;
 import org.fife.ui.rtextarea.RTextArea;
-import org.fife.ui.rtextarea.RTextAreaEditorKit;
-import org.fife.ui.rtextarea.RTextAreaEditorKit.ClipboardHistoryAction;
-import org.fife.ui.rtextarea.RTextAreaEditorKit.InvertSelectionCaseAction;
-import org.fife.ui.rtextarea.RTextAreaEditorKit.LineMoveAction;
-import org.fife.ui.rtextarea.RTextAreaEditorKit.LowerSelectionCaseAction;
-import org.fife.ui.rtextarea.RTextAreaEditorKit.NextBookmarkAction;
-import org.fife.ui.rtextarea.RTextAreaEditorKit.TimeDateAction;
-import org.fife.ui.rtextarea.RTextAreaEditorKit.ToggleBookmarkAction;
-import org.fife.ui.rtextarea.RTextAreaEditorKit.UpperSelectionCaseAction;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.RecordableTextAction;
 import org.fife.ui.rtextarea.SearchContext;
@@ -141,6 +120,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private String supportStatus;
 	private final ErrorParser errorHighlighter;
 	private final JMenu noneLangSyntaxMenu;
+	private final EditorPaneActions actions;
 
 
 	@Parameter
@@ -164,6 +144,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public EditorPane() {
 
 		errorHighlighter= new ErrorParser(this);
+		actions = new EditorPaneActions(this);
 
 		// set sensible defaults
 		setAntiAliasingEnabled(true);
@@ -196,23 +177,11 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		loadPreferences();
 
 		// Register recordable actions
-		getActionMap().put(DefaultEditorKit.nextWordAction, wordMovement("Next-Word-Action", +1, false));
-		getActionMap().put(DefaultEditorKit.selectionNextWordAction, wordMovement("Next-Word-Select-Action", +1, true));
-		getActionMap().put(DefaultEditorKit.previousWordAction, wordMovement("Prev-Word-Action", -1, false));
-		getActionMap().put(DefaultEditorKit.selectionPreviousWordAction,
+		getActionMap().put(EditorPaneActions.nextWordAction, wordMovement("Next-Word-Action", +1, false));
+		getActionMap().put(EditorPaneActions.selectionNextWordAction, wordMovement("Next-Word-Select-Action", +1, true));
+		getActionMap().put(EditorPaneActions.previousWordAction, wordMovement("Prev-Word-Action", -1, false));
+		getActionMap().put(EditorPaneActions.selectionPreviousWordAction,
 				wordMovement("Prev-Word-Select-Action", -1, true));
-		getActionMap().put(RTextAreaEditorKit.rtaTimeDateAction, new TimeDateAction());
-		if (getActionMap().get(RTextAreaEditorKit.clipboardHistoryAction) != null)
-			getActionMap().put(RTextAreaEditorKit.clipboardHistoryAction, new ClipboardHistoryAction());
-		if (getActionMap().get(RSyntaxTextAreaEditorKit.rstaToggleCommentAction) != null)
-			getActionMap().put(RSyntaxTextAreaEditorKit.rstaToggleCommentAction, new ToggleCommentAction());
-		if (getActionMap().get(RSyntaxTextAreaEditorKit.rstaCopyAsStyledTextAction) != null)
-			getActionMap().put(RSyntaxTextAreaEditorKit.rstaCopyAsStyledTextAction, new CopyAsStyledTextAction());
-
-		// Fix conflicts with historical shortcuts: override defaults
-		getActionMap().put(RTextAreaEditorKit.rtaNextBookmarkAction, new NextBookMarkActionImpl(RTextAreaEditorKit.rtaNextBookmarkAction, true));
-		getActionMap().put(RTextAreaEditorKit.rtaPrevBookmarkAction, new NextBookMarkActionImpl(RTextAreaEditorKit.rtaPrevBookmarkAction, false));
-		getActionMap().put(RTextAreaEditorKit.rtaToggleBookmarkAction, new ToggleBookmarkActionImpl());
 
 		noneLangSyntaxMenu = geSyntaxForNoneLang();
 		adjustPopupMenu();
@@ -257,43 +226,65 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		});
 	}
 
-	private void adjustPopupMenu() {
-		final JPopupMenu popup = super.getPopupMenu();
-		JMenu menu = new JMenu("Move");
-		popup.add(menu);
-		menu.add(getMenuItem("Shift Left (Decrease Indent)", new DecreaseIndentAction()));
-		menu.add(getMenuItem("Shift Right (Increase Indent)", new IncreaseIndentAction()));
-			menu.addSeparator();
-		menu.add(getMenuItem("Move Up", new LineMoveAction(RTextAreaEditorKit.rtaLineUpAction, -1)));
-		menu.add(getMenuItem("Move Down", new LineMoveAction(RTextAreaEditorKit.rtaLineDownAction, 1)));
-		menu = new JMenu("Transform");
-		popup.add(menu);
-		menu.add(getMenuItem("Invert Case", new InvertSelectionCaseAction()));
-		menu.addSeparator();
-		menu.add(getMenuItem("Camel Case", new CamelCaseAction()));
-		menu.add(getMenuItem("Lower Case", new LowerSelectionCaseAction()));
-		menu.add(getMenuItem("Lower Case ('_' Sep.)", new LowerCaseUnderscoreAction()));
-		menu.add(getMenuItem("Title Case", new TitleCaseAction()));
-		menu.add(getMenuItem("Upper Case", new UpperSelectionCaseAction()));
-		menu = new JMenu("Actions");
-		popup.add(menu);
-		menu.add(getMenuItem("Open URL Under Cursor", new OpenLinkUnderCursor()));
-		menu.add(getMenuItem("Search the Web for Selected Text", new SearchWebOnSelectedText()));
-		popup.addSeparator();
-		popup.add(noneLangSyntaxMenu);
+	@Override
+	protected void appendFoldingMenu(JPopupMenu popup) {
+		// We are overriding the entire foldingMenu completely so that we can include
+		// our shortcuts in the menu items. These commands are not listed on the
+		// menubar, so this is the only access point in the GUI for these
+		// popup.addSeparator();
+		popup.add(getMenuItem("Select Line", EditorPaneActions.selectLineAction));
+		popup.add(getMenuItem("Select Paragraph", EditorPaneActions.selectParagraphAction));
+		TextEditor.addPopupMenuSeparator(popup, "Code Folding:");
+		popup.add(getMenuItem("Collapse Fold", EditorPaneActions.rstaCollapseFoldAction));
+		popup.add(getMenuItem("Expand Fold", EditorPaneActions.rstaExpandFoldAction));
+		popup.add(getMenuItem("Toggle Current Fold", EditorPaneActions.rstaToggleCurrentFoldAction));
+		// popup.addSeparator();
+		popup.add(getMenuItem("Collapse All Folds", EditorPaneActions.rstaCollapseAllFoldsAction));
+		popup.add(getMenuItem("Expand All Folds", EditorPaneActions.rstaExpandAllFoldsAction));
+		// popup.addSeparator();
+		popup.add(getMenuItem("Collapse All Comments", EditorPaneActions.rstaCollapseAllCommentFoldsAction));
 	}
 
-	private JMenuItem getMenuItem(final String label, final RecordableTextAction a) {
-		JMenuItem item = new JMenuItem(a);
-		item.setAccelerator((KeyStroke) a.getValue(Action.ACCELERATOR_KEY));
-		if (getActionMap().get(a.getName()) == null)
-			getActionMap().put(a.getName(), a); // make it recordable
-		item.setText(label);
-		return item;
+	private void adjustPopupMenu() {
+		final JPopupMenu popup = super.getPopupMenu();
+		// See #appendFoldingMenu()
+		TextEditor.addPopupMenuSeparator(popup, "Code Formatting:");
+		popup.add(getMenuItem("Indent Right", EditorPaneActions.epaIncreaseIndentAction));
+		popup.add(getMenuItem("Indent Left", EditorPaneActions.rstaDecreaseIndentAction));
+		//popup.addSeparator();
+		popup.add(getMenuItem("Move Up", EditorPaneActions.rtaLineUpAction));
+		popup.add(getMenuItem("Move Down", EditorPaneActions.rtaLineDownAction));
+		popup.add(getMenuItem("Join Lines", EditorPaneActions.rtaJoinLinesAction));
+		JMenu menu = new JMenu("Transform Case");
+		popup.add(menu);
+		menu.add(getMenuItem("Invert Case", EditorPaneActions.rtaInvertSelectionCaseAction));
+		menu.addSeparator();
+		menu.add(getMenuItem("Camel Case", EditorPaneActions.epaCamelCaseAction));
+		menu.add(getMenuItem("Lower Case", EditorPaneActions.rtaLowerSelectionCaseAction));
+		menu.add(getMenuItem("Lower Case ('_' Sep.)", EditorPaneActions.epaLowerCaseUndAction));
+		menu.add(getMenuItem("Title Case", EditorPaneActions.epaTitleCaseAction));
+		menu.add(getMenuItem("Upper Case", EditorPaneActions.rtaUpperSelectionCaseAction));
+		TextEditor.addPopupMenuSeparator(popup, "Ocurrences:");
+		popup.add(getMenuItem("Next Occurrence", EditorPaneActions.rtaNextOccurrenceAction));
+		popup.add(getMenuItem("Previous Occurrence", EditorPaneActions.rtaPrevOccurrenceAction));
+		TextEditor.addPopupMenuSeparator(popup, "Utilities:");
+		popup.add(new OpenLinkUnderCursor().getMenuItem());
+		popup.add(new SearchWebOnSelectedText().getMenuItem());
+		//popup.addSeparator();
+		popup.add(noneLangSyntaxMenu);
+
+	}
+
+	private JMenuItem getMenuItem(final String label, final String actionID) {
+		final Action action = getActionMap().get(actionID);
+		final JMenuItem jmi = new JMenuItem(action);
+		jmi.setAccelerator(getPaneActions().getAccelerator(actionID));
+		jmi.setText(label);
+		return jmi;
 	}
 
 	private JMenu geSyntaxForNoneLang() {
-		final JMenu menu = new JMenu("Non-executable Syntax");
+		final JMenu menu = new JMenu("Non-Executable Syntax");
 		menu.setToolTipText("Markup languages when scripting language is none");
 		final ButtonGroup bg = new ButtonGroup();
 		menu.add(getSyntaxItem(bg, "None", SYNTAX_STYLE_NONE));
@@ -1109,7 +1100,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		return supportStatus;
 	}
 
-	private void openLinkInBrowser(String link) {
+	 void openLinkInBrowser(String link) {
 		try {
 			if (!link.startsWith("http"))
 				link = "https://" + link; // or it won't work
@@ -1124,228 +1115,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		return errorHighlighter;
 	}
 
-	static class CamelCaseAction extends RecordableTextAction {
-		private static final long serialVersionUID = 1L;
-
-		CamelCaseAction() {
-			super("RTA.CamelCaseAction");
-		}
-
-		@Override
-		public void actionPerformedImpl(final ActionEvent e, final RTextArea textArea) {
-			if (!textArea.isEditable() || !textArea.isEnabled()) {
-				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
-				return;
-			}
-			final String selection = textArea.getSelectedText();
-			if (selection != null) {
-				final String[] words = selection.split("[\\W_]+");
-				final StringBuilder buffer = new StringBuilder();
-				for (int i = 0; i < words.length; i++) {
-					String word = words[i];
-					if (i == 0) {
-						word = word.isEmpty() ? word : word.toLowerCase();
-					} else {
-						word = word.isEmpty() ? word
-								: Character.toUpperCase(word.charAt(0)) + word.substring(1).toLowerCase();
-					}
-					buffer.append(word);
-				}
-				textArea.replaceSelection(buffer.toString());
-			}
-			textArea.requestFocusInWindow();
-		}
-
-		@Override
-		public String getMacroID() {
-			return getName();
-		}
-
-	}
-
-	static class TitleCaseAction extends RecordableTextAction {
-		private static final long serialVersionUID = 1L;
-
-		TitleCaseAction() {
-			super("RTA.TitleCaseAction");
-		}
-
-		@Override
-		public void actionPerformedImpl(final ActionEvent e, final RTextArea textArea) {
-			if (!textArea.isEditable() || !textArea.isEnabled()) {
-				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
-				return;
-			}
-			final String selection = textArea.getSelectedText();
-			if (selection != null) {
-				final String[] words = selection.split("[\\W_]+");
-				final StringBuilder buffer = new StringBuilder();
-				for (int i = 0; i < words.length; i++) {
-					String word = words[i];
-					word = word.isEmpty() ? word
-								: Character.toUpperCase(word.charAt(0)) + word.substring(1).toLowerCase();
-					buffer.append(word);
-					if (i < words.length-1) buffer.append(" ");
-				}
-				textArea.replaceSelection(buffer.toString());
-			}
-			textArea.requestFocusInWindow();
-		}
-
-		@Override
-		public String getMacroID() {
-			return getName();
-		}
-
-	}
-
-	static class LowerCaseUnderscoreAction extends RecordableTextAction {
-		private static final long serialVersionUID = 1L;
-
-		LowerCaseUnderscoreAction() {
-			super("RTA.LowerCaseUnderscoreSep.Action");
-		}
-
-		@Override
-		public void actionPerformedImpl(final ActionEvent e, final RTextArea textArea) {
-			if (!textArea.isEditable() || !textArea.isEnabled()) {
-				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
-				return;
-			}
-			final String selection = textArea.getSelectedText();
-			if (selection != null)
-				textArea.replaceSelection(selection.trim().replaceAll("\\s", "_").toLowerCase());
-			textArea.requestFocusInWindow();
-		}
-
-		@Override
-		public String getMacroID() {
-			return getName();
-		}
-
-	}
-
-	/** solves hot-key conflicts with historical shortcuts */
-	static class NextBookMarkActionImpl extends NextBookmarkAction {
-		private static final long serialVersionUID = 1L;
-
-		public NextBookMarkActionImpl(String name, boolean forward) {
-			super(name, forward);
-			final KeyStroke keystroke =  KeyStroke.getKeyStroke(KeyEvent.VK_F2, (forward) ? 0 : ActionEvent.SHIFT_MASK);
-			setAccelerator(keystroke);
-		}
-		
-	}
-	/** solves hot-key conflicts with historical shortcuts */
-	class ToggleBookmarkActionImpl extends ToggleBookmarkAction {
-		private static final long serialVersionUID = 1L;
-
-		public ToggleBookmarkActionImpl() {
-			super();
-			final KeyStroke keystroke =  KeyStroke.getKeyStroke(KeyEvent.VK_F2, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask());
-			setAccelerator(keystroke);
-		}
-
-		@Override
-		public void actionPerformedImpl(ActionEvent e, RTextArea textArea) {
-			toggleBookmark();
-		}
-	}
-
-	/** Modified from DecreaseIndentAction */
-	static class IncreaseIndentAction extends RecordableTextAction {
-
-		private static final long serialVersionUID = 1L;
-
-		private final Segment s;
-
-		public IncreaseIndentAction() {
-			super("RSTA.IncreaseIndentAction");
-			s = new Segment();
-		}
-
-		@Override
-		public void actionPerformedImpl(final ActionEvent e, final RTextArea textArea) {
-
-			if (!textArea.isEditable() || !textArea.isEnabled()) {
-				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
-				return;
-			}
-
-			final Document document = textArea.getDocument();
-			final Element map = document.getDefaultRootElement();
-			final Caret c = textArea.getCaret();
-			int dot = c.getDot();
-			int mark = c.getMark();
-			int line1 = map.getElementIndex(dot);
-			final int tabSize = textArea.getTabSize();
-			final StringBuilder sb = new StringBuilder();
-			if (textArea.getTabsEmulated()) {
-				while (sb.length() < tabSize) {
-					sb.append(' ');
-				}
-			} else {
-				sb.append('\t');
-			}
-			final String paddingString = sb.toString();
-
-			// If there is a selection, indent all lines in the selection.
-			// Otherwise, indent the line the caret is on.
-			if (dot != mark) {
-				final int line2 = map.getElementIndex(mark);
-				dot = Math.min(line1, line2);
-				mark = Math.max(line1, line2);
-				Element elem;
-				textArea.beginAtomicEdit();
-				try {
-					for (line1 = dot; line1 < mark; line1++) {
-						elem = map.getElement(line1);
-						handleIncreaseIndent(elem, document, paddingString);
-					}
-					// Don't do the last line if the caret is at its
-					// beginning. We must call getDot() again and not just
-					// use 'dot' as the caret's position may have changed
-					// due to the insertion of the tabs above.
-					elem = map.getElement(mark);
-					final int start = elem.getStartOffset();
-					if (Math.max(c.getDot(), c.getMark()) != start) {
-						handleIncreaseIndent(elem, document, paddingString);
-					}
-				} catch (final BadLocationException ble) {
-					ble.printStackTrace();
-					UIManager.getLookAndFeel().provideErrorFeedback(textArea);
-				} finally {
-					textArea.endAtomicEdit();
-				}
-			} else {
-				final Element elem = map.getElement(line1);
-				try {
-					handleIncreaseIndent(elem, document, paddingString);
-				} catch (final BadLocationException ble) {
-					ble.printStackTrace();
-					UIManager.getLookAndFeel().provideErrorFeedback(textArea);
-				}
-			}
-
-		}
-
-		@Override
-		public final String getMacroID() {
-			return getName();
-		}
-
-		private void handleIncreaseIndent(final Element elem, final Document doc, final String pad)
-				throws BadLocationException {
-			final int start = elem.getStartOffset();
-			int end = elem.getEndOffset() - 1; // Why always true??
-			doc.getText(start, end - start, s);
-			final int i = s.offset;
-			end = i + s.count;
-			if (end > i || (end == i && i == 0)) {
-				doc.insertString(start, pad, null);
-			}
-		}
-
+	public EditorPaneActions getPaneActions() {
+		return actions;
 	}
 
 	class SearchWebOnSelectedText extends RecordableTextAction {
@@ -1376,6 +1147,13 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			return getName();
 		}
 
+		JMenuItem getMenuItem() {
+			final JMenuItem jmi = new JMenuItem(this);
+			jmi.setText("Search Web for Selection");
+			return jmi;
+		}
+
+
 	}
 
 	class OpenLinkUnderCursor extends RecordableTextAction {
@@ -1405,6 +1183,11 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			return getName();
 		}
 
+		JMenuItem getMenuItem() {
+			final JMenuItem jmi = new JMenuItem(this);
+			jmi.setText("Open URL Under Cursor");
+			return jmi;
+		}
 	}
 
 	private static class CursorUtils {

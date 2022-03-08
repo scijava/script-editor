@@ -141,7 +141,6 @@ import javax.swing.tree.TreePath;
 
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit;
 import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
 import org.fife.ui.rtextarea.ClipboardHistory;
 import org.fife.ui.rtextarea.Macro;
@@ -240,7 +239,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			chooseTabSize, gitGrep, replaceTabsWithSpaces,
 			replaceSpacesWithTabs, zapGremlins,openClassOrPackageHelp;
 	private RecentFilesMenuItem openRecent;
-	private JMenu gitMenu, tabsMenu, fontSizeMenu, tabSizeMenu, toolsMenu,
+	private JMenu editMenu, gitMenu, tabsMenu, fontSizeMenu, tabSizeMenu, toolsMenu,
 			runMenu;
 	private int tabsMenuTabsStart;
 	private Set<JMenuItem> tabsMenuItems;
@@ -300,7 +299,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	private boolean incremental = false;
 	private DragSource dragSource;
 	private boolean layoutLoading = true;
-	
+
 	public static final ArrayList<TextEditor> instances = new ArrayList<>();
 	public static final ArrayList<Context> contexts = new ArrayList<>();
 
@@ -401,68 +400,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		mbar.add(file);
 
 		// -- Edit menu --
-
-		final JMenu edit = new JMenu("Edit");
-		edit.setMnemonic(KeyEvent.VK_E);
-		undo = addToMenu(edit, "Undo", KeyEvent.VK_Z, ctrl);
-		redo = addToMenu(edit, "Redo", KeyEvent.VK_Y, ctrl);
-		edit.addSeparator();
-		selectAll = addToMenu(edit, "Select All", KeyEvent.VK_A, ctrl);
-		cut = addToMenu(edit, "Cut", KeyEvent.VK_X, ctrl);
-		copy = addToMenu(edit, "Copy", KeyEvent.VK_C, ctrl);
-		addMappedActionToMenu(edit, "Copy as Styled Text",
-				RSyntaxTextAreaEditorKit.rstaCopyAsStyledTextAction);
-		paste = addToMenu(edit, "Paste", KeyEvent.VK_V, ctrl);
-		final JMenuItem clipHistory = addMappedActionToMenu(edit, "Paste from History...",
-				RTextAreaEditorKit.clipboardHistoryAction);
-		clipHistory.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_V, ctrl + shift));
-		addSeparator(edit, "Find:");
-		find = addToMenu(edit, "Find/Replace...", KeyEvent.VK_F, ctrl);
-		find.setMnemonic(KeyEvent.VK_F);
-		findNext = addToMenu(edit, "Find Next", KeyEvent.VK_F3, 0);
-		findNext.setMnemonic(KeyEvent.VK_N);
-		findPrevious = addToMenu(edit, "Find Previous", KeyEvent.VK_F3, shift);
-		findPrevious.setMnemonic(KeyEvent.VK_P);
-
-		addMenubarSeparator(edit, "Goto:");
-		gotoLine = addToMenu(edit, "Goto Line...", KeyEvent.VK_G, ctrl);
-		gotoLine.setMnemonic(KeyEvent.VK_G);
-
-		final JMenuItem gotoType = new JMenuItem("Goto Type...");
-		gotoType.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_G, ctrl + shift)); // default is Ctrl+Shift+O
-		gotoType.addActionListener(e -> {
-			try {
-				getTextArea().getActionMap().get("GoToType").actionPerformed(e);
-			} catch (final Exception | Error ignored) {
-				error("\"Goto Type\" not availabe for current scripting language.");
-			}
-		});
-		edit.add(gotoType);
-
-		addSeparator(edit, "Bookmarks:");
-		final JMenuItem nextB = addMappedActionToMenu(edit, "Next Bookmark", RSyntaxTextAreaEditorKit.rtaNextBookmarkAction);
-		nextB.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0));
-		final JMenuItem prevB = addMappedActionToMenu(edit, "Previous Bookmark", RSyntaxTextAreaEditorKit.rtaPrevBookmarkAction);
-		prevB.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F2, shift));
-		final JMenuItem toggB = addMappedActionToMenu(edit, "Toggle Bookmark", RSyntaxTextAreaEditorKit.rtaToggleBookmarkAction);
-		toggB.setToolTipText("Alternatively, click on left bookmark gutter near the line number");
-		toggB.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F2, ctrl));
-		final JMenuItem listBookmarks = addToMenu(edit, "List Bookmarks...", 0, 0);
-		listBookmarks.setMnemonic(KeyEvent.VK_L);
-		listBookmarks.addActionListener( e -> listBookmarks());
-		final JMenuItem clearBookmarks = addToMenu(edit, "Clear Bookmarks...", 0, 0);
-		clearBookmarks.addActionListener(e -> clearAllBookmarks());
-
-		addSeparator(edit, "Utilities:");
-		final JMenuItem commentJMI = addMappedActionToMenu(edit, "Comment/Uncomment Selection",
-				RSyntaxTextAreaEditorKit.rstaToggleCommentAction);
-		commentJMI.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_SLASH, ctrl + shift));
-		addMappedActionToMenu(edit, "Insert Time Stamp", RTextAreaEditorKit.rtaTimeDateAction);
-		removeTrailingWhitespace = addToMenu(edit, "Remove Trailing Whitespace", 0, 0);
-		zapGremlins = addToMenu(edit, "Zap Gremlins", 0, 0);
-		zapGremlins.setToolTipText("Removes invalid (non-printable) ASCII characters");
-
-		mbar.add(edit);
+		editMenu = new JMenu("Edit"); // cannot be populated here. see #assembleEditMenu()
+		editMenu.setMnemonic(KeyEvent.VK_E);
+		mbar.add(editMenu);
 
 		// -- Language menu --
 
@@ -927,6 +867,68 @@ public class TextEditor extends JFrame implements ActionListener,
 		editorPane.requestFocus();
 	}
 
+	private void assembleEditMenu() {
+		// requires an existing instance of an EditorPane
+		final int ctrl = Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
+		final int shift = ActionEvent.SHIFT_MASK;
+		undo = addToMenu(editMenu, "Undo", KeyEvent.VK_Z, ctrl);
+		redo = addToMenu(editMenu, "Redo", KeyEvent.VK_Y, ctrl);
+		editMenu.addSeparator();
+		selectAll = addToMenu(editMenu, "Select All", KeyEvent.VK_A, ctrl);
+		cut = addToMenu(editMenu, "Cut", KeyEvent.VK_X, ctrl);
+		copy = addToMenu(editMenu, "Copy", KeyEvent.VK_C, ctrl);
+		addMappedActionToMenu(editMenu, "Copy as Styled Text", EditorPaneActions.rstaCopyAsStyledTextAction);
+		paste = addToMenu(editMenu, "Paste", KeyEvent.VK_V, ctrl);
+		addMappedActionToMenu(editMenu, "Paste from History...", EditorPaneActions.clipboardHistoryAction);
+		addMenubarSeparator(editMenu, "Find:");
+		find = addToMenu(editMenu, "Find/Replace...", KeyEvent.VK_F, ctrl);
+		find.setMnemonic(KeyEvent.VK_F);
+		findNext = addToMenu(editMenu, "Find Next", KeyEvent.VK_F3, 0);
+		findNext.setMnemonic(KeyEvent.VK_N);
+		findPrevious = addToMenu(editMenu, "Find Previous", KeyEvent.VK_F3, shift);
+		findPrevious.setMnemonic(KeyEvent.VK_P);
+
+		addMenubarSeparator(editMenu, "Goto:");
+		gotoLine = addToMenu(editMenu, "Goto Line...", KeyEvent.VK_G, ctrl);
+		gotoLine.setMnemonic(KeyEvent.VK_G);
+		addMappedActionToMenu(editMenu, "Goto Matching Bracket", EditorPaneActions.rstaGoToMatchingBracketAction);
+
+		final JMenuItem gotoType = new JMenuItem("Goto Type...");
+		gotoType.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_G, ctrl + shift)); // default is Ctrl+Shift+O
+		gotoType.setToolTipText(
+				"Alternative shortcut: " + getEditorPane().getPaneActions().getAcceleratorLabel("GoToType"));
+		gotoType.addActionListener(e -> {
+			try {
+				getTextArea().getActionMap().get("GoToType").actionPerformed(e);
+			} catch (final Exception | Error ignored) {
+				error("\"Goto Type\" not availabe for current scripting language.");
+			}
+		});
+		editMenu.add(gotoType);
+
+		addMenubarSeparator(editMenu, "Bookmarks:");
+		addMappedActionToMenu(editMenu, "Next Bookmark", EditorPaneActions.rtaNextBookmarkAction);
+		addMappedActionToMenu(editMenu, "Previous Bookmark", EditorPaneActions.rtaPrevBookmarkAction);
+		final JMenuItem toggB = addMappedActionToMenu(editMenu, "Toggle Bookmark",
+				EditorPaneActions.rtaToggleBookmarkAction);
+		toggB.setToolTipText("Alternatively, click on left bookmark gutter near the line number");
+		final JMenuItem listBookmarks = addToMenu(editMenu, "List Bookmarks...", 0, 0);
+		listBookmarks.setMnemonic(KeyEvent.VK_L);
+		listBookmarks.addActionListener(e -> listBookmarks());
+		final JMenuItem clearBookmarks = addToMenu(editMenu, "Clear Bookmarks...", 0, 0);
+		clearBookmarks.addActionListener(e -> clearAllBookmarks());
+
+		addMenubarSeparator(editMenu, "Utilities:");
+		final JMenuItem commentJMI = addMappedActionToMenu(editMenu, "Toggle Comment",
+				EditorPaneActions.rstaToggleCommentAction);
+		commentJMI.setToolTipText("Alternative shortcut: "
+				+ getEditorPane().getPaneActions().getAcceleratorLabel(EditorPaneActions.epaToggleCommentAltAction));
+		addMappedActionToMenu(editMenu, "Insert Time Stamp", EditorPaneActions.rtaTimeDateAction);
+		removeTrailingWhitespace = addToMenu(editMenu, "Remove Trailing Whitespace", 0, 0);
+		zapGremlins = addToMenu(editMenu, "Zap Gremlins", 0, 0);
+		zapGremlins.setToolTipText("Removes invalid (non-printable) ASCII characters");
+	}
+
 	private void addScritpEditorMacroCommands(final JMenu menu) {
 		addMenubarSeparator(menu, "Script Editor Macros:");
 		final JMenuItem startMacro = new JMenuItem("Start/Resume Macro Recording");
@@ -1073,11 +1075,19 @@ public class TextEditor extends JFrame implements ActionListener,
 				keyString = keyString.replace("ctrl", "Ctrl");
 				keyString = keyString.replace("shift", "Shift");
 				keyString = keyString.replace("alt", "Alt");
-				lines.add("<dt><b>" + keyString + "</b></dt>" + "<dd>" + capitalize(objString) + "</dd>");
+				lines.add("<tr><td style=\"width: 50%; text-align: left;\">" + capitalize(objString)
+						+ "</td><td style=\"width: 50%; text-align: left;\">" + keyString + "</td></tr>");
 			}
 			Collections.sort(lines, String.CASE_INSENSITIVE_ORDER);
 		}
-		showHTMLDialog("Script Editor Key Bindings", "<HTML><dl>" + String.join("", lines) + "</dl>");
+		final String prefix = "<HTML><table>" //
+				+ "<tbody>" //
+				+ "<tr>" //
+				+ "<td style=\"width: 50%; text-align: center;\"><b>Action</b></td>" //
+				+ "<td style=\"width: 50%; height: 21px; text-align: center;\"><b>Shortcut</b></td>" //
+				+ "</tr>"; //
+		final String suffix = "</tbody></table>";
+		showHTMLDialog("Script Editor Shortcuts", prefix + String.join("", lines) + suffix);
 	}
 
 	private String cleanseActionDescription(String actionId) {
@@ -1389,6 +1399,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				error("\"" + label + "\" not availabe for current scripting language.");
 			}
 		});
+		jmi.setAccelerator(getEditorPane().getPaneActions().getAccelerator(actionID));
 		menu.add(jmi);
 		return jmi;
 	}
@@ -2131,6 +2142,10 @@ public class TextEditor extends JFrame implements ActionListener,
 				tab.editorPane.loadPreferences();
 				tab.editorPane.getDocument().addDocumentListener(this);
 				addDefaultAccelerators(tab.editorPane);
+			} else {
+				// the Edit menu can only be populated after an editor
+				// pane exists, as it reads actions from its input map
+				assembleEditMenu();
 			}
 			synchronized (tab.editorPane) { // tab is never null at this location.
 				tab.editorPane.open(file);
@@ -2378,28 +2393,28 @@ public class TextEditor extends JFrame implements ActionListener,
 		runMenu.setEnabled(isRunnable);
 		compileAndRun.setText(isCompileable ? "Compile and Run" : "Run");
 		compileAndRun.setEnabled(isRunnable);
-		runSelection.setEnabled(isRunnable && !isCompileable);
-		compile.setEnabled(isCompileable);
-		autoSave.setEnabled(isCompileable);
-		makeJar.setEnabled(isCompileable);
-		makeJarWithSource.setEnabled(isCompileable);
-
-		final boolean isJava =
-			language != null && language.getLanguageName().equals("Java");
-		addImport.setEnabled(isJava);
-		removeUnusedImports.setEnabled(isJava);
-		sortImports.setEnabled(isJava);
-		//openSourceForMenuItem.setEnabled(isJava);
-
-		final boolean isMacro =
-			language != null && language.getLanguageName().equals("ImageJ Macro");
-		openMacroFunctions.setEnabled(isMacro);
-		openSourceForClass.setEnabled(!isMacro);
-
-		openHelp.setEnabled(!isMacro && isRunnable);
-		openHelpWithoutFrames.setEnabled(!isMacro && isRunnable);
-		nextError.setEnabled(!isMacro && isRunnable);
-		previousError.setEnabled(!isMacro && isRunnable);
+			runSelection.setEnabled(isRunnable && !isCompileable);
+			compile.setEnabled(isCompileable);
+			autoSave.setEnabled(isCompileable);
+			makeJar.setEnabled(isCompileable);
+			makeJarWithSource.setEnabled(isCompileable);
+	
+			final boolean isJava =
+				language != null && language.getLanguageName().equals("Java");
+			addImport.setEnabled(isJava);
+			removeUnusedImports.setEnabled(isJava);
+			sortImports.setEnabled(isJava);
+			//openSourceForMenuItem.setEnabled(isJava);
+	
+			final boolean isMacro =
+				language != null && language.getLanguageName().equals("ImageJ Macro");
+			openMacroFunctions.setEnabled(isMacro);
+			openSourceForClass.setEnabled(!isMacro);
+	
+			openHelp.setEnabled(!isMacro && isRunnable);
+			openHelpWithoutFrames.setEnabled(!isMacro && isRunnable);
+			nextError.setEnabled(!isMacro && isRunnable);
+			previousError.setEnabled(!isMacro && isRunnable);
 
 		final boolean isInGit = getEditorPane().getGitDirectory() != null;
 		gitMenu.setVisible(isInGit);
