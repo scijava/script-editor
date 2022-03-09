@@ -3023,15 +3023,17 @@ public class TextEditor extends JFrame implements ActionListener,
 		ExceptionHandler.addThread(Thread.currentThread(), this);
 	}
 
-	public void markCompileEnd() {
+	public void markCompileEnd() { // this naming is not-intuitive at all!
 		if (errorHandler == null) {
 			errorHandler =
 				new ErrorHandler(getCurrentLanguage(), errorScreen,
 					compileStartPosition.getOffset());
 			if (errorHandler.getErrorCount() > 0) getTab().showErrors();
 		}
-		if (compileStartOffset != errorScreen.getDocument().getLength()) getTab()
-			.showErrors();
+		if (getEditorPane().getErrorHighlighter().isLogDetailed() &&
+				compileStartOffset != errorScreen.getDocument().getLength()) {
+			getTab().showErrors();
+		}
 		if (getTab().showingErrors) {
 			errorHandler.scrollToVisible(compileStartOffset);
 		}
@@ -3388,8 +3390,8 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	public void handleException(final Throwable e) {
 		handleException(e, errorScreen);
-		getTab().showErrors();
 		getEditorPane().getErrorHighlighter().parse(e);
+		getTab().showErrors();
 	}
 
 	public static void

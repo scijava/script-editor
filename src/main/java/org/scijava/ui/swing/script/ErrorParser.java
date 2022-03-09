@@ -30,7 +30,9 @@
 package org.scijava.ui.swing.script;
 
 import java.awt.Color;
+import java.awt.Dialog;
 import java.awt.Rectangle;
+import java.awt.Window;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
@@ -66,6 +68,7 @@ public class ErrorParser {
 	private JTextAreaWriter writer;
 	private int lengthOfJTextAreaWriter;
 	private ErrorStripNotifyingParser notifyingParser;
+	private boolean parsingSucceeded;
 
 	public ErrorParser(final EditorPane editorPane) {
 		this.editorPane = editorPane;
@@ -148,8 +151,23 @@ public class ErrorParser {
 		parse(sw.toString());
 	}
 
+	private boolean isIJ1Macro() {
+		final ScriptLanguage lang = editorPane.getCurrentLanguage();
+		return lang != null && "IJ1 Macro".equals(lang.getLanguageName());
+	}
+
+	public boolean isLogDetailed() {
+		if (!isIJ1Macro()) return parsingSucceeded;
+		for (final Window win : Window.getWindows()) {
+			if (win != null && win instanceof Dialog && "Macro Error".equals(((Dialog)win).getTitle())) {
+				return true; // hopefully there is something in the console
+			}
+		}
+		return parsingSucceeded;
+	}
+
 	private boolean isCaretMovable() {
-		if (errorLines == null || errorLines.isEmpty() || !editorPane.isEditable() || !editorPane.isEnabled()) {
+		if (errorLines == null || errorLines.isEmpty()) {
 			UIManager.getLookAndFeel().provideErrorFeedback(editorPane);
 			return false;
 		}
@@ -172,9 +190,15 @@ public class ErrorParser {
 	private void parse(final String errorLog) {
 
 		final ScriptLanguage lang = editorPane.getCurrentLanguage();
-		if (lang == null)
+		if (lang == null) {
+			abort();
 			return;
-	
+		}
+		final boolean isIJM = isIJ1Macro();
+		if (isIJM) {
+			abort("Execution errors handled by the Macro Interpreter. Use the Interpreter's Debug option for error tracking", false);
+			return;
+		}
 		// Do nothing if disabled, or if only selected text was evaluated in the
 		// script but we don't know where in the document such selection occurred
 		if (!enabled) {
@@ -188,8 +212,10 @@ public class ErrorParser {
 	
 		final boolean isJava = "Java".equals(lang.getLanguageName());
 		final String fileName = editorPane.getFileName();
-		if (isJava && fileName == null)
+		if (isJava && fileName == null) {
+			abort();
 			return;
+		}
 
 		// HACK scala code seems to always be pre-pended by some 10 lines of code(!?).
 		if ("Scala".equals(lang.getLanguageName()))
@@ -209,14 +235,13 @@ public class ErrorParser {
 				parseNonJava(tokenizer.nextToken(), errorLines);
 			}
 		}
-		if (errorLines.isEmpty() && "IJ1 Macro".equals(lang.getLanguageName())) {
-			abort("Execution errors handled by the Macro Interpreter. Use the Interpreter's Debug option for error tracking", false);
-		} else if (!errorLines.isEmpty()) {
+		if (!errorLines.isEmpty()) {
 			notifyingParser = new ErrorStripNotifyingParser();
 			editorPane.addParser(notifyingParser);
 			editorPane.forceReparsing(notifyingParser);
 			gotoLine(errorLines.first());
 		}
+		parsingSucceeded = true;
 	}
 
 	private void parseNonJava(final String lineText, final Collection<Integer> errorLines) {
@@ -298,10 +323,16 @@ public class ErrorParser {
 		}
 	}
 
+	private void abort() {
+		parsingSucceeded = false;
+	}
+
 	private void abort(final String msg, final boolean offsetNotice) {
+		abort();
 		if (writer != null) {
-			String finalMsg = "[WARNING] " + msg + "\n";
-			finalMsg += "[WARNING] Reported error line(s) may not match line numbers in the editor\n";
+			String finalMsg = "[INFO] " + msg + "\n";
+			if (offsetNotice)
+				finalMsg += "[INFO] Reported error line(s) may not match line numbers in the editor\n";
 			writer.textArea.insert(finalMsg, lengthOfJTextAreaWriter);
 		}
 		errorLines = null;
