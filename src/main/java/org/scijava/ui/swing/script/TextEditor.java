@@ -2145,7 +2145,6 @@ public class TextEditor extends JFrame implements ActionListener,
 				tab = new TextEditorTab(this);
 				context.inject(tab.editorPane);
 				tab.editorPane.loadPreferences();
-				tab.editorPane.getDocument().addDocumentListener(this);
 				addDefaultAccelerators(tab.editorPane);
 			} else {
 				// the Edit menu can only be populated after an editor
@@ -2185,7 +2184,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 
 			updateLanguageMenu(tab.editorPane.getCurrentLanguage());
-
+			tab.editorPane.getDocument().addDocumentListener(this);
 			return tab;
 		}
 		catch (final FileNotFoundException e) {
@@ -3099,10 +3098,14 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private void removeTab(final int index) {
 		final int menuItemIndex = index + tabsMenuTabsStart;
-
-		tabbed.remove(index);
-		tabsMenuItems.remove(tabsMenu.getItem(menuItemIndex));
-		tabsMenu.remove(menuItemIndex);
+		try {
+			tabbed.remove(index);
+			tabsMenuItems.remove(tabsMenu.getItem(menuItemIndex));
+			tabsMenu.remove(menuItemIndex);
+		} catch (final IndexOutOfBoundsException e) {
+			// this should never happen!?
+			log.debug(e);
+		}
 	}
 
 	boolean editorPaneContainsFile(final EditorPane editorPane, final File file) {

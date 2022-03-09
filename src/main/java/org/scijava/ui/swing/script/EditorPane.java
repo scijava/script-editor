@@ -178,10 +178,10 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		});
 		// Add support for TODO, FIXME, HACK
 		addParser(new TaskTagParser());
-		// load preferences
-		loadPreferences();
 
-		// Register recordable actions
+		//NB: Loading of preferences will happen by calling #loadPreferences();
+
+		// Register recordable actions: TODO this should go to EditorPaneActions
 		getActionMap().put(EditorPaneActions.nextWordAction, wordMovement("Next-Word-Action", +1, false));
 		getActionMap().put(EditorPaneActions.selectionNextWordAction, wordMovement("Next-Word-Select-Action", +1, true));
 		getActionMap().put(EditorPaneActions.previousWordAction, wordMovement("Prev-Word-Action", -1, false));
@@ -192,7 +192,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		adjustPopupMenu();
 
 		ToolTipManager.sharedInstance().registerComponent(this);
-		getDocument().addDocumentListener(this);
 		addMouseListener(new MouseAdapter() {
 
 			SearchContext context;
@@ -233,6 +232,13 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	protected boolean isLocked() {
 		return !(isEditable() && isEnabled());
+	}
+
+	@Override
+	public void addNotify() {
+		// this seems to solve these issues reported here:
+		// https://forum.image.sc/t/shiny-new-script-editor/64160/19
+		if (isVisible()) super.addNotify();
 	}
 
 	@Override
@@ -533,43 +539,54 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public void open(final File file) throws IOException {
 		final File oldFile = curFile;
 		curFile = null;
-		if (file == null) setText("");
+		if (file == null)
+			setText("");
 		else {
 			int line = 0;
 			try {
-				if (file.getCanonicalPath().equals(oldFile.getCanonicalPath())) line =
-					getCaretLineNumber();
-			}
-			catch (final Exception e) { /* ignore */}
+				if (file.getCanonicalPath().equals(oldFile.getCanonicalPath()))
+					line = getCaretLineNumber();
+			} catch (final Exception e) {
+				/* ignore */}
 			if (!file.exists()) {
 				modifyCount = Integer.MIN_VALUE;
 				setFileName(file);
-				return;
+					return;
+				}
+				final StringBuffer string = new StringBuffer();
+				try (BufferedReader reader = new BufferedReader(
+						new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
+					final char[] buffer = new char[16384];
+					for (;;) {
+						final int count = reader.read(buffer);
+						if (count < 0)
+							break;
+					string.append(buffer, 0, count);
+				}
+				reader.close();
 			}
-			final StringBuffer string = new StringBuffer();
-			final BufferedReader reader =
-				new BufferedReader(new InputStreamReader(new FileInputStream(file),
-					"UTF-8"));
-			final char[] buffer = new char[16384];
-			for (;;) {
-				final int count = reader.read(buffer);
-				if (count < 0) break;
-				string.append(buffer, 0, count);
+			try {
+				setText(string.toString());
+			} catch (final Error | IndexOutOfBoundsException e2) {
+				// Mysterious parsing errors w/ IJM!? Syntax highlighting will
+				// fail but things should be back to normal on next repaint. See
+				// https://github.com/scijava/script-editor/issues/14
+				// https://forum.image.sc/t/shiny-new-script-editor/64160/19
+				log.debug(e2);
 			}
-			reader.close();
-			SwingUtilities.invokeLater(() -> {
-				setText(string.toString()); // otherwise GUI freezes!??
-			});
 			curFile = file;
-			if (line > getLineCount()) line = getLineCount() - 1;
+			if (line > getLineCount())
+				line = getLineCount() - 1;
 			try {
 				setCaretPosition(getLineStartOffset(line));
+			} catch (final BadLocationException e) {
+				/* ignore */
+				}
 			}
-			catch (final BadLocationException e) { /* ignore */}
-		}
-		discardAllEdits();
-		modifyCount = 0;
-		fileLastModified = file == null || !file.exists() ? 0 : file.lastModified();
+			discardAllEdits();
+			fileLastModified = file == null || !file.exists() ? 0 : file.lastModified();
+			modifyCount = 0;
+			getDocument().addDocumentListener(this); // Add as late as possible to avoid spurious updates
 	}
 
 	/**
@@ -644,9 +661,13 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 				extension = "." + extensions.get(0);
 			}
 			if (currentLanguage.getLanguageName().equals("Java")) {
-				final String name = new TokenFunctions(this).getClassName();
-				if (name != null) {
-					return name + extension;
+				try {
+					final String name = new TokenFunctions(this).getClassName();
+					if (name != null) {
+						return name + extension;
+					}
+				} catch (final Exception ignored) {
+					// Do nothing
 				}
 			}
 		}
@@ -731,9 +752,10 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		try {
 			setSyntaxEditingStyle(styleName);
 		}
-		catch (final NullPointerException exc) {
-			// NB: Avoid possible NPEs in RSyntaxTextArea code.
+		catch (final NullPointerException | IndexOutOfBoundsException exc) {
+			// NB Avoid possible NPEs and other exceptions in RSyntaxTextArea code.
 			// See: https://fiji.sc/bug/1181.html
+			// See: https://forum.image.sc/t/shiny-new-script-editor/64160/19
 			log.debug(exc);
 		}
 
