@@ -143,8 +143,12 @@ public class FindAndReplaceDialog extends JDialog implements ActionListener {
 		return getTextArea();
 	}
 
-	final public RSyntaxTextArea getTextArea() {
+	final private EditorPane getTextAreaAsEditorPane() {
 		return textEditor.getEditorPane();
+	}
+
+	final public RSyntaxTextArea getTextArea() {
+		return getTextAreaAsEditorPane();
 	}
 
 	@Override
@@ -213,6 +217,10 @@ public class FindAndReplaceDialog extends JDialog implements ActionListener {
 		if (source == findNext) searchOrReplace(false);
 		else if (source == replace) searchOrReplace(true);
 		else if (source == replaceAll) {
+			if (getTextAreaAsEditorPane().isLocked()) {
+				JOptionPane.showMessageDialog(this, "File is currently locked.");
+				return;
+			}
 			final int replace =
 				SearchEngine.replaceAll(getTextArea(), getSearchContext(true))
 					.getCount();

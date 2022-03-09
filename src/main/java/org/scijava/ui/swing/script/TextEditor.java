@@ -351,24 +351,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		saveas = addToMenu(file, "Save As...", KeyEvent.VK_S, ctrl + shift);
 		saveas.setMnemonic(KeyEvent.VK_A);
 		file.addSeparator();
-		makeJar = addToMenu(file, "Export as JAR", 0, 0);
+		makeJar = addToMenu(file, "Export as JAR...", 0, 0);
 		makeJar.setMnemonic(KeyEvent.VK_E);
-		makeJarWithSource = addToMenu(file, "Export as JAR (With Source)", 0, 0);
+		makeJarWithSource = addToMenu(file, "Export as JAR (With Source)...", 0, 0);
 		makeJarWithSource.setMnemonic(KeyEvent.VK_X);
 		file.addSeparator();
-		final JCheckBoxMenuItem lock = new JCheckBoxMenuItem("Lock (Make Read Only)");
-		file.add(lock);
-		lock.addActionListener( e -> {
-			if (lock.isSelected()) {
-				new SetReadOnlyAction().actionPerformedImpl(e, getTextArea());
-			} else {
-				new SetWritableAction().actionPerformedImpl(e, getTextArea());
-			}
-		});
-		JMenuItem jmi = new JMenuItem("Revert");
+		JMenuItem jmi = new JMenuItem("Revert...");
 		jmi.addActionListener(e -> {
-			if (lock.isSelected()) {
-				error("File is locked (read only).");
+			if (getEditorPane().isLocked()) {
+				error("File is currently locked.");
 				return;
 			}
 			final File f = getEditorPane().getFile();
@@ -406,8 +397,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		// -- Language menu --
 
-		languageMenuItems =
-			new LinkedHashMap<>();
+		languageMenuItems = new LinkedHashMap<>();
 		final Set<Integer> usedShortcuts = new HashSet<>();
 		final JMenu languages = new JMenu("Language");
 		languages.setMnemonic(KeyEvent.VK_L);
@@ -877,9 +867,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		selectAll = addToMenu(editMenu, "Select All", KeyEvent.VK_A, ctrl);
 		cut = addToMenu(editMenu, "Cut", KeyEvent.VK_X, ctrl);
 		copy = addToMenu(editMenu, "Copy", KeyEvent.VK_C, ctrl);
-		addMappedActionToMenu(editMenu, "Copy as Styled Text", EditorPaneActions.rstaCopyAsStyledTextAction);
+		addMappedActionToMenu(editMenu, "Copy as Styled Text", EditorPaneActions.rstaCopyAsStyledTextAction, false);
 		paste = addToMenu(editMenu, "Paste", KeyEvent.VK_V, ctrl);
-		addMappedActionToMenu(editMenu, "Paste from History...", EditorPaneActions.clipboardHistoryAction);
+		addMappedActionToMenu(editMenu, "Paste from History...", EditorPaneActions.clipboardHistoryAction, true);
 		addMenubarSeparator(editMenu, "Find:");
 		find = addToMenu(editMenu, "Find/Replace...", KeyEvent.VK_F, ctrl);
 		find.setMnemonic(KeyEvent.VK_F);
@@ -891,7 +881,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		addMenubarSeparator(editMenu, "Goto:");
 		gotoLine = addToMenu(editMenu, "Goto Line...", KeyEvent.VK_G, ctrl);
 		gotoLine.setMnemonic(KeyEvent.VK_G);
-		addMappedActionToMenu(editMenu, "Goto Matching Bracket", EditorPaneActions.rstaGoToMatchingBracketAction);
+		addMappedActionToMenu(editMenu, "Goto Matching Bracket", EditorPaneActions.rstaGoToMatchingBracketAction, false);
 
 		final JMenuItem gotoType = new JMenuItem("Goto Type...");
 		gotoType.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_G, ctrl + shift)); // default is Ctrl+Shift+O
@@ -907,10 +897,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		editMenu.add(gotoType);
 
 		addMenubarSeparator(editMenu, "Bookmarks:");
-		addMappedActionToMenu(editMenu, "Next Bookmark", EditorPaneActions.rtaNextBookmarkAction);
-		addMappedActionToMenu(editMenu, "Previous Bookmark", EditorPaneActions.rtaPrevBookmarkAction);
+		addMappedActionToMenu(editMenu, "Next Bookmark", EditorPaneActions.rtaNextBookmarkAction, false);
+		addMappedActionToMenu(editMenu, "Previous Bookmark", EditorPaneActions.rtaPrevBookmarkAction, false);
 		final JMenuItem toggB = addMappedActionToMenu(editMenu, "Toggle Bookmark",
-				EditorPaneActions.rtaToggleBookmarkAction);
+				EditorPaneActions.rtaToggleBookmarkAction, false);
 		toggB.setToolTipText("Alternatively, click on left bookmark gutter near the line number");
 		final JMenuItem listBookmarks = addToMenu(editMenu, "List Bookmarks...", 0, 0);
 		listBookmarks.setMnemonic(KeyEvent.VK_L);
@@ -920,11 +910,22 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		addMenubarSeparator(editMenu, "Utilities:");
 		final JMenuItem commentJMI = addMappedActionToMenu(editMenu, "Toggle Comment",
-				EditorPaneActions.rstaToggleCommentAction);
+				EditorPaneActions.rstaToggleCommentAction, true);
 		commentJMI.setToolTipText("Alternative shortcut: "
 				+ getEditorPane().getPaneActions().getAcceleratorLabel(EditorPaneActions.epaToggleCommentAltAction));
-		addMappedActionToMenu(editMenu, "Insert Time Stamp", EditorPaneActions.rtaTimeDateAction);
+		addMappedActionToMenu(editMenu, "Insert Time Stamp", EditorPaneActions.rtaTimeDateAction, true);
 		removeTrailingWhitespace = addToMenu(editMenu, "Remove Trailing Whitespace", 0, 0);
+		final JCheckBoxMenuItem lock = new JCheckBoxMenuItem("Lock Editing");
+		editMenu.add(lock);
+		lock.addActionListener(e -> {
+			for (int i = 0; i < tabbed.getTabCount(); i++) {
+				if (lock.isSelected()) {
+					new SetReadOnlyAction().actionPerformedImpl(e, getEditorPane(i));
+				} else {
+					new SetWritableAction().actionPerformedImpl(e, getEditorPane(i));
+				}
+			}
+		});
 		zapGremlins = addToMenu(editMenu, "Zap Gremlins", 0, 0);
 		zapGremlins.setToolTipText("Removes invalid (non-printable) ASCII characters");
 	}
@@ -1385,15 +1386,19 @@ public class TextEditor extends JFrame implements ActionListener,
 		return item;
 	}
 
-	private JMenuItem addMappedActionToMenu(final JMenu menu, String label, String actionID) {
+	private JMenuItem addMappedActionToMenu(final JMenu menu, String label, String actionID, final boolean editingAction) {
 		final JMenuItem jmi = new JMenuItem(label);
 		jmi.addActionListener(e -> {
-			if (RTextAreaEditorKit.clipboardHistoryAction.equals(actionID)
-					&& ClipboardHistory.get().getHistory().isEmpty()) {
-				warn("The internal clipboard manager is empty.");
-				return;
-			}
 			try {
+				if (editingAction && getEditorPane().isLocked()) {
+					warn("File is currently locked.");
+					return;
+				}
+				if (RTextAreaEditorKit.clipboardHistoryAction.equals(actionID)
+						&& ClipboardHistory.get().getHistory().isEmpty()) {
+					warn("The internal clipboard manager is empty.");
+					return;
+				}
 				getTextArea().getActionMap().get(actionID).actionPerformed(e);
 			} catch (final Exception | Error ignored) {
 				error("\"" + label + "\" not availabe for current scripting language.");
@@ -1973,10 +1978,10 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		// override search pattern only if
 		// there is sth. selected
-		final String selection = getTextArea().getSelectedText();
+		final String selection = getEditorPane().getSelectedText();
 		if (selection != null) findDialog.setSearchPattern(selection);
 
-		findDialog.show(doReplace);
+		findDialog.show(doReplace && !getEditorPane().isLocked());
 	}
 
 	public void gotoLine() {
