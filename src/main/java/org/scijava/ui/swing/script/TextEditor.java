@@ -2170,9 +2170,10 @@ public class TextEditor extends JFrame implements ActionListener,
 				tab.editorPane.loadPreferences();
 				addDefaultAccelerators(tab.editorPane);
 			} else {
-				// the Edit menu can only be populated after an editor
-				// pane exists, as it reads actions from its input map
-				assembleEditMenu();
+				// the Edit menu can only be populated after an editor pane exists, as it reads
+				// actions from its input map. We will built it here, if it has not been assembled
+				// yet.
+				if (undo == null) assembleEditMenu();
 			}
 			synchronized (tab.editorPane) { // tab is never null at this location.
 				tab.editorPane.open(file);
@@ -2420,9 +2421,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		runMenu.setEnabled(isRunnable);
 		compileAndRun.setText(isCompileable ? "Compile and Run" : "Run");
 		compileAndRun.setEnabled(isRunnable);
-			runSelection.setEnabled(isRunnable && !isCompileable);
-			compile.setEnabled(isCompileable);
-			autoSave.setEnabled(isCompileable);
+		runSelection.setEnabled(isRunnable && !isCompileable);
+		compile.setEnabled(isCompileable);
+		autoSave.setEnabled(isCompileable);
 			makeJar.setEnabled(isCompileable);
 			makeJarWithSource.setEnabled(isCompileable);
 	
@@ -2438,8 +2439,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			openMacroFunctions.setEnabled(isMacro);
 			openSourceForClass.setEnabled(!isMacro);
 	
-			openHelp.setEnabled(!isMacro && isRunnable);
-			openHelpWithoutFrames.setEnabled(!isMacro && isRunnable);
+		openHelp.setEnabled(!isMacro && isRunnable);
+		openHelpWithoutFrames.setEnabled(!isMacro && isRunnable);
 			nextError.setEnabled(!isMacro && isRunnable);
 			previousError.setEnabled(!isMacro && isRunnable);
 
