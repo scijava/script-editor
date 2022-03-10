@@ -35,7 +35,6 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
-import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
@@ -62,8 +61,6 @@ import javax.swing.JPopupMenu;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JViewport;
-import javax.swing.KeyStroke;
-import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
@@ -80,12 +77,9 @@ import org.fife.ui.rsyntaxtextarea.Style;
 import org.fife.ui.rsyntaxtextarea.SyntaxScheme;
 import org.fife.ui.rsyntaxtextarea.Theme;
 import org.fife.ui.rsyntaxtextarea.parser.TaskTagParser;
-import org.fife.ui.rtextarea.ClipboardHistory;
 import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.GutterIconInfo;
 import org.fife.ui.rtextarea.RTextArea;
-import org.fife.ui.rtextarea.RTextAreaEditorKit;
-import org.fife.ui.rtextarea.RTextAreaEditorKit.CutAction;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.RecordableTextAction;
 import org.fife.ui.rtextarea.SearchContext;
@@ -106,6 +100,7 @@ import org.scijava.util.FileUtils;
  *
  * @author Johannes Schindelin
  * @author Jonathan Hale
+ * @author Tiago Ferreira
  */
 public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
@@ -189,7 +184,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 				wordMovement("Prev-Word-Select-Action", -1, true));
 
 		noneLangSyntaxMenu = geSyntaxForNoneLang();
-		adjustPopupMenu();
+		installCostumPopupMenu();
 
 		ToolTipManager.sharedInstance().registerComponent(this);
 		addMouseListener(new MouseAdapter() {
@@ -241,13 +236,12 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		if (isVisible()) super.addNotify();
 	}
 
-	@Override
-	protected JPopupMenu createPopupMenu() {
-		super.createPopupMenu();
-		JPopupMenu popup = new JPopupMenu();
-		TextEditor.addPopupMenuSeparator(popup, "Undo/Redo:");
-		popup.add(getMenuItem("Undo", EditorPaneActions.rtaUndoAction, true));
-		popup.add(getMenuItem("Redo", EditorPaneActions.rtaRedoAction, true));
+	private void installCostumPopupMenu() {
+		// We are overriding the entire menu so that we can include our shortcuts
+		// in the menu items. These commands are not listed on the menubar, so
+		// this is the only access point in the GUI for these
+		// see #createPopupMenu(); #appendFoldingMenu();
+		final JPopupMenu popup = new JPopupMenu();
 		TextEditor.addPopupMenuSeparator(popup, "Code Editing:");
 		popup.add(getMenuItem("Copy", EditorPaneActions.copyAction, false));
 		popup.add(getMenuItem("Cut", EditorPaneActions.cutAction, true));
@@ -258,33 +252,16 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		popup.add(getMenuItem("Select All", EditorPaneActions.selectAllAction, false));
 		popup.add(getMenuItem("Select Line", EditorPaneActions.selectLineAction, false));
 		popup.add(getMenuItem("Select Paragraph", EditorPaneActions.selectParagraphAction, false));
-		return popup;
-	}
-
-	@Override
-	protected void appendFoldingMenu(JPopupMenu popup) {
-		// We are overriding the entire foldingMenu completely so that we can include
-		// our shortcuts in the menu items. These commands are not listed on the
-		// menubar, so this is the only access point in the GUI for these
-		// popup.addSeparator();
 		TextEditor.addPopupMenuSeparator(popup, "Code Folding:");
 		popup.add(getMenuItem("Collapse Fold", EditorPaneActions.rstaCollapseFoldAction, false));
 		popup.add(getMenuItem("Expand Fold", EditorPaneActions.rstaExpandFoldAction, false));
 		popup.add(getMenuItem("Toggle Current Fold", EditorPaneActions.rstaToggleCurrentFoldAction, false));
-		// popup.addSeparator();
 		popup.add(getMenuItem("Collapse All Folds", EditorPaneActions.rstaCollapseAllFoldsAction, false));
 		popup.add(getMenuItem("Expand All Folds", EditorPaneActions.rstaExpandAllFoldsAction, false));
-		// popup.addSeparator();
 		popup.add(getMenuItem("Collapse All Comments", EditorPaneActions.rstaCollapseAllCommentFoldsAction, false));
-	}
-
-	private void adjustPopupMenu() {
-		final JPopupMenu popup = super.getPopupMenu();
-		// See #appendFoldingMenu()
 		TextEditor.addPopupMenuSeparator(popup, "Code Formatting:");
 		popup.add(getMenuItem("Indent Right", EditorPaneActions.epaIncreaseIndentAction, true));
 		popup.add(getMenuItem("Indent Left", EditorPaneActions.rstaDecreaseIndentAction, true));
-		//popup.addSeparator();
 		popup.add(getMenuItem("Move Up", EditorPaneActions.rtaLineUpAction, true));
 		popup.add(getMenuItem("Move Down", EditorPaneActions.rtaLineDownAction, true));
 		popup.add(getMenuItem("Join Lines", EditorPaneActions.rtaJoinLinesAction, true));
@@ -303,9 +280,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		TextEditor.addPopupMenuSeparator(popup, "Utilities:");
 		popup.add(new OpenLinkUnderCursor().getMenuItem());
 		popup.add(new SearchWebOnSelectedText().getMenuItem());
-		//popup.addSeparator();
 		popup.add(noneLangSyntaxMenu);
-
+		super.setPopupMenu(popup);
 	}
 
 	private JMenuItem getMenuItem(final String label, final String actionID, final boolean editingAction) {
@@ -317,8 +293,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 				UIManager.getLookAndFeel().provideErrorFeedback(this);
 			} else try {
 				action.actionPerformed(e);
-			} catch (final Exception | Error ignored) {
-				UIManager.getLookAndFeel().provideErrorFeedback(this);
+			} catch (final Exception | Error ex) {
+				log.debug(ex);
 			}
 		});
 		jmi.setText(label);
@@ -1158,7 +1134,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		return supportStatus;
 	}
 
-	 void openLinkInBrowser(String link) {
+	void openLinkInBrowser(String link) {
 		try {
 			if (!link.startsWith("http"))
 				link = "https://" + link; // or it won't work
@@ -1186,10 +1162,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 		@Override
 		public void actionPerformedImpl(final ActionEvent e, final RTextArea textArea) {
-			if (!textArea.isEditable() || !textArea.isEnabled()) {
-				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
-				return;
-			}
 			final String selection = textArea.getSelectedText();
 			if (selection == null) {
 				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
@@ -1223,10 +1195,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 		@Override
 		public void actionPerformedImpl(final ActionEvent e, final RTextArea textArea) {
-			if (!textArea.isEditable() || !textArea.isEnabled()) {
-				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
-				return;
-			}
 			String link = new CursorUtils(textArea).getLinkAtCursor();
 			if (link == null) {
 				UIManager.getLookAndFeel().provideErrorFeedback(textArea);

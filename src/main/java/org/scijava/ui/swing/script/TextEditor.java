@@ -356,6 +356,17 @@ public class TextEditor extends JFrame implements ActionListener,
 		makeJarWithSource = addToMenu(file, "Export as JAR (With Source)...", 0, 0);
 		makeJarWithSource.setMnemonic(KeyEvent.VK_X);
 		file.addSeparator();
+		final JCheckBoxMenuItem lockPane = new JCheckBoxMenuItem("Lock (Make Read Only)");
+		lockPane.setToolTipText("Protects file from accidental editing");
+		file.add(lockPane);
+		lockPane.addActionListener(e -> {
+			if (lockPane.isSelected()) {
+				new SetReadOnlyAction().actionPerformedImpl(e, getEditorPane());
+			} else {
+				new SetWritableAction().actionPerformedImpl(e, getEditorPane());
+			}
+		});
+		tabbed.addChangeListener(e -> lockPane.setSelected(getTab(tabbed.getSelectedIndex()).editorPane.isLocked()));
 		JMenuItem jmi = new JMenuItem("Revert...");
 		jmi.addActionListener(e -> {
 			if (getEditorPane().isLocked()) {
@@ -915,17 +926,6 @@ public class TextEditor extends JFrame implements ActionListener,
 				+ getEditorPane().getPaneActions().getAcceleratorLabel(EditorPaneActions.epaToggleCommentAltAction));
 		addMappedActionToMenu(editMenu, "Insert Time Stamp", EditorPaneActions.rtaTimeDateAction, true);
 		removeTrailingWhitespace = addToMenu(editMenu, "Remove Trailing Whitespace", 0, 0);
-		final JCheckBoxMenuItem lock = new JCheckBoxMenuItem("Lock Editing");
-		editMenu.add(lock);
-		lock.addActionListener(e -> {
-			for (int i = 0; i < tabbed.getTabCount(); i++) {
-				if (lock.isSelected()) {
-					new SetReadOnlyAction().actionPerformedImpl(e, getEditorPane(i));
-				} else {
-					new SetWritableAction().actionPerformedImpl(e, getEditorPane(i));
-				}
-			}
-		});
 		zapGremlins = addToMenu(editMenu, "Zap Gremlins", 0, 0);
 		zapGremlins.setToolTipText("Removes invalid (non-printable) ASCII characters");
 	}
@@ -934,6 +934,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		addMenubarSeparator(menu, "Script Editor Macros:");
 		final JMenuItem startMacro = new JMenuItem("Start/Resume Macro Recording");
 		startMacro.addActionListener(e -> {
+			if (getEditorPane().isLocked()) {
+				error("File is currently locked.");
+				return;
+			}
 			final String state = (RTextArea.getCurrentMacro() == null) ? "on" : "resumed";
 			write("Script Editor: Macro recording " + state);
 			RTextArea.beginRecordingMacro();
@@ -984,6 +988,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		final JMenuItem playMacro = new JMenuItem("Run Recorded Macro");
 		playMacro.setToolTipText("Runs current recordings. Prompts for\nrecordings file if no recordings exist");
 		playMacro.addActionListener(e -> {
+			if (getEditorPane().isLocked()) {
+				error("File is currently locked.");
+				return;
+			}
 			if (null == RTextArea.getCurrentMacro()) {
 				final File fileToOpen = getMacroFile(true);
 				if (fileToOpen != null) {
@@ -1683,11 +1691,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			if (index > 0) index--;
 			switchTo(index);
 		}
-		else if (source == cut) getTextArea().cut();
 		else if (source == copy) getTextArea().copy();
-		else if (source == paste) getTextArea().paste();
-		else if (source == undo) getTextArea().undoLastAction();
-		else if (source == redo) getTextArea().redoLastAction();
 		else if (source == find) findOrReplace(true);
 		else if (source == findNext) {
 			findDialog.setRestrictToConsole(false);
@@ -1708,21 +1712,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == chooseTabSize) {
 			commandService.run(ChooseTabSize.class, true, "editor", this);
 		}
-		else if (source == addImport) {
-			addImport(getSelectedClassNameOrAsk("Add import (complete qualified name of class/package)",
-					"Which Class to Import?"));
-		}
-		else if (source == removeUnusedImports) new TokenFunctions(getTextArea())
-			.removeUnusedImports();
-		else if (source == sortImports) new TokenFunctions(getTextArea())
-			.sortImports();
-		else if (source == removeTrailingWhitespace) new TokenFunctions(
-			getTextArea()).removeTrailingWhitespace();
-		else if (source == replaceTabsWithSpaces) getTextArea()
-			.convertTabsToSpaces();
-		else if (source == replaceSpacesWithTabs) getTextArea()
-			.convertSpacesToTabs();
-		else if (source == zapGremlins) zapGremlins();
 		else if (source == openClassOrPackageHelp) openClassOrPackageHelp(null);
 		else if (source == extractSourceJar) extractSourceJar();
 		else if (source == openSourceForClass) {
@@ -1771,6 +1760,36 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == nextTab) switchTabRelative(1);
 		else if (source == previousTab) switchTabRelative(-1);
 		else if (handleTabsMenu(source)) return;
+		else {
+			// commands that should not run when files are locked!
+			if (getEditorPane().isLocked()) {
+				error("File is currently locked.");
+				return;
+			}
+			if (source == cut)
+				getTextArea().cut();
+			else if (source == paste)
+				getTextArea().paste();
+			else if (source == undo)
+				getTextArea().undoLastAction();
+			else if (source == redo)
+				getTextArea().redoLastAction();
+			else if (source == addImport) {
+				addImport(getSelectedClassNameOrAsk("Add import (complete qualified name of class/package)",
+						"Which Class to Import?"));
+			} else if (source == removeUnusedImports)
+				new TokenFunctions(getTextArea()).removeUnusedImports();
+			else if (source == sortImports)
+				new TokenFunctions(getTextArea()).sortImports();
+			else if (source == removeTrailingWhitespace)
+				new TokenFunctions(getTextArea()).removeTrailingWhitespace();
+			else if (source == replaceTabsWithSpaces)
+				getTextArea().convertTabsToSpaces();
+			else if (source == replaceSpacesWithTabs)
+				getTextArea().convertSpacesToTabs();
+			else if (source == zapGremlins)
+				zapGremlins();
+		}
 	}
 
 	private void setAutoCompletionEnabled(final boolean enabled) {
@@ -2098,20 +2117,24 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	/**
-	 * Open a new tab with some content; the languageExtension is like ".java",
-	 * ".py", etc.
+	 * Opens a new tab with some content.
+	 * 
+	 * @param content           the script content
+	 * @param languageExtension the file extension associated with the content's
+	 *                          language (e.g., ".java", ".py", etc.
+	 * @return the text editor tab
 	 */
-	public TextEditorTab newTab(final String content, final String language) {
-		String lang = language;
+	public TextEditorTab newTab(final String content, final String languageExtension) {
+		String lang = languageExtension;
 		final TextEditorTab tab = open(null);
 		if (null != lang && lang.length() > 0) {
 			lang = lang.trim().toLowerCase();
 
 			if ('.' != lang.charAt(0)) {
-				lang = "." + language;
+				lang = "." + languageExtension;
 			}
 
-			tab.editorPane.setLanguage(scriptService.getLanguageByName(language));
+			tab.editorPane.setLanguage(scriptService.getLanguageByName(languageExtension));
 		} else {
 			final String lastLanguageName = prefService.get(getClass(), LAST_LANGUAGE);
 			if (null != lastLanguageName && "none" != lastLanguageName)
@@ -2189,11 +2212,11 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		catch (final FileNotFoundException e) {
 			log.error(e);
-			error("The file '" + file + "' was not found.");
+			error("The file\n'" + file + "' was not found.");
 		}
 		catch (final Exception e) {
 			log.error(e);
-			error("There was an error while opening '" + file + "': " + e);
+			error("There was an error while opening\n'" + file + "': " + e);
 		}
 		return null;
 	}
