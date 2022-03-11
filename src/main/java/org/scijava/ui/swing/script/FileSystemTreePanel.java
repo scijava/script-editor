@@ -99,8 +99,8 @@ class FileSystemTreePanel extends JPanel {
 		bc.gridy = 0;
 		bc.weightx = 0;
 		bc.weighty = 0;
-		bc.anchor = GridBagConstraints.NORTHWEST;
-		bc.fill = GridBagConstraints.NONE;
+		bc.anchor = GridBagConstraints.CENTER;
+		bc.fill = GridBagConstraints.HORIZONTAL;
 		add(addDirectoryButton(), bc);
 		bc.gridx = 1;
 		add(removeDirectoryButton(), bc);
@@ -322,13 +322,13 @@ class FileSystemTreePanel extends JPanel {
 	private void addContextualMenuToTree() {
 		final JPopupMenu popup = new JPopupMenu();
 		JMenuItem jmi = new JMenuItem("Collapse All");
-		jmi.addActionListener(e -> collapseAllNodes());
+		jmi.addActionListener(e -> TextEditor.GuiUtils.collapseAllTreeNodes(tree));
 		popup.add(jmi);
 		jmi = new JMenuItem("Expand Folders");
 		jmi.addActionListener(e -> expandImmediateNodes());
 		popup.add(jmi);
 		popup.addSeparator();
-		jmi = new JMenuItem("Show in System Explorer");
+		jmi = new JMenuItem("Open in System Explorer");
 		jmi.addActionListener(e -> {
 			final TreePath path = tree.getSelectionPath();
 			if (path == null) {
@@ -346,6 +346,24 @@ class FileSystemTreePanel extends JPanel {
 			}
 		});
 		popup.add(jmi);
+		jmi = new JMenuItem("Open in Terminal");
+		jmi.addActionListener(e -> {
+			final TreePath path = tree.getSelectionPath();
+			if (path == null) {
+				JOptionPane.showMessageDialog(this, "No items are currently selected.", "Invalid Selection",
+						JOptionPane.INFORMATION_MESSAGE);
+				return;
+			}
+			try {
+				final String filepath = (String) ((FileSystemTree.Node) path.getLastPathComponent()).getUserObject();
+				TextEditor.GuiUtils.openTerminal(new File(filepath));
+			} catch (final Exception ignored) {
+				JOptionPane.showMessageDialog(this, "Could not open path in Terminal.", "Error",
+						JOptionPane.ERROR_MESSAGE);
+			}
+		});
+		popup.add(jmi);
+		
 		popup.addSeparator();
 		jmi = new JMenuItem("Reset to Home Folder");
 		jmi.addActionListener(e -> changeRootPath(System.getProperty("user.home")));
@@ -361,11 +379,6 @@ class FileSystemTreePanel extends JPanel {
 		tree.addTopLevelFoldersFrom(path);
 		tree.getModel().reload(); // this will collapse all nodes
 		expandImmediateNodes();
-	}
-
-	private void collapseAllNodes() {
-		for (int i = tree.getRowCount() - 1; i >= 0; i--)
-			tree.collapseRow(i);
 	}
 
 	private void expandImmediateNodes() {
@@ -387,8 +400,8 @@ class FileSystemTreePanel extends JPanel {
 				+ "to paste their paths into the active script.</p>" //
 				+ "<br><p><b>Filtering Files</b></p>" //
 				+ "<p>Filters affect filenames (not folders) and are applied by typing a filtering "//
-				+ "string + [Enter]. Filters act only on files being listed, and ignore collapsed " //
-				+ "folders. Examples of regex usage:</p>" //
+				+ "string + [Enter]. Filters act only on files being listed in expanded directories, " //
+				+ "and ignore the content of collapsed folders. Examples of regex usage:</p>" //
 				+ "<br><table align='center'>" //
 				+ "  <tr>" //
 				+ "   <th>Pattern</th>" //

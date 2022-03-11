@@ -61,6 +61,7 @@ import javax.swing.JPopupMenu;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JViewport;
+import javax.swing.MenuElement;
 import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
@@ -184,7 +185,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 				wordMovement("Prev-Word-Select-Action", -1, true));
 
 		noneLangSyntaxMenu = geSyntaxForNoneLang();
-		installCostumPopupMenu();
+		installCustomPopupMenu();
 
 		ToolTipManager.sharedInstance().registerComponent(this);
 		addMouseListener(new MouseAdapter() {
@@ -236,30 +237,30 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		if (isVisible()) super.addNotify();
 	}
 
-	private void installCostumPopupMenu() {
+	private void installCustomPopupMenu() {
 		// We are overriding the entire menu so that we can include our shortcuts
 		// in the menu items. These commands are not listed on the menubar, so
 		// this is the only access point in the GUI for these
 		// see #createPopupMenu(); #appendFoldingMenu();
 		final JPopupMenu popup = new JPopupMenu();
-		TextEditor.addPopupMenuSeparator(popup, "Code Editing:");
+		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Code Editing:");
 		popup.add(getMenuItem("Copy", EditorPaneActions.copyAction, false));
 		popup.add(getMenuItem("Cut", EditorPaneActions.cutAction, true));
 		popup.add(getMenuItem("Paste", EditorPaneActions.pasteAction, true));
 		popup.add(getMenuItem("Delete Line", EditorPaneActions.rtaDeleteLineAction, true));
 		popup.add(getMenuItem("Delete Rest of Line", EditorPaneActions.rtaDeleteRestOfLineAction, true));
-		TextEditor.addPopupMenuSeparator(popup, "Code Selection:");
+		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Code Selection:");
 		popup.add(getMenuItem("Select All", EditorPaneActions.selectAllAction, false));
 		popup.add(getMenuItem("Select Line", EditorPaneActions.selectLineAction, false));
 		popup.add(getMenuItem("Select Paragraph", EditorPaneActions.selectParagraphAction, false));
-		TextEditor.addPopupMenuSeparator(popup, "Code Folding:");
+		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Code Folding:");
 		popup.add(getMenuItem("Collapse Fold", EditorPaneActions.rstaCollapseFoldAction, false));
 		popup.add(getMenuItem("Expand Fold", EditorPaneActions.rstaExpandFoldAction, false));
 		popup.add(getMenuItem("Toggle Current Fold", EditorPaneActions.rstaToggleCurrentFoldAction, false));
 		popup.add(getMenuItem("Collapse All Folds", EditorPaneActions.rstaCollapseAllFoldsAction, false));
 		popup.add(getMenuItem("Expand All Folds", EditorPaneActions.rstaExpandAllFoldsAction, false));
 		popup.add(getMenuItem("Collapse All Comments", EditorPaneActions.rstaCollapseAllCommentFoldsAction, false));
-		TextEditor.addPopupMenuSeparator(popup, "Code Formatting:");
+		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Code Formatting:");
 		popup.add(getMenuItem("Indent Right", EditorPaneActions.epaIncreaseIndentAction, true));
 		popup.add(getMenuItem("Indent Left", EditorPaneActions.rstaDecreaseIndentAction, true));
 		popup.add(getMenuItem("Move Up", EditorPaneActions.rtaLineUpAction, true));
@@ -274,10 +275,10 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		menu.add(getMenuItem("Lower Case ('_' Sep.)", EditorPaneActions.epaLowerCaseUndAction, true));
 		menu.add(getMenuItem("Title Case", EditorPaneActions.epaTitleCaseAction, true));
 		menu.add(getMenuItem("Upper Case", EditorPaneActions.rtaUpperSelectionCaseAction, true));
-		TextEditor.addPopupMenuSeparator(popup, "Ocurrences:");
+		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Ocurrences:");
 		popup.add(getMenuItem("Next Occurrence", EditorPaneActions.rtaNextOccurrenceAction, false));
 		popup.add(getMenuItem("Previous Occurrence", EditorPaneActions.rtaPrevOccurrenceAction, false));
-		TextEditor.addPopupMenuSeparator(popup, "Utilities:");
+		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Utilities:");
 		popup.add(new OpenLinkUnderCursor().getMenuItem());
 		popup.add(new SearchWebOnSelectedText().getMenuItem());
 		popup.add(noneLangSyntaxMenu);
@@ -323,6 +324,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private JMenuItem getSyntaxItem(final ButtonGroup bg, final String label, final String syntaxId) {
 		final JRadioButtonMenuItem item = new JRadioButtonMenuItem(label);
 		bg.add(item);
+		item.setActionCommand(syntaxId);
 		item.addActionListener(e -> {
 			if (getCurrentLanguage() == null) {
 				setSyntaxEditingStyle(syntaxId);
@@ -333,6 +335,30 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			}
 		});
 		return item;
+	}
+
+	private void updateNoneLangSyntaxMenu(final ScriptLanguage language) {
+		noneLangSyntaxMenu.setEnabled(language == null);
+		if (language == null) {
+			JRadioButtonMenuItem defaultChoice = null;
+			try {
+				for (final MenuElement me : noneLangSyntaxMenu.getSubElements()) {
+					if (me instanceof JRadioButtonMenuItem) {
+						final JRadioButtonMenuItem rb = ((JRadioButtonMenuItem) me);
+						final String choice = rb.getActionCommand();
+						if (getSyntaxEditingStyle().equals(choice)) {
+							rb.setSelected(true);
+							return;
+						}
+						if (SYNTAX_STYLE_NONE.equals(choice))
+							defaultChoice = rb;
+					}
+				}
+				defaultChoice.setSelected(true);
+			} catch (final Exception ignored) {
+				// do nothing
+			}
+		}
 	}
 
 	@Override
@@ -740,7 +766,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setText(header += getText());
 		}
 
-		noneLangSyntaxMenu.setEnabled(language == null);
+		updateNoneLangSyntaxMenu(language);
 		if ("None".equals(languageName) ) {
 			supportStatus = "Active language: None";
 			return; // no need to update console any further

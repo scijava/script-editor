@@ -124,13 +124,18 @@ public class GutterUtils {
 
 		@Override
 		public void paintIcon(final Component c, final Graphics g, final int x, final int y) {
-			g.setColor(background);
-			g.fillRect(x, y, size, size);
-			g.setColor(foreground);
-			g.drawRect(x, y, size, size);
-			g.drawLine(x + 2, y + size / 2, x + 2 + size / 2, y + size / 2);
+			// the default '+'/'-' symbols are to small with scaled fonts, and we don't
+			// have an easy way to resize the space allocated for the icon in the gutter
 			if (collapsed) {
-				g.drawLine(x + size / 2, y + 2, x + size / 2, y + size / 2 + 2);
+				g.setColor(foreground);
+				g.fillRect(x, y, size, size);
+				g.setColor(background);
+				g.drawRect(x, y, size-2, size-1); // no idea why the extra pixel is needed
+			} else {
+				g.setColor(background);
+				g.fillRect(x, y, size, size);
+				g.setColor(foreground);
+				g.drawRect(x, y, size-2, size-1);
 			}
 		}
 	}

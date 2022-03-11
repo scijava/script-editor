@@ -40,6 +40,7 @@ import java.awt.font.TextLayout;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
 
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
@@ -63,16 +64,17 @@ class OutlineTreePanel extends JScrollPane {
 	private AbstractSourceTree sourceTree;
 	private final Color placeholdColor;
 	private float fontSize;
+	private boolean sorted;
+	private boolean major;
 
 	OutlineTreePanel(final TextEditor editor) {
 		super();
 		fontSize = getFont().getSize();
 		setViewportView(new UnsupportedLangTree());
-		placeholdColor = TextEditor.getDisabledComponentColor();
-
+		placeholdColor = TextEditor.GuiUtils.getDisabledComponentColor();
 	}
 
-	protected void refreshSourceTree(final EditorPane pane) {
+	protected void rebuildSourceTree(final EditorPane pane) {
 		if (!isVisible())
 			return;
 		if (sourceTree != null) {
@@ -82,14 +84,15 @@ class OutlineTreePanel extends JScrollPane {
 		final String language = (sLanguage == null) ? "" : sLanguage.getLanguageName();
 		switch (language) {
 		case "Java":
-			sourceTree = new JavaOutlineTree();
+		//case "BeanShell":
+			sourceTree = new JavaOutlineTree(sorted);
 			break;
 		case "JavaScript":
-			sourceTree = new JavaScriptOutlineTree();
+			sourceTree = new JavaScriptOutlineTree(sorted);
 			break;
 		default:
 			if (EditorPane.SYNTAX_STYLE_XML.equals(pane.getSyntaxEditingStyle())) {
-				sourceTree = new XmlOutlineTree();
+				sourceTree = new XmlOutlineTree(sorted);
 			} else
 				sourceTree = null;
 			break;
@@ -98,6 +101,7 @@ class OutlineTreePanel extends JScrollPane {
 		if (sourceTree == null) {
 			setViewportView(new UnsupportedLangTree(pane));
 		} else {
+			sourceTree.setShowMajorElementsOnly(major);
 			sourceTree.setFont(sourceTree.getFont().deriveFont(fontSize));
 			sourceTree.listenTo(pane);
 			setViewportView(sourceTree);
@@ -108,10 +112,35 @@ class OutlineTreePanel extends JScrollPane {
 
 	private void setPopupMenu(final JTree tree, final EditorPane pane) {
 		final JPopupMenu popup = new JPopupMenu();
-		final JMenuItem jmi = new JMenuItem("Refresh");
-		jmi.addActionListener(e -> refreshSourceTree(pane));
+		JMenuItem jmi;
+		if (tree instanceof AbstractSourceTree) {
+			jmi = new JMenuItem("Collapse All");
+			jmi.addActionListener(e -> TextEditor.GuiUtils.collapseAllTreeNodes(tree));
+			popup.add(jmi);
+			jmi = new JMenuItem("Expand All");
+			jmi.addActionListener(e -> TextEditor.GuiUtils.expandAllTreeNodes(tree));
+			popup.add(jmi);
+			popup.addSeparator();
+			final JCheckBoxMenuItem jcmi1 = new JCheckBoxMenuItem("Hide 'Minor' Elements", major);
+			jcmi1.setToolTipText("Whether non-proeminent elements (e.g., local variables) should be displayed");
+			jcmi1.addItemListener(e -> {
+				major = jcmi1.isSelected();
+				((AbstractSourceTree) tree).setShowMajorElementsOnly(major);
+				((AbstractSourceTree) tree).refresh();
+			});
+			popup.add(jcmi1);
+			final JCheckBoxMenuItem jcmi2 = new JCheckBoxMenuItem("Sort Elements", sorted);
+			jcmi2.addItemListener(e -> {
+				sorted = jcmi2.isSelected();
+				((AbstractSourceTree) tree).setSorted(sorted); // will refresh
+			});
+			popup.add(jcmi2);
+			popup.addSeparator();
+		}
+		jmi = new JMenuItem("Rebuild");
+		jmi.addActionListener(e -> rebuildSourceTree(pane));
 		popup.add(jmi);
-		setComponentPopupMenu(popup);
+		tree.setComponentPopupMenu(popup);
 	}
 
 	private class UnsupportedLangTree extends JTree {
@@ -124,7 +153,7 @@ class OutlineTreePanel extends JScrollPane {
 			super((TreeNode) null);
 		}
 
-		public UnsupportedLangTree(EditorPane pane) {
+		public UnsupportedLangTree(final EditorPane pane) {
 			this();
 			setPopupMenu(this, pane);
 		}
