@@ -246,7 +246,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	private FindAndReplaceDialog findDialog;
 	private JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport,
 			autocompletion, fallbackAutocompletion, keylessAutocompletion,
-			markOccurences, paintTabs, whiteSpace, marginLine;
+			markOccurences, paintTabs, whiteSpace, marginLine, lockPane;
 	private ButtonGroup themeRadioGroup;
 	private JTextArea errorScreen = new JTextArea();
 
@@ -299,11 +299,13 @@ public class TextEditor extends JFrame implements ActionListener,
 	private boolean incremental = false;
 	private DragSource dragSource;
 	private boolean layoutLoading = true;
+	private OutlineTreePanel sourceTreePanel;
 
 	public static final ArrayList<TextEditor> instances = new ArrayList<>();
 	public static final ArrayList<Context> contexts = new ArrayList<>();
 
 	public TextEditor(final Context context) {
+
 		super("Script Editor");
 		instances.add(this);
 		contexts.add(context);
@@ -313,15 +315,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		// NB: All panes must be initialized before menus are assembled!
 		tabbed = new JTabbedPane();
 		tree = new FileSystemTree(log);
-		body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new FileSystemTreePanel(tree, context), tabbed);
-		try {// on Aqua L&F, 'one touch arrows' collide with borderless options button, which in turn are
-			// needed for proper resize of the search panel. Grrrrr....
-			if ("com.apple.laf.AquaLookAndFeel".equals(UIManager.getLookAndFeel().getClass().getName())) {
-				body.setOneTouchExpandable(false);
-			}
-		} catch (final Exception ignored) {
-			// do nothing
-		}
+		final JTabbedPane sideTabs = new JTabbedPane();
+		sideTabs.addTab("File Explorer", new FileSystemTreePanel(tree, context));
+		sideTabs.addTab("Outline", sourceTreePanel = new OutlineTreePanel(this));
+		body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sideTabs, tabbed);
 
 		// These items are dynamic and need to be initialized before EditorPane creation
 		initializeDynamicMenuComponents();
@@ -356,7 +353,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		makeJarWithSource = addToMenu(file, "Export as JAR (With Source)...", 0, 0);
 		makeJarWithSource.setMnemonic(KeyEvent.VK_X);
 		file.addSeparator();
-		final JCheckBoxMenuItem lockPane = new JCheckBoxMenuItem("Lock (Make Read Only)");
+		lockPane  = new JCheckBoxMenuItem("Lock (Make Read Only)");
 		lockPane.setToolTipText("Protects file from accidental editing");
 		file.add(lockPane);
 		lockPane.addActionListener(e -> {
@@ -366,7 +363,6 @@ public class TextEditor extends JFrame implements ActionListener,
 				new SetWritableAction().actionPerformedImpl(e, getEditorPane());
 			}
 		});
-		tabbed.addChangeListener(e -> lockPane.setSelected(getTab(tabbed.getSelectedIndex()).editorPane.isLocked()));
 		JMenuItem jmi = new JMenuItem("Revert...");
 		jmi.addActionListener(e -> {
 			if (getEditorPane().isLocked()) {
@@ -552,7 +548,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		tabsMenu.setMnemonic(KeyEvent.VK_W);
 		addMenubarSeparator(tabsMenu, "Panes:");
 		// Assume initial status from prefs or panel visibility
-		final JCheckBoxMenuItem jcmi1 = new JCheckBoxMenuItem("File Explorer",
+		final JCheckBoxMenuItem jcmi1 = new JCheckBoxMenuItem("Side Pane",
 				prefService.getInt(getClass(), MAIN_DIV_LOCATION, body.getDividerLocation()) > 0
 						|| isLeftPaneExpanded(body));
 		jcmi1.addItemListener(e -> collapseSplitPane(0, !jcmi1.isSelected()));
@@ -677,8 +673,14 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		// -- END MENUS --
 
-		// Add the editor and output area
+		// add tab-related listeners
 		tabbed.addChangeListener(this);
+		sideTabs.addChangeListener(e -> {
+			if (sideTabs.getSelectedIndex() == 1)
+				sourceTreePanel.refreshSourceTree(getTab(tabbed.getSelectedIndex()).editorPane);
+		});
+
+		// Add the editor and output area
 		new FileDrop(tabbed, files -> {
 			final ArrayList<File> filteredFiles = new ArrayList<>();
 			assembleFlatFileCollection(filteredFiles, files);
@@ -895,9 +897,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		addMappedActionToMenu(editMenu, "Goto Matching Bracket", EditorPaneActions.rstaGoToMatchingBracketAction, false);
 
 		final JMenuItem gotoType = new JMenuItem("Goto Type...");
-		gotoType.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_G, ctrl + shift)); // default is Ctrl+Shift+O
-		gotoType.setToolTipText(
-				"Alternative shortcut: " + getEditorPane().getPaneActions().getAcceleratorLabel("GoToType"));
+		gotoType.setAccelerator(getEditorPane().getPaneActions().getAccelerator("GoToType"));
 		gotoType.addActionListener(e -> {
 			try {
 				getTextArea().getActionMap().get("GoToType").actionPerformed(e);
@@ -1976,6 +1976,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			return;
 		}
 		final EditorPane editorPane = getEditorPane(index);
+		lockPane.setSelected(editorPane.isLocked());
 		editorPane.requestFocus();
 		checkForOutsideChanges();
 
@@ -2209,6 +2210,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 			updateLanguageMenu(tab.editorPane.getCurrentLanguage());
 			tab.editorPane.getDocument().addDocumentListener(this);
+			tab.editorPane.requestFocusInWindow();
 			return tab;
 		}
 		catch (final FileNotFoundException e) {
@@ -2460,9 +2462,9 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	public void updateUI(final boolean setByLanguage) {
 		final EditorPane pane = getEditorPane();
-		if (pane.getCurrentLanguage() == null) return;
+		//if (pane.getCurrentLanguage() == null) return;
 
-		if (setByLanguage) {
+		if (setByLanguage && pane.getCurrentLanguage() != null) {
 			if (pane.getCurrentLanguage().getLanguageName().equals("Python")) {
 				pane.setTabSize(4);
 			}
@@ -2513,6 +2515,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		autocompletion.setState(pane.isAutoCompletionEnabled());
 		fallbackAutocompletion.setState(pane.isAutoCompletionFallbackEnabled());
 		keylessAutocompletion.setState(pane.isAutoCompletionKeyless());
+		sourceTreePanel.refreshSourceTree(pane);
 	}
 
 	public void setEditorPaneFileName(final String baseName) {
@@ -3928,7 +3931,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		return collection;
 	}
 
-	private static Color getDisabledComponentColor() {
+	protected static Color getDisabledComponentColor() {
 		try {
 			return UIManager.getColor("MenuItem.disabledForeground");
 		} catch (final Exception ignored) {

@@ -90,6 +90,13 @@ public class EditorPaneActions extends RSyntaxTextAreaEditorKit {
 		map.put(KeyStroke.getKeyStroke(KeyEvent.VK_I, defaultMod), epaIncreaseIndentAction);
 		map.put(KeyStroke.getKeyStroke(KeyEvent.VK_I, defaultMod + shift), rstaDecreaseIndentAction);
 
+		// editing: override defaults for undo/redo/copy/cut/paste for consistency with menubar
+		map.put(KeyStroke.getKeyStroke(KeyEvent.VK_C, defaultMod), copyAction);
+		map.put(KeyStroke.getKeyStroke(KeyEvent.VK_V, defaultMod), pasteAction);
+		map.put(KeyStroke.getKeyStroke(KeyEvent.VK_X, defaultMod), cutAction);
+		map.put(KeyStroke.getKeyStroke(KeyEvent.VK_Z, defaultMod), rtaUndoAction);
+		map.put(KeyStroke.getKeyStroke(KeyEvent.VK_Y, defaultMod), rtaRedoAction); // this should be ctrl+shift+z!?
+
 		/*
 		 * see RSyntaxTextAreaDefaultInputMap and RTADefaultInputMap for other bindings.
 		 * Note that some of those bindings must be overridden in map.getParent()
