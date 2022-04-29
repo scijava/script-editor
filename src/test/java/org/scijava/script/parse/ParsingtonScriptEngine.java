@@ -39,7 +39,7 @@ import java.util.Collection;
 import javax.script.ScriptException;
 
 import org.scijava.parsington.Variable;
-import org.scijava.parsington.eval.DefaultEvaluator;
+import org.scijava.parsington.eval.DefaultTreeEvaluator;
 import org.scijava.parsington.eval.Evaluator;
 import org.scijava.script.AbstractScriptEngine;
 
@@ -95,7 +95,7 @@ public class ParsingtonScriptEngine extends AbstractScriptEngine {
 	public ParsingtonScriptEngine() {
 		// NB: Create a default evaluator, but extended to support method calls.
 		// This is a first-cut hack, just for fun -- fields are not supported yet.
-		this(new DefaultEvaluator() {
+		this(new DefaultTreeEvaluator() {
 
 			@Override
 			public Object dot(final Object a, final Object b) {

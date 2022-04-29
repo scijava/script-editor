@@ -132,8 +132,10 @@ public class EditorPaneActions extends RSyntaxTextAreaEditorKit {
 		// actions that are not registered by default
 		map.put(rtaTimeDateAction, new TimeDateAction());
 		map.put(clipboardHistoryAction, new ClipboardHistoryActionImpl());
-		if (map.get(rstaCopyAsStyledTextAction) != null)
-			map.put(rstaCopyAsStyledTextAction, new CopyAsStyledTextAction());
+		// NB: This action is present in rsyntaxtextarea 3.1.1, but not 3.1.6.
+		// So we disable it for the time being.
+		//if (map.get(rstaCopyAsStyledTextAction) != null)
+		//	map.put(rstaCopyAsStyledTextAction, new CopyAsStyledTextAction());
 		if (map.get(rstaGoToMatchingBracketAction) != null)
 			map.put(rstaGoToMatchingBracketAction, new GoToMatchingBracketAction());
 
