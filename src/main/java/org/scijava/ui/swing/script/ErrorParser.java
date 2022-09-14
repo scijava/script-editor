@@ -151,13 +151,15 @@ public class ErrorParser {
 		parse(sw.toString());
 	}
 
-	private boolean isIJ1Macro() {
+	private boolean isImageJMacro() {
 		final ScriptLanguage lang = editorPane.getCurrentLanguage();
-		return lang != null && "IJ1 Macro".equals(lang.getLanguageName());
+		if (lang == null) return false;
+		final String name = lang.getLanguageName();
+		return name.equals("ImageJ Macro") || name.equals("IJ1 Macro");
 	}
 
 	public boolean isLogDetailed() {
-		if (!isIJ1Macro()) return parsingSucceeded;
+		if (!isImageJMacro()) return parsingSucceeded;
 		for (final Window win : Window.getWindows()) {
 			if (win != null && win instanceof Dialog && "Macro Error".equals(((Dialog)win).getTitle())) {
 				return true; // hopefully there is something in the console
@@ -194,7 +196,7 @@ public class ErrorParser {
 			abort();
 			return;
 		}
-		final boolean isIJM = isIJ1Macro();
+		final boolean isIJM = isImageJMacro();
 		if (isIJM) {
 			abort("Execution errors handled by the Macro Interpreter. Use the Interpreter's Debug option for error tracking", false);
 			return;

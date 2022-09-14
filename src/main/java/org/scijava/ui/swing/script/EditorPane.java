@@ -1067,7 +1067,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setTabsEmulated(false);
 			setPaintTabLines(false);
 			setAutoCompletion(true);
-			setKeylessAutoCompletion(true); // true for backwards compatibility with IJ1 macro auto-completion
+			setKeylessAutoCompletion(true); // true for backwards compatibility with ImageJ macro auto-completion
 			setFallbackAutoCompletion(false);
 			setMarkOccurrences(false);
 		} else {
@@ -1078,7 +1078,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setWhitespaceVisible(prefService.getBoolean(getClass(), WHITESPACE_VISIBLE_PREFS, isWhitespaceVisible()));
 			setPaintTabLines(prefService.getBoolean(getClass(), TABLINES_VISIBLE_PREFS, getPaintTabLines()));
 			setAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_PREFS, true));
-			setKeylessAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_KEYLESS_PREFS, true)); // true for backwards compatibility with IJ1 macro
+			setKeylessAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_KEYLESS_PREFS, true)); // true for backwards compatibility with ImageJ macro
 			setFallbackAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, false));
 			setMarkOccurrences(prefService.getBoolean(getClass(), MARK_OCCURRENCES_PREFS, false));
 			setMarginLineEnabled(prefService.getBoolean(getClass(), MARGIN_VISIBLE_PREFS, false));

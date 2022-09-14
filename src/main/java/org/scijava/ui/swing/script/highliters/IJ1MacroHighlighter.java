@@ -33,12 +33,12 @@ import org.scijava.plugin.Plugin;
 import org.scijava.ui.swing.script.SyntaxHighlighter;
 
 /**
- * SyntaxHighliter for ij1-macros.
+ * SyntaxHighliter for imagej-macros.
  *
  * @author Johannes Schindelin
  * @author Jonathan Hale
  */
-@Plugin(type = SyntaxHighlighter.class, name = "ij1-macro")
+@Plugin(type = SyntaxHighlighter.class, name = "imagej-macro")
 public class IJ1MacroHighlighter extends ImageJMacroTokenMaker implements
 	SyntaxHighlighter
 {

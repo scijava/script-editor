@@ -3767,7 +3767,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		menu.add(helpMenuItem("Fiji on GitHub", "https://github.com/fiji"));
 		menu.add(helpMenuItem("SciJava on GitHub", "https://github.com/scijava/"));
 		menu.addSeparator();
-		menu.add(helpMenuItem("IJ1 Macro Functions", "https://imagej.nih.gov/ij/developer/macro/functions.html"));
+		menu.add(helpMenuItem("ImageJ Macro Functions", "https://imagej.nih.gov/ij/developer/macro/functions.html"));
 		menu.add(helpMenuItem("ImageJ Docs: Development", "https://imagej.net/develop/"));
 		menu.add(helpMenuItem("ImageJ Docs: Scripting", "https://imagej.net/scripting/"));
 		menu.addSeparator();
