@@ -1192,8 +1192,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			if (selection == null) {
 				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
 			} else {
-				final String link = "https://duckduckgo.com/?q=" + selection.trim().replace(" ", "+");
-				openLinkInBrowser(link);
+				TextEditor.GuiUtils.runSearchQueryInBrowser(EditorPane.this, platformService, selection.trim());
 			}
 			textArea.requestFocusInWindow();
 		}
@@ -1208,8 +1207,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			jmi.setText("Search Web for Selection");
 			return jmi;
 		}
-
-
 	}
 
 	class OpenLinkUnderCursor extends RecordableTextAction {

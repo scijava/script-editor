@@ -30,12 +30,15 @@
 package org.scijava.ui.swing.script;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
@@ -75,7 +78,9 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.io.Writer;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -125,6 +130,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
+import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.JTree;
 import javax.swing.KeyStroke;
@@ -302,6 +308,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	private DragSource dragSource;
 	private boolean layoutLoading = true;
 	private OutlineTreePanel sourceTreePanel;
+	private final CommandPalette cmdPalette;
 
 	public static final ArrayList<TextEditor> instances = new ArrayList<>();
 	public static final ArrayList<Context> contexts = new ArrayList<>();
@@ -498,6 +505,9 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		toolsMenu = new JMenu("Tools");
 		toolsMenu.setMnemonic(KeyEvent.VK_O);
+		cmdPalette = new CommandPalette(this);
+		cmdPalette.register(toolsMenu);
+	
 		GuiUtils.addMenubarSeparator(toolsMenu, "Imports:");
 		addImport = addToMenu(toolsMenu, "Add Import...", 0, 0);
 		addImport.setMnemonic(KeyEvent.VK_I);
@@ -767,6 +777,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				}
 				dragSource = null;
 				getTab().destroy();
+				cmdPalette.dispose();
 				dispose();
 			}
 		});
@@ -854,12 +865,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		findPrevious = addToMenu(editMenu, "Find Previous", KeyEvent.VK_F3, shift);
 		findPrevious.setMnemonic(KeyEvent.VK_P);
 
-		GuiUtils.addMenubarSeparator(editMenu, "Goto:");
-		gotoLine = addToMenu(editMenu, "Goto Line...", KeyEvent.VK_G, ctrl);
+		GuiUtils.addMenubarSeparator(editMenu, "Go To:");
+		gotoLine = addToMenu(editMenu, "Go to Line...", KeyEvent.VK_G, ctrl);
 		gotoLine.setMnemonic(KeyEvent.VK_G);
-		addMappedActionToMenu(editMenu, "Goto Matching Bracket", EditorPaneActions.rstaGoToMatchingBracketAction, false);
+		addMappedActionToMenu(editMenu, "Go to Matching Bracket", EditorPaneActions.rstaGoToMatchingBracketAction, false);
 
-		final JMenuItem gotoType = new JMenuItem("Goto Type...");
+		final JMenuItem gotoType = new JMenuItem("Go to Type...");
 		// we could retrieve the accelerator from paneactions but this may not work, if e.g., an
 		// unsupported syntax (such IJM) has been opened at startup, so we'll just specify it manually
 		//gotoType.setAccelerator(getEditorPane().getPaneActions().getAccelerator("GoToType"));
@@ -3236,7 +3247,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			if (matches.isEmpty()) {
 				if (confirm("No info found for: '" + text + "'.\nSearch for it on the web?", "Search the Web?",
 						"Search")) {
-					openURL("https://duckduckgo.com/?q=" + text.trim().replace(" ", "+"));
+					GuiUtils.runSearchQueryInBrowser(TextEditor.this, getPlatformService(), text.trim());
 				}
 				return;
 			}
@@ -3269,11 +3280,7 @@ public class TextEditor extends JFrame implements ActionListener,
 					gridbag.setConstraints(link, c);
 					panel.add(link);
 					link.addActionListener(event -> {
-						try {
-							platformService.open(new URL(url));
-						} catch (final Exception e) {
-							e.printStackTrace();
-						}
+						GuiUtils.openURL(TextEditor.this, platformService, url);
 					});
 				}
 				c.gridy += 1;
@@ -3866,6 +3873,31 @@ public class TextEditor extends JFrame implements ActionListener,
 		private GuiUtils() {
 		}
 
+		static void runSearchQueryInBrowser(final Component parentComponent, final PlatformService platformService,
+				final String query) {
+			String url;
+			try {
+				url = "https://forum.image.sc/search?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8.toString());
+			} catch (final Exception ignored) {
+				url = query.trim().replace(" ", "%20");
+			}
+			openURL(parentComponent, platformService, url);
+		}
+
+		static void openURL(final Component parentComponent, final PlatformService platformService, final String url) {
+			try {
+				platformService.open(new URL(url));
+			} catch (final Exception ignored) {
+				error(parentComponent, "<HTML>Web page could not be open. " + "Please visit<br>" + url
+						+ "<br>using your web browser.");
+			}
+		}
+
+		private static void error(final Component parentComponent, final String message) {
+			JOptionPane.showMessageDialog(parentComponent, message,
+					"Error", JOptionPane.ERROR_MESSAGE);
+		}
+
 		static void openTerminal(final File pwd) throws IOException, InterruptedException {
 			final String[] wrappedCommand;
 			final File dir = (pwd.isDirectory()) ? pwd : pwd.getParentFile();
@@ -3888,26 +3920,14 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 
 		static void addMenubarSeparator(final JMenu menu, final String header) {
-			if (menu.getMenuComponentCount() > 1) {
+			if (menu.getMenuComponentCount() > 0) {
 				menu.addSeparator();
 			}
 			try {
-				// on Aqua L&F (and other L&Fs on the Mac!?) the label is never rendered. It
-				// seems
-				// only menu items with an actual actionlistener are registered on the menubar!?
-				if (PlatformUtils.isMac()) {
-					final JMenuItem label = new JMenuItem("↓ " + header);
-					label.setEnabled(false);
-					label.setFont(label.getFont().deriveFont(Font.ITALIC)); // ignored
-					label.addActionListener(e -> label.setActionCommand("dummy-menu-bar-separator"));
-					menu.add(label);
-				} else {
-					final JLabel label = new JLabel(header);
-					// label.setHorizontalAlignment(SwingConstants.LEFT);
-					label.setEnabled(false);
-					label.setForeground(getDisabledComponentColor());
-					menu.add(label);
-				}
+				final JLabel label = new JLabel(" "+ header);
+				label.setEnabled(false);
+				label.setForeground(getDisabledComponentColor());
+				menu.add(label);
 			} catch (final Exception ignored) {
 				// do nothing
 			}
@@ -3992,6 +4012,39 @@ public class TextEditor extends JFrame implements ActionListener,
 			});
 			return tabbed;
 		}
+	}
+
+	static class TextFieldWithPlaceholder extends JTextField {
+
+		private static final long serialVersionUID = 1L;
+		private String placeholder;
+
+		TextFieldWithPlaceholder(final String placeholder) {
+			changePlaceholder(placeholder);
+		}
+
+		void changePlaceholder(final String placeholder) {
+			this.placeholder = placeholder;
+			update(getGraphics());
+		}
+
+		Font getPlaceholderFont() {
+			return getFont().deriveFont(Font.ITALIC);
+		}
+
+		@Override
+		protected void paintComponent(final java.awt.Graphics g) {
+			super.paintComponent(g);
+			if (getText().isEmpty()) {
+				final Graphics2D g2 = (Graphics2D) g.create();
+				g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+				g2.setColor(getDisabledTextColor());
+				g2.setFont(getPlaceholderFont());
+				g2.drawString(placeholder, getInsets().left, g2.getFontMetrics().getHeight() + getInsets().top);
+				g2.dispose();
+			}
+		}
+
 	}
 
 }
