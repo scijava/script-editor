@@ -93,13 +93,14 @@ public class FileFunctions {
 		final File baseDirectory = new File(workspace, baseName);
 
 		final List<String> result = new ArrayList<>();
-		final JarFile jar = new JarFile(path);
-		for (final JarEntry entry : Collections.list(jar.entries())) {
-			final String name = entry.getName();
-			if (name.endsWith(".class") || name.endsWith("/")) continue;
-			final String destination = baseDirectory + name;
-			copyTo(jar.getInputStream(entry), destination);
-			result.add(destination);
+		try (JarFile jar = new JarFile(path)) {
+			for (final JarEntry entry : Collections.list(jar.entries())) {
+				final String name = entry.getName();
+				if (name.endsWith(".class") || name.endsWith("/")) continue;
+				final String destination = baseDirectory + name;
+				copyTo(jar.getInputStream(entry), destination);
+				result.add(destination);
+			}
 		}
 		return result;
 	}
@@ -223,7 +224,7 @@ public class FileFunctions {
 		}
 		if (paths.size() == 1) return new File(workspace, paths.get(0))
 			.getAbsolutePath();
-		final String[] names = paths.toArray(new String[paths.size()]);
+		//final String[] names = paths.toArray(new String[paths.size()]);
 		final JFileChooser chooser = new JFileChooser(workspace);
 		chooser.setDialogTitle("Choose path");
 		if (chooser.showOpenDialog(parent) != JFileChooser.APPROVE_OPTION) return null;
@@ -304,8 +305,7 @@ public class FileFunctions {
 			final String prefix = url.substring(bang + 2);
 			final int prefixLength = prefix.length();
 
-			try {
-				final JarFile jar = new JarFile(jarURL);
+			try (JarFile jar = new JarFile(jarURL)) {
 				final Enumeration<JarEntry> e = jar.entries();
 				while (e.hasMoreElements()) {
 					final JarEntry entry = e.nextElement();
@@ -504,11 +504,11 @@ public class FileFunctions {
 		final int line)
 	{
 		if (file == null || gitDirectory == null) {
-			error("No file or git directory");
+			parent.error("No file or git directory.");
 			return;
 		}
 		final String url = getGitwebURL(file, gitDirectory, line);
-		if (url == null) error("Could not get gitweb URL for " + file);
+		if (url == null) parent.error("Could not get gitweb URL for " + file + ".");
 		else try {
 			parent.getPlatformService().open(new URL(url));
 		}
@@ -597,11 +597,6 @@ public class FileFunctions {
 		if (string.endsWith(suffix)) return string.substring(0, string.length() -
 			suffix.length());
 		return string;
-	}
-
-	protected boolean error(final String message) {
-		JOptionPane.showMessageDialog(parent, message);
-		return false;
 	}
 
 	/**

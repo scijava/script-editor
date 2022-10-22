@@ -324,17 +324,20 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private JMenuItem getSyntaxItem(final ButtonGroup bg, final String label, final String syntaxId) {
 		final JRadioButtonMenuItem item = new JRadioButtonMenuItem(label);
 		bg.add(item);
-		item.setActionCommand(syntaxId);
 		item.addActionListener(e -> {
 			if (getCurrentLanguage() == null) {
 				setSyntaxEditingStyle(syntaxId);
 			} else {
-				log.error("[BUG] Unknown state: Non-executable syntaxes cannot be applied to valid languages");
+				error("Non-executable syntaxes can only be applied when scripting language is 'None'.");
 				bg.getElements().nextElement().setSelected(true); //select none
 				setSyntaxEditingStyle(SYNTAX_STYLE_NONE);
 			}
 		});
 		return item;
+	}
+
+	void error(final String message) {
+		JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
 	}
 
 	private void updateNoneLangSyntaxMenu(final ScriptLanguage language) {

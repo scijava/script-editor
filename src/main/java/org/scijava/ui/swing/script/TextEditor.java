@@ -112,10 +112,8 @@ import javax.swing.Action;
 import javax.swing.ActionMap;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
-import javax.swing.InputMap;
 import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
-import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -308,7 +306,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	private DragSource dragSource;
 	private boolean layoutLoading = true;
 	private OutlineTreePanel sourceTreePanel;
-	private final CommandPalette cmdPalette;
+	protected final CommandPalette cmdPalette;
 
 	public static final ArrayList<TextEditor> instances = new ArrayList<>();
 	public static final ArrayList<Context> contexts = new ArrayList<>();
@@ -326,7 +324,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		tree = new FileSystemTree(log);
 		final JTabbedPane sideTabs = GuiUtils.getJTabbedPane();
 		sideTabs.addTab("File Explorer", new FileSystemTreePanel(tree, context));
-		sideTabs.addTab("Outline", sourceTreePanel = new OutlineTreePanel(this));
+		sideTabs.addTab("Outline", sourceTreePanel = new OutlineTreePanel());
 		body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sideTabs, tabbed);
 
 		// These items are dynamic and need to be initialized before EditorPane creation
@@ -506,7 +504,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		toolsMenu = new JMenu("Tools");
 		toolsMenu.setMnemonic(KeyEvent.VK_O);
 		cmdPalette = new CommandPalette(this);
-		cmdPalette.register(toolsMenu);
+		cmdPalette.install(toolsMenu);
 	
 		GuiUtils.addMenubarSeparator(toolsMenu, "Imports:");
 		addImport = addToMenu(toolsMenu, "Add Import...", 0, 0);
@@ -856,7 +854,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		copy = addToMenu(editMenu, "Copy", KeyEvent.VK_C, ctrl);
 		addMappedActionToMenu(editMenu, "Copy as Styled Text", EditorPaneActions.rstaCopyAsStyledTextAction, false);
 		paste = addToMenu(editMenu, "Paste", KeyEvent.VK_V, ctrl);
-		addMappedActionToMenu(editMenu, "Paste from History...", EditorPaneActions.clipboardHistoryAction, true);
+		addMappedActionToMenu(editMenu, "Paste History...", EditorPaneActions.clipboardHistoryAction, true);
 		GuiUtils.addMenubarSeparator(editMenu, "Find:");
 		find = addToMenu(editMenu, "Find/Replace...", KeyEvent.VK_F, ctrl);
 		find.setMnemonic(KeyEvent.VK_F);
@@ -1021,74 +1019,27 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	private void displayRecordableMap() {
-		final ActionMap inputMap = getTextArea().getActionMap();
-		Object[] keys = inputMap.allKeys();
-		final ArrayList<String> lines = new ArrayList<>();
-		if (keys != null) {
-			for (int i = 0; i < keys.length; i++) {
-				final Object obj = inputMap.get(keys[i]);
-				if (!(obj instanceof RecordableTextAction))
-					continue;
-				String objString = (String) ((RecordableTextAction) obj).getValue(Action.NAME);
-				objString = cleanseActionDescription(objString);
-				lines.add("<li>" + capitalize(objString) + "</li>");
-			}
-			Collections.sort(lines, String.CASE_INSENSITIVE_ORDER);
-		}
-		showHTMLDialog("Script Editor Recordable Actions/Events", "<HTML><ol>" + String.join("", lines) + "</dl>");
+		displayMap(cmdPalette.getRecordableActions(), "Script Editor Recordable Actions/Events");
 	}
 
 	private void displayKeyMap() {
-		final InputMap inputMap = getTextArea().getInputMap(JComponent.WHEN_FOCUSED);
-		final KeyStroke[] keys = inputMap.allKeys();
+		displayMap(cmdPalette.getShortcuts(), "Script Editor Shortcuts");
+	}
+
+	private void displayMap(final Map<String, String> map, final String windowTitle) {
 		final ArrayList<String> lines = new ArrayList<>();
-		if (keys != null) {
-			for (int i = 0; i < keys.length; i++) {
-				final KeyStroke key = keys[i];
-				String keyString = key.toString().replace("pressed", "");
-				if (keyString.startsWith("typed "))
-					continue; // ignore 'regular keystrokes'
-				final Object obj = inputMap.get(key);
-				String objString;
-				if (obj instanceof AbstractAction) {
-					objString = (String) ((AbstractAction) obj).getValue(Action.NAME);
-				} else if (obj instanceof AbstractButton) {
-					objString = ((AbstractButton) obj).getText();
-				} else {
-					objString = obj.toString();
-				}
-				objString = cleanseActionDescription(objString);
-				keyString = keyString.replace("ctrl", "Ctrl");
-				keyString = keyString.replace("shift", "Shift");
-				keyString = keyString.replace("alt", "Alt");
-				lines.add("<tr><td style=\"width: 50%; text-align: left;\">" + capitalize(objString)
-						+ "</td><td style=\"width: 50%; text-align: left;\">" + keyString + "</td></tr>");
-			}
-			Collections.sort(lines, String.CASE_INSENSITIVE_ORDER);
-		}
-		final String prefix = "<HTML><table>" //
+		map.forEach( (cmd, key) -> {
+			lines.add("<tr><td>" + cmd
+			+ "</td><td>" + key + "</td></tr>");
+		});
+		final String prefix = "<HTML><center><table>" //
 				+ "<tbody>" //
 				+ "<tr>" //
-				+ "<td style=\"width: 50%; text-align: center;\"><b>Action</b></td>" //
-				+ "<td style=\"width: 50%; height: 21px; text-align: center;\"><b>Shortcut</b></td>" //
+				+ "<td style=\"width: 60%; text-align: center;\"><b>Action</b></td>" //
+				+ "<td style=\"width: 40%; text-align: center;\"><b>Shortcut</b></td>" //
 				+ "</tr>"; //
-		final String suffix = "</tbody></table>";
-		showHTMLDialog("Script Editor Shortcuts", prefix + String.join("", lines) + suffix);
-	}
-
-	private String cleanseActionDescription(String actionId) {
-		if (actionId.startsWith("RTA."))
-			actionId = actionId.substring(4);
-		else if (actionId.startsWith("RSTA."))
-			actionId = actionId.substring(5);
-		if (actionId.endsWith("Action"))
-			actionId = actionId.substring(0, actionId.length() - 6);
-		actionId = actionId.replace("-", " ");
-		return actionId.replaceAll("([A-Z])", " $1"); // CamelCase to Camel Case
-	}
-
-	private String capitalize(final String string) {
-		return string.substring(0, 1).toUpperCase() + string.substring(1);
+		final String suffix = "</tbody></table></center>";
+		showHTMLDialog(windowTitle, prefix + String.join("", lines) + suffix);
 	}
 
 	private class DragAndDrop implements DragSourceListener, DragGestureListener {
@@ -1843,7 +1794,6 @@ public class TextEditor extends JFrame implements ActionListener,
 				return;
 			}
 			final JRadioButtonMenuItem item = new JRadioButtonMenuItem(k);
-			item.setActionCommand(v);
 			themeRadioGroup.add(item);
 			item.addActionListener(e -> {
 				try {
@@ -3378,15 +3328,14 @@ public class TextEditor extends JFrame implements ActionListener,
 		final JDialog dialog = pane.createDialog(this, title);
 		dialog.setResizable(true);
 		dialog.pack();
-		pane.setPreferredSize(
+		dialog.setPreferredSize(
 			new Dimension(
 				(int) Math.min(getWidth()  * .5, sp.getPreferredSize().getWidth() + (3 * sp.getVerticalScrollBar().getWidth())),
-				(int) Math.min(getHeight() * .6, pane.getPreferredSize().getHeight())));
+				(int) Math.min(getHeight() * .8, pane.getPreferredSize().getHeight())));
 		dialog.pack();
 		pane.addPropertyChangeListener(JOptionPane.VALUE_PROPERTY, ignored -> {
 			dialog.dispose();
 		});
-		dialog.pack();
 		dialog.setModal(false);
 		dialog.setLocationRelativeTo(this);
 		dialog.setVisible(true);
@@ -3799,15 +3748,23 @@ public class TextEditor extends JFrame implements ActionListener,
 	protected void applyConsolePopupMenu(final JTextArea textArea) {
 		final JPopupMenu popup = new JPopupMenu();
 		textArea.setComponentPopupMenu(popup);
-		JMenuItem jmi = new JMenuItem("Search " + ((textArea == errorScreen) ? "Erros..." : "Outputs..."));
+		final String scope = ((textArea == errorScreen) ? "Errors..." : "Outputs...");
+		JMenuItem jmi = new JMenuItem("Search " + scope);
 		popup.add(jmi);
 		jmi.addActionListener(e -> {
 			findDialog.setLocationRelativeTo(this);
 			findDialog.setRestrictToConsole(true);
 			final String text = textArea.getSelectedText();
 			if (text != null) findDialog.setSearchPattern(text);
+			// Ensure the right pane is visible in case search is being
+			// triggered by CmdPalette
+			if (textArea == errorScreen && !getTab().showingErrors)
+				getTab().showErrors();
+			else if (getTab().showingErrors)
+				getTab().showOutput();
 			findDialog.show(false);
 		});
+		cmdPalette.register(jmi, scope);
 		jmi = new JMenuItem("Search Script for Selected Text...");
 		popup.add(jmi);
 		jmi.addActionListener(e -> {
@@ -3850,10 +3807,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		jmi = new JMenuItem("Clear Highlights");
 		popup.add(jmi);
 		jmi.addActionListener(e -> textArea.getHighlighter().removeAllHighlights());
+		cmdPalette.register(jmi, scope);
 		popup.addSeparator();
 		final JCheckBoxMenuItem jmc = new JCheckBoxMenuItem("Wrap Lines");
 		popup.add(jmc);
 		jmc.addActionListener( e -> textArea.setLineWrap(jmc.isSelected()));
+		cmdPalette.register(jmc, scope);
 	}
 
 	private static Collection<File> assembleFlatFileCollection(final Collection<File> collection, final File[] files) {
@@ -3888,14 +3847,15 @@ public class TextEditor extends JFrame implements ActionListener,
 			try {
 				platformService.open(new URL(url));
 			} catch (final Exception ignored) {
-				error(parentComponent, "<HTML>Web page could not be open. " + "Please visit<br>" + url
-						+ "<br>using your web browser.");
+				// Error message with selectable text
+				final JTextPane f = new JTextPane();
+				f.setContentType("text/html");
+				f.setText("<HTML>Web page could not be open. Please visit<br>" + url + "<br>using your web browser.");
+				f.setEditable(false);
+				f.setBackground(null);
+				f.setBorder(null);
+				JOptionPane.showMessageDialog(parentComponent, f, "Error", JOptionPane.ERROR_MESSAGE);
 			}
-		}
-
-		private static void error(final Component parentComponent, final String message) {
-			JOptionPane.showMessageDialog(parentComponent, message,
-					"Error", JOptionPane.ERROR_MESSAGE);
 		}
 
 		static void openTerminal(final File pwd) throws IOException, InterruptedException {
@@ -4019,17 +3979,17 @@ public class TextEditor extends JFrame implements ActionListener,
 		private static final long serialVersionUID = 1L;
 		private String placeholder;
 
-		TextFieldWithPlaceholder(final String placeholder) {
-			changePlaceholder(placeholder);
-		}
-
-		void changePlaceholder(final String placeholder) {
+		void setPlaceholder(final String placeholder) {
 			this.placeholder = placeholder;
 			update(getGraphics());
 		}
 
 		Font getPlaceholderFont() {
 			return getFont().deriveFont(Font.ITALIC);
+		}
+
+		String getPlaceholder() {
+			return placeholder;
 		}
 
 		@Override
@@ -4040,7 +4000,8 @@ public class TextEditor extends JFrame implements ActionListener,
 				g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 				g2.setColor(getDisabledTextColor());
 				g2.setFont(getPlaceholderFont());
-				g2.drawString(placeholder, getInsets().left, g2.getFontMetrics().getHeight() + getInsets().top);
+				g2.drawString(getPlaceholder(), getInsets().left,
+						g2.getFontMetrics().getHeight() + getInsets().top - getInsets().bottom);
 				g2.dispose();
 			}
 		}

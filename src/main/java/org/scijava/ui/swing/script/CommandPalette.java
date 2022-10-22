@@ -39,6 +39,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 
 import javax.swing.AbstractAction;
@@ -67,6 +68,7 @@ import javax.swing.event.DocumentListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 
+import org.fife.ui.rtextarea.RecordableTextAction;
 import org.scijava.util.PlatformUtils;
 
 class CommandPalette {
@@ -93,7 +95,7 @@ class CommandPalette {
 		cmdScrapper = new CmdScrapper(textEditor);
 	}
 
-	void register(final JMenu toolsMenu) {
+	void install(final JMenu toolsMenu) {
 		final Action action = new AbstractAction(NAME) {
 
 			private static final long serialVersionUID = -7030359886427866104L;
@@ -108,25 +110,50 @@ class CommandPalette {
 		toolsMenu.add(new JMenuItem(action));
 	}
 
+	Map<String, String> getShortcuts() {
+		if (!cmdScrapper.scrapeSuccessful())
+			cmdScrapper.scrape();
+		final TreeMap<String, String> result = new TreeMap<>();
+		cmdScrapper.getCmdMap().forEach((id, cmdAction) -> {
+			if (cmdAction.hotkey != null && !cmdAction.hotkey.isEmpty())
+				result.put(id, cmdAction.hotkey);
+
+		});
+		return result;
+	}
+
+	Map<String, String> getRecordableActions() {
+		if (!cmdScrapper.scrapeSuccessful())
+			cmdScrapper.scrape();
+		final TreeMap<String, String> result = new TreeMap<>();
+		cmdScrapper.getCmdMap().forEach((id, cmdAction) -> {
+			if (cmdAction.recordable())
+				result.put(id, cmdAction.hotkey);
+
+		});
+		return result;
+	}
+
+	void register(final AbstractButton button, final String description) {
+		cmdScrapper.registerOther(button, description);
+	}
+
 	void dispose() {
-		if (frame != null)
-			frame.dispose();
+		if (frame != null) frame.dispose();
 		frame = null;
 	}
 
 	private void hideWindow() {
-		if (frame != null)
-			frame.setVisible(false);
+		if (frame != null) frame.setVisible(false);
 	}
 
 	private void assemblePalette() {
 		if (frame != null)
 			return;
 		frame = new Palette();
-		final Container contentPane = frame.getContentPane();
-		contentPane.setLayout(new BorderLayout());
+		frame.setLayout(new BorderLayout());
 		searchField = new SearchField();
-		contentPane.add(searchField, BorderLayout.NORTH);
+		frame.add(searchField, BorderLayout.NORTH);
 		searchField.getDocument().addDocumentListener(new PromptDocumentListener());
 		final InternalKeyListener keyListener = new InternalKeyListener();
 		searchField.addKeyListener(keyListener);
@@ -140,16 +167,13 @@ class CommandPalette {
 				}
 			}
 		});
-		contentPane.add(table.getScrollPane(), BorderLayout.CENTER);
 		populateList("");
+		frame.add(table.getScrollPane());
 		frame.pack();
 	}
 
-	private String[] makeRow(final String command, final CmdAction ca) {
-		final String[] result = new String[table.getColumnCount()];
-		result[0] = command;
-		result[1] = ca.description();
-		return result;
+	private String[] makeRow(final CmdAction ca) {
+		return new String[] {ca.id, ca.description()};
 	}
 
 	private void populateList(final String matchingSubstring) {
@@ -158,11 +182,11 @@ class CommandPalette {
 			cmdScrapper.scrape();
 		cmdScrapper.getCmdMap().forEach((id, cmd) -> {
 			if (cmd.matches(matchingSubstring)) {
-				list.add(makeRow(id, cmd));
+				list.add(makeRow(cmd));
 			}
 		});
 		if (list.isEmpty()) {
-			list.add(makeRow(noHitsCmd.id, noHitsCmd));
+			list.add(makeRow(noHitsCmd));
 		}
 		table.getInternalModel().setData(list);
 		if (searchField != null)
@@ -170,21 +194,38 @@ class CommandPalette {
 	}
 
 	private void runCmd(final String command) {
-		final CmdAction cmd;
-		hideWindow(); // hide before running, in case command opens a dialog
-		if (noHitsCmd != null && command.equals(noHitsCmd.id)) {
-			cmd = noHitsCmd;
-		} else {
-			cmd = cmdScrapper.getCmdMap().get(command);
-		}
-		if (cmd != null) {
-			if (cmd.button != null) {
-				cmd.button.doClick();
-			} else if (cmd.action != null) {
-				cmd.action.actionPerformed(
-						new ActionEvent(textEditor.getTextArea(), ActionEvent.ACTION_PERFORMED, cmd.id));
+		SwingUtilities.invokeLater(() -> {
+			if (CmdScrapper.REBUILD_ID.equals(command)) {
+				cmdScrapper.scrape();
+				table.clearSelection();
+				searchField.setText("");
+				searchField.requestFocus();
+				frame.setVisible(true);
+				return;
 			}
-		}
+			CmdAction cmd;
+			if (noHitsCmd != null && command.equals(noHitsCmd.id)) {
+				cmd = noHitsCmd;
+			} else {
+				cmd = cmdScrapper.getCmdMap().get(command);
+			}
+			if (cmd != null) {
+				final boolean hasButton = cmd.button != null;
+				if (hasButton && !cmd.button.isEnabled()) {
+					textEditor.error("Command is currently disabled. Either execution requirements "
+							+ "are unmet or it is not supported by current language.");
+					frame.setVisible(true);
+					return;
+				}
+				hideWindow(); // hide before running, in case command opens a dialog
+				if (hasButton) {
+					cmd.button.doClick();
+				} else if (cmd.action != null) {
+					cmd.action.actionPerformed(
+							new ActionEvent(textEditor.getTextArea(), ActionEvent.ACTION_PERFORMED, cmd.id));
+				}
+			}
+		});
 	}
 
 	private void toggleVisibility() {
@@ -201,40 +242,13 @@ class CommandPalette {
 		}
 	}
 
-	private static List<JMenuItem> getMenuItems(final JPopupMenu popupMenu) {
-		final List<JMenuItem> list = new ArrayList<>();
-		for (final MenuElement me : popupMenu.getSubElements()) {
-			if (me == null) {
-				continue;
-			} else if (me instanceof JMenuItem) {
-				list.add((JMenuItem) me);
-			} else if (me instanceof JMenu) {
-				getMenuItems((JMenu) me, list);
-			}
-		}
-		return list;
-	}
-
-	private static void getMenuItems(final JMenu menu, final List<JMenuItem> holdingList) {
-		for (int j = 0; j < menu.getItemCount(); j++) {
-			final JMenuItem jmi = menu.getItem(j);
-			if (jmi == null)
-				continue;
-			if (jmi instanceof JMenu) {
-				getMenuItems((JMenu) jmi, holdingList);
-			} else {
-				holdingList.add(jmi);
-			}
-		}
-	}
-
 	private static class SearchField extends TextEditor.TextFieldWithPlaceholder {
 		private static final long serialVersionUID = 1L;
 		private static final int PADDING = 4;
 		static final Font REF_FONT = refFont();
 
 		SearchField() {
-			super(" Search for commands and actions (e.g., Theme)");
+			setPlaceholder(" Search for commands and actions (e.g., Theme)");
 			setMargin(new Insets(PADDING, PADDING, 0, 0));
 			setFont(REF_FONT.deriveFont(REF_FONT.getSize() * 1.5f));
 		}
@@ -400,8 +414,11 @@ class CommandPalette {
 			getColumnModel().getColumn(0).setMaxWidth(col0Width);
 			getColumnModel().getColumn(1).setMaxWidth(col1Width);
 			setRowHeight(renderer.rowHeight());
-			final int height = TABLE_ROWS * getRowMargin() * getRowHeight();
+			int height = TABLE_ROWS * getRowHeight();
+			if (getRowMargin() > 0)
+				height *= getRowMargin();
 			setPreferredScrollableViewportSize(new Dimension(col0Width + col1Width, height));
+			setFillsViewportHeight(true);
 		}
 
 		private JScrollPane getScrollPane() {
@@ -496,7 +513,7 @@ class CommandPalette {
 		String menuLocation;
 		String hotkey;
 		AbstractButton button;
-		AbstractAction action;
+		Action action;
 
 		CmdAction(final String cmdName) {
 			this.id = capitalize(cmdName);
@@ -512,13 +529,22 @@ class CommandPalette {
 				this.button = button;
 		}
 
-		CmdAction(final String cmdName, final AbstractAction action) {
+		CmdAction(final String cmdName, final Action action) {
 			this(cmdName);
 			this.action = action;
 		}
 
+		boolean recordable() {
+			return action != null && action instanceof RecordableTextAction;
+		}
+	
 		String description() {
-			return (hotkey.isEmpty()) ? "|" + menuLocation + "|" : hotkey;
+			final String rec = (recordable()) ?"   \u29BF" :"";
+			if (!hotkey.isEmpty())
+				return hotkey + rec;
+			if (!menuLocation.isEmpty())
+				return "|" + menuLocation + "|" + rec;
+			return rec;
 		}
 
 		boolean matches(final String lowercaseQuery) {
@@ -530,7 +556,15 @@ class CommandPalette {
 		}
 
 		void setkeyString(final KeyStroke key) {
-			hotkey = prettifiedKey(key);
+			if (hotkey.isEmpty()) {
+				hotkey = prettifiedKey(key);
+			} else {
+				final String oldHotkey = hotkey;
+				final String newHotKey = prettifiedKey(key);
+				if (!oldHotkey.contains(newHotKey)) {
+					hotkey = oldHotkey + " or " + newHotKey;
+				}
+			}
 		}
 
 		private String capitalize(final String string) {
@@ -543,16 +577,16 @@ class CommandPalette {
 			final StringBuilder s = new StringBuilder();
 			final int m = key.getModifiers();
 			if ((m & InputEvent.CTRL_DOWN_MASK) != 0) {
-				s.append("Ctrl ");
+				s.append((PlatformUtils.isMac()) ? "⌃ " : "Ctrl ");
 			}
 			if ((m & InputEvent.META_DOWN_MASK) != 0) {
 				s.append((PlatformUtils.isMac()) ? "⌘ " : "Ctrl ");
 			}
 			if ((m & InputEvent.ALT_DOWN_MASK) != 0) {
-				s.append("Alt ");
+				s.append((PlatformUtils.isMac()) ? "⎇ " : "Alt ");
 			}
 			if ((m & InputEvent.SHIFT_DOWN_MASK) != 0) {
-				s.append("Shift ");
+				s.append("⇧ ");
 			}
 			if ((m & InputEvent.BUTTON1_DOWN_MASK) != 0) {
 				s.append("L-click ");
@@ -638,7 +672,7 @@ class CommandPalette {
 			case KeyEvent.VK_ADD:
 				return "[Num +]";
 			case KeyEvent.VK_SUBTRACT:
-				return "[Num -]";
+				return "[Num −]";
 			case KeyEvent.VK_DIVIDE:
 				return "[Num /]";
 			case KeyEvent.VK_DELETE:
@@ -646,19 +680,19 @@ class CommandPalette {
 			case KeyEvent.VK_INSERT:
 				return "Ins";
 			case KeyEvent.VK_BACK_QUOTE:
-				return "BACK_QUOTE";
+				return "`";
 			case KeyEvent.VK_QUOTE:
-				return "[']";
+				return "'";
 			case KeyEvent.VK_AMPERSAND:
-				return "[&]";
+				return "&";
 			case KeyEvent.VK_ASTERISK:
-				return "[*]";
+				return "*";
 			case KeyEvent.VK_QUOTEDBL:
-				return "[\"]";
+				return "\"";
 			case KeyEvent.VK_LESS:
-				return "[<]";
+				return "<";
 			case KeyEvent.VK_GREATER:
-				return "[>]";
+				return ">";
 			case KeyEvent.VK_BRACELEFT:
 				return "{";
 			case KeyEvent.VK_BRACERIGHT:
@@ -676,9 +710,9 @@ class CommandPalette {
 			case KeyEvent.VK_LEFT_PARENTHESIS:
 				return "(";
 			case KeyEvent.VK_MINUS:
-				return "[-]";
+				return "-";
 			case KeyEvent.VK_PLUS:
-				return "[+]";
+				return "+";
 			case KeyEvent.VK_RIGHT_PARENTHESIS:
 				return ")";
 			case KeyEvent.VK_UNDERSCORE:
@@ -691,7 +725,9 @@ class CommandPalette {
 
 	private class CmdScrapper {
 		final TextEditor textEditor;
+		static final String REBUILD_ID = "Rebuild Actions Index";
 		private final TreeMap<String, CmdAction> cmdMap;
+		private TreeMap<String, CmdAction> otherMap;
 
 		CmdScrapper(final TextEditor textEditor) {
 			this.textEditor = textEditor;
@@ -702,6 +738,8 @@ class CommandPalette {
 		}
 
 		TreeMap<String, CmdAction> getCmdMap() {
+			if (otherMap != null)
+				cmdMap.putAll(otherMap);
 			return cmdMap;
 		}
 
@@ -711,6 +749,8 @@ class CommandPalette {
 
 		void scrape() {
 			cmdMap.clear();
+			cmdMap.put(REBUILD_ID, new CmdAction(REBUILD_ID));
+			parseActionAndInputMaps();
 			final JMenuBar menuBar = textEditor.getJMenuBar();
 			final int topLevelMenus = menuBar.getMenuCount();
 			for (int i = 0; i < topLevelMenus; ++i) {
@@ -722,15 +762,13 @@ class CommandPalette {
 			final JPopupMenu popup = textEditor.getEditorPane().getPopupMenu();
 			if (popup != null) {
 				getMenuItems(popup).forEach(mi -> {
-					registerMenuItem(mi, "Popup");
+					registerMenuItem(mi, "Popup Menu");
 				});
 			}
-			parseMaps();
 		}
 
-		private void parseMaps() {
+		private void parseActionAndInputMaps() {
 			final InputMap inputMap = textEditor.getTextArea().getInputMap(JComponent.WHEN_FOCUSED);
-			final ActionMap actionMap = textEditor.getTextArea().getActionMap();
 			final KeyStroke[] keys = inputMap.allKeys();
 			if (keys != null) {
 				for (final KeyStroke key : keys) {
@@ -741,19 +779,24 @@ class CommandPalette {
 					final Object obj = inputMap.get(key);
 					CmdAction cmdAction;
 					String cmdName;
-					if (obj instanceof AbstractAction) {
-						cmdName = (String) ((AbstractAction) obj).getValue(Action.NAME);
+					if (obj instanceof Action) {
+						cmdName = (String) ((Action) obj).getValue(Action.NAME);
 						cmdAction = new CmdAction(cleanseActionDescription(cmdName), (AbstractAction) obj);
 					} else if (obj instanceof AbstractButton) {
 						cmdName = ((AbstractButton) obj).getText();
 						cmdAction = new CmdAction(cmdName, (AbstractButton) obj);
-					} else if (obj instanceof String) {
-						final Action action = actionMap.get((String) obj);
-						cmdAction = new CmdAction(cleanseActionDescription((String) obj), (AbstractAction) action);
 					} else {
 						continue;
 					}
 					cmdAction.setkeyString(key);
+					cmdMap.put(cmdAction.id, cmdAction);
+				}
+			}
+			final ActionMap actionMap = textEditor.getTextArea().getActionMap();
+			for (final Object obj : actionMap.keys()) {
+				if (obj instanceof String && cmdMap.get((String) obj) == null) {
+					final Action action = actionMap.get((String) obj);
+					final CmdAction cmdAction = new CmdAction(cleanseActionDescription((String) obj), action);
 					cmdMap.put(cmdAction.id, cmdAction);
 				}
 			}
@@ -767,7 +810,7 @@ class CommandPalette {
 		}
 
 		private void registerMenuItem(final JMenuItem m, final String hostingComponent) {
-			if (m != null && m.isEnabled()) {
+			if (m != null) {
 				String label = m.getActionCommand();
 				if (label == null)
 					label = m.getText();
@@ -778,7 +821,34 @@ class CommandPalette {
 						hostDesc = hostingComponent;
 					parseMenu(hostDesc, subMenu);
 				} else {
-					register(m, hostingComponent);
+					registerMain(m, hostingComponent);
+				}
+			}
+		}
+
+		private List<JMenuItem> getMenuItems(final JPopupMenu popupMenu) {
+			final List<JMenuItem> list = new ArrayList<>();
+			for (final MenuElement me : popupMenu.getSubElements()) {
+				if (me == null) {
+					continue;
+				} else if (me instanceof JMenuItem) {
+					list.add((JMenuItem) me);
+				} else if (me instanceof JMenu) {
+					getMenuItems((JMenu) me, list);
+				}
+			}
+			return list;
+		}
+
+		private void getMenuItems(final JMenu menu, final List<JMenuItem> holdingList) {
+			for (int j = 0; j < menu.getItemCount(); j++) {
+				final JMenuItem jmi = menu.getItem(j);
+				if (jmi == null)
+					continue;
+				if (jmi instanceof JMenu) {
+					getMenuItems((JMenu) jmi, holdingList);
+				} else {
+					holdingList.add(jmi);
 				}
 			}
 		}
@@ -788,7 +858,18 @@ class CommandPalette {
 			return label == null || label.endsWith(" pt") || label.length() < 2;
 		}
 
-		private void register(final AbstractButton button, final String descriptionOfComponentHostingButton) {
+		void registerMain(final AbstractButton button, final String description) {
+			register(cmdMap, button, description);
+		}
+
+		void registerOther(final AbstractButton button, final String description) {
+			if (otherMap == null)
+				otherMap = new TreeMap<>();
+			register(otherMap, button, description);
+		}
+
+		private void register(final TreeMap<String, CmdAction> map, final AbstractButton button,
+				final String descriptionOfComponentHostingButton) {
 			String label = button.getActionCommand();
 			if (NAME.equals(label))
 				return; // do not register command palette
@@ -798,16 +879,18 @@ class CommandPalette {
 				return;
 			if (label.endsWith("..."))
 				label = label.substring(0, label.length() - 3);
-			CmdAction ca = (CmdAction) cmdMap.get(label);
-			if (ca == null) {
-				ca = new CmdAction(label, button);
+			// If a command has already been registered, we'll include its accelerator
+			final boolean isMenuItem = button instanceof JMenuItem;
+			final CmdAction registeredAction = (CmdAction) map.get(label);
+			final KeyStroke accelerator = (isMenuItem) ? ((JMenuItem) button).getAccelerator() : null;
+			if (registeredAction != null && accelerator != null) {
+				registeredAction.setkeyString(accelerator);
+			} else {
+				final CmdAction ca = new CmdAction(label, button);
 				ca.menuLocation = descriptionOfComponentHostingButton;
-				if (button instanceof JMenuItem) {
-					ca.setkeyString(((JMenuItem) button).getAccelerator());
-				}
-				cmdMap.put(ca.id, ca);
+				if (accelerator != null) ca.setkeyString(accelerator);
+				map.put(ca.id, ca);
 			}
-			// else command label is not unique. Hopefully, this won't happen often
 		}
 
 		private String cleanseActionDescription(String actionId) {
@@ -820,6 +903,7 @@ class CommandPalette {
 			actionId = actionId.replace("-", " ");
 			return actionId.replaceAll("([A-Z])", " $1").trim(); // CamelCase to Camel Case
 		}
+
 	}
 
 	private class SearchWebCmd extends CmdAction {

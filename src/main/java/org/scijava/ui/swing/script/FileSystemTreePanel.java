@@ -32,13 +32,10 @@ package org.scijava.ui.swing.script;
 import java.awt.Color;
 import java.awt.Desktop;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.FontMetrics;
-import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.awt.RenderingHints;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
@@ -53,7 +50,6 @@ import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 
 import javax.swing.BorderFactory;
-import javax.swing.FocusManager;
 import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFileChooser;
@@ -62,7 +58,6 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
-import javax.swing.JTextField;
 import javax.swing.UIManager;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
@@ -199,7 +194,7 @@ class FileSystemTreePanel extends JPanel {
 		return field;
 	}
 
-	private JButton thinButton(final String label) {
+	private JButton thinButton(final String label, final float factor) {
 		final JButton b = new JButton(label);
 		try {
 			if ("com.apple.laf.AquaLookAndFeel".equals(UIManager.getLookAndFeel().getClass().getName())) {
@@ -209,10 +204,9 @@ class FileSystemTreePanel extends JPanel {
 				b.setBorder(BorderFactory.createEmptyBorder());
 				b.setMargin(new Insets(0, 2, 0, 2));
 			} else {
-				final double FACTOR = .25;
 				final Insets insets = b.getMargin();
-				b.setMargin(new Insets(insets.top, (int) (insets.left * FACTOR), insets.bottom,
-						(int) (insets.right * FACTOR)));
+				b.setMargin(new Insets((int) (insets.top * factor), (int) (insets.left * factor),
+						(int) (insets.bottom * factor), (int) (insets.right * factor)));
 			}
 		} catch (final Exception ignored) {
 			// do nothing
@@ -225,7 +219,7 @@ class FileSystemTreePanel extends JPanel {
 	}
 
 	private JButton addDirectoryButton() {
-		final JButton add_directory = thinButton("<HTML>&#43;");
+		final JButton add_directory = thinButton("+", .25f);
 		add_directory.setToolTipText("Add a directory");
 		add_directory.addActionListener(e -> {
 			final String folders = tree.getTopLevelFoldersString();
@@ -257,7 +251,7 @@ class FileSystemTreePanel extends JPanel {
 	}
 
 	private JButton removeDirectoryButton() {
-		final JButton remove_directory = thinButton("<HTML>&#8722;");
+		final JButton remove_directory = thinButton("−", .25f);
 		remove_directory.setToolTipText("Remove a top-level directory");
 		remove_directory.addActionListener(e -> {
 			final TreePath p = tree.getSelectionPath();
@@ -279,7 +273,7 @@ class FileSystemTreePanel extends JPanel {
 	}
 
 	private JButton searchOptionsButton() {
-		final JButton options = thinButton("<HTML>&#8942;");
+		final JButton options = thinButton("⋮", .05f);
 		options.setToolTipText("Filtering options");
 		final JPopupMenu popup = new JPopupMenu();
 		final JCheckBoxMenuItem jcbmi1 = new JCheckBoxMenuItem("Case Sensitive", isCaseSensitive());
@@ -437,7 +431,7 @@ class FileSystemTreePanel extends JPanel {
 		searchField.update();
 	}
 
-	private class SearchField extends JTextField {
+	private class SearchField extends TextEditor.TextFieldWithPlaceholder {
 
 		private static final long serialVersionUID = 7004232238240585434L;
 		private static final String REGEX_HOLDER = "[?*]";
@@ -445,7 +439,6 @@ class FileSystemTreePanel extends JPanel {
 		private static final String DEF_HOLDER = "File filter... ";
 
 		SearchField() {
-			super();
 			try {
 				// make sure pane is large enough to display placeholders
 				final FontMetrics fm = getFontMetrics(getFont());
@@ -453,7 +446,7 @@ class FileSystemTreePanel extends JPanel {
 				final String buf = CASE_HOLDER + REGEX_HOLDER + DEF_HOLDER;
 				final Rectangle2D rect = getFont().getStringBounds(buf, frc);
 				final int prefWidth = (int) rect.getWidth();
-				setColumns(prefWidth / super.getColumnWidth());
+				setColumns(prefWidth / getColumnWidth());
 			} catch (final Exception ignored) {
 				// do nothing
 			}
@@ -464,21 +457,13 @@ class FileSystemTreePanel extends JPanel {
 		}
 
 		@Override
-		protected void paintComponent(final java.awt.Graphics g) {
-			super.paintComponent(g);
-			if (super.getText().isEmpty() && !(FocusManager.getCurrentKeyboardFocusManager().getFocusOwner() == this)) {
-				final Graphics2D g2 = (Graphics2D) g.create();
-				g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-				g2.setColor(Color.GRAY);
-				g2.setFont(getFont().deriveFont(Font.ITALIC));
-				final StringBuilder sb = new StringBuilder(DEF_HOLDER);
-				if (isCaseSensitive())
-					sb.append(CASE_HOLDER);
-				if (isRegexEnabled())
-					sb.append(REGEX_HOLDER);
-				g2.drawString(sb.toString(), 4, g2.getFontMetrics().getHeight());
-				g2.dispose();
-			}
+		String getPlaceholder() {
+			final StringBuilder sb = new StringBuilder(DEF_HOLDER);
+			if (isCaseSensitive())
+				sb.append(CASE_HOLDER);
+			if (isRegexEnabled())
+				sb.append(REGEX_HOLDER);
+			return sb.toString();
 		}
 	}
 }
