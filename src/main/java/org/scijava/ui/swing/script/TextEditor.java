@@ -108,8 +108,6 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 import javax.swing.AbstractAction;
 import javax.swing.AbstractButton;
-import javax.swing.Action;
-import javax.swing.ActionMap;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
@@ -146,6 +144,7 @@ import javax.swing.tree.TreePath;
 
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.Theme;
 import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
 import org.fife.ui.rtextarea.ClipboardHistory;
 import org.fife.ui.rtextarea.Macro;
@@ -153,7 +152,6 @@ import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextAreaEditorKit;
 import org.fife.ui.rtextarea.RTextAreaEditorKit.SetReadOnlyAction;
 import org.fife.ui.rtextarea.RTextAreaEditorKit.SetWritableAction;
-import org.fife.ui.rtextarea.RecordableTextAction;
 import org.scijava.Context;
 import org.scijava.app.AppService;
 import org.scijava.batch.BatchService;
@@ -189,6 +187,8 @@ import org.scijava.util.POM;
 import org.scijava.util.PlatformUtils;
 import org.scijava.util.Types;
 import org.scijava.widget.FileWidget;
+
+import com.formdev.flatlaf.FlatLaf;
 
 /**
  * A versatile script editor for SciJava applications.
@@ -570,16 +570,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		tabsMenu.add(jcmi2);
 		final JMenuItem mi = new JMenuItem("Reset Layout...");
 		mi.addActionListener(e -> {
-			final int choice = JOptionPane.showConfirmDialog(TextEditor.this,//
-					"Reset Location of Console and File Explorer?",
-					"Reset Layout?", JOptionPane.OK_CANCEL_OPTION);
-			if (JOptionPane.OK_OPTION == choice) {
-				body.setDividerLocation(.2d);
-				getTab().setOrientation(JSplitPane.VERTICAL_SPLIT);
-				getTab().setDividerLocation((incremental) ? .7d : .75d);
-				if (incremental)
-					getTab().getScreenAndPromptSplit().setDividerLocation(.5d);
-				getTab().setREPLVisible(incremental);
+			if (confirm("Reset Location of Console and File Explorer?", "Reset Layout?", "Reset")) {
+				resetLayout();
 				jcmi1.setSelected(true);
 				jcmi2.setSelected(true);
 			}
@@ -698,10 +690,8 @@ public class TextEditor extends JFrame implements ActionListener,
 				warn("None of the dropped file(s) seems parseable.");
 				return;
 			}
-			final boolean confirm = filteredFiles.size() < 10 || (JOptionPane.showConfirmDialog(TextEditor.this,
-					"Confirm loading of " + filteredFiles.size()+ " items?", "Confirm?",
-					JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION);
-			if (confirm) {
+			if (filteredFiles.size() < 10
+					|| confirm("Confirm loading of " + filteredFiles.size() + " items?", "Confirm?", "Load")) {
 				filteredFiles.forEach(f -> open(f));
 			}
 		});
@@ -746,10 +736,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				}
 			}
 			// Ask:
-			final int choice = JOptionPane.showConfirmDialog(TextEditor.this,
-				"Really try to open file " + name + " in a tab?", "Confirm",
-				JOptionPane.OK_CANCEL_OPTION);
-			if (JOptionPane.OK_OPTION == choice) {
+			if (confirm("Really try to open file " + name + " in a tab?", "Confirm", "Open")) {
 				open(f);
 			}
 		});
@@ -832,7 +819,9 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		final EditorPane editorPane = getEditorPane();
 		// If dark L&F and using the default theme, assume 'dark' theme
-		applyTheme((GuiUtils.isDarkLaF() && "default".equals(editorPane.themeName())) ? "dark" : editorPane.themeName());
+		applyTheme((GuiUtils.isDarkLaF() && "default".equals(editorPane.themeName())) ? "dark" : editorPane.themeName(),
+				true);
+
 		// Ensure font sizes are consistent across all panels
 		setFontSize(getEditorPane().getFontSize());
 		// Ensure menu commands are up-to-date
@@ -840,6 +829,16 @@ public class TextEditor extends JFrame implements ActionListener,
 		// Store locations of splitpanes
 		panePositions = new int[]{body.getDividerLocation(), getTab().getDividerLocation()};
 		editorPane.requestFocus();
+	}
+
+	private void resetLayout() {
+		body.setDividerLocation(.2d);
+		getTab().setOrientation(JSplitPane.VERTICAL_SPLIT);
+		getTab().setDividerLocation((incremental) ? .7d : .75d);
+		if (incremental)
+			getTab().getScreenAndPromptSplit().setDividerLocation(.5d);
+		getTab().setREPLVisible(incremental);
+		pack();
 	}
 
 	private void assembleEditMenu() {
@@ -1562,16 +1561,12 @@ public class TextEditor extends JFrame implements ActionListener,
 			save();
 			return true;
 		}
-
-		switch (JOptionPane.showConfirmDialog(this, "Do you want to save changes?")) {
-			case JOptionPane.NO_OPTION:
-				// Compiled languages should not progress if their source is unsaved
-				return !beforeCompiling;
-			case JOptionPane.YES_OPTION:
-				if (save()) return true;
+		if (GuiUtils.confirm(this, "Do you want to save changes?", "Save Changes?", "Save")) {
+			return save();
+		} else {
+			// Compiled languages should not progress if their source is unsaved
+			return !beforeCompiling;
 		}
-
-		return false;
 	}
 
 	private boolean isJava(final ScriptLanguage language) {
@@ -1822,8 +1817,13 @@ public class TextEditor extends JFrame implements ActionListener,
 		applyTheme(theme, true);
 	}
 
-	private void applyTheme(final String theme, final boolean updateUI) throws IllegalArgumentException {
+	private void applyTheme(final String theme, final boolean updateMenus) throws IllegalArgumentException {
 		try {
+			final Theme th = getTheme(theme);
+			if (th == null) {
+				writeError("Unrecognized theme ignored: '" + theme + "'");
+				return;
+			}
 			for (int i = 0; i < tabbed.getTabCount(); i++) {
 				getEditorPane(i).applyTheme(theme);
 			}
@@ -1835,7 +1835,16 @@ public class TextEditor extends JFrame implements ActionListener,
 			throw new IllegalArgumentException(ex);
 		}
 		activeTheme = theme;
-		if (updateUI) updateThemeControls(theme);
+		if (updateMenus) updateThemeControls(theme);
+	}
+
+	static Theme getTheme(final String theme) throws IllegalArgumentException {
+		try {
+			return Theme
+					.load(TextEditor.class.getResourceAsStream("/org/fife/ui/rsyntaxtextarea/themes/" + theme + ".xml"));
+		} catch (final Exception ex) {
+			throw new IllegalArgumentException(ex);
+		}
 	}
 
 	private void updateThemeControls(final String theme) {
@@ -1933,9 +1942,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public void gotoLine() {
-		final String line =
-			JOptionPane.showInputDialog(this, "Enter line number:", "Goto Line",
-				JOptionPane.QUESTION_MESSAGE);
+		final String line = GuiUtils.getString(this, "Enter line number:", "Goto Line");
 		if (line == null) return;
 		try {
 			gotoLine(Integer.parseInt(line));
@@ -1980,8 +1987,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		final Vector<Bookmark> bookmarks = getAllBookmarks();
 		if (bookmarks.isEmpty())
 			return;
-		if (JOptionPane.showConfirmDialog(TextEditor.this, "Delete all bookmarks?", "Confirm Deletion?",
-				JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+		;
+		if (confirm("Delete all bookmarks?", "Confirm Deletion?", "Delete")) {
 			bookmarks.forEach(bk -> bk.tab.editorPane.toggleBookmark(bk.getLineNumber()));
 		}
 	}
@@ -2170,11 +2177,11 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	public boolean saveAs(final String path, final boolean askBeforeReplacing) {
 		final File file = new File(path);
-		if (file.exists() &&
-			askBeforeReplacing &&
-			JOptionPane.showConfirmDialog(this, "Do you want to replace " + path +
-				"?", "Replace " + path + "?", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return false;
-		if (!write(file)) return false;
+		if (file.exists() && askBeforeReplacing
+				&& confirm("Do you want to replace " + path + "?", "Replace " + path + "?", "Replace"))
+			return false;
+		if (!write(file))
+			return false;
 		setEditorPaneFileName(file);
 		openRecent.add(path);
 		return true;
@@ -2220,10 +2227,9 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		final File selectedFile = uiService.chooseFile(file, FileWidget.SAVE_STYLE);
 		if (selectedFile == null) return false;
-		if (selectedFile.exists() &&
-			JOptionPane.showConfirmDialog(this, "Do you want to replace " +
-				selectedFile + "?", "Replace " + selectedFile + "?",
-				JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return false;
+		if (selectedFile.exists()
+				&& confirm("Do you want to replace " + selectedFile + "?", "Replace " + selectedFile + "?", "Replace"))
+			return false;
 		try {
 			makeJar(selectedFile, includeSources);
 			return true;
@@ -2931,11 +2937,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	private String getSelectedTextOrAsk(final String msg, final String title) {
 		String selection = getTextArea().getSelectedText();
 		if (selection == null || selection.indexOf('\n') >= 0) {
-			selection = JOptionPane.showInputDialog(this,
-					msg + "\nAlternatively, select a class declaration and re-run.", title,
-					JOptionPane.QUESTION_MESSAGE);
-			if (selection == null)
-				return null;
+			return GuiUtils.getString(this, msg + "\nAlternatively, select a class declaration and re-run.", title);
 		}
 		return selection;
 	}
@@ -2951,7 +2953,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		textArea.insert(text, length);
 		textArea.setCaretPosition(length);
 	}
-	
 
 	public void markCompileStart() {
 		markCompileStart(true);
@@ -3297,48 +3298,23 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	void error(final String message) {
-		JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
+		GuiUtils.error(this, message);
 	}
 
 	void warn(final String message) {
-		JOptionPane.showMessageDialog(this, message, "Warning", JOptionPane.WARNING_MESSAGE);
+		GuiUtils.warn(this, message);
 	}
 
 	void info(final String message, final String title) {
-		JOptionPane.showMessageDialog(this, message, title, JOptionPane.INFORMATION_MESSAGE);
+		GuiUtils.info(this, message, title);
 	}
 
 	boolean confirm(final String message, final String title, final String yesButtonLabel) {
-		return JOptionPane.showOptionDialog(this, message, title, JOptionPane.YES_NO_OPTION,
-				JOptionPane.QUESTION_MESSAGE, null, // no custom Icon
-				new String[] { yesButtonLabel, "Cancel" }, // titles of buttons
-				yesButtonLabel) == JOptionPane.OK_OPTION;
+		return GuiUtils.confirm(this, message, title, yesButtonLabel);
 	}
 
 	void showHTMLDialog(final String title, final String htmlContents) {
-		final JTextPane f = new JTextPane();
-		f.setContentType("text/html");
-		f.setEditable(false);
-		f.setBackground(null);
-		f.setBorder(null);
-		f.setText(htmlContents);
-		f.setCaretPosition(0);
-		final JScrollPane sp = new JScrollPane(f);
-		final JOptionPane pane = new JOptionPane(sp);
-		final JDialog dialog = pane.createDialog(this, title);
-		dialog.setResizable(true);
-		dialog.pack();
-		dialog.setPreferredSize(
-			new Dimension(
-				(int) Math.min(getWidth()  * .5, sp.getPreferredSize().getWidth() + (3 * sp.getVerticalScrollBar().getWidth())),
-				(int) Math.min(getHeight() * .8, pane.getPreferredSize().getHeight())));
-		dialog.pack();
-		pane.addPropertyChangeListener(JOptionPane.VALUE_PROPERTY, ignored -> {
-			dialog.dispose();
-		});
-		dialog.setModal(false);
-		dialog.setLocationRelativeTo(this);
-		dialog.setVisible(true);
+		GuiUtils.showHTMLDialog(this, title, htmlContents);
 	}
 
 	public void handleException(final Throwable e) {
@@ -3674,6 +3650,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		menu.add(item);
 		item.addActionListener(e -> {
 			if (confirm("Reset preferences to defaults? (a restart may be required)", "Reset?", "Reset")) {
+				resetLayout();
 				prefService.clear(EditorPane.class);
 				prefService.clear(TextEditor.class);
 				write("Script Editor: Preferences Reset. Restart is recommended\n");
@@ -3733,16 +3710,8 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private JMenuItem helpMenuItem(final String label, final String url) {
 		final JMenuItem item = new JMenuItem(label);
-		item.addActionListener(e -> openURL(url));
+		item.addActionListener(e -> GuiUtils.openURL(TextEditor.this, platformService, url));
 		return item;
-	}
-
-	private void openURL(final String url) {
-		try {
-			platformService.open(new URL(url));
-		} catch (final IOException ignored) {
-			error("<HTML>Web page could not be open. " + "Please visit<br>" + url + "<br>using your web browser.");
-		}
 	}
 
 	protected void applyConsolePopupMenu(final JTextArea textArea) {
@@ -3829,7 +3798,56 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	protected static class GuiUtils {
+
 		private GuiUtils() {
+		}
+
+		static void error(final Component parent, final String message) {
+			JOptionPane.showMessageDialog(parent, message, "Error", JOptionPane.ERROR_MESSAGE);
+		}
+
+		static void warn(final Component parent, final String message) {
+			JOptionPane.showMessageDialog(parent, message, "Warning", JOptionPane.WARNING_MESSAGE);
+		}
+
+		static void info(final Component parent, final String message, final String title) {
+			JOptionPane.showMessageDialog(parent, message, title, JOptionPane.INFORMATION_MESSAGE);
+		}
+
+		static boolean confirm(final Component parent, final String message, final String title,
+				final String yesButtonLabel) {
+			return JOptionPane.showConfirmDialog(parent, message, title, JOptionPane.YES_NO_OPTION) == 
+					JOptionPane.YES_OPTION;
+		}
+
+		static void showHTMLDialog(final Component parent, final String title, final String htmlContents) {
+			final JTextPane f = new JTextPane();
+			f.setContentType("text/html");
+			f.setEditable(false);
+			f.setBackground(null);
+			f.setBorder(null);
+			f.setText(htmlContents);
+			f.setCaretPosition(0);
+			final JScrollPane sp = new JScrollPane(f);
+			final JOptionPane pane = new JOptionPane(sp);
+			final JDialog dialog = pane.createDialog(parent, title);
+			dialog.setResizable(true);
+			dialog.pack();
+			dialog.setPreferredSize(
+				new Dimension(
+					(int) Math.min(parent.getWidth()  * .5, pane.getPreferredSize().getWidth() + (3 * sp.getVerticalScrollBar().getWidth())),
+					(int) Math.min(parent.getHeight() * .8, pane.getPreferredSize().getHeight())));
+			dialog.pack();
+			pane.addPropertyChangeListener(JOptionPane.VALUE_PROPERTY, ignored -> {
+				dialog.dispose();
+			});
+			dialog.setModal(false);
+			dialog.setLocationRelativeTo(parent);
+			dialog.setVisible(true);
+		}
+
+		static String getString(final Component parent, final String message, final String title) {
+			return (String) JOptionPane.showInputDialog(parent, message, title, JOptionPane.QUESTION_MESSAGE);
 		}
 
 		static void runSearchQueryInBrowser(final Component parentComponent, final PlatformService platformService,
@@ -3914,9 +3932,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 
 		static boolean isDarkLaF() {
+			return FlatLaf.isLafDark() || isDark(new JLabel().getBackground());
+		}
+	
+		static boolean isDark(final Color c) {
 			// see https://stackoverflow.com/a/3943023
-			final Color b = new JLabel().getBackground();
-			return (b.getRed() * 0.299 + b.getGreen() * 0.587 + b.getBlue() * 0.114) < 186;
+			return (c.getRed() * 0.299 + c.getGreen() * 0.587 + c.getBlue() * 0.114) < 186;
 		}
 
 		static void collapseAllTreeNodes(final JTree tree) {

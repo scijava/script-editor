@@ -56,7 +56,6 @@ import javax.swing.Action;
 import javax.swing.ButtonGroup;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
@@ -314,7 +313,9 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		menu.add(getSyntaxItem(bg, "Dockerfile", SYNTAX_STYLE_DOCKERFILE));
 		menu.add(getSyntaxItem(bg, "HTML", SYNTAX_STYLE_HTML));
 		menu.add(getSyntaxItem(bg, "JSON", SYNTAX_STYLE_JSON));
+		menu.add(getSyntaxItem(bg, "Kotlin", SYNTAX_STYLE_KOTLIN));
 		menu.add(getSyntaxItem(bg, "Makefile", SYNTAX_STYLE_MAKEFILE));
+		menu.add(getSyntaxItem(bg, "Markdown", SYNTAX_STYLE_MARKDOWN));
 		menu.add(getSyntaxItem(bg, "SH", SYNTAX_STYLE_UNIX_SHELL));
 		menu.add(getSyntaxItem(bg, "XML", SYNTAX_STYLE_XML));
 		menu.add(getSyntaxItem(bg, "YAML", SYNTAX_STYLE_YAML));
@@ -337,7 +338,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	}
 
 	void error(final String message) {
-		JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
+		TextEditor.GuiUtils.error(this, message);
 	}
 
 	private void updateNoneLangSyntaxMenu(final ScriptLanguage language) {
@@ -948,8 +949,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			}
 			catch (final BadLocationException e) {
 				/* ignore */
-				JOptionPane.showMessageDialog(this, "Cannot toggle bookmark at this location.", "Error",
-						JOptionPane.ERROR_MESSAGE);
+				error("Cannot toggle bookmark at this location.");
 			}
 		}
 	}
@@ -1099,7 +1099,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 */
 	public void applyTheme(final String theme) throws IllegalArgumentException {
 		try {
-			applyTheme(getTheme(theme));
+			applyTheme(TextEditor.getTheme(theme));
 		} catch (final Exception ex) {
 			throw new IllegalArgumentException(ex);
 		}
@@ -1115,15 +1115,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		th.apply(this);
 		setFontSize(existingFontSize);
 		GutterUtils.updateIcons(gutter);
-	}
-
-	private static Theme getTheme(final String theme) throws IllegalArgumentException {
-		try {
-			return Theme
-					.load(TextEditor.class.getResourceAsStream("/org/fife/ui/rsyntaxtextarea/themes/" + theme + ".xml"));
-		} catch (final Exception ex) {
-			throw new IllegalArgumentException(ex);
-		}
 	}
 
 	public String loadFolders() {

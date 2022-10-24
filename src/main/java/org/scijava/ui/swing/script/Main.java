@@ -38,6 +38,9 @@ import org.scijava.Context;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptService;
 
+import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatLightLaf;
+
 /**
  * Main entry point for launching the script editor standalone.
  *
@@ -65,6 +68,7 @@ public final class Main {
 		editor.setVisible(true);
 	}
 	public static void main(String[] args) throws Exception {
+		FlatDarkLaf.setup();
 		String lang = args.length == 0 ? "Java" : args[0];
 		launch(lang);
 	}

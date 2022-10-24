@@ -49,9 +49,12 @@ public class GutterUtils {
 	GutterUtils(final Gutter gutter) {
 		this.gutter = gutter;
 		gutter.setSpacingBetweenLineNumbersAndFoldIndicator(0);
+		//gutter.setFoldIndicatorStyle(org.fife.ui.rtextarea.FoldIndicatorStyle.MODERN); // DEFAULT
+		gutter.setShowCollapsedRegionToolTips(true);
 	}
 
-	private void updateFoldIcons() {
+	@SuppressWarnings("unused")
+	private void updateFoldIcons() { // no longer needed since v3.3.0
 		int size;
 		try {
 			size = (int) new FoldIndicator(null).getPreferredSize().getWidth();
@@ -63,7 +66,7 @@ public class GutterUtils {
 		final int fontSize = gutter.getLineNumberFont().getSize();
 		if (size > fontSize)
 			size = fontSize;
-		gutter.setFoldIcons(new FoldIcon(true, size), new FoldIcon(false, size));
+		//gutter.setFoldIcons(new FoldIcon(true, size), new FoldIcon(false, size));
 	}
 
 	private ImageIcon getBookmarkIcon() {
@@ -94,10 +97,11 @@ public class GutterUtils {
 
 	public static void updateIcons(final Gutter gutter) {
 		final GutterUtils utils = new GutterUtils(gutter);
-		utils.updateFoldIcons();
+		//utils.updateFoldIcons();
 		utils.updateBookmarkIcon();
 	}
 
+	@SuppressWarnings("unused")
 	private class FoldIcon implements Icon {
 
 		private final boolean collapsed;
