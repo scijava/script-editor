@@ -288,15 +288,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		final Action action = getActionMap().get(actionID);
 		final JMenuItem jmi = new JMenuItem(action);
 		jmi.setAccelerator(getPaneActions().getAccelerator(actionID));
-		jmi.addActionListener(e -> {
-			if (editingAction && isLocked()) {
-				UIManager.getLookAndFeel().provideErrorFeedback(this);
-			} else try {
-				action.actionPerformed(e);
-			} catch (final Exception | Error ex) {
-				log.debug(ex);
-			}
-		});
 		jmi.setText(label);
 		return jmi;
 	}

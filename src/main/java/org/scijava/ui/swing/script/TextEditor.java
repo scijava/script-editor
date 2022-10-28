@@ -1789,6 +1789,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				return;
 			}
 			final JRadioButtonMenuItem item = new JRadioButtonMenuItem(k);
+			item.setActionCommand(v); // needed for #updateThemeControls()
 			themeRadioGroup.add(item);
 			item.addActionListener(e -> {
 				try {
