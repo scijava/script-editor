@@ -32,13 +32,10 @@ package org.scijava.ui.swing.script;
 import java.awt.Color;
 import java.awt.Desktop;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.FontMetrics;
-import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.awt.RenderingHints;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
@@ -53,16 +50,13 @@ import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 
 import javax.swing.BorderFactory;
-import javax.swing.FocusManager;
 import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFileChooser;
 import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
-import javax.swing.JTextField;
 import javax.swing.UIManager;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
@@ -124,14 +118,11 @@ class FileSystemTreePanel extends JPanel {
 			final List<File> dirs = Arrays.asList(files).stream().filter(f -> f.isDirectory())
 					.collect(Collectors.toList());
 			if (dirs.isEmpty()) {
-				JOptionPane.showMessageDialog(this, "Only folders can be dropped into the file tree.",
-						"Invalid Drop", JOptionPane.WARNING_MESSAGE);
+				TextEditor.GuiUtils.warn(this, "Only folders can be dropped into the file tree.");
 				return;
 			}
-			final boolean confirm = dirs.size() < 4 || (JOptionPane.showConfirmDialog(this,
-					"Confirm loading of " + dirs.size() + " folders?", "Confirm?",
-					JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION);
-			if (confirm) {
+			if (TextEditor.GuiUtils.confirm(this, "Confirm loading of " + dirs.size() + " folders?", "Confirm?",
+					"Confirm")) {
 				dirs.forEach(dir -> tree.addRootDirectory(dir.getAbsolutePath(), true));
 			}
 		});
@@ -199,7 +190,7 @@ class FileSystemTreePanel extends JPanel {
 		return field;
 	}
 
-	private JButton thinButton(final String label) {
+	private JButton thinButton(final String label, final float factor) {
 		final JButton b = new JButton(label);
 		try {
 			if ("com.apple.laf.AquaLookAndFeel".equals(UIManager.getLookAndFeel().getClass().getName())) {
@@ -209,10 +200,9 @@ class FileSystemTreePanel extends JPanel {
 				b.setBorder(BorderFactory.createEmptyBorder());
 				b.setMargin(new Insets(0, 2, 0, 2));
 			} else {
-				final double FACTOR = .25;
 				final Insets insets = b.getMargin();
-				b.setMargin(new Insets(insets.top, (int) (insets.left * FACTOR), insets.bottom,
-						(int) (insets.right * FACTOR)));
+				b.setMargin(new Insets((int) (insets.top * factor), (int) (insets.left * factor),
+						(int) (insets.bottom * factor), (int) (insets.right * factor)));
 			}
 		} catch (final Exception ignored) {
 			// do nothing
@@ -225,7 +215,7 @@ class FileSystemTreePanel extends JPanel {
 	}
 
 	private JButton addDirectoryButton() {
-		final JButton add_directory = thinButton("<HTML>&#43;");
+		final JButton add_directory = thinButton("+", .25f);
 		add_directory.setToolTipText("Add a directory");
 		add_directory.addActionListener(e -> {
 			final String folders = tree.getTopLevelFoldersString();
@@ -257,13 +247,12 @@ class FileSystemTreePanel extends JPanel {
 	}
 
 	private JButton removeDirectoryButton() {
-		final JButton remove_directory = thinButton("<HTML>&#8722;");
+		final JButton remove_directory = thinButton("−", .25f);
 		remove_directory.setToolTipText("Remove a top-level directory");
 		remove_directory.addActionListener(e -> {
 			final TreePath p = tree.getSelectionPath();
 			if (null == p) {
-				JOptionPane.showMessageDialog(this, "Select a top-level folder first.", "Invalid Folder",
-						JOptionPane.ERROR_MESSAGE);
+				TextEditor.GuiUtils.error(this, "Select a top-level folder first.");
 				return;
 			}
 			if (2 == p.getPathCount()) {
@@ -271,15 +260,14 @@ class FileSystemTreePanel extends JPanel {
 				tree.getModel().removeNodeFromParent(//
 						(FileSystemTree.Node) p.getLastPathComponent());
 			} else {
-				JOptionPane.showMessageDialog(this, "Can only remove top-level folders.", "Invalid Folder",
-						JOptionPane.ERROR_MESSAGE);
+				TextEditor.GuiUtils.error(this, "Can only remove top-level folders.");
 			}
 		});
 		return remove_directory;
 	}
 
 	private JButton searchOptionsButton() {
-		final JButton options = thinButton("<HTML>&#8942;");
+		final JButton options = thinButton("⋮", .05f);
 		options.setToolTipText("Filtering options");
 		final JPopupMenu popup = new JPopupMenu();
 		final JCheckBoxMenuItem jcbmi1 = new JCheckBoxMenuItem("Case Sensitive", isCaseSensitive());
@@ -332,8 +320,7 @@ class FileSystemTreePanel extends JPanel {
 		jmi.addActionListener(e -> {
 			final TreePath path = tree.getSelectionPath();
 			if (path == null) {
-				JOptionPane.showMessageDialog(this, "No items are currently selected.", "Invalid Selection",
-						JOptionPane.INFORMATION_MESSAGE);
+				TextEditor.GuiUtils.info(this, "No items are currently selected.", "Invalid Selection");
 				return;
 			}
 			try {
@@ -341,8 +328,7 @@ class FileSystemTreePanel extends JPanel {
 				final File f = new File(filepath);
 				Desktop.getDesktop().open((f.isDirectory()) ? f : f.getParentFile());
 			} catch (final Exception | Error ignored) {
-				JOptionPane.showMessageDialog(this, "Folder of selected item does not seem to be accessible.", "Error",
-						JOptionPane.ERROR_MESSAGE);
+				TextEditor.GuiUtils.error(this, "Folder of selected item does not seem to be accessible.");
 			}
 		});
 		popup.add(jmi);
@@ -350,16 +336,14 @@ class FileSystemTreePanel extends JPanel {
 		jmi.addActionListener(e -> {
 			final TreePath path = tree.getSelectionPath();
 			if (path == null) {
-				JOptionPane.showMessageDialog(this, "No items are currently selected.", "Invalid Selection",
-						JOptionPane.INFORMATION_MESSAGE);
+				TextEditor.GuiUtils.info(this,  "No items are currently selected.", "Invalid Selection");
 				return;
 			}
 			try {
 				final String filepath = (String) ((FileSystemTree.Node) path.getLastPathComponent()).getUserObject();
 				TextEditor.GuiUtils.openTerminal(new File(filepath));
 			} catch (final Exception ignored) {
-				JOptionPane.showMessageDialog(this, "Could not open path in Terminal.", "Error",
-						JOptionPane.ERROR_MESSAGE);
+				TextEditor.GuiUtils.error(this, "Could not open path in Terminal.");
 			}
 		});
 		popup.add(jmi);
@@ -387,7 +371,7 @@ class FileSystemTreePanel extends JPanel {
 	}
 
 	private void showHelpMsg() {
-		final String msg = "<HTML><div WIDTH=500>" //
+		final String msg = "<HTML>" //
 				+ "<p><b>Overview</b></p>" //
 				+ "<p>The File Explorer pane provides a direct view of selected folders. Changes in " //
 				+ "the native file system are synchronized in real time.</p>" //
@@ -416,7 +400,7 @@ class FileSystemTreePanel extends JPanel {
 				+ "   <td>Display filenames starting with <i>Demo</i></td>" //
 				+ "  </tr>" //
 				+ "</table>";
-		JOptionPane.showMessageDialog(this, msg, "File Explorer Pane", JOptionPane.PLAIN_MESSAGE);
+		TextEditor.GuiUtils.showHTMLDialog(this.getRootPane(), "File Explorer Pane", msg);
 	}
 
 	private boolean isCaseSensitive() {
@@ -437,7 +421,7 @@ class FileSystemTreePanel extends JPanel {
 		searchField.update();
 	}
 
-	private class SearchField extends JTextField {
+	private class SearchField extends TextEditor.TextFieldWithPlaceholder {
 
 		private static final long serialVersionUID = 7004232238240585434L;
 		private static final String REGEX_HOLDER = "[?*]";
@@ -445,7 +429,6 @@ class FileSystemTreePanel extends JPanel {
 		private static final String DEF_HOLDER = "File filter... ";
 
 		SearchField() {
-			super();
 			try {
 				// make sure pane is large enough to display placeholders
 				final FontMetrics fm = getFontMetrics(getFont());
@@ -453,7 +436,7 @@ class FileSystemTreePanel extends JPanel {
 				final String buf = CASE_HOLDER + REGEX_HOLDER + DEF_HOLDER;
 				final Rectangle2D rect = getFont().getStringBounds(buf, frc);
 				final int prefWidth = (int) rect.getWidth();
-				setColumns(prefWidth / super.getColumnWidth());
+				setColumns(prefWidth / getColumnWidth());
 			} catch (final Exception ignored) {
 				// do nothing
 			}
@@ -464,21 +447,13 @@ class FileSystemTreePanel extends JPanel {
 		}
 
 		@Override
-		protected void paintComponent(final java.awt.Graphics g) {
-			super.paintComponent(g);
-			if (super.getText().isEmpty() && !(FocusManager.getCurrentKeyboardFocusManager().getFocusOwner() == this)) {
-				final Graphics2D g2 = (Graphics2D) g.create();
-				g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-				g2.setColor(Color.GRAY);
-				g2.setFont(getFont().deriveFont(Font.ITALIC));
-				final StringBuilder sb = new StringBuilder(DEF_HOLDER);
-				if (isCaseSensitive())
-					sb.append(CASE_HOLDER);
-				if (isRegexEnabled())
-					sb.append(REGEX_HOLDER);
-				g2.drawString(sb.toString(), 4, g2.getFontMetrics().getHeight());
-				g2.dispose();
-			}
+		String getPlaceholder() {
+			final StringBuilder sb = new StringBuilder(DEF_HOLDER);
+			if (isCaseSensitive())
+				sb.append(CASE_HOLDER);
+			if (isRegexEnabled())
+				sb.append(REGEX_HOLDER);
+			return sb.toString();
 		}
 	}
 }

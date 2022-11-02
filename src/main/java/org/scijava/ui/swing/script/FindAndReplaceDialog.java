@@ -151,6 +151,7 @@ public class FindAndReplaceDialog extends JDialog implements ActionListener {
 		return getTextAreaAsEditorPane();
 	}
 
+	@SuppressWarnings("deprecation")
 	@Override
 	public void show(final boolean replace) {
 		if (replace && restrictToConsole)
@@ -166,7 +167,7 @@ public class FindAndReplaceDialog extends JDialog implements ActionListener {
 		searchField.selectAll();
 		replaceField.selectAll();
 		getRootPane().setDefaultButton(findNext);
-		show();
+		show(); // cannot call setVisible
 	}
 
 	private JTextField createField(final String name, final Container container,

@@ -158,6 +158,7 @@ public class TextEditorTab extends JSplitPane {
 		bc.fill = GridBagConstraints.HORIZONTAL;
 		runit = new JButton("Run");
 		runit.setToolTipText("Control+R, F5, or F11");
+		textEditor.cmdPalette.register(runit, "Interpreter");
 		runit.addActionListener(ae -> textEditor.runText());
 		bottom.add(runit, bc);
 
@@ -175,6 +176,7 @@ public class TextEditorTab extends JSplitPane {
 
 		bc.gridx = 3;
 		incremental = new JCheckBox("REPL");
+		textEditor.cmdPalette.register(incremental, "Interpreter");
 		incremental.setEnabled(true);
 		incremental.setSelected(false);
 		bottom.add(incremental, bc);
@@ -202,7 +204,8 @@ public class TextEditorTab extends JSplitPane {
 			if (showingErrors) editorPane.getErrorHighlighter().reset();
 		});
 		bottom.add(clear, bc);
-		
+		textEditor.cmdPalette.register(clear, "Console");
+
 		bc.gridx = 7;
 		switchSplit = new JButton(RIGHT_ARROW);
 		switchSplit.setToolTipText("Switch location");

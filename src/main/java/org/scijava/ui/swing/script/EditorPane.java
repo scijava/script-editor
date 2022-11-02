@@ -56,7 +56,6 @@ import javax.swing.Action;
 import javax.swing.ButtonGroup;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
@@ -289,15 +288,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		final Action action = getActionMap().get(actionID);
 		final JMenuItem jmi = new JMenuItem(action);
 		jmi.setAccelerator(getPaneActions().getAccelerator(actionID));
-		jmi.addActionListener(e -> {
-			if (editingAction && isLocked()) {
-				UIManager.getLookAndFeel().provideErrorFeedback(this);
-			} else try {
-				action.actionPerformed(e);
-			} catch (final Exception | Error ex) {
-				log.debug(ex);
-			}
-		});
 		jmi.setText(label);
 		return jmi;
 	}
@@ -314,7 +304,9 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		menu.add(getSyntaxItem(bg, "Dockerfile", SYNTAX_STYLE_DOCKERFILE));
 		menu.add(getSyntaxItem(bg, "HTML", SYNTAX_STYLE_HTML));
 		menu.add(getSyntaxItem(bg, "JSON", SYNTAX_STYLE_JSON));
+		menu.add(getSyntaxItem(bg, "Kotlin", SYNTAX_STYLE_KOTLIN));
 		menu.add(getSyntaxItem(bg, "Makefile", SYNTAX_STYLE_MAKEFILE));
+		menu.add(getSyntaxItem(bg, "Markdown", SYNTAX_STYLE_MARKDOWN));
 		menu.add(getSyntaxItem(bg, "SH", SYNTAX_STYLE_UNIX_SHELL));
 		menu.add(getSyntaxItem(bg, "XML", SYNTAX_STYLE_XML));
 		menu.add(getSyntaxItem(bg, "YAML", SYNTAX_STYLE_YAML));
@@ -324,17 +316,20 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private JMenuItem getSyntaxItem(final ButtonGroup bg, final String label, final String syntaxId) {
 		final JRadioButtonMenuItem item = new JRadioButtonMenuItem(label);
 		bg.add(item);
-		item.setActionCommand(syntaxId);
 		item.addActionListener(e -> {
 			if (getCurrentLanguage() == null) {
 				setSyntaxEditingStyle(syntaxId);
 			} else {
-				log.error("[BUG] Unknown state: Non-executable syntaxes cannot be applied to valid languages");
+				error("Non-executable syntaxes can only be applied when scripting language is 'None'.");
 				bg.getElements().nextElement().setSelected(true); //select none
 				setSyntaxEditingStyle(SYNTAX_STYLE_NONE);
 			}
 		});
 		return item;
+	}
+
+	void error(final String message) {
+		TextEditor.GuiUtils.error(this, message);
 	}
 
 	private void updateNoneLangSyntaxMenu(final ScriptLanguage language) {
@@ -945,8 +940,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			}
 			catch (final BadLocationException e) {
 				/* ignore */
-				JOptionPane.showMessageDialog(this, "Cannot toggle bookmark at this location.", "Error",
-						JOptionPane.ERROR_MESSAGE);
+				error("Cannot toggle bookmark at this location.");
 			}
 		}
 	}
@@ -1096,7 +1090,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 */
 	public void applyTheme(final String theme) throws IllegalArgumentException {
 		try {
-			applyTheme(getTheme(theme));
+			applyTheme(TextEditor.getTheme(theme));
 		} catch (final Exception ex) {
 			throw new IllegalArgumentException(ex);
 		}
@@ -1112,15 +1106,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		th.apply(this);
 		setFontSize(existingFontSize);
 		GutterUtils.updateIcons(gutter);
-	}
-
-	private static Theme getTheme(final String theme) throws IllegalArgumentException {
-		try {
-			return Theme
-					.load(TextEditor.class.getResourceAsStream("/org/fife/ui/rsyntaxtextarea/themes/" + theme + ".xml"));
-		} catch (final Exception ex) {
-			throw new IllegalArgumentException(ex);
-		}
 	}
 
 	public String loadFolders() {
@@ -1192,8 +1177,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			if (selection == null) {
 				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
 			} else {
-				final String link = "https://duckduckgo.com/?q=" + selection.trim().replace(" ", "+");
-				openLinkInBrowser(link);
+				TextEditor.GuiUtils.runSearchQueryInBrowser(EditorPane.this, platformService, selection.trim());
 			}
 			textArea.requestFocusInWindow();
 		}
@@ -1208,8 +1192,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			jmi.setText("Search Web for Selection");
 			return jmi;
 		}
-
-
 	}
 
 	class OpenLinkUnderCursor extends RecordableTextAction {

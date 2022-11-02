@@ -67,7 +67,7 @@ class OutlineTreePanel extends JScrollPane {
 	private boolean sorted;
 	private boolean major;
 
-	OutlineTreePanel(final TextEditor editor) {
+	OutlineTreePanel() {
 		super();
 		fontSize = getFont().getSize();
 		setViewportView(new UnsupportedLangTree());
