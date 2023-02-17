@@ -2,7 +2,7 @@
  * #%L
  * Script Editor and Interpreter for SciJava script languages.
  * %%
- * Copyright (C) 2009 - 2022 SciJava developers.
+ * Copyright (C) 2009 - 2023 SciJava developers.
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
