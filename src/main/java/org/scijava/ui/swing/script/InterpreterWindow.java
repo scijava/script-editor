@@ -2,7 +2,7 @@
  * #%L
  * Script Editor and Interpreter for SciJava script languages.
  * %%
- * Copyright (C) 2009 - 2022 SciJava developers.
+ * Copyright (C) 2009 - 2023 SciJava developers.
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -59,12 +59,29 @@ public class InterpreterWindow extends JFrame {
 	@Parameter
 	private LogService log;
 
-	/** Constructs the scripting interpreter window. */
+	/**
+	 * Constructs the scripting interpreter window.
+	 *
+	 * @param context The SciJava application context to use.
+	 */
 	public InterpreterWindow(final Context context) {
+		this(context, null);
+	}
+
+	/**
+	 * Constructs the scripting interpreter window.
+	 *
+	 * @param context The SciJava application context to use.
+	 * @param languagePreference The given language to use, or null to fall back
+	 *          to the default.
+	 */
+	public InterpreterWindow(final Context context,
+		final String languagePreference)
+	{
 		super("Script Interpreter");
 		context.inject(this);
 
-		pane = new InterpreterPane(context) {
+		pane = new InterpreterPane(context, languagePreference) {
 			@Override
 			public void dispose() {
 				super.dispose();

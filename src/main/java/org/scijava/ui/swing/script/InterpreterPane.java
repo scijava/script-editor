@@ -2,7 +2,7 @@
  * #%L
  * Script Editor and Interpreter for SciJava script languages.
  * %%
- * Copyright (C) 2009 - 2022 SciJava developers.
+ * Copyright (C) 2009 - 2023 SciJava developers.
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -73,15 +73,30 @@ public class InterpreterPane implements UIComponent<JComponent> {
 	/**
 	 * Constructs an interpreter UI pane for a SciJava scripting REPL.
 	 *
-	 * @param context The SciJava application context to use
+	 * @param context The SciJava application context to use.
 	 */
 	public InterpreterPane(final Context context) {
+		this(context, null);
+	}
+
+	/**
+	 * Constructs an interpreter UI pane for a SciJava scripting REPL, with a
+	 * given language preference.
+	 *
+	 * @param context The SciJava application context to use.
+	 * @param languagePreference The given language to use, or null to fall back
+	 *          to the default.
+	 */
+	public InterpreterPane(final Context context,
+		final String languagePreference)
+	{
 		context.inject(this);
 		output = new OutputPane(log);
 		final JScrollPane outputScroll = new JScrollPane(output);
 		outputScroll.setPreferredSize(new Dimension(440, 400));
 
-		repl = new ScriptREPL(context, output.getOutputStream());
+		repl = new ScriptREPL(context, languagePreference, //
+			output.getOutputStream());
 		repl.initialize();
 
 		final Writer writer = output.getOutputWriter();
