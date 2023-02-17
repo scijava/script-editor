@@ -60,22 +60,37 @@ public class InterpreterWindow extends JFrame {
 	private LogService log;
 
 	/** Constructs the scripting interpreter window. */
-	public InterpreterWindow(final Context context) {
+	public InterpreterWindow(final Context context, final String languagePreference) {
 		super("Script Interpreter");
 		context.inject(this);
 
-		pane = new InterpreterPane(context) {
-			@Override
-			public void dispose() {
-				super.dispose();
-				InterpreterWindow.super.dispose();
-			}
-		};
+		if(languagePreference == null) {
+			pane = new InterpreterPane(context) {
+				@Override
+				public void dispose() {
+					super.dispose();
+					InterpreterWindow.super.dispose();
+				}
+			};
+		} else {
+			pane = new InterpreterPane(context, languagePreference) {
+				@Override
+				public void dispose() {
+					super.dispose();
+					InterpreterWindow.super.dispose();
+				}
+			};
+		}
 		setContentPane(pane.getComponent());
 
 		pack();
 
 		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+	}
+
+	/** Construct the scripting interpreter with a given language preference. */
+	public InterpreterWindow(final Context context) {
+		this(context, null);
 	}
 
 	/** Gets the window's associated {@link ScriptREPL}. */
