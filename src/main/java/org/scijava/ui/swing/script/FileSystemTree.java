@@ -506,6 +506,7 @@ public class FileSystemTree extends JTree
 		private final HashMap<Path, Node> map = new HashMap<>();
 
 		DirectoryWatcher() {
+			setDaemon(true);
 			try {
 				this.watcher = FileSystems.getDefault().newWatchService();
 				this.start();
