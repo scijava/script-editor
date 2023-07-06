@@ -3246,7 +3246,10 @@ public class TextEditor extends JFrame implements ActionListener,
 			setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 
 			// setup default prompt
-			String prompt = "Write concise and high quality code in " + getCurrentLanguage().getLanguageName() + " for ImageJ/Fiji.\n" +
+			String prompt =
+					"Write code in " + getCurrentLanguage().getLanguageName() + ".\n" +
+					"Write concise and high quality code for ImageJ/Fiji.\n" +
+					"Put minimal comments explaining what the code does.\n" +
 					"The code should do the following:\n" +
 					getTextArea().getSelectedText();
 
@@ -3266,7 +3269,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 
 			//getTextArea().insert(answer, getTextArea().getCaretPosition());
-			getTextArea().replaceSelection(answer);
+			getTextArea().replaceSelection(answer + "\n");
 			setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 		});
 	}
