@@ -4,3 +4,17 @@ SciJava Script Editor
 ---------------------
 
 Script Editor and Interpreter for SciJava script languages.
+
+## Testing from the command line
+
+### Script Editor
+
+```
+mvn -Pexec,editor
+```
+
+### Script Interpreter
+
+```
+mvn -Pexec,interp
+```
