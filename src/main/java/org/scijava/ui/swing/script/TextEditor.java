@@ -142,6 +142,7 @@ import org.scijava.io.IOService;
 import org.scijava.log.LogService;
 import org.scijava.module.ModuleException;
 import org.scijava.module.ModuleService;
+import org.scijava.options.OptionsService;
 import org.scijava.platform.PlatformService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.PluginInfo;
@@ -276,6 +277,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	private AppService appService;
 	@Parameter
 	private BatchService batchService;
+	@Parameter(required = false)
+	private OptionsService optionsService;
 
 	private Map<ScriptLanguage, JRadioButtonMenuItem> languageMenuItems;
 	private JRadioButtonMenuItem noneLanguageItem;
@@ -3276,7 +3279,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private String askChatGPT(String text) {
 		// Modified from: https://github.com/TheoKanning/openai-java/blob/main/example/src/main/java/example/OpenAiApiFunctionsExample.java
-		String token = System.getenv("OPENAI_API_KEY");
+		String token = apiKey();
 
 		OpenAiService service = new OpenAiService(token);
 
@@ -3295,6 +3298,18 @@ public class TextEditor extends JFrame implements ActionListener,
 		String result = responseMessage.getContent();
 		System.out.println(result);
 		return result;
+	}
+
+	private String apiKey() {
+		if (optionsService != null) {
+			final OpenAIOptions openAIOptions =
+				optionsService.getOptions(OpenAIOptions.class);
+			if (openAIOptions != null) {
+				final String key = openAIOptions.getOpenAIKey();
+				if (key != null && !key.isEmpty()) return key;
+			}
+		}
+		return System.getenv("OPENAI_API_KEY");
 	}
 
 	public void extractSourceJar(final File file) {
