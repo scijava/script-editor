@@ -106,32 +106,8 @@ import java.util.zip.ZipException;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
-import javax.swing.AbstractAction;
-import javax.swing.AbstractButton;
-import javax.swing.BoxLayout;
-import javax.swing.ButtonGroup;
-import javax.swing.JButton;
-import javax.swing.JCheckBoxMenuItem;
-import javax.swing.JDialog;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import javax.swing.JRadioButtonMenuItem;
-import javax.swing.JScrollPane;
-import javax.swing.JSplitPane;
-import javax.swing.JTabbedPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.JTextPane;
-import javax.swing.JTree;
-import javax.swing.KeyStroke;
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
+import javax.swing.*;
+import javax.swing.border.BevelBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
@@ -142,6 +118,10 @@ import javax.swing.text.DefaultHighlighter.DefaultHighlightPainter;
 import javax.swing.text.Position;
 import javax.swing.tree.TreePath;
 
+import com.theokanning.openai.completion.chat.ChatCompletionRequest;
+import com.theokanning.openai.completion.chat.ChatMessage;
+import com.theokanning.openai.completion.chat.ChatMessageRole;
+import com.theokanning.openai.service.OpenAiService;
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Theme;
@@ -162,6 +142,7 @@ import org.scijava.io.IOService;
 import org.scijava.log.LogService;
 import org.scijava.module.ModuleException;
 import org.scijava.module.ModuleService;
+import org.scijava.options.OptionsService;
 import org.scijava.platform.PlatformService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.PluginInfo;
@@ -238,7 +219,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			gotoLine, makeJar, makeJarWithSource, removeUnusedImports, sortImports,
 			removeTrailingWhitespace, findNext, findPrevious, openHelp, addImport,
 			nextError, previousError, openHelpWithoutFrames, nextTab,
-			previousTab, runSelection, extractSourceJar,
+			previousTab, runSelection, extractSourceJar, askChatGPTtoGenerateCode,
 			openSourceForClass,
 			//openSourceForMenuItem, // this never had an actionListener!??
 			openMacroFunctions, decreaseFontSize, increaseFontSize, chooseFontSize,
@@ -296,6 +277,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	private AppService appService;
 	@Parameter
 	private BatchService batchService;
+	@Parameter(required = false)
+	private OptionsService optionsService;
 
 	private Map<ScriptLanguage, JRadioButtonMenuItem> languageMenuItems;
 	private JRadioButtonMenuItem noneLanguageItem;
@@ -534,6 +517,11 @@ public class TextEditor extends JFrame implements ActionListener,
 		openSourceForClass.setMnemonic(KeyEvent.VK_J);
 		//openSourceForMenuItem = addToMenu(toolsMenu, "Open Java File for Menu Item...", 0, 0);
 		//openSourceForMenuItem.setMnemonic(KeyEvent.VK_M);
+
+		GuiUtils.addMenubarSeparator(toolsMenu, "chatGPT");
+		askChatGPTtoGenerateCode = addToMenu(toolsMenu, "Ask chatGPT...", 0, 0);
+
+
 		addScritpEditorMacroCommands(toolsMenu);
 		mbar.add(toolsMenu);
 
@@ -1638,6 +1626,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		else if (source == openClassOrPackageHelp) openClassOrPackageHelp(null);
 		else if (source == extractSourceJar) extractSourceJar();
+		else if (source == askChatGPTtoGenerateCode) askChatGPTtoGenerateCode();
 		else if (source == openSourceForClass) {
 			final String className = getSelectedClassNameOrAsk("Class (fully qualified name):", "Which Class?");
 			if (className != null) {
@@ -3252,6 +3241,75 @@ public class TextEditor extends JFrame implements ActionListener,
 	public void extractSourceJar() {
 		final File file = openWithDialog(null);
 		if (file != null) extractSourceJar(file);
+	}
+
+	public void askChatGPTtoGenerateCode() {
+		SwingUtilities.invokeLater(() -> {
+
+			setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+
+			// setup default prompt
+			String prompt =
+					"Write code in " + getCurrentLanguage().getLanguageName() + ".\n" +
+					"Write concise and high quality code for ImageJ/Fiji.\n" +
+					"Put minimal comments explaining what the code does.\n" +
+					"The code should do the following:\n" +
+					getTextArea().getSelectedText();
+
+			String answer = askChatGPT(prompt);
+
+			if (answer.contains("```")) {
+				// clean answer by removing blabla outside the code block
+				answer = answer.replace("```java", "```");
+				answer = answer.replace("```javascript", "```");
+				answer = answer.replace("```python", "```");
+				answer = answer.replace("```jython", "```");
+				answer = answer.replace("```macro", "```");
+				answer = answer.replace("```groovy", "```");
+
+				String[] temp = answer.split("```");
+				answer = temp[1];
+			}
+
+			//getTextArea().insert(answer, getTextArea().getCaretPosition());
+			getTextArea().replaceSelection(answer + "\n");
+			setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+		});
+	}
+
+	private String askChatGPT(String text) {
+		// Modified from: https://github.com/TheoKanning/openai-java/blob/main/example/src/main/java/example/OpenAiApiFunctionsExample.java
+		String token = apiKey();
+
+		OpenAiService service = new OpenAiService(token);
+
+		List<ChatMessage> messages = new ArrayList<>();
+		ChatMessage userMessage = new ChatMessage(ChatMessageRole.USER.value(), text);
+		messages.add(userMessage);
+
+		ChatCompletionRequest chatCompletionRequest = ChatCompletionRequest
+				.builder()
+				.model("gpt-3.5-turbo-0613")
+				.messages(messages).build();
+
+		ChatMessage responseMessage = service.createChatCompletion(chatCompletionRequest).getChoices().get(0).getMessage();
+		messages.add(responseMessage);
+
+		String result = responseMessage.getContent();
+		System.out.println(result);
+		return result;
+	}
+
+	private String apiKey() {
+		if (optionsService != null) {
+			final OpenAIOptions openAIOptions =
+				optionsService.getOptions(OpenAIOptions.class);
+			if (openAIOptions != null) {
+				final String key = openAIOptions.getOpenAIKey();
+				if (key != null && !key.isEmpty()) return key;
+			}
+		}
+		return System.getenv("OPENAI_API_KEY");
 	}
 
 	public void extractSourceJar(final File file) {
