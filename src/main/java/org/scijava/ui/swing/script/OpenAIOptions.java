@@ -41,8 +41,18 @@ import org.scijava.plugin.Plugin;
 @Plugin(type = OptionsPlugin.class, menuPath = "Edit>Options>OpenAI...")
 public class OpenAIOptions extends OptionsPlugin {
 
-	@Parameter(label = "OpenAI key")
+	@Parameter(label = "OpenAI key", required = false)
 	private String openAIKey;
+
+	@Parameter(label = "OpenAI Model name")
+	private String modelName = "gpt-3.5-turbo-0613";
+
+	@Parameter(label = "Prompt prefix (added before custom prompt)", style = "text area")
+	private String promptPrefix = "Write code in {programming_language}.\n" +
+			"Write concise and high quality code for ImageJ/Fiji.\n" +
+			"Put minimal comments explaining what the code does.\n" +
+			"The code should do the following:\n" +
+			"{custom_prompt}";
 
 	public String getOpenAIKey() {
 		return openAIKey;
@@ -51,4 +61,22 @@ public class OpenAIOptions extends OptionsPlugin {
 	public void setOpenAIKey(final String openAIKey) {
 		this.openAIKey = openAIKey;
 	}
+
+	public String getPromptPrefix() {
+		return promptPrefix;
+	}
+
+	public void setPromptPrefix(final String promptPrefix) {
+		this.promptPrefix = promptPrefix;
+	}
+
+	public String getModelName() {
+		return modelName;
+	}
+
+	public void setModelName(final String modelName) {
+		this.modelName = modelName;
+	}
+
+
 }

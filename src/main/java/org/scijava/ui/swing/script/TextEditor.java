@@ -3250,11 +3250,9 @@ public class TextEditor extends JFrame implements ActionListener,
 
 			// setup default prompt
 			String prompt =
-					"Write code in " + getCurrentLanguage().getLanguageName() + ".\n" +
-					"Write concise and high quality code for ImageJ/Fiji.\n" +
-					"Put minimal comments explaining what the code does.\n" +
-					"The code should do the following:\n" +
-					getTextArea().getSelectedText();
+					promptPrefix()
+							.replace("{programming_language}",  getCurrentLanguage().getLanguageName() )
+							.replace("{custom_prompt}", getTextArea().getSelectedText());
 
 			String answer = askChatGPT(prompt);
 
@@ -3289,7 +3287,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		ChatCompletionRequest chatCompletionRequest = ChatCompletionRequest
 				.builder()
-				.model("gpt-3.5-turbo-0613")
+				.model(modelName())
 				.messages(messages).build();
 
 		ChatMessage responseMessage = service.createChatCompletion(chatCompletionRequest).getChoices().get(0).getMessage();
@@ -3311,6 +3309,31 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		return System.getenv("OPENAI_API_KEY");
 	}
+
+	private String modelName() {
+		if (optionsService != null) {
+			final OpenAIOptions openAIOptions =
+					optionsService.getOptions(OpenAIOptions.class);
+			if (openAIOptions != null) {
+				final String key = openAIOptions.getModelName();
+				if (key != null && !key.isEmpty()) return key;
+			}
+		}
+		return null;
+	}
+
+	private String promptPrefix() {
+		if (optionsService != null) {
+			final OpenAIOptions openAIOptions =
+					optionsService.getOptions(OpenAIOptions.class);
+			if (openAIOptions != null) {
+				final String promptPrefix = openAIOptions.getPromptPrefix();
+				if (promptPrefix != null && !promptPrefix.isEmpty()) return promptPrefix;
+			}
+		}
+		return "";
+	}
+
 
 	public void extractSourceJar(final File file) {
 		try {
