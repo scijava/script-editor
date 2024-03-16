@@ -50,8 +50,7 @@ public class OutputPane extends JTextArea {
 
 	public OutputPane(final LogService log) {
 		this.log = log;
-		final Font font = new Font("Courier", Font.PLAIN, 12);
-		setFont(font);
+		setFont(new Font(Font.MONOSPACED, Font.PLAIN, getFont().getSize()));
 		setEditable(false);
 		setFocusable(true);
 		setLineWrap(true);
