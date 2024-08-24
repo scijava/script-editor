@@ -50,6 +50,12 @@ public class LLMServicesOptions extends OptionsPlugin {
 	@Parameter(label = "OpenAI Model name")
 	private String openAIModelName = "gpt-4o-2024-08-06";
 
+	@Parameter(label = "Ollama Model name")
+	private String ollamaModelName = "codegemma:7b-instruct";
+
+	@Parameter(label = "Ollama Url")
+	private String ollamaUrl = "http://localhost:11434/v1";
+
 	@Parameter(label = "Anthropic Model name")
 	private String anthropicModelName = "claude-3-5-sonnet-20240620";
 
@@ -93,6 +99,15 @@ public class LLMServicesOptions extends OptionsPlugin {
 		this.openAIModelName = openAIModelName;
 	}
 
+	public String getOllamaModelName() {
+		return ollamaModelName;
+	}
+
+	public void setOllamaModelName(final String ollamaModelName) {
+		this.ollamaModelName = ollamaModelName;
+	}
+
+
 	public String getAnthropidModelName() {
 		return anthropicModelName;
 	}
@@ -101,5 +116,12 @@ public class LLMServicesOptions extends OptionsPlugin {
 		this.anthropicModelName = anthropicModelName;
 	}
 
+	public String getOllamaUrl() {
+		return ollamaUrl;
+	}
+
+	public void setOllamaUrl(final String ollamaUrl) {
+		this.ollamaUrl = ollamaUrl;
+	}
 
 }
