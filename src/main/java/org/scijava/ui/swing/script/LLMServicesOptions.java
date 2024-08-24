@@ -38,28 +38,43 @@ import org.scijava.plugin.Plugin;
  * 
  * @author Curtis Rueden
  */
-@Plugin(type = OptionsPlugin.class, menuPath = "Edit>Options>OpenAI...")
-public class OpenAIOptions extends OptionsPlugin {
+@Plugin(type = OptionsPlugin.class, menuPath = "Edit>Options>LLM Service Options...")
+public class LLMServicesOptions extends OptionsPlugin {
 
-	@Parameter(label = "OpenAI key", required = false)
-	private String openAIKey;
+	@Parameter(label = "OpenAI API key", required = false)
+	private String openAIAPIKey;
+
+	@Parameter(label = "Anthropic API key", required = false)
+	private String anthropicAPIKey;
 
 	@Parameter(label = "OpenAI Model name")
-	private String modelName = "gpt-3.5-turbo-0613";
+	private String openAIModelName = "gpt-4o-2024-08-06";
+
+	@Parameter(label = "Anthropic Model name")
+	private String anthropicModelName = "claude-3-5-sonnet-20240620";
 
 	@Parameter(label = "Prompt prefix (added before custom prompt)", style = "text area")
-	private String promptPrefix = "Write code in {programming_language}.\n" +
+	private String promptPrefix =
+			"You are an extremely talented Bio-image Analyst and programmer.\n" +
+			"You write code in {programming_language}.\n" +
 			"Write concise and high quality code for ImageJ/Fiji.\n" +
 			"Put minimal comments explaining what the code does.\n" +
-			"The code should do the following:\n" +
+			"Your task is the following:\n" +
 			"{custom_prompt}";
 
-	public String getOpenAIKey() {
-		return openAIKey;
+	public String getOpenAIAPIKey() {
+		return openAIAPIKey;
 	}
 
-	public void setOpenAIKey(final String openAIKey) {
-		this.openAIKey = openAIKey;
+	public String getAnthropicAPIKey() {
+		return anthropicAPIKey;
+	}
+
+	public void setOpenAIAPIKey(final String openAIAPIKey) {
+		this.openAIAPIKey = openAIAPIKey;
+	}
+	public void setAnthropicAPIKey(final String anthropicAPIKey) {
+		this.anthropicAPIKey = anthropicAPIKey;
 	}
 
 	public String getPromptPrefix() {
@@ -70,12 +85,20 @@ public class OpenAIOptions extends OptionsPlugin {
 		this.promptPrefix = promptPrefix;
 	}
 
-	public String getModelName() {
-		return modelName;
+	public String getOpenAIModelName() {
+		return openAIModelName;
 	}
 
-	public void setModelName(final String modelName) {
-		this.modelName = modelName;
+	public void setOpenAIModelName(final String openAIModelName) {
+		this.openAIModelName = openAIModelName;
+	}
+
+	public String getAnthropidModelName() {
+		return anthropicModelName;
+	}
+
+	public void setAnthropidModelName(final String anthropicModelName) {
+		this.anthropicModelName = anthropicModelName;
 	}
 
 
