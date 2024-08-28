@@ -54,7 +54,7 @@ public class LLMServicesOptions extends OptionsPlugin {
 	private String ollamaModelName = "codegemma:7b-instruct";
 
 	@Parameter(label = "Ollama Url")
-	private String ollamaUrl = "http://localhost:11434/v1";
+	private String ollamaUrl = "http://localhost:11434/v1/chat/completions";
 
 	@Parameter(label = "Anthropic Model name")
 	private String anthropicModelName = "claude-3-5-sonnet-20240620";
