@@ -215,7 +215,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			removeTrailingWhitespace, findNext, findPrevious, openHelp, addImport,
 			nextError, previousError, openHelpWithoutFrames, nextTab,
 			previousTab, runSelection, extractSourceJar, askChatGPTtoGenerateCode,
-			askClaudetoGenerateCode, openSourceForClass,
+			askOllamatoGenerateCode, askClaudetoGenerateCode, openSourceForClass,
 			//openSourceForMenuItem, // this never had an actionListener!??
 			openMacroFunctions, decreaseFontSize, increaseFontSize, chooseFontSize,
 			chooseTabSize, gitGrep, replaceTabsWithSpaces,
@@ -515,6 +515,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		GuiUtils.addMenubarSeparator(toolsMenu, "AI assistance");
 		askChatGPTtoGenerateCode = addToMenu(toolsMenu, "Ask OpenAI's chatGPT...", 0, 0);
+		askOllamatoGenerateCode = addToMenu(toolsMenu, "Ask Ollama...", 0, 0 );
 		askClaudetoGenerateCode = addToMenu(toolsMenu, "Ask Anthropic's Claude...", 0, 0 );
 
 
@@ -1623,6 +1624,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		else if (source == openClassOrPackageHelp) openClassOrPackageHelp(null);
 		else if (source == extractSourceJar) extractSourceJar();
 		else if (source == askChatGPTtoGenerateCode) askChatGPTtoGenerateCode();
+		else if (source == askOllamatoGenerateCode) askOllamatoGenerateCode();
 		else if (source == askClaudetoGenerateCode) askClaudetoGenerateCode();
 		else if (source == openSourceForClass) {
 			final String className = getSelectedClassNameOrAsk("Class (fully qualified name):", "Which Class?");
@@ -3243,6 +3245,9 @@ public class TextEditor extends JFrame implements ActionListener,
 	public void askChatGPTtoGenerateCode() {
 		askLLMServiceProviderToGenerateCode("openai");
 	}
+	public void askOllamatoGenerateCode() {
+		askLLMServiceProviderToGenerateCode("ollama");
+	}
 	public void askClaudetoGenerateCode() {
 		askLLMServiceProviderToGenerateCode("anthropic");
 	}
@@ -3268,6 +3273,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			try {
 				if (service_provider.equals("openai")) {
 					answer = new OpenAIClient().prompt(prompt, openAIModelName(), openaiApiKey(), null);
+				} else if (service_provider.equals("ollama")) {
+					answer = new OpenAIClient().prompt(prompt, ollamaModelName(), null, ollamaUrl());
 				} else if (service_provider.equals("anthropic")) {
 					answer = new ClaudeApiClient().prompt(prompt, anthropicModelName(), anthropicApiKey(), null);
 				} else {
@@ -3328,6 +3335,30 @@ public class TextEditor extends JFrame implements ActionListener,
 					optionsService.getOptions(LLMServicesOptions.class);
 			if (llmOptions != null) {
 				final String key = llmOptions.getOpenAIModelName();
+				if (key != null && !key.isEmpty()) return key;
+			}
+		}
+		return null;
+	}
+
+	private String ollamaModelName() {
+		if (optionsService != null) {
+			final LLMServicesOptions llmOptions =
+					optionsService.getOptions(LLMServicesOptions.class);
+			if (llmOptions != null) {
+				final String key = llmOptions.getOllamaModelName();
+				if (key != null && !key.isEmpty()) return key;
+			}
+		}
+		return null;
+	}
+
+	private String ollamaUrl() {
+		if (optionsService != null) {
+			final LLMServicesOptions llmOptions =
+					optionsService.getOptions(LLMServicesOptions.class);
+			if (llmOptions != null) {
+				final String key = llmOptions.getOllamaUrl();
 				if (key != null && !key.isEmpty()) return key;
 			}
 		}
