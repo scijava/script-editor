@@ -781,9 +781,15 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			supportLevel = "N/A. Using Java as fallback";
 		}
 		if (support != null) {
+			// NB: We call support.set*Enabled functions both before and after
+			// installing the LanguageSupport, to increase the chances of
+			// LanguageSupport implementations getting configured according to
+			// the user's wishes, rather than with hardcoded defaults.
 			support.setAutoCompleteEnabled(autoCompletionEnabled);
 			support.setAutoActivationEnabled(autoCompletionWithoutKey);
 			support.install(this);
+			support.setAutoCompleteEnabled(autoCompletionEnabled);
+			support.setAutoActivationEnabled(autoCompletionWithoutKey);
 			if (!autoCompletionEnabled)
 				supportLevel += " but currently disabled\n";
 			else {
