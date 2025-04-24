@@ -2635,6 +2635,11 @@ public class ImageJMacroTokenMaker extends AbstractJFlexCTokenMaker {
 		zzMarkedPos -= number;
 	}
 
+	@Override
+	public int yystate() {
+		return zzLexicalState; // the current lexical state
+	}
+
 	/**
 	 * Resumes scanning until the next regular expression is matched, the end of
 	 * input is encountered or an I/O-Error occurs.
