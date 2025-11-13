@@ -10,7 +10,7 @@
 	</parent>
 
 	<artifactId>script-editor</artifactId>
-	<version>1.1.2-SNAPSHOT</version>
+	<version>1.2.0-SNAPSHOT</version>
 
 	<name>SciJava Script Editor</name>
 	<description>Script Editor and Interpreter for SciJava script languages.</description>
@@ -208,17 +208,6 @@
 		<dependency>
 			<groupId>com.formdev</groupId>
 			<artifactId>flatlaf</artifactId>
-		</dependency>
-
-		<dependency>
-			<groupId>com.theokanning.openai-gpt3-java</groupId>
-			<artifactId>client</artifactId>
-			<version>0.14.0</version>
-		</dependency>
-		<dependency>
-			<groupId>com.theokanning.openai-gpt3-java</groupId>
-			<artifactId>service</artifactId>
-			<version>0.14.0</version>
 		</dependency>
 	</dependencies>
 

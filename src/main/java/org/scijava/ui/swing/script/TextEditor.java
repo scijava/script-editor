@@ -118,10 +118,6 @@ import javax.swing.text.DefaultHighlighter.DefaultHighlightPainter;
 import javax.swing.text.Position;
 import javax.swing.tree.TreePath;
 
-import com.theokanning.openai.completion.chat.ChatCompletionRequest;
-import com.theokanning.openai.completion.chat.ChatMessage;
-import com.theokanning.openai.completion.chat.ChatMessageRole;
-import com.theokanning.openai.service.OpenAiService;
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Theme;
@@ -219,8 +215,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			gotoLine, makeJar, makeJarWithSource, removeUnusedImports, sortImports,
 			removeTrailingWhitespace, findNext, findPrevious, openHelp, addImport,
 			nextError, previousError, openHelpWithoutFrames, nextTab,
-			previousTab, runSelection, extractSourceJar, askChatGPTtoGenerateCode,
-			openSourceForClass,
+			previousTab, runSelection, extractSourceJar, openSourceForClass,
 			//openSourceForMenuItem, // this never had an actionListener!??
 			openMacroFunctions, decreaseFontSize, increaseFontSize, chooseFontSize,
 			chooseTabSize, gitGrep, replaceTabsWithSpaces,
@@ -517,10 +512,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		openSourceForClass.setMnemonic(KeyEvent.VK_J);
 		//openSourceForMenuItem = addToMenu(toolsMenu, "Open Java File for Menu Item...", 0, 0);
 		//openSourceForMenuItem.setMnemonic(KeyEvent.VK_M);
-
-		GuiUtils.addMenubarSeparator(toolsMenu, "chatGPT");
-		askChatGPTtoGenerateCode = addToMenu(toolsMenu, "Ask chatGPT...", 0, 0);
-
 
 		addScritpEditorMacroCommands(toolsMenu);
 		mbar.add(toolsMenu);
@@ -1626,7 +1617,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		else if (source == openClassOrPackageHelp) openClassOrPackageHelp(null);
 		else if (source == extractSourceJar) extractSourceJar();
-		else if (source == askChatGPTtoGenerateCode) askChatGPTtoGenerateCode();
 		else if (source == openSourceForClass) {
 			final String className = getSelectedClassNameOrAsk("Class (fully qualified name):", "Which Class?");
 			if (className != null) {
@@ -3242,98 +3232,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		final File file = openWithDialog(null);
 		if (file != null) extractSourceJar(file);
 	}
-
-	public void askChatGPTtoGenerateCode() {
-		SwingUtilities.invokeLater(() -> {
-
-			setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-
-			// setup default prompt
-			String prompt =
-					promptPrefix()
-							.replace("{programming_language}",  getCurrentLanguage().getLanguageName() )
-							.replace("{custom_prompt}", getTextArea().getSelectedText());
-
-			String answer = askChatGPT(prompt);
-
-			if (answer.contains("```")) {
-				// clean answer by removing blabla outside the code block
-				answer = answer.replace("```java", "```");
-				answer = answer.replace("```javascript", "```");
-				answer = answer.replace("```python", "```");
-				answer = answer.replace("```jython", "```");
-				answer = answer.replace("```macro", "```");
-				answer = answer.replace("```groovy", "```");
-
-				String[] temp = answer.split("```");
-				answer = temp[1];
-			}
-
-			//getTextArea().insert(answer, getTextArea().getCaretPosition());
-			getTextArea().replaceSelection(answer + "\n");
-			setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-		});
-	}
-
-	private String askChatGPT(String text) {
-		// Modified from: https://github.com/TheoKanning/openai-java/blob/main/example/src/main/java/example/OpenAiApiFunctionsExample.java
-		String token = apiKey();
-
-		OpenAiService service = new OpenAiService(token);
-
-		List<ChatMessage> messages = new ArrayList<>();
-		ChatMessage userMessage = new ChatMessage(ChatMessageRole.USER.value(), text);
-		messages.add(userMessage);
-
-		ChatCompletionRequest chatCompletionRequest = ChatCompletionRequest
-				.builder()
-				.model(modelName())
-				.messages(messages).build();
-
-		ChatMessage responseMessage = service.createChatCompletion(chatCompletionRequest).getChoices().get(0).getMessage();
-		messages.add(responseMessage);
-
-		String result = responseMessage.getContent();
-		System.out.println(result);
-		return result;
-	}
-
-	private String apiKey() {
-		if (optionsService != null) {
-			final OpenAIOptions openAIOptions =
-				optionsService.getOptions(OpenAIOptions.class);
-			if (openAIOptions != null) {
-				final String key = openAIOptions.getOpenAIKey();
-				if (key != null && !key.isEmpty()) return key;
-			}
-		}
-		return System.getenv("OPENAI_API_KEY");
-	}
-
-	private String modelName() {
-		if (optionsService != null) {
-			final OpenAIOptions openAIOptions =
-					optionsService.getOptions(OpenAIOptions.class);
-			if (openAIOptions != null) {
-				final String key = openAIOptions.getModelName();
-				if (key != null && !key.isEmpty()) return key;
-			}
-		}
-		return null;
-	}
-
-	private String promptPrefix() {
-		if (optionsService != null) {
-			final OpenAIOptions openAIOptions =
-					optionsService.getOptions(OpenAIOptions.class);
-			if (openAIOptions != null) {
-				final String promptPrefix = openAIOptions.getPromptPrefix();
-				if (promptPrefix != null && !promptPrefix.isEmpty()) return promptPrefix;
-			}
-		}
-		return "";
-	}
-
 
 	public void extractSourceJar(final File file) {
 		try {
