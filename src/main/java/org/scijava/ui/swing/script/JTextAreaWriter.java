@@ -114,8 +114,7 @@ public class JTextAreaWriter extends Writer {
 			catch (final BadLocationException e) {
 				log.error(e);
 			}
-			textArea.append(sb.toString());
-			textArea.setCaretPosition(textArea.getDocument().getLength());
+			ConsoleArea.appendFollowing(textArea, sb.toString());
 		}
 	}
 

@@ -104,8 +104,7 @@ public class JTextAreaOutputStream extends OutputStream {
 			catch (final BadLocationException e) {
 				e.printStackTrace();
 			}
-			textArea.append(sb.toString());
-			textArea.setCaretPosition(textArea.getDocument().getLength());
+			ConsoleArea.appendFollowing(textArea, sb.toString());
 		}
 	}
 

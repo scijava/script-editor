@@ -32,12 +32,15 @@ package org.scijava.ui.swing.script;
 
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Rectangle;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.JTextArea;
+import javax.swing.JViewport;
+import javax.swing.SwingUtilities;
 import javax.swing.plaf.basic.BasicTextAreaUI;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
@@ -127,8 +130,28 @@ public class ConsoleArea extends JTextArea {
 		if (text == null || text.isEmpty()) return;
 		synchronized (appendLock) {
 			chunks.add(new Mark(getDocument().getLength(), error));
-			append(text);
+			appendFollowing(this, text);
 		}
+	}
+
+	/**
+	 * Appends text to the given area, then scrolls to the end of the text if the
+	 * area was already scrolled to the bottom (or is not currently displayed).
+	 * If the user has scrolled upward, the view is left alone.
+	 */
+	public static void appendFollowing(final JTextArea area, final String text) {
+		final boolean follow = isAtBottom(area);
+		area.append(text);
+		if (follow) {
+			SwingUtilities.invokeLater(() -> area.setCaretPosition(area.getDocument().getLength()));
+		}
+	}
+
+	private static boolean isAtBottom(final JTextArea area) {
+		if (!(area.getParent() instanceof JViewport)) return true;
+		final Rectangle visible = area.getVisibleRect();
+		// Note: allow a little slack for rounding and partially visible lines.
+		return visible.y + visible.height >= area.getHeight() - 2;
 	}
 
 	/** Sets foreground, background and caret colors together. */
