@@ -135,10 +135,7 @@ public class FindAndReplaceDialog extends JDialog implements ActionListener {
 
 	private JTextArea getSearchArea() {
 		if (restrictToConsole) {
-			if (textEditor.getTab().showingErrors)
-				return textEditor.getErrorScreen();
-			else
-				return textEditor.getTab().getScreen();
+			return textEditor.getTab().getScreen();
 		}
 		return getTextArea();
 	}

@@ -1090,7 +1090,9 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 */
 	public void applyTheme(final String theme) throws IllegalArgumentException {
 		try {
-			applyTheme(TextEditor.getTheme(theme));
+			// If dark L&F and using the default theme, assume 'dark' theme
+			final boolean dark = DEFAULT_THEME.equals(theme) && TextEditor.GuiUtils.isDarkLaF();
+			applyTheme(TextEditor.getTheme(dark ? "dark" : theme));
 		} catch (final Exception ex) {
 			throw new IllegalArgumentException(ex);
 		}

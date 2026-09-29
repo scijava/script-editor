@@ -30,6 +30,7 @@
 package org.scijava.ui.swing.script;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -48,15 +49,21 @@ import java.util.List;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.text.BadLocationException;
 import javax.swing.text.JTextComponent;
 
 import org.fife.ui.rsyntaxtextarea.ErrorStrip;
+import org.fife.ui.rsyntaxtextarea.Style;
+import org.fife.ui.rsyntaxtextarea.Token;
 import org.scijava.ui.swing.script.TextEditor.Executer;
 
 /**
@@ -69,15 +76,38 @@ public class TextEditorTab extends JSplitPane {
 	private static final String DOWN_ARROW = "\u25BC";
 	private static final String RIGHT_ARROW = "\u25B6";
 
+	/** Which console stream(s) to display. */
+	private enum ConsoleView {
+			OUTPUT("Output"), ERRORS("Errors"), BOTH("Output+Errors");
+
+			private final String label;
+
+			ConsoleView(final String label) {
+				this.label = label;
+			}
+
+			@Override
+			public String toString() {
+				return label;
+			}
+	}
+
 	protected final EditorPane editorPane;
-	protected final JTextArea screen = new JTextArea();
+	protected final JTextArea screen = new ConsoleArea(ConsoleArea.Content.OUTPUT);
+	/** Output and errors interleaved, in the order they were written. */
+	private final ConsoleArea combinedScreen = new ConsoleArea(ConsoleArea.Content.MIXED);
 	protected final JTextArea prompt = new JTextArea();
 	private final JLabel prompt_title = new JLabel();
 	protected final JCheckBox updownarrows = new JCheckBox("Use arrow keys");
 	protected final JScrollPane scroll;
+	/** True iff the console is showing errors only. */
 	protected boolean showingErrors;
+	private ConsoleView view = ConsoleView.BOTH;
+	private boolean updatingViewChooser;
+	private volatile boolean skipErrorMirroring;
 	private Executer executer;
-	private final JButton runit, batchit, killit, toggleErrors, switchSplit;
+	private final JButton runit, batchit, killit, switchSplit;
+	private final JComboBox<ConsoleView> viewChooser;
 	private final JCheckBox incremental;
 	private final JSplitPane screenAndPromptSplit;
 	private int screenAndPromptSplitDividerLocation;
@@ -144,7 +174,13 @@ public class TextEditorTab extends JSplitPane {
 		screen.setEditable(false);
 		screen.setLineWrap(false);
 		screen.setFont(getEditorPane().getFont());
+		combinedScreen.setEditable(false);
+		combinedScreen.setLineWrap(false);
+		combinedScreen.setFont(getEditorPane().getFont());
 		textEditor.applyConsolePopupMenu(screen);
+		textEditor.applyConsolePopupMenu(combinedScreen);
+		mirrorInto(combinedScreen, screen, false);
+		mirrorInto(combinedScreen, textEditor.getErrorScreen(), true);
 
 		final JPanel bottom = new JPanel();
 		bottom.setLayout(new GridBagLayout());
@@ -190,9 +226,15 @@ public class TextEditorTab extends JSplitPane {
 		bc.fill = GridBagConstraints.NONE;
 		bc.weightx = 0;
 		bc.anchor = GridBagConstraints.NORTHEAST;
-		toggleErrors = new JButton("Show Errors");
-		toggleErrors.addActionListener(e -> toggleErrors());
-		bottom.add(toggleErrors, bc);
+		viewChooser = new JComboBox<>(ConsoleView.values());
+		viewChooser.setToolTipText("Which console streams to show");
+		viewChooser.addActionListener(e -> {
+			if (!updatingViewChooser) setView((ConsoleView) viewChooser.getSelectedItem());
+		});
+		final JPanel viewPanel = new JPanel(new BorderLayout(4, 0));
+		viewPanel.add(new JLabel("Show:"), BorderLayout.LINE_START);
+		viewPanel.add(viewChooser, BorderLayout.CENTER);
+		bottom.add(viewPanel, bc);
 
 		bc.gridx = 6;
 		bc.fill = GridBagConstraints.NONE;
@@ -200,8 +242,10 @@ public class TextEditorTab extends JSplitPane {
 		bc.anchor = GridBagConstraints.NORTHEAST;
 		final JButton clear = new JButton("Clear");
 		clear.addActionListener(ae -> {
-			getScreen().setText("");
-			if (showingErrors) editorPane.getErrorHighlighter().reset();
+			screen.setText("");
+			textEditor.getErrorScreen().setText("");
+			combinedScreen.setText("");
+			if (view != ConsoleView.OUTPUT) editorPane.getErrorHighlighter().reset();
 		});
 		bottom.add(clear, bc);
 		textEditor.cmdPalette.register(clear, "Console");
@@ -322,6 +366,8 @@ public class TextEditorTab extends JSplitPane {
 		super.setRightComponent(screenAndPromptSplit);
 		screenAndPromptSplit.setDividerLocation(1.0);
 
+		applyConsoleColors();
+
 		// Persist Script Editor layout whenever split pane divider is adjusted.
 		addPropertyChangeListener(evt -> {
 			if ("dividerLocation".equals(evt.getPropertyName()))
@@ -387,32 +433,113 @@ public class TextEditorTab extends JSplitPane {
 	}
 
 	public void toggleErrors() {
-		showingErrors = !showingErrors;
-		if (showingErrors) {
-			toggleErrors.setText("Show Output");
-			scroll.setViewportView(textEditor.getErrorScreen());
-		}
-		else {
-			toggleErrors.setText("Show Errors");
-			scroll.setViewportView(screen);
-		}
+		setView(view == ConsoleView.ERRORS ? ConsoleView.OUTPUT : ConsoleView.ERRORS);
 	}
 
+	/** Shows errors, unless errors are already shown (alone or with output). */
 	public void showErrors() {
-		if (!showingErrors) toggleErrors();
-		else if (scroll.getViewport().getView() == null) {
-			scroll.setViewportView(textEditor.getErrorScreen());
+		if (view == ConsoleView.OUTPUT) setView(ConsoleView.ERRORS);
+		else if (scroll.getViewport().getView() == null) setView(view);
+	}
+
+	/** Shows output, unless output is already shown (alone or with errors). */
+	public void showOutput() {
+		if (view == ConsoleView.ERRORS) setView(ConsoleView.OUTPUT);
+	}
+
+	private void setView(final ConsoleView newView) {
+		view = newView;
+		showingErrors = newView == ConsoleView.ERRORS;
+		updatingViewChooser = true;
+		try {
+			viewChooser.setSelectedItem(newView);
+		}
+		finally {
+			updatingViewChooser = false;
+		}
+		scroll.setViewportView(getScreen());
+	}
+
+	/**
+	 * Runs the given action, which writes to the errors area, without the
+	 * combined view showing that text. Useful for text also written to output.
+	 */
+	void withoutMirroringErrors(final Runnable action) {
+		skipErrorMirroring = true;
+		try {
+			action.run();
+		}
+		finally {
+			skipErrorMirroring = false;
 		}
 	}
 
-	public void showOutput() {
-		if (showingErrors) toggleErrors();
+	/** Dims everything currently in the consoles, so the next run stands out. */
+	void startNewRun() {
+		((ConsoleArea) screen).startNewRun();
+		combinedScreen.startNewRun();
+		final JTextArea errors = textEditor.getErrorScreen();
+		if (errors instanceof ConsoleArea) ((ConsoleArea) errors).startNewRun();
+	}
+
+	/** Makes the consoles and REPL prompt use the editor pane's colors. */
+	void applyConsoleColors() {
+		// Note: themes set the text color via the syntax scheme, not the component foreground.
+		final Style style = editorPane.getSyntaxScheme().getStyle(Token.IDENTIFIER);
+		final Color fg = style != null && style.foreground != null ? //
+			style.foreground : editorPane.getForeground();
+		final Color bg = editorPane.getBackground();
+		combinedScreen.setColors(fg, bg);
+		((ConsoleArea) screen).setColors(fg, bg);
+		final JTextArea errors = textEditor.getErrorScreen();
+		if (errors instanceof ConsoleArea) ((ConsoleArea) errors).setColors(fg, bg);
+		prompt.setForeground(fg);
+		prompt.setBackground(bg);
+		prompt.setCaretColor(fg);
+	}
+
+	/**
+	 * Copies everything appended to {@code source} into {@code target}, so that
+	 * {@code target} shows several streams in the order they were written.
+	 */
+	private void mirrorInto(final ConsoleArea target, final JTextArea source,
+		final boolean error)
+	{
+		source.getDocument().addDocumentListener(new DocumentListener() {
+
+			@Override
+			public void insertUpdate(final DocumentEvent e) {
+				if (error && skipErrorMirroring) return;
+				try {
+					target.append(e.getDocument().getText(e.getOffset(), e.getLength()), error);
+					final int lines = target.getLineCount();
+					// Eliminate the first 100 lines when reaching 1100 lines.
+					if (lines > 1100) target.replaceRange("", 0, target.getLineEndOffset(lines - 1000));
+				}
+				catch (final BadLocationException ex) {
+					// Note: the source changed underneath us; nothing sensible to mirror.
+				}
+			}
+
+			@Override
+			public void removeUpdate(final DocumentEvent e) {}
+
+			@Override
+			public void changedUpdate(final DocumentEvent e) {}
+		});
 	}
 
 	public JTextArea getScreen() {
-		return showingErrors ? textEditor.getErrorScreen() : screen;
+		switch (view) {
+			case ERRORS:
+				return textEditor.getErrorScreen();
+			case BOTH:
+				return combinedScreen;
+			default:
+				return screen;
+		}
 	}
-	
+
 	public JTextArea getPrompt() {
 		return prompt;
 	}

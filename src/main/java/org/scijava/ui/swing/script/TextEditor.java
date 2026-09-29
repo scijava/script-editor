@@ -230,7 +230,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			autocompletion, fallbackAutocompletion, keylessAutocompletion,
 			markOccurences, paintTabs, whiteSpace, marginLine, lockPane;
 	private ButtonGroup themeRadioGroup;
-	private JTextArea errorScreen = new JTextArea();
+	private JTextArea errorScreen = new ConsoleArea(ConsoleArea.Content.ERRORS);
 
 	private final FileSystemTree tree;
 	private final JSplitPane body;
@@ -399,8 +399,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		final ArrayList<ScriptLanguage> list =
 			new ArrayList<>(scriptService.getLanguages());
 		Collections.sort(list, (l1, l2) -> {
-			final String name1 = l1.getLanguageName();
-			final String name2 = l2.getLanguageName();
+			final String name1 = languageDisplayName(l1);
+			final String name2 = languageDisplayName(l2);
 			return MiscUtils.compare(name1, name2);
 		});
 		list.add(null);
@@ -408,8 +408,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final Map<String, ScriptLanguage> languageMap =
 			new HashMap<>();
 		for (final ScriptLanguage language : list) {
-			final String name =
-				language == null ? "None" : language.getLanguageName();
+			final String name = language == null ? "None" : languageDisplayName(language);
 			languageMap.put(name, language);
 
 			final JRadioButtonMenuItem item = new JRadioButtonMenuItem(name);
@@ -1406,6 +1405,12 @@ public class TextEditor extends JFrame implements ActionListener,
 	 *
 	 * @param templatesMenu the top-level menu to populate
 	 */
+	/** Gets the plugin label of the given language if it has one, else its language name. */
+	private static String languageDisplayName(final ScriptLanguage language) {
+		final String label = language.getInfo() == null ? null : language.getInfo().getLabel();
+		return label == null || label.trim().isEmpty() ? language.getLanguageName() : label;
+	}
+
 	private void addTemplates(final JMenu templatesMenu) {
 		final File baseDir = appService.getApp().getBaseDirectory();
 
@@ -1815,6 +1820,9 @@ public class TextEditor extends JFrame implements ActionListener,
 			throw new IllegalArgumentException(ex);
 		}
 		activeTheme = theme;
+		for (int i = 0; i < tabbed.getTabCount(); i++) {
+			getTab(i).applyConsoleColors();
+		}
 		if (updateMenus) updateThemeControls(theme);
 	}
 
@@ -2940,11 +2948,13 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	public void markCompileStart(final boolean with_timestamp) {
 		errorHandler = null;
+		getTab().startNewRun();
 
 		if (with_timestamp) {
 			final String started =
 					"Started " + getEditorPane().getFileName() + " at " + new Date() + "\n";
-			append(errorScreen, started);
+			// Note: the combined view shows the header once, from stdout.
+			getTab().withoutMirroringErrors(() -> append(errorScreen, started));
 			append(getTab().screen, started);
 		}
 		final int offset = errorScreen.getDocument().getLength();
