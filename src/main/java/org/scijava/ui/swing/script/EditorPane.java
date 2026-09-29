@@ -94,7 +94,7 @@ import org.scijava.script.ScriptHeaderService;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptService;
 import org.scijava.ui.swing.script.vim.VimHandler;
-import org.scijava.script.complete.CodeCompletionService;
+import org.scijava.code.api.CodeCompletionService;
 import org.scijava.ui.swing.script.autocompletion.CodeCompleterLanguageSupport;
 import org.scijava.util.FileUtils;
 
@@ -806,7 +806,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		{
 			support = new CodeCompleterLanguageSupport(
 				codeCompletionService.getCompleterPlugin(currentLanguage),
-				currentLanguage);
+				currentLanguage, log);
 		}
 
 		// Tier 3: RSTA's own built-in support for the syntax style.

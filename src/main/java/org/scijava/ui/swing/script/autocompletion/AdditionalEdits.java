@@ -31,11 +31,11 @@ package org.scijava.ui.swing.script.autocompletion;
 
 import java.util.List;
 
-import org.scijava.script.complete.Completion.TextEdit;
+import org.scijava.code.api.Completion.TextEdit;
 
 /**
  * Implemented by RSTA completions that carry
- * {@link org.scijava.script.complete.Completion#additionalEdits() additional
+ * {@link org.scijava.code.api.Completion#additionalEdits() additional
  * edits} (e.g. auto-imports) to apply when accepted. Both the
  * {@code BasicCompletion}-based and {@code FunctionCompletion}-based SciJava
  * completions implement this, so {@link SciJavaAutoCompletion} can apply the

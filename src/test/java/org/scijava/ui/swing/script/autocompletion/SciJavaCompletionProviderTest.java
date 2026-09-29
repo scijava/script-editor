@@ -37,11 +37,11 @@ import java.util.List;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.junit.Test;
-import org.scijava.script.complete.CompletionResult;
+import org.scijava.code.api.CompletionResult;
 
 /**
  * Tests that {@link SciJavaCompletionProvider} faithfully bridges neutral
- * {@link org.scijava.script.complete.Completion}s to RSTA completions, including
+ * {@link org.scijava.code.api.Completion}s to RSTA completions, including
  * honoring the completer's reported replacement span.
  *
  * @author Curtis Rueden
@@ -59,9 +59,9 @@ public class SciJavaCompletionProviderTest {
 		final int replaceStart = 4;
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
 			request -> new CompletionResult(Arrays.asList(
-				org.scijava.script.complete.Completion.builder("bar")
+				org.scijava.code.api.Completion.builder("bar")
 					.summary("the bar member").build(),
-				org.scijava.script.complete.Completion.builder("baz").build()),
+				org.scijava.code.api.Completion.builder("baz").build()),
 				replaceStart),
 			null);
 
@@ -82,12 +82,12 @@ public class SciJavaCompletionProviderTest {
 		area.setCaretPosition(area.getDocument().getLength());
 
 		// A class-name completion that also auto-imports at the top of the file.
-		final org.scijava.script.complete.Completion.TextEdit importEdit =
-			org.scijava.script.complete.Completion.TextEdit.insert(0,
+		final org.scijava.code.api.Completion.TextEdit importEdit =
+			org.scijava.code.api.Completion.TextEdit.insert(0,
 				"from ij.gui import Roi\n");
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
 			request -> new CompletionResult(java.util.Collections.singletonList(
-				org.scijava.script.complete.Completion.builder("Roi")
+				org.scijava.code.api.Completion.builder("Roi")
 					.additionalEdits(java.util.Collections.singletonList(importEdit))
 					.build()),
 				0),
@@ -110,17 +110,17 @@ public class SciJavaCompletionProviderTest {
 
 		// A callable completion taking one ij.gui.Roi parameter, plus a
 		// parameter-choices resolver that offers an in-scope variable for it.
-		final org.scijava.script.complete.Completion.Parameter roiParam =
-			new org.scijava.script.complete.Completion.Parameter("roi", "ij.gui.Roi");
-		final org.scijava.script.complete.Completion method =
-			org.scijava.script.complete.Completion.builder("addRoi")
-				.kind(org.scijava.script.complete.Completion.Kind.METHOD)
+		final org.scijava.code.api.Completion.Parameter roiParam =
+			new org.scijava.code.api.Completion.Parameter("roi", "ij.gui.Roi");
+		final org.scijava.code.api.Completion method =
+			org.scijava.code.api.Completion.builder("addRoi")
+				.kind(org.scijava.code.api.Completion.Kind.METHOD)
 				.parameters(java.util.Collections.singletonList(roiParam))
 				.returnType("void").build();
-		final org.scijava.script.complete.ParameterChoices choices = p -> //
+		final org.scijava.code.api.ParameterChoices choices = p -> //
 			"ij.gui.Roi".equals(p.type())
 				? java.util.Collections.singletonList(
-					org.scijava.script.complete.Completion.of("myRoi"))
+					org.scijava.code.api.Completion.of("myRoi"))
 				: java.util.Collections.emptyList();
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
 			request -> new CompletionResult(java.util.Collections.singletonList(

@@ -34,13 +34,13 @@ import java.util.List;
 
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.FunctionCompletion;
-import org.scijava.script.complete.Completion.TextEdit;
+import org.scijava.code.api.Completion.TextEdit;
 
 /**
  * An RSTA {@link FunctionCompletion} for callable completions (methods,
  * functions, constructors), so parameter assistance and parameter choices
  * engage. It also carries optional
- * {@link org.scijava.script.complete.Completion#additionalEdits() additional
+ * {@link org.scijava.code.api.Completion#additionalEdits() additional
  * edits} (e.g. the auto-import needed by a constructor completion), applied by
  * {@link SciJavaAutoCompletion}.
  *

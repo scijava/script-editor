@@ -39,10 +39,10 @@ import java.util.stream.Stream;
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionProvider;
-import org.scijava.script.complete.ClassIndex;
+import org.scijava.code.api.ClassIndex;
 
 /**
- * Thin facade over the toolkit-agnostic {@link ClassIndex} in scijava-common,
+ * Thin facade over the toolkit-agnostic {@link ClassIndex} in scijava-code-api,
  * retained for the script editor's Swing-specific completion code. New code
  * should use {@link ClassIndex} directly; only the RSTA-specific
  * {@link #classUnavailableCompletions} helper is genuinely editor-side.

@@ -33,11 +33,11 @@ import java.util.List;
 
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.CompletionProvider;
-import org.scijava.script.complete.Completion.TextEdit;
+import org.scijava.code.api.Completion.TextEdit;
 
 /**
  * An RSTA {@link BasicCompletion} that also carries
- * {@link org.scijava.script.complete.Completion#additionalEdits() additional
+ * {@link org.scijava.code.api.Completion#additionalEdits() additional
  * edits} to apply on acceptance (e.g. auto-imports). The edits are applied by
  * {@link SciJavaAutoCompletion}.
  *

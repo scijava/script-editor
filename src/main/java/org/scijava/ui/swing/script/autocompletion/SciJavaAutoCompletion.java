@@ -39,12 +39,12 @@ import javax.swing.text.JTextComponent;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.rtextarea.RTextArea;
-import org.scijava.script.complete.Completion.TextEdit;
+import org.scijava.code.api.Completion.TextEdit;
 
 /**
  * An {@link org.fife.ui.autocomplete.AutoCompletion} that, in addition to
  * inserting the chosen completion, applies any
- * {@link org.scijava.script.complete.Completion#additionalEdits() additional
+ * {@link org.scijava.code.api.Completion#additionalEdits() additional
  * edits} the completion carries (see {@link SciJavaCompletion}). This is how
  * language-neutral auto-imports are realized in the Swing editor.
  *
