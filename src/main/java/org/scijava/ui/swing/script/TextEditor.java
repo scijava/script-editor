@@ -103,6 +103,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
@@ -1411,6 +1413,61 @@ public class TextEditor extends JFrame implements ActionListener,
 		return label == null || label.trim().isEmpty() ? language.getLanguageName() : label;
 	}
 
+	/** Matches a shebang line declaring the script language. */
+	private static final Pattern SHEBANG = Pattern.compile("^#!\\s*(.+?)\\s*$");
+
+	/** Matches the language attribute of a {@code #@script} directive. */
+	private static final Pattern SCRIPT_LANGUAGE = Pattern.compile(
+		"^\\s*#@script\\s*\\(.*\\blanguage\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)')");
+
+	/**
+	 * Determines the language of a script template: a language declared by a
+	 * {@code #!} line or {@code #@script(language="...")} directive in the
+	 * template's leading lines wins; otherwise, the language associated with the
+	 * file extension is used.
+	 * <p>
+	 * TODO: Ideally, this would use scijava-common API rather than a bespoke
+	 * mini-parser. {@code ScriptInfo#parseParameters()} does understand these
+	 * declarations, but also registers the script as a module (see
+	 * {@code ScriptDirectiveScriptProcessor}), which is unwanted for templates.
+	 * What we would like there is a side-effect-free way to ask about a script
+	 * without registering it, e.g. {@code ScriptService#getLanguage(URL)} or a
+	 * {@code ScriptInfo} flag/subclass which skips {@code addModule}.
+	 * </p>
+	 */
+	private ScriptLanguage templateLanguage(final URL url, final String ext) {
+		final String declared = declaredLanguage(url);
+		if (declared != null) {
+			ScriptLanguage lang = scriptService.getLanguageByName(declared);
+			if (lang == null) lang = scriptService.getLanguageByExtension(declared);
+			if (lang != null) return lang;
+			log.warn("Unknown script language '" + declared + "' in template: " + url);
+		}
+		return ext.isEmpty() ? null : scriptService.getLanguageByExtension(ext);
+	}
+
+	/** Scans the head of a template for a language declaration. */
+	private String declaredLanguage(final URL url) {
+		try (final BufferedReader in = new BufferedReader(new InputStreamReader(
+			url.openStream(), StandardCharsets.UTF_8)))
+		{
+			for (int i = 0; i < 50; i++) {
+				final String line = in.readLine();
+				if (line == null) break;
+				if (i == 0) {
+					final Matcher m = SHEBANG.matcher(line);
+					if (m.matches()) return m.group(1);
+				}
+				final Matcher m = SCRIPT_LANGUAGE.matcher(line);
+				if (m.find()) return m.group(1) != null ? m.group(1) : m.group(2);
+			}
+		}
+		catch (final IOException exc) {
+			log.debug(exc);
+		}
+		return null;
+	}
+
 	private void addTemplates(final JMenu templatesMenu) {
 		final File baseDir = appService.getApp().getBaseDirectory();
 
@@ -1422,10 +1479,10 @@ public class TextEditor extends JFrame implements ActionListener,
 				final String ext = FileUtils.getExtension(key);
 
 				// try to determine the scripting language
-				final ScriptLanguage lang = ext.isEmpty() ? null :
-					scriptService.getLanguageByExtension(ext);
+				final ScriptLanguage lang = templateLanguage(entry.getValue(), ext);
 				final String langName = lang == null ? null : lang.getLanguageName();
-				final String langSuffix = lang == null ? null : " (" + langName + ")";
+				final String langDisplayName = lang == null ? null : languageDisplayName(lang);
+				final String langSuffix = lang == null ? null : " (" + langDisplayName + ")";
 
 				final String path = adjustPath(key, langName);
 
@@ -1438,7 +1495,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 				// add script to the secondary language-sorted menu structure
 				if (langName != null) {
-					final String langPath = "[by language]/" + langName + "/" + path;
+					final String langPath = "[by language]/" + langDisplayName + "/" + path;
 					final JMenu langMenu = getMenu(templatesMenu, langPath, true);
 					final JMenuItem langItem = new JMenuItem(label);
 					langMenu.add(langItem);
