@@ -42,22 +42,23 @@ import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.ParameterChoicesProvider;
 import org.fife.ui.autocomplete.ParameterizedCompletion;
+import org.scijava.log.Logger;
 import org.scijava.script.ScriptLanguage;
-import org.scijava.script.complete.CodeCompleter;
-import org.scijava.script.complete.CompletionRequest;
-import org.scijava.script.complete.CompletionResult;
-import org.scijava.script.complete.ParameterChoices;
+import org.scijava.code.api.CodeCompleter;
+import org.scijava.code.api.CompletionRequest;
+import org.scijava.code.api.CompletionResult;
+import org.scijava.code.api.ParameterChoices;
 
 /**
  * The single bridge between SciJava's toolkit-agnostic code completion SPI
- * ({@link CodeCompleter}, {@link org.scijava.script.complete.Completion}) and
+ * ({@link CodeCompleter}, {@link org.scijava.code.api.Completion}) and
  * RSyntaxTextArea's Swing-based completion machinery.
  * <p>
  * This provider delegates all language intelligence to a {@link CodeCompleter},
  * then translates the resulting neutral {@link CompletionResult} into RSTA
  * {@link Completion}s. Language adapters therefore need no dependency on Swing or
  * RSTA: they implement {@link CodeCompleter} (via a
- * {@link org.scijava.script.complete.CodeCompleterPlugin}) and the script editor
+ * {@link org.scijava.code.api.CodeCompleterPlugin}) and the script editor
  * renders the suggestions here.
  * </p>
  *
@@ -67,6 +68,9 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 
 	private final CodeCompleter completer;
 	private final ScriptLanguage language;
+
+	/** Optional logger, for reporting completer failures. */
+	private Logger log;
 
 	/** Optional live engine, set when completing in an interpreter. */
 	private ScriptEngine engine;
@@ -89,6 +93,11 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 		setParameterizedCompletionParams('(', ", ", ')');
 		// Auto-activate after a letter, digit, '.' or '_'.
 		setAutoActivationRules(true, ".");
+	}
+
+	/** Sets a logger with which to report completer failures. */
+	public void setLogger(final Logger log) {
+		this.log = log;
 	}
 
 	/** Sets a live script engine to enable variable/binding-based completion. */
@@ -117,7 +126,7 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 	@Override
 	public List<Completion> getCompletionsImpl(final JTextComponent comp) {
 		final CompletionResult result = compute(comp);
-		final List<org.scijava.script.complete.Completion> source =
+		final List<org.scijava.code.api.Completion> source =
 			result.completions();
 		final int n = source.size();
 		final List<Completion> out = new ArrayList<>(n);
@@ -150,7 +159,9 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 			result = completer.complete(request);
 			if (result == null) result = CompletionResult.EMPTY;
 		}
-		catch (final Exception exc) {
+		catch (final Exception | LinkageError exc) {
+			// NB: Never let a misbehaving completer break the editor.
+			if (log != null) log.debug("Code completion failed", exc);
 			result = CompletionResult.EMPTY;
 		}
 		cachedCaret = caret;
@@ -186,7 +197,7 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 	 * auto-imports). The {@code orderRelevance} argument preserves the completer's
 	 * ordering when the completion does not specify its own relevance.
 	 */
-	private Completion toRSTA(final org.scijava.script.complete.Completion c,
+	private Completion toRSTA(final org.scijava.code.api.Completion c,
 		final int orderRelevance)
 	{
 		final Completion rsta = c.isCallable() ? functionCompletion(c)
@@ -200,7 +211,7 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 	}
 
 	private Completion basicCompletion(
-		final org.scijava.script.complete.Completion c)
+		final org.scijava.code.api.Completion c)
 	{
 		return c.additionalEdits().isEmpty() //
 			? new BasicCompletion(this, c.insertionText(), c.summary(),
@@ -210,7 +221,7 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 	}
 
 	private Completion functionCompletion(
-		final org.scijava.script.complete.Completion c)
+		final org.scijava.code.api.Completion c)
 	{
 		// FunctionCompletion appends the parameter template itself, so strip any
 		// trailing "()" the completer may have included in the insertion text.
@@ -228,11 +239,11 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 	}
 
 	private static List<ParameterizedCompletion.Parameter> toRSTAParams(
-		final List<org.scijava.script.complete.Completion.Parameter> params)
+		final List<org.scijava.code.api.Completion.Parameter> params)
 	{
 		final List<ParameterizedCompletion.Parameter> out =
 			new ArrayList<>(params.size());
-		for (final org.scijava.script.complete.Completion.Parameter p : params) {
+		for (final org.scijava.code.api.Completion.Parameter p : params) {
 			// Pass the type as the parameter's "type object" so the choices
 			// provider can dispatch on it.
 			out.add(new ParameterizedCompletion.Parameter(p.type(), p.name()));
@@ -259,10 +270,10 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 		public List<Completion> getParameterChoices(final JTextComponent tc,
 			final ParameterizedCompletion.Parameter param)
 		{
-			final org.scijava.script.complete.Completion.Parameter neutral =
-				new org.scijava.script.complete.Completion.Parameter(param.getName(),
+			final org.scijava.code.api.Completion.Parameter neutral =
+				new org.scijava.code.api.Completion.Parameter(param.getName(),
 					param.getType());
-			final List<org.scijava.script.complete.Completion> result;
+			final List<org.scijava.code.api.Completion> result;
 			try {
 				result = choices.choicesFor(neutral);
 			}
@@ -271,7 +282,7 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 			}
 			if (result == null || result.isEmpty()) return Collections.emptyList();
 			final List<Completion> out = new ArrayList<>(result.size());
-			for (final org.scijava.script.complete.Completion c : result) {
+			for (final org.scijava.code.api.Completion c : result) {
 				out.add(new BasicCompletion(SciJavaCompletionProvider.this,
 					c.insertionText(), c.summary(), c.description()));
 			}

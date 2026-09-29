@@ -34,7 +34,7 @@ import org.scijava.plugin.Plugin;
 import org.scijava.ui.swing.script.SyntaxHighlighter;
 
 /**
- * SyntaxHighlighter for "python-(jython)".
+ * SyntaxHighlighter for "Jython".
  * <p>
  * Syntax highlighting requires an RSyntaxTextArea {@code TokenMaker}, which is
  * inherently editor-side, so the script editor provides it here on behalf of the
@@ -43,7 +43,7 @@ import org.scijava.ui.swing.script.SyntaxHighlighter;
  *
  * @author Karl Duderstadt
  */
-@Plugin(type = SyntaxHighlighter.class, name = "python-(jython)")
+@Plugin(type = SyntaxHighlighter.class, name = "Jython")
 public class PythonHighlighter extends PythonTokenMaker implements
 	SyntaxHighlighter
 {

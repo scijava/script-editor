@@ -32,8 +32,9 @@ package org.scijava.ui.swing.script.autocompletion;
 import org.fife.rsta.ac.AbstractLanguageSupport;
 import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.scijava.log.Logger;
 import org.scijava.script.ScriptLanguage;
-import org.scijava.script.complete.CodeCompleter;
+import org.scijava.code.api.CodeCompleter;
 
 /**
  * An RSTA {@link org.fife.rsta.ac.LanguageSupport} that drives code completion
@@ -41,7 +42,7 @@ import org.scijava.script.complete.CodeCompleter;
  * {@link SciJavaCompletionProvider}.
  * <p>
  * This is the lightweight completion tier of the script editor: any language
- * that contributes a {@link org.scijava.script.complete.CodeCompleterPlugin}
+ * that contributes a {@link org.scijava.code.api.CodeCompleterPlugin}
  * gets editor completion through this class, with no language-specific Swing or
  * RSTA code required.
  * </p>
@@ -52,12 +53,20 @@ public class CodeCompleterLanguageSupport extends AbstractLanguageSupport {
 
 	private final CodeCompleter completer;
 	private final ScriptLanguage language;
+	private final Logger log;
 
 	public CodeCompleterLanguageSupport(final CodeCompleter completer,
 		final ScriptLanguage language)
 	{
+		this(completer, language, null);
+	}
+
+	public CodeCompleterLanguageSupport(final CodeCompleter completer,
+		final ScriptLanguage language, final Logger log)
+	{
 		this.completer = completer;
 		this.language = language;
+		this.log = log;
 		setAutoCompleteEnabled(true);
 		setParameterAssistanceEnabled(true);
 		setShowDescWindow(true);
@@ -67,6 +76,7 @@ public class CodeCompleterLanguageSupport extends AbstractLanguageSupport {
 	public void install(final RSyntaxTextArea textArea) {
 		final SciJavaCompletionProvider provider =
 			new SciJavaCompletionProvider(completer, language);
+		provider.setLogger(log);
 		final AutoCompletion ac = new SciJavaAutoCompletion(provider);
 		ac.setAutoCompleteEnabled(isAutoCompleteEnabled());
 		ac.setAutoActivationEnabled(isAutoActivationEnabled());
