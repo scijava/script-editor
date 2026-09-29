@@ -2149,6 +2149,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				tab = new TextEditorTab(this);
 				context.inject(tab.editorPane);
 				tab.editorPane.loadPreferences();
+				tab.applyConsoleColors(); // the theme was just applied to the editor pane
 				addDefaultAccelerators(tab.editorPane);
 			} else {
 				// the Edit menu can only be populated after an editor pane exists, as it reads
