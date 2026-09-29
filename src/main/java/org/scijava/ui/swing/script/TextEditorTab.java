@@ -78,7 +78,7 @@ public class TextEditorTab extends JSplitPane {
 
 	/** Which console stream(s) to display. */
 	private enum ConsoleView {
-			OUTPUT("Output"), ERRORS("Errors"), BOTH("Output+Errors");
+			BOTH("Output+Errors"), OUTPUT("Output"), ERRORS("Errors");
 
 			private final String label;
 
@@ -366,6 +366,7 @@ public class TextEditorTab extends JSplitPane {
 		super.setRightComponent(screenAndPromptSplit);
 		screenAndPromptSplit.setDividerLocation(1.0);
 
+		setView(view); // sync the console and chooser with the initial view
 		applyConsoleColors();
 
 		// Persist Script Editor layout whenever split pane divider is adjusted.
