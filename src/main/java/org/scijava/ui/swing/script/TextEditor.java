@@ -230,7 +230,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	private FindAndReplaceDialog findDialog;
 	private JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport,
 			autocompletion, fallbackAutocompletion, keylessAutocompletion,
-			markOccurences, paintTabs, whiteSpace, marginLine, lockPane;
+			markOccurences, paintTabs, whiteSpace, marginLine, lockPane, vimMode;
 	private ButtonGroup themeRadioGroup;
 	private JTextArea errorScreen = new ConsoleArea(ConsoleArea.Content.ERRORS);
 
@@ -647,6 +647,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		options.add(autocompletion);
 		options.add(keylessAutocompletion);
 		options.add(fallbackAutocompletion);
+
+		GuiUtils.addMenubarSeparator(options, "Key Bindings:");
+		options.add(vimMode);
 
 		options.addSeparator();
 		appendPreferences(options);
@@ -1130,6 +1133,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		fallbackAutocompletion.setToolTipText("<HTML>If selected, Java completions will be used when scripting<br>"
 				+ "a language for which auto-completions are not available");
 		fallbackAutocompletion.addItemListener(e -> setFallbackAutoCompletion(fallbackAutocompletion.getState()));
+		vimMode = new JCheckBoxMenuItem("Vim Mode", false);
+		vimMode.setToolTipText("<HTML>Edit with vim-style modal key bindings.<br>"
+				+ "Press Esc for normal mode; :w saves, :q closes the tab");
+		vimMode.addItemListener(e -> setVimMode(vimMode.getState()));
 		themeRadioGroup = new ButtonGroup();
 
 		// Help menu. These are 'dynamic' items
@@ -1647,15 +1654,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				getEditorPane().getErrorHighlighter().gotoPreviousError();
 		}
 		else if (source == kill) chooseTaskToKill();
-		else if (source == close) if (tabbed.getTabCount() < 2) processWindowEvent(new WindowEvent(
-			this, WindowEvent.WINDOW_CLOSING));
-		else {
-			if (!handleUnsavedChanges()) return;
-			int index = tabbed.getSelectedIndex();
-			removeTab(index);
-			if (index > 0) index--;
-			switchTo(index);
-		}
+		else if (source == close) closeTab(true);
 		else if (source == copy) getTextArea().copy();
 		else if (source == find) findOrReplace(true);
 		else if (source == findNext) {
@@ -1809,6 +1808,55 @@ public class TextEditor extends JFrame implements ActionListener,
 	private void setMarginLineEnabled(final boolean enabled) {
 		for (int i = 0; i < tabbed.getTabCount(); i++)
 			getEditorPane(i).setMarginLineEnabled(enabled);
+		getEditorPane().requestFocusInWindow();
+	}
+
+	/**
+	 * Closes the current tab, or the window if it is the last tab.
+	 *
+	 * @param confirm Whether to ask about unsaved changes before closing a tab.
+	 */
+	private void closeTab(final boolean confirm) {
+		if (tabbed.getTabCount() < 2) {
+			processWindowEvent(new WindowEvent(this, WindowEvent.WINDOW_CLOSING));
+			return;
+		}
+		if (confirm && !handleUnsavedChanges()) return;
+		int index = tabbed.getSelectedIndex();
+		removeTab(index);
+		if (index > 0) index--;
+		switchTo(index);
+	}
+
+	/**
+	 * Handles a vim ex command (typed after ':') which the editor pane does not
+	 * handle itself.
+	 *
+	 * @return false if the command is unknown.
+	 */
+	boolean handleVimCommand(final String command) {
+		switch (command) {
+			case "w":
+				save();
+				return true;
+			case "q":
+				closeTab(true);
+				return true;
+			case "q!":
+				closeTab(false);
+				return true;
+			case "wq":
+			case "x":
+				if (save()) closeTab(true);
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	private void setVimMode(final boolean enabled) {
+		for (int i = 0; i < tabbed.getTabCount(); i++)
+			getEditorPane(i).setVimEnabled(enabled);
 		getEditorPane().requestFocusInWindow();
 	}
 
@@ -2487,6 +2535,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		}
 		markOccurences.setState(pane.getMarkOccurrences());
+		vimMode.setState(pane.isVimEnabled());
 		wrapLines.setState(pane.getLineWrap());
 		marginLine.setState(pane.isMarginLineEnabled());
 		tabsEmulated.setState(pane.getTabsEmulated());

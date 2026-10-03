@@ -35,6 +35,7 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
@@ -92,6 +93,7 @@ import org.scijava.prefs.PrefService;
 import org.scijava.script.ScriptHeaderService;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptService;
+import org.scijava.ui.swing.script.vim.VimHandler;
 import org.scijava.util.FileUtils;
 
 /**
@@ -121,6 +123,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private final ErrorParser errorHighlighter;
 	private final JMenu noneLangSyntaxMenu;
 	private final EditorPaneActions actions;
+	private final VimHandler vim = new VimHandler(this);
 
 
 	@Parameter
@@ -432,6 +435,24 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 				}
 			}
 		};
+	}
+
+	@Override
+	protected void processKeyEvent(final KeyEvent e) {
+		if (vim.processKeyEvent(e)) e.consume();
+		else super.processKeyEvent(e);
+	}
+
+	public VimHandler getVimHandler() {
+		return vim;
+	}
+
+	public boolean isVimEnabled() {
+		return vim.isEnabled();
+	}
+
+	public void setVimEnabled(final boolean enabled) {
+		vim.setEnabled(enabled);
 	}
 
 	@Override
@@ -1046,6 +1067,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public static final String AUTOCOMPLETE_KEYLESS_PREFS = "script.editor.ACNoKey";
 	public static final String AUTOCOMPLETE_FALLBACK_PREFS = "script.editor.ACFallback";
 	public static final String MARK_OCCURRENCES_PREFS = "script.editor.Occurrences";
+	public static final String VIM_PREFS = "script.editor.Vim";
 	public static final String FOLDERS_PREFS = "script.editor.folders";
 	public static final int DEFAULT_TAB_SIZE = 4;
 	public static final String DEFAULT_THEME = "default";
@@ -1076,6 +1098,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setFallbackAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, false));
 			setMarkOccurrences(prefService.getBoolean(getClass(), MARK_OCCURRENCES_PREFS, false));
 			setMarginLineEnabled(prefService.getBoolean(getClass(), MARGIN_VISIBLE_PREFS, false));
+			setVimEnabled(prefService.getBoolean(getClass(), VIM_PREFS, false));
 			applyTheme(themeName());
 		}
 	}
@@ -1132,6 +1155,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		prefService.put(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, isAutoCompletionFallbackEnabled());
 		prefService.put(getClass(), MARGIN_VISIBLE_PREFS, isMarginLineEnabled());
 		prefService.put(getClass(), MARK_OCCURRENCES_PREFS, getMarkOccurrences());
+		prefService.put(getClass(), VIM_PREFS, isVimEnabled());
 		if (null != top_folders) prefService.put(getClass(), FOLDERS_PREFS, top_folders);
 		if (null != theme) prefService.put(getClass(), THEME_PREFS, theme);
 	}

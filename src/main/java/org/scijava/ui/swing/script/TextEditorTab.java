@@ -32,6 +32,7 @@ package org.scijava.ui.swing.script;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.datatransfer.DataFlavor;
@@ -47,6 +48,7 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.util.List;
 
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -98,6 +100,8 @@ public class TextEditorTab extends JSplitPane {
 	private final ConsoleArea combinedScreen = new ConsoleArea(ConsoleArea.Content.MIXED);
 	protected final JTextArea prompt = new JTextArea();
 	private final JLabel prompt_title = new JLabel();
+	/** Status line for vim mode: the mode, partial command or message. */
+	private final JLabel vimStatus = new JLabel(" ");
 	protected final JCheckBox updownarrows = new JCheckBox("Use arrow keys");
 	protected final JScrollPane scroll;
 	/** True iff the console is showing errors only. */
@@ -362,6 +366,16 @@ public class TextEditorTab extends JSplitPane {
 		final JPanel holder = new JPanel(new BorderLayout());
 		holder.add(editorPane.wrappedInScrollbars());
 		holder.add(es, BorderLayout.LINE_END);
+		holder.add(vimStatus, BorderLayout.PAGE_END);
+		vimStatus.setFont(new Font(Font.MONOSPACED, Font.PLAIN, vimStatus.getFont().getSize()));
+		vimStatus.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
+		vimStatus.setVisible(false);
+		editorPane.getVimHandler().setStatusListener(status -> {
+			vimStatus.setVisible(status != null);
+			// Note: a blank keeps the line from collapsing.
+			vimStatus.setText(status == null || status.isEmpty() ? " " : status);
+		});
+		editorPane.getVimHandler().setExHandler(textEditor::handleVimCommand);
 		super.setLeftComponent(holder);
 		super.setRightComponent(screenAndPromptSplit);
 		screenAndPromptSplit.setDividerLocation(1.0);
