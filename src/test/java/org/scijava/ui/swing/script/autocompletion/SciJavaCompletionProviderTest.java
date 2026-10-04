@@ -140,4 +140,32 @@ public class SciJavaCompletionProviderTest {
 		assertEquals(1, roiChoices.size());
 		assertEquals("myRoi", roiChoices.get(0).getReplacementText());
 	}
+
+	@Test
+	public void testCallablesRenderWithSignatures() {
+		final String completionText = "img.getAt";
+		final RSyntaxTextArea area = new RSyntaxTextArea();
+		area.setText(completionText);
+		area.setCaretPosition(area.getDocument().getLength());
+
+		final org.scijava.code.api.Completion method =
+			org.scijava.code.api.Completion.builder(completionText)
+				.kind(org.scijava.code.api.Completion.Kind.METHOD)
+				.parameters(java.util.Collections.singletonList(
+					new org.scijava.code.api.Completion.Parameter("pos", "long[]")))
+				.returnType("java.lang.Object").build();
+		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
+			request -> new CompletionResult(java.util.Collections.singletonList(
+				method), 0),
+			null);
+
+		// The popup list must show a callable's parameters, not just its name.
+		final Completion c = provider.getCompletionsImpl(area).get(0);
+		final javax.swing.JLabel label = (javax.swing.JLabel) provider
+			.getListCellRenderer().getListCellRendererComponent(
+				new javax.swing.JList<>(), c, 0, false, false);
+		final String text = label.getText();
+		org.junit.Assert.assertTrue(text, text.contains("long[]"));
+		org.junit.Assert.assertTrue(text, text.contains("pos"));
+	}
 }
