@@ -179,6 +179,9 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 		//NB: Loading of preferences will happen by calling #loadPreferences();
 
+		// Let vim macros type into this pane as if typed by the user.
+		vim.setKeyDispatcher(e -> super.processKeyEvent(e));
+
 		// Register recordable actions: TODO this should go to EditorPaneActions
 		getActionMap().put(EditorPaneActions.nextWordAction, wordMovement("Next-Word-Action", +1, false));
 		getActionMap().put(EditorPaneActions.selectionNextWordAction, wordMovement("Next-Word-Select-Action", +1, true));

@@ -6,13 +6,13 @@
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- *
+ * 
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- *
+ * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -44,6 +44,8 @@ import java.util.List;
 
 import javax.swing.SwingUtilities;
 
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextArea;
 import org.junit.Before;
 import org.junit.Test;
@@ -381,6 +383,104 @@ public class VimHandlerTest {
 	private KeyEvent pressed(final int code, final int modifiers) {
 		return new KeyEvent(area, KeyEvent.KEY_PRESSED, 0, modifiers, code,
 			KeyEvent.CHAR_UNDEFINED);
+	}
+
+	@Test
+	public void testMacro() {
+		run("|a1\na2\na3", "qaA!" + ESC + "jq");
+		assertText("a1!\na|2\na3");
+		type("@a");
+		assertText("a1!\na2!\na|3");
+		type("@@");
+		assertEquals("a1!\na2!\na3!", area.getText());
+	}
+
+	@Test
+	public void testMacroCount() {
+		run("|a b c d e", "qarYwq3@a");
+		assertText("Y Y Y Y |e");
+	}
+
+	@Test
+	public void testMacroStopsOnFailure() {
+		run("|x1 x2 x3", "qa/x\nrYq100@a");
+		assertEquals("Y1 Y2 Y3", area.getText());
+		assertTrue(vim.getStatus().startsWith("E486"));
+	}
+
+	@Test
+	public void testRecursiveMacro() {
+		run("|x1 x2 x3 x4", "qaq" + "qa/x\nrY@aq" + "@a");
+		assertEquals("Y1 Y2 Y3 Y4", area.getText());
+	}
+
+	@Test
+	public void testMacroRegisters() {
+		// Macros are plain text in registers...
+		run("|ab", "qaxq\"ap");
+		assertEquals("bx", area.getText());
+		// ...so text can be played as a macro...
+		run("|lx\nabc", "\"ay$j0@a");
+		assertEquals("lx\nac", area.getText());
+		// ...and an uppercase register name appends.
+		run("|abcd", "qaxqqAxq@a");
+		assertEquals("", area.getText());
+	}
+
+	@Test
+	public void testRepeatEx() {
+		run("|a a\na a", ":s/a/b/\nj@:");
+		assertEquals("b a\nb a", area.getText());
+	}
+
+	@Test
+	public void testMacroRecordsTypedKeys() {
+		run("|", "qai");
+		onEDT(() -> {
+			// Note: nothing is inserted, as the text area never sees the keys.
+			assertFalse(vim.processKeyEvent(typed('z', 0)));
+			vim.processKeyEvent(typed('y', 0));
+			vim.processKeyEvent(pressed(KeyEvent.VK_LEFT, 0));
+			vim.processKeyEvent(typed('x', 0));
+			vim.processKeyEvent(pressed(KeyEvent.VK_ESCAPE, 0));
+		});
+		type("q");
+		assertEquals("", area.getText());
+		type("@a");
+		assertText("z|xy");
+	}
+
+	@Test
+	public void testMacroTypesIntoTextArea() {
+		final TypingArea typingArea = new TypingArea();
+		typingArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
+		area = typingArea;
+		vim = new VimHandler(area);
+		vim.setKeyDispatcher(typingArea::type);
+		onEDT(() -> vim.setEnabled(true));
+		// Auto-indentation applies both when recording and playing back.
+		run("\t|foo", "qaA\nbar" + ESC + "q");
+		assertEquals("\tfoo\n\tbar", area.getText());
+		type("@a");
+		assertEquals("\tfoo\n\tbar\n\tbar", area.getText());
+	}
+
+	@Test
+	public void testRecordingStatus() {
+		run("|abc", "qa");
+		assertEquals("recording @a", vim.getStatus());
+		type("i");
+		assertEquals("-- INSERT --   recording @a", vim.getStatus());
+		type(ESC + "q");
+		assertEquals("", vim.getStatus());
+	}
+
+	/** Text area which can be typed into, as by the user. */
+	private static class TypingArea extends RSyntaxTextArea {
+
+		void type(final KeyEvent e) {
+			processKeyEvent(e);
+		}
 	}
 
 	private String vimMessage() {

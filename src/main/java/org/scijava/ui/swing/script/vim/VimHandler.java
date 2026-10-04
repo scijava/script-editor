@@ -6,13 +6,13 @@
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- *
+ * 
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- *
+ * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -68,6 +68,10 @@ import org.fife.ui.rtextarea.RTextArea;
  * {@code '\b'} for Backspace, and {@code ctrl('r')} etc. for Ctrl+key.
  * </p>
  * <p>
+ * Macros ({@code q} and {@code @}) are stored as such keys in registers, plus
+ * {@link #KEY_LEFT} etc. for arrow keys in insert mode.
+ * </p>
+ * <p>
  * Search and {@code :s} patterns are Java regular expressions, plus vim's
  * {@code \<} and {@code \>} word boundaries.
  * </p>
@@ -81,6 +85,21 @@ public class VimHandler {
 	}
 
 	public static final char ESC = 27;
+
+	/** Keys for arrows etc. in insert mode, as macros record them. */
+	public static final char KEY_UP = '\uF700', KEY_DOWN = '\uF701',
+			KEY_LEFT = '\uF702', KEY_RIGHT = '\uF703', KEY_HOME = '\uF704',
+			KEY_END = '\uF705';
+
+	private static final String SPECIAL_KEYS = "" + KEY_UP + KEY_DOWN +
+		KEY_LEFT + KEY_RIGHT + KEY_HOME + KEY_END;
+
+	private static final int[] SPECIAL_KEY_CODES = { KeyEvent.VK_UP,
+		KeyEvent.VK_DOWN, KeyEvent.VK_LEFT, KeyEvent.VK_RIGHT, KeyEvent.VK_HOME,
+		KeyEvent.VK_END };
+
+	/** Most keys one macro playback may process. */
+	private static final int MAX_MACRO_KEYS = 1_000_000;
 
 	public static char ctrl(final char c) {
 		return (char) (c & 0x1f);
@@ -122,6 +141,21 @@ public class VimHandler {
 	private boolean replaying;
 	private String replayKeys;
 
+	/** Register being recorded into with q, or 0 if not recording. */
+	private char recordingRegister;
+	private final StringBuilder macro = new StringBuilder();
+	private char lastMacroRegister;
+	private String lastEx;
+
+	/** Macro keys waiting to be played. */
+	private final StringBuilder macroQueue = new StringBuilder();
+	private boolean playing;
+
+	/** Whether a command failed, which stops macro playback. */
+	private boolean aborted;
+
+	private Consumer<KeyEvent> keyDispatcher;
+
 	/** Whether an atomic (single undo step) edit is in progress. */
 	private boolean editing;
 
@@ -149,6 +183,7 @@ public class VimHandler {
 		cmdLine.setLength(0);
 		message = null;
 		mode = Mode.NORMAL;
+		recordingRegister = 0;
 		if (enabled) {
 			if (area.getCaret() instanceof ConfigurableCaret) {
 				originalCaretStyle = ((ConfigurableCaret) area.getCaret()).getStyle();
@@ -186,8 +221,24 @@ public class VimHandler {
 		exHandler = handler;
 	}
 
+	/**
+	 * Sets how insert mode keys from macros and '.' reach the text area's own
+	 * key handling, so that auto-indentation etc. apply as they did when the
+	 * keys were typed. Without it, characters are inserted verbatim.
+	 */
+	public void setKeyDispatcher(final Consumer<KeyEvent> dispatcher) {
+		keyDispatcher = dispatcher;
+	}
+
 	public String getStatus() {
 		if (!enabled) return null;
+		final String status = modeStatus();
+		if (recordingRegister == 0 || mode == Mode.COMMAND_LINE) return status;
+		return status + (status.isEmpty() ? "" : "   ") + "recording @" +
+			recordingRegister;
+	}
+
+	private String modeStatus() {
 		if (mode == Mode.COMMAND_LINE) return cmdLineType + cmdLine.toString();
 		if (message != null) return message;
 		final String modeText;
@@ -303,6 +354,15 @@ public class VimHandler {
 
 	public void feed(final char c) {
 		if (!enabled) return;
+		process(c);
+		playQueued();
+		updateCaretStyle();
+		fireStatus();
+	}
+
+	/** Processes one key, including any change it repeats via '.'. */
+	private void process(final char c) {
+		if (!replaying && !playing) recordMacro(c);
 		message = null;
 		try {
 			switch (mode) {
@@ -316,6 +376,9 @@ public class VimHandler {
 					commandKey(c);
 			}
 		}
+		catch (final Invalid exc) {
+			fail();
+		}
 		finally {
 			endEdit();
 		}
@@ -325,15 +388,95 @@ public class VimHandler {
 			replaying = true;
 			area.beginAtomicEdit();
 			try {
-				feed(replay);
+				for (final char k : replay.toCharArray())
+					process(k);
 			}
 			finally {
 				area.endAtomicEdit();
 				replaying = false;
 			}
 		}
-		updateCaretStyle();
-		fireStatus();
+	}
+
+	// -- Macros --
+
+	/** Plays back keys from a macro, ahead of any keys already queued. */
+	private void play(final String keys) {
+		macroQueue.insert(0, keys);
+	}
+
+	/** Plays the queued macro keys, until done or a command fails. */
+	private void playQueued() {
+		if (playing || macroQueue.length() == 0) return;
+		playing = true;
+		aborted = false;
+		try {
+			int count = 0;
+			while (macroQueue.length() > 0 && !aborted) {
+				if (++count > MAX_MACRO_KEYS) {
+					// Note: a recursive macro which never fails would run forever.
+					error("Macro stopped after " + MAX_MACRO_KEYS + " keys");
+					break;
+				}
+				final char k = macroQueue.charAt(0);
+				macroQueue.deleteCharAt(0);
+				process(k);
+			}
+		}
+		finally {
+			macroQueue.setLength(0);
+			playing = false;
+		}
+	}
+
+	private void recordMacro(final char c) {
+		if (recordingRegister != 0) macro.append(c);
+	}
+
+	private void startRecording(final char name) {
+		if (!Character.isLetterOrDigit(name) && name != '"') throw INVALID;
+		recordingRegister = name;
+		macro.setLength(0);
+	}
+
+	private void stopRecording() {
+		// Note: the 'q' which stopped the recording is not part of the macro.
+		macro.setLength(Math.max(0, macro.length() - 1));
+		final char name = recordingRegister;
+		recordingRegister = 0;
+		final char lower = Character.toLowerCase(name);
+		final Register old = registers.get(lower);
+		final Register r = Character.isUpperCase(name) && old != null
+			? new Register(old.text + macro, old.linewise) : new Register(macro
+				.toString(), false);
+		registers.put(lower, r);
+		macro.setLength(0);
+	}
+
+	/** Plays the macro in the given register (@{register}) n times. */
+	private void playRegister(final char name, final int n) {
+		final String keys;
+		if (name == ':') {
+			if (lastEx == null) throw INVALID;
+			keys = ":" + lastEx + "\n";
+		}
+		else {
+			final char reg = name == '@' ? lastMacroRegister : name;
+			if (reg == 0) {
+				error("E748: No previously used register");
+				return;
+			}
+			final Register r = getRegister(reg);
+			if (r == null) {
+				if (!Character.isLetterOrDigit(reg)) throw INVALID;
+				// Note: an empty register plays nothing, so recursive macros can
+				// be recorded after clearing their register with e.g. qaq.
+				return;
+			}
+			lastMacroRegister = reg;
+			keys = r.text;
+		}
+		play(repeat(keys, n));
 	}
 
 	// -- Insert mode --
@@ -344,36 +487,92 @@ public class VimHandler {
 			return;
 		}
 		recordInsert(c);
-		final int start = area.getSelectionStart(), end = area.getSelectionEnd();
-		if (c == '\b') {
-			if (start < end) remove(start, end);
-			else if (start > 0) remove(start - 1, start);
+		if (keyDispatcher != null) {
+			keyDispatcher.accept(keyEvent(c));
+			return;
 		}
-		else {
-			replace(start, end, String.valueOf(c));
-			// Note: the caret only follows insertions on the EDT by default.
-			area.setCaretPosition(start + 1);
+		final int start = area.getSelectionStart(), end = area.getSelectionEnd();
+		final int pos = area.getCaretPosition();
+		switch (c) {
+			case '\b':
+				if (start < end) remove(start, end);
+				else if (start > 0) remove(start - 1, start);
+				return;
+			case KEY_LEFT:
+				area.setCaretPosition(Math.max(0, pos - 1));
+				return;
+			case KEY_RIGHT:
+				area.setCaretPosition(Math.min(length(), pos + 1));
+				return;
+			case KEY_HOME:
+				area.setCaretPosition(lineStart(pos));
+				return;
+			case KEY_END:
+				area.setCaretPosition(lineEnd(pos));
+				return;
+			case KEY_UP:
+			case KEY_DOWN:
+				return;
+			default:
+				replace(start, end, String.valueOf(c));
+				// Note: the caret only follows insertions on the EDT by default.
+				area.setCaretPosition(start + 1);
 		}
 	}
 
+	/** Creates the key event a user would have typed for an insert mode key. */
+	private KeyEvent keyEvent(final char c) {
+		final long when = System.currentTimeMillis();
+		final int code;
+		switch (c) {
+			case '\n':
+				code = KeyEvent.VK_ENTER;
+				break;
+			case '\b':
+				code = KeyEvent.VK_BACK_SPACE;
+				break;
+			case '\t':
+				code = KeyEvent.VK_TAB;
+				break;
+			default:
+				final int index = SPECIAL_KEYS.indexOf(c);
+				if (index < 0) {
+					return new KeyEvent(area, KeyEvent.KEY_TYPED, when, 0,
+						KeyEvent.VK_UNDEFINED, c);
+				}
+				code = SPECIAL_KEY_CODES[index];
+		}
+		final char keyChar = c < ' ' ? c : KeyEvent.CHAR_UNDEFINED;
+		return new KeyEvent(area, KeyEvent.KEY_PRESSED, when, 0, code, keyChar);
+	}
+
+	/** Records a key typed in insert mode, which the text area handles. */
 	private void recordInsert(final KeyEvent e) {
+		final char c;
 		if (e.getID() == KeyEvent.KEY_TYPED) {
 			if (e.isControlDown() || e.isMetaDown()) return;
-			final char c = e.getKeyChar();
-			if (c >= ' ' && c != KeyEvent.VK_DELETE || c == '\n' || c == '\b' ||
-				c == '\t') recordInsert(c);
+			c = e.getKeyChar();
+			if (c < ' ' && c != '\n' && c != '\b' && c != '\t' ||
+				c == KeyEvent.VK_DELETE) return;
 		}
-		else if (e.getID() == KeyEvent.KEY_PRESSED && e.isActionKey() &&
-			insertRecording != null)
-		{
+		else if (e.getID() == KeyEvent.KEY_PRESSED && e.getModifiersEx() == 0) {
+			final int index = indexOf(SPECIAL_KEY_CODES, e.getKeyCode());
+			if (index < 0) return;
+			c = SPECIAL_KEYS.charAt(index);
+		}
+		else return;
+		recordMacro(c);
+		recordInsert(c);
+	}
+
+	private void recordInsert(final char c) {
+		if (insertRecording == null || replaying) return;
+		if (SPECIAL_KEYS.indexOf(c) >= 0) {
 			// The caret moved elsewhere; '.' will only repeat what follows.
 			insertPrefix = "i";
 			insertRecording.setLength(0);
 		}
-	}
-
-	private void recordInsert(final char c) {
-		if (insertRecording != null && !replaying) insertRecording.append(c);
+		else insertRecording.append(c);
 	}
 
 	private void enterInsert(final int pos, final String keys) {
@@ -404,6 +603,7 @@ public class VimHandler {
 	}
 
 	private void commandLineKey(final char c) {
+		if (SPECIAL_KEYS.indexOf(c) >= 0) return;
 		if (c == ESC) {
 			mode = Mode.NORMAL;
 			return;
@@ -419,7 +619,10 @@ public class VimHandler {
 		}
 		mode = Mode.NORMAL;
 		final String line = cmdLine.toString();
-		if (cmdLineType == ':') ex(line.trim());
+		if (cmdLineType == ':') {
+			if (!line.trim().isEmpty()) lastEx = line.trim();
+			ex(line.trim());
+		}
 		else {
 			if (!line.isEmpty()) lastSearch = line;
 			lastSearchForward = cmdLineType == '/';
@@ -446,7 +649,7 @@ public class VimHandler {
 		}
 		else if ("'<,'>".equals(range)) {
 			if (lastVisualStartLine < 0) {
-				message = "E20: Mark not set";
+				error("E20: Mark not set");
 				return;
 			}
 			first = lastVisualStartLine;
@@ -477,7 +680,7 @@ public class VimHandler {
 			// Note: searches are not highlighted, so there is nothing to clear.
 		}
 		else if (range != null || exHandler == null || !exHandler.test(rest)) {
-			message = "E492: Not an editor command: " + command;
+			error("E492: Not an editor command: " + command);
 		}
 	}
 
@@ -525,7 +728,7 @@ public class VimHandler {
 			lastChanged = first + i;
 		}
 		if (lastChanged < 0) {
-			message = "E486: Pattern not found: " + lastSearch;
+			error("E486: Pattern not found: " + lastSearch);
 			return;
 		}
 		replace(start, end, String.join("\n", lines));
@@ -635,7 +838,9 @@ public class VimHandler {
 		}
 	}
 
-	private void commandKey(final char c) {
+	private void commandKey(final char key) {
+		final int special = SPECIAL_KEYS.indexOf(key);
+		final char c = special < 0 ? key : "kjhl0$".charAt(special);
 		if (mode == Mode.NORMAL) adoptForeignSelection();
 		else syncVisual();
 		if (c == ESC) {
@@ -652,11 +857,8 @@ public class VimHandler {
 		catch (final Incomplete exc) {
 			return;
 		}
-		catch (final Invalid exc) {
-			beep();
-		}
-		catch (final BadLocationException exc) {
-			beep();
+		catch (final Invalid | BadLocationException exc) {
+			fail();
 		}
 		pending.setLength(0);
 		lastCursor = isVisual() ? visualCursor : area.getCaretPosition();
@@ -774,6 +976,13 @@ public class VimHandler {
 			case '.':
 				if (lastChange == null) throw INVALID;
 				replayKeys = count1 > 0 ? withCount(lastChange, count1) : lastChange;
+				return;
+			case 'q':
+				if (recordingRegister != 0) stopRecording();
+				else startRecording(k.next());
+				return;
+			case '@':
+				playRegister(k.next(), n);
 				return;
 			case ':':
 				enterCommandLine(':', count1 == 0 ? "" : count1 == 1 ? "." : ".," +
@@ -963,6 +1172,10 @@ public class VimHandler {
 		final int start = lines ? lineOf(lo) : lo;
 		final int end = lines ? lineOf(hi) : Math.min(hi + 1, length());
 		switch (c) {
+			case 'q':
+				if (recordingRegister == 0) throw INVALID;
+				stopRecording();
+				return;
 			case 'v':
 			case 'V': {
 				final Mode m = c == 'v' ? Mode.VISUAL : Mode.VISUAL_LINE;
@@ -1343,7 +1556,7 @@ public class VimHandler {
 			case '\'': {
 				final Position p = marks.get(k.next());
 				if (p == null) {
-					message = "E20: Mark not set";
+					error("E20: Mark not set");
 					throw INVALID;
 				}
 				final int pos = Math.min(p.getOffset(), len);
@@ -1393,7 +1606,7 @@ public class VimHandler {
 
 	private int search(final int from, final boolean forward) {
 		if (lastSearch == null) {
-			message = "E35: No previous regular expression";
+			error("E35: No previous regular expression");
 			return -1;
 		}
 		final Pattern p = compile(lastSearch, false);
@@ -1413,7 +1626,7 @@ public class VimHandler {
 			}
 			if (found < 0) found = last;
 		}
-		if (found < 0) message = "E486: Pattern not found: " + lastSearch;
+		if (found < 0) error("E486: Pattern not found: " + lastSearch);
 		return found;
 	}
 
@@ -1424,7 +1637,7 @@ public class VimHandler {
 			return Pattern.compile(regex, flags);
 		}
 		catch (final PatternSyntaxException exc) {
-			message = "E486: Invalid pattern: " + pattern;
+			error("E486: Invalid pattern: " + pattern);
 			return null;
 		}
 	}
@@ -1628,10 +1841,7 @@ public class VimHandler {
 	}
 
 	private void replace(final int start, final int end, final String s) {
-		if (!area.isEditable()) {
-			beep();
-			throw INVALID;
-		}
+		if (!area.isEditable()) throw INVALID;
 		if (!editing) {
 			area.beginAtomicEdit();
 			editing = true;
@@ -1827,6 +2037,24 @@ public class VimHandler {
 
 	private void fireStatus() {
 		if (statusListener != null) statusListener.accept(getStatus());
+	}
+
+	/** Reports a failed command, which also stops macro playback. */
+	private void error(final String msg) {
+		message = msg;
+		aborted = true;
+	}
+
+	/** Signals a failed command, which also stops macro playback. */
+	private void fail() {
+		beep();
+		aborted = true;
+	}
+
+	private static int indexOf(final int[] values, final int value) {
+		for (int i = 0; i < values.length; i++)
+			if (values[i] == value) return i;
+		return -1;
 	}
 
 	private void beep() {
