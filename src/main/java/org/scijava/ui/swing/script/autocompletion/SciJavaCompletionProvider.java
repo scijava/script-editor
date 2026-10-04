@@ -31,7 +31,10 @@ package org.scijava.ui.swing.script.autocompletion;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.script.ScriptEngine;
 import javax.swing.text.BadLocationException;
@@ -49,6 +52,7 @@ import org.scijava.code.api.CodeCompleter;
 import org.scijava.code.api.CompletionRequest;
 import org.scijava.code.api.CompletionResult;
 import org.scijava.code.api.ParameterChoices;
+import org.scijava.code.api.TypeResolver;
 
 /**
  * The single bridge between SciJava's toolkit-agnostic code completion SPI
@@ -131,10 +135,19 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 		final CompletionResult result = compute(comp);
 		final List<org.scijava.code.api.Completion> source =
 			result.completions();
+		// Group callables by name, so each can list its sibling overloads.
+		final Map<String, List<org.scijava.code.api.Completion>> overloads =
+			new HashMap<>();
+		for (final org.scijava.code.api.Completion c : source) {
+			if (!c.isCallable()) continue;
+			overloads.computeIfAbsent(stripParens(c.insertionText()),
+				k -> new ArrayList<>()).add(c);
+		}
 		final int n = source.size();
 		final List<Completion> out = new ArrayList<>(n);
 		for (int i = 0; i < n; i++) {
-			out.add(toRSTA(source.get(i), n - i));
+			out.add(toRSTA(comp, source.get(i), n - i, overloads, result
+				.typeResolver()));
 		}
 		return out;
 	}
@@ -200,10 +213,14 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 	 * auto-imports). The {@code orderRelevance} argument preserves the completer's
 	 * ordering when the completion does not specify its own relevance.
 	 */
-	private Completion toRSTA(final org.scijava.code.api.Completion c,
-		final int orderRelevance)
+	private Completion toRSTA(final JTextComponent comp,
+		final org.scijava.code.api.Completion c, final int orderRelevance,
+		final Map<String, List<org.scijava.code.api.Completion>> overloads,
+		final TypeResolver types)
 	{
-		final Completion rsta = c.isCallable() ? functionCompletion(c)
+		final Completion rsta = c.isCallable() //
+			? functionCompletion(comp, c, overloads.get(stripParens(c
+				.insertionText())), types) //
 			: basicCompletion(c);
 		final double rel = c.relevance();
 		final int relevance = rel != 0 ? (int) Math.round(rel) : orderRelevance;
@@ -223,13 +240,14 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 				c.description(), c.additionalEdits());
 	}
 
-	private Completion functionCompletion(
-		final org.scijava.code.api.Completion c)
+	private Completion functionCompletion(final JTextComponent comp,
+		final org.scijava.code.api.Completion c,
+		final List<org.scijava.code.api.Completion> overloads,
+		final TypeResolver types)
 	{
 		// FunctionCompletion appends the parameter template itself, so strip any
 		// trailing "()" the completer may have included in the insertion text.
-		String name = c.insertionText();
-		if (name.endsWith("()")) name = name.substring(0, name.length() - 2);
+		final String name = stripParens(c.insertionText());
 		final String returnType = c.returnType() == null ? "" : c.returnType();
 
 		final SciJavaFunctionCompletion fc = new SciJavaFunctionCompletion(this,
@@ -237,19 +255,117 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 		fc.setReturnValueDescription(returnType);
 		fc.setShortDescription(c.summary());
 		if (c.description() != null) fc.setSummary(c.description());
-		fc.setParams(toRSTAParams(c.parameters()));
+		fc.setParams(toRSTAParams(comp, c, overloads, types));
 		return fc;
 	}
 
-	private static List<ParameterizedCompletion.Parameter> toRSTAParams(
-		final List<org.scijava.code.api.Completion.Parameter> params)
+	/**
+	 * Lists the parameters of {@code c}'s other overloads as HTML, one overload
+	 * per line, for RSTA's parameter tooltip; or returns null if there are none.
+	 * If {@code argTypes} is given, the overloads are sorted by how well they fit
+	 * those arguments (see {@link Overloads#fit}): matches first, then those
+	 * needing a conversion (greyed), then incompatible ones (struck out).
+	 */
+	static String otherOverloads(final org.scijava.code.api.Completion c,
+		final List<org.scijava.code.api.Completion> overloads,
+		final List<String> argTypes)
 	{
+		if (overloads == null) return null;
+		final String own = parameterList(c);
+		// NB: A map, since reflection can report the same signature twice.
+		final Map<String, Integer> fits = new LinkedHashMap<>();
+		for (final org.scijava.code.api.Completion o : overloads) {
+			final String sig = parameterList(o);
+			if (sig.equals(own)) continue;
+			final int fit = argTypes == null ? Overloads.MATCH : Overloads.fit(o,
+				argTypes);
+			fits.merge(sig, fit, Math::max);
+		}
+		if (fits.isEmpty()) return null;
+		// NB: The sort is stable, so equally good fits keep their order.
+		final List<Map.Entry<String, Integer>> sorted = new ArrayList<>(fits
+			.entrySet());
+		sorted.sort(Map.Entry.<String, Integer> comparingByValue().reversed());
+		final StringBuilder sb = new StringBuilder();
+		for (final Map.Entry<String, Integer> entry : sorted) {
+			// NB: A rule between overloads (and after RSTA's own line).
+			sb.append("<hr>");
+			final String sig = escapeHTML(entry.getKey());
+			switch (entry.getValue()) {
+				case Overloads.MATCH:
+					sb.append(sig);
+					break;
+				case Overloads.CONVERSION:
+					sb.append("<font color=\"gray\">").append(sig).append("</font>");
+					break;
+				default:
+					sb.append("<font color=\"gray\"><s>").append(sig).append(
+						"</s></font>");
+			}
+		}
+		return sb.toString();
+	}
+
+	/**
+	 * A short parameter list such as {@code long[] pos, int d}, or {@code ()} if
+	 * there are no parameters.
+	 */
+	private static String parameterList(
+		final org.scijava.code.api.Completion c)
+	{
+		final StringBuilder sb = new StringBuilder();
+		final List<org.scijava.code.api.Completion.Parameter> params = c
+			.parameters();
+		for (int i = 0; i < params.size(); i++) {
+			if (i > 0) sb.append(", ");
+			final String type = params.get(i).type();
+			if (type != null) sb.append(type.substring(type.lastIndexOf('.') + 1));
+			if (params.get(i).name() != null) {
+				if (type != null) sb.append(' ');
+				sb.append(params.get(i).name());
+			}
+		}
+		return sb.length() == 0 ? "()" : sb.toString();
+	}
+
+	private static String escapeHTML(final String s) {
+		return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+	}
+
+	private static String stripParens(final String name) {
+		return name.endsWith("()") ? name.substring(0, name.length() - 2) : name;
+	}
+
+	/**
+	 * Converts {@code c}'s neutral parameters to RSTA ones. RSTA's parameter
+	 * tooltip shows the current parameter's description, as HTML, below the
+	 * signature: there, we list {@code c}'s other overloads.
+	 */
+	private static List<ParameterizedCompletion.Parameter> toRSTAParams(
+		final JTextComponent comp, final org.scijava.code.api.Completion c,
+		final List<org.scijava.code.api.Completion> overloads,
+		final TypeResolver types)
+	{
+		final List<org.scijava.code.api.Completion.Parameter> params = c
+			.parameters();
 		final List<ParameterizedCompletion.Parameter> out =
 			new ArrayList<>(params.size());
 		for (final org.scijava.code.api.Completion.Parameter p : params) {
 			// Pass the type as the parameter's "type object" so the choices
 			// provider can dispatch on it.
-			out.add(new ParameterizedCompletion.Parameter(p.type(), p.name()));
+			out.add(new ParameterizedCompletion.Parameter(p.type(), p.name()) {
+
+				/**
+				 * Computed when RSTA asks, so the list reflects the arguments typed
+				 * so far. RSTA asks when the tooltip opens (before the argument list
+				 * is inserted) and whenever the caret moves to another parameter.
+				 */
+				@Override
+				public String getDescription() {
+					return otherOverloads(c, overloads, Overloads.argumentTypes(comp,
+						types, c));
+				}
+			});
 		}
 		return out;
 	}

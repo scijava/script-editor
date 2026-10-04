@@ -168,4 +168,111 @@ public class SciJavaCompletionProviderTest {
 		org.junit.Assert.assertTrue(text, text.contains("long[]"));
 		org.junit.Assert.assertTrue(text, text.contains("pos"));
 	}
+
+	@Test
+	public void testParameterTooltipListsOtherOverloads() {
+		final RSyntaxTextArea area = new RSyntaxTextArea();
+		area.setText("img.getAt");
+		area.setCaretPosition(area.getDocument().getLength());
+
+		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
+			request -> new CompletionResult(Arrays.asList( //
+				method("img.getAt", "int[]"), //
+				method("img.getAt", "net.imglib2.Localizable"), //
+				method("img.getAt", "int[]"), // e.g. a bridge method
+				method("img.getAtX", "long[]")), 0),
+			null);
+		final List<Completion> completions = provider.getCompletionsImpl(area);
+
+		// Each overload's tooltip lists the others, once each, even before RSTA
+		// inserts the argument list...
+		assertEquals("<hr>Localizable p0",
+			((org.fife.ui.autocomplete.ParameterizedCompletion) completions.get(0))
+				.getParam(0).getDescription());
+		// ...but the side description window does not.
+		final String summary = completions.get(0).getSummary();
+		org.junit.Assert.assertFalse(summary, summary.contains("Localizable"));
+
+		// Inside the argument list, likewise.
+		area.setText("img.getAt(p0)");
+		area.setCaretPosition(10);
+		final String desc = ((org.fife.ui.autocomplete.ParameterizedCompletion) //
+		completions.get(0)).getParam(0).getDescription();
+		assertEquals("<hr>Localizable p0", desc);
+		// ...and a callable with no other overloads gets no description.
+		org.junit.Assert.assertNull(((org.fife.ui.autocomplete.ParameterizedCompletion) //
+		completions.get(3)).getParam(0).getDescription());
+	}
+
+	@Test
+	public void testParameterTooltipRanksOverloadsByArgumentTypes() {
+		final RSyntaxTextArea area = new RSyntaxTextArea();
+		area.setText("a");
+		area.setCaretPosition(1);
+
+		final org.scijava.code.api.TypeResolver types = expr -> {
+			switch (expr) {
+				case "1.5": return "double";
+				case "1": return "long";
+				default: return null;
+			}
+		};
+		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
+			request -> new CompletionResult(Arrays.asList( //
+				method("a", "int", "int"), //
+				method("a", "java.lang.String"), //
+				method("a", "float", "float"), //
+				method("a", "long", "long")), 0, null, types),
+			null);
+		final List<Completion> completions = provider.getCompletionsImpl(area);
+		final org.fife.ui.autocomplete.ParameterizedCompletion intOverload =
+			(org.fife.ui.autocomplete.ParameterizedCompletion) completions.get(0);
+		final org.fife.ui.autocomplete.ParameterizedCompletion floatOverload =
+			(org.fife.ui.autocomplete.ParameterizedCompletion) completions.get(2);
+		final String gray = "<font color=\"gray\">";
+
+		// Accepted a(int, int), typed a float, and tabbed onward: the float
+		// overload matches, and the others are struck out.
+		area.setText("a(1.5, p1)");
+		area.setCaretPosition(7);
+		assertEquals("<hr>float p0, float p1" + //
+			"<hr>" + gray + "<s>String p0</s></font>" + //
+			"<hr>" + gray + "<s>long p0, long p1</s></font>", //
+			intOverload.getParam(1).getDescription());
+
+		// Accepted a(float, float) and typed an int: the integral overloads
+		// match, so they come first.
+		area.setText("a(1, p1)");
+		area.setCaretPosition(5);
+		assertEquals("<hr>int p0, int p1<hr>long p0, long p1" + //
+			"<hr>" + gray + "<s>String p0</s></font>", //
+			floatOverload.getParam(1).getDescription());
+
+		// Accepted a(int, int) and typed an int: the float overload would need a
+		// conversion, so it comes after the long one, greyed.
+		assertEquals("<hr>long p0, long p1" + //
+			"<hr>" + gray + "float p0, float p1</font>" + //
+			"<hr>" + gray + "<s>String p0</s></font>", //
+			intOverload.getParam(1).getDescription());
+
+		// Nothing typed yet: the overloads keep their order, unstyled.
+		area.setText("a(p0, p1)");
+		area.setCaretPosition(2);
+		assertEquals("<hr>String p0<hr>float p0, float p1<hr>long p0, long p1", //
+			intOverload.getParam(0).getDescription());
+	}
+
+	private static org.scijava.code.api.Completion method(final String name,
+		final String... paramTypes)
+	{
+		final List<org.scijava.code.api.Completion.Parameter> params =
+			new java.util.ArrayList<>();
+		for (int i = 0; i < paramTypes.length; i++) {
+			params.add(new org.scijava.code.api.Completion.Parameter("p" + i,
+				paramTypes[i]));
+		}
+		return org.scijava.code.api.Completion.builder(name).kind(
+			org.scijava.code.api.Completion.Kind.METHOD).parameters(params)
+			.returnType("java.lang.Object").build();
+	}
 }
