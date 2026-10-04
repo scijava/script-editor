@@ -94,6 +94,8 @@ import org.scijava.script.ScriptHeaderService;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptService;
 import org.scijava.ui.swing.script.vim.VimHandler;
+import org.scijava.script.complete.CodeCompletionService;
+import org.scijava.ui.swing.script.autocompletion.CodeCompleterLanguageSupport;
 import org.scijava.util.FileUtils;
 
 /**
@@ -120,6 +122,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private boolean autoCompletionJavaFallback;
 	private boolean autoCompletionWithoutKey;
 	private String supportStatus;
+	/** The completion support currently installed on this pane, if any. */
+	private LanguageSupport installedSupport;
 	private final ErrorParser errorHighlighter;
 	private final JMenu noneLangSyntaxMenu;
 	private final EditorPaneActions actions;
@@ -130,6 +134,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	Context context;
 	@Parameter
 	private LanguageSupportService languageSupportService;
+	@Parameter
+	private CodeCompletionService codeCompletionService;
 	@Parameter
 	private ScriptService scriptService;
 	@Parameter
@@ -731,11 +737,11 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		final boolean addHeader)
 	{
 		// uninstall existing language support.
-		LanguageSupport support =
-			languageSupportService.getLanguageSupport(currentLanguage);
-		if (support != null) {
-			support.uninstall(this);
+		if (installedSupport != null) {
+			installedSupport.uninstall(this);
+			installedSupport = null;
 		}
+		LanguageSupport support;
 
 		String languageName;
 		String defaultExtension;
@@ -791,15 +797,24 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			return; // no need to update console any further
 		}
 		String supportLevel = "SciJava supported";
-		// try to get language support for current language, may be null.
+		// Tier 1: a heavy RSTA LanguageSupportPlugin (e.g. the Java parser).
 		support = languageSupportService.getLanguageSupport(currentLanguage);
 
-		// that did not work. See if there is internal support for it.
+		// Tier 2: a toolkit-agnostic CodeCompleterPlugin for this language.
+		if (support == null &&
+			codeCompletionService.getCompleterPlugin(currentLanguage) != null)
+		{
+			support = new CodeCompleterLanguageSupport(
+				codeCompletionService.getCompleterPlugin(currentLanguage),
+				currentLanguage);
+		}
+
+		// Tier 3: RSTA's own built-in support for the syntax style.
 		if (support == null) {
 			support = LanguageSupportFactory.get().getSupportFor(styleName);
 			supportLevel = "Legacy supported";
 		}
-		// that did not work, Fallback to Java
+		// Tier 4: fall back to Java completion, if requested.
 		if (support == null && autoCompletionJavaFallback) {
 			support = languageSupportService.getLanguageSupport(scriptService.getLanguageByName("Java"));
 			supportLevel = "N/A. Using Java as fallback";
@@ -808,6 +823,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			support.setAutoCompleteEnabled(autoCompletionEnabled);
 			support.setAutoActivationEnabled(autoCompletionWithoutKey);
 			support.install(this);
+			installedSupport = support;
 			if (!autoCompletionEnabled)
 				supportLevel += " but currently disabled\n";
 			else {
