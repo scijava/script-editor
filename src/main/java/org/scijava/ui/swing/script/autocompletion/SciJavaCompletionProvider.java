@@ -39,6 +39,7 @@ import javax.swing.text.JTextComponent;
 
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
+import org.fife.ui.autocomplete.CompletionCellRenderer;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.ParameterChoicesProvider;
 import org.fife.ui.autocomplete.ParameterizedCompletion;
@@ -91,6 +92,8 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 		this.completer = completer;
 		this.language = language;
 		setParameterizedCompletionParams('(', ", ", ')');
+		// Show each callable's parameters and return type in the popup list.
+		setListCellRenderer(new CompletionCellRenderer());
 		// Auto-activate after a letter, digit, '.' or '_'.
 		setAutoActivationRules(true, ".");
 	}
