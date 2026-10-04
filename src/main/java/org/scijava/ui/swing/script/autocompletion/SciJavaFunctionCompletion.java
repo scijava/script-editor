@@ -65,4 +65,34 @@ public class SciJavaFunctionCompletion extends FunctionCompletion implements
 	public List<TextEdit> getAdditionalEdits() {
 		return additionalEdits;
 	}
+
+	/**
+	 * As {@link FunctionCompletion#addParameters}, which fills in the side
+	 * description window, but without the parameter descriptions: those list
+	 * the other overloads, for the parameter tooltip only (see
+	 * {@link SciJavaCompletionProvider#otherOverloads}).
+	 */
+	@Override
+	protected void addParameters(final StringBuilder sb) {
+		final int count = getParamCount();
+		if (count > 0) {
+			sb.append("<b>Parameters:</b><br>");
+			sb.append("<center><table width='90%'><tr><td>");
+			for (int i = 0; i < count; i++) {
+				final Parameter param = getParam(i);
+				sb.append("<b>");
+				sb.append(param.getName() != null ? param.getName() : param
+					.getType());
+				sb.append("</b><br>");
+			}
+			sb.append("</td></tr></table></center><br><br>");
+		}
+		final String returnDesc = getReturnValueDescription();
+		if (returnDesc != null) {
+			sb.append("<b>Returns:</b><br>");
+			sb.append("<center><table width='90%'><tr><td>");
+			sb.append(returnDesc);
+			sb.append("</td></tr></table></center><br><br>");
+		}
+	}
 }

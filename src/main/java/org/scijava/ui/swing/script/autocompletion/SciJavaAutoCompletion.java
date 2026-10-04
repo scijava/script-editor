@@ -56,6 +56,9 @@ public class SciJavaAutoCompletion extends
 
 	public SciJavaAutoCompletion(final CompletionProvider provider) {
 		super(provider);
+		// Expand threshold to describe other overloads
+		// (2000 is just a magic number)
+		setParameterDescriptionTruncateThreshold(2000);
 	}
 
 	@Override
