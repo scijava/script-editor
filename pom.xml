@@ -140,6 +140,11 @@
 	</ciManagement>
 
 	<properties>
+		<scijava.jvm.version>11</scijava.jvm.version>
+		<!-- TEMP: depend on the in-development scijava-common providing the new
+		     org.scijava.script.complete code-completion SPI. Remove once a
+		     released scijava-common containing it is pinned by pom-scijava. -->
+		<scijava-common.version>2.100.2-SNAPSHOT</scijava-common.version>
 		<main-class>org.scijava.ui.swing.script.Main</main-class>
 		<package-name>org.scijava.ui.swing.script</package-name>
 		<license.licenseName>bsd_2</license.licenseName>
