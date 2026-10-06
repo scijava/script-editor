@@ -30,6 +30,7 @@
 package org.scijava.ui.swing.script.autocompletion;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.CompletionProvider;
@@ -48,13 +49,32 @@ public class SciJavaCompletion extends BasicCompletion implements
 {
 
 	private final List<TextEdit> additionalEdits;
+	private final Supplier<String> description;
 
 	public SciJavaCompletion(final CompletionProvider provider,
 		final String replacementText, final String shortDesc, final String summary,
 		final List<TextEdit> additionalEdits)
 	{
-		super(provider, replacementText, shortDesc, summary);
+		this(provider, replacementText, shortDesc, () -> summary,
+			additionalEdits);
+	}
+
+	/**
+	 * @param description Supplies the description shown beside the completion
+	 *          list, asked for only when the completion is selected.
+	 */
+	public SciJavaCompletion(final CompletionProvider provider,
+		final String replacementText, final String shortDesc,
+		final Supplier<String> description, final List<TextEdit> additionalEdits)
+	{
+		super(provider, replacementText, shortDesc, null);
+		this.description = description;
 		this.additionalEdits = additionalEdits;
+	}
+
+	@Override
+	public String getSummary() {
+		return description == null ? null : description.get();
 	}
 
 	@Override

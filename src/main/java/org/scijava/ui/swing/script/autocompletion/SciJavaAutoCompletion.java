@@ -59,6 +59,29 @@ public class SciJavaAutoCompletion extends
 		// Expand threshold to describe other overloads
 		// (2000 is just a magic number)
 		setParameterDescriptionTruncateThreshold(2000);
+		if (provider instanceof SciJavaCompletionProvider) {
+			((SciJavaCompletionProvider) provider).setUpdateListener(
+				this::refreshPopup);
+		}
+	}
+
+	/**
+	 * Shows the current (just improved) completions: in the popup, if it is
+	 * showing, or in a new one, if the previous result had nothing to show.
+	 */
+	private void refreshPopup(final boolean previousWasEmpty) {
+		final JTextComponent comp = getTextComponent();
+		if (comp == null || !comp.isFocusOwner()) return;
+		if (!isPopupVisible() && !previousWasEmpty) return; // NB: User closed it.
+		// NB: Never insert a lone completion the user has not chosen.
+		final boolean single = getAutoCompleteSingleChoices();
+		setAutoCompleteSingleChoices(false);
+		try {
+			doCompletion();
+		}
+		finally {
+			setAutoCompleteSingleChoices(single);
+		}
 	}
 
 	@Override

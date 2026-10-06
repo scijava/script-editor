@@ -29,12 +29,16 @@
 
 package org.scijava.ui.swing.script.autocompletion;
 
+import java.io.File;
+import java.util.function.Supplier;
+
 import org.fife.rsta.ac.AbstractLanguageSupport;
 import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.scijava.log.Logger;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.code.api.CodeCompleter;
+import org.scijava.code.api.CompletionRequest;
 
 /**
  * An RSTA {@link org.fife.rsta.ac.LanguageSupport} that drives code completion
@@ -54,6 +58,7 @@ public class CodeCompleterLanguageSupport extends AbstractLanguageSupport {
 	private final CodeCompleter completer;
 	private final ScriptLanguage language;
 	private final Logger log;
+	private final Supplier<File> file;
 
 	public CodeCompleterLanguageSupport(final CodeCompleter completer,
 		final ScriptLanguage language)
@@ -64,9 +69,21 @@ public class CodeCompleterLanguageSupport extends AbstractLanguageSupport {
 	public CodeCompleterLanguageSupport(final CodeCompleter completer,
 		final ScriptLanguage language, final Logger log)
 	{
+		this(completer, language, log, null);
+	}
+
+	/**
+	 * @param file Supplies the file of the script being edited (or null if
+	 *          unsaved), so that completers can resolve files relative to it.
+	 */
+	public CodeCompleterLanguageSupport(final CodeCompleter completer,
+		final ScriptLanguage language, final Logger log,
+		final Supplier<File> file)
+	{
 		this.completer = completer;
 		this.language = language;
 		this.log = log;
+		this.file = file;
 		setAutoCompleteEnabled(true);
 		setParameterAssistanceEnabled(true);
 		setShowDescWindow(true);
@@ -77,6 +94,7 @@ public class CodeCompleterLanguageSupport extends AbstractLanguageSupport {
 		final SciJavaCompletionProvider provider =
 			new SciJavaCompletionProvider(completer, language);
 		provider.setLogger(log);
+		provider.setFile(file);
 		final AutoCompletion ac = new SciJavaAutoCompletion(provider);
 		ac.setAutoCompleteEnabled(isAutoCompleteEnabled());
 		ac.setAutoActivationEnabled(isAutoActivationEnabled());
@@ -84,6 +102,18 @@ public class CodeCompleterLanguageSupport extends AbstractLanguageSupport {
 		ac.setShowDescWindow(getShowDescWindow());
 		ac.install(textArea);
 		installImpl(textArea, ac);
+
+		// Let the completer get ready for this script, e.g. warm up caches.
+		try {
+			final File f = file == null ? null : file.get();
+			final String text = textArea.getText();
+			completer.prepare(new CompletionRequest(text, text.length(), language,
+				null, null, f == null ? null : f.getPath()));
+		}
+		catch (final Exception | LinkageError exc) {
+			// NB: Preparation is optional; never let it break the editor.
+			if (log != null) log.debug("Completer preparation failed", exc);
+		}
 	}
 
 	@Override

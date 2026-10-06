@@ -806,7 +806,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		{
 			support = new CodeCompleterLanguageSupport(
 				codeCompletionService.getCompleterPlugin(currentLanguage),
-				currentLanguage, log);
+				currentLanguage, log, this::getFile);
 		}
 
 		// Tier 3: RSTA's own built-in support for the syntax style.

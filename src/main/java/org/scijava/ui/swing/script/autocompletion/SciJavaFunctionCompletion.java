@@ -31,6 +31,7 @@ package org.scijava.ui.swing.script.autocompletion;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Supplier;
 
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.FunctionCompletion;
@@ -51,6 +52,7 @@ public class SciJavaFunctionCompletion extends FunctionCompletion implements
 {
 
 	private final List<TextEdit> additionalEdits;
+	private Supplier<String> description;
 
 	public SciJavaFunctionCompletion(final CompletionProvider provider,
 		final String name, final String returnType,
@@ -64,6 +66,28 @@ public class SciJavaFunctionCompletion extends FunctionCompletion implements
 	@Override
 	public List<TextEdit> getAdditionalEdits() {
 		return additionalEdits;
+	}
+
+	/**
+	 * Sets a supplier of the description (e.g. documentation) shown beside the
+	 * completion list, asked for only when the completion is selected.
+	 */
+	public void setDescription(final Supplier<String> description) {
+		this.description = description;
+	}
+
+	/**
+	 * Adds the description, if any, below RSTA's short description. (RSTA's
+	 * {@link FunctionCompletion#getSummary} would not show it otherwise.)
+	 */
+	@Override
+	protected boolean possiblyAddDescription(final StringBuilder sb) {
+		final boolean added = super.possiblyAddDescription(sb);
+		final String desc = description == null ? null : description.get();
+		if (desc == null || desc.isEmpty()) return added;
+		if (!added) sb.append("<hr><br>");
+		sb.append(desc).append("<br><br><br>");
+		return true;
 	}
 
 	/**

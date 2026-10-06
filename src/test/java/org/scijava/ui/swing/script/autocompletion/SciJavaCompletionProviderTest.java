@@ -38,6 +38,7 @@ import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.junit.Test;
 import org.scijava.code.api.CompletionResult;
+import org.scijava.code.api.SignatureHelp.Fit;
 
 /**
  * Tests that {@link SciJavaCompletionProvider} faithfully bridges neutral
@@ -205,61 +206,240 @@ public class SciJavaCompletionProviderTest {
 	}
 
 	@Test
-	public void testParameterTooltipRanksOverloadsByArgumentTypes() {
+	public void testParameterTooltipShowsSignatureHelp() {
 		final RSyntaxTextArea area = new RSyntaxTextArea();
 		area.setText("a");
 		area.setCaretPosition(1);
 
-		final org.scijava.code.api.TypeResolver types = expr -> {
-			switch (expr) {
-				case "1.5": return "double";
-				case "1": return "long";
-				default: return null;
-			}
-		};
+		final org.scijava.code.api.Completion ints = method("a", "int", "int");
+		final org.scijava.code.api.Completion strings = method("a",
+			"java.lang.String");
+		final org.scijava.code.api.Completion floats = method("a", "float",
+			"float");
+		final org.scijava.code.api.Completion longs = method("a", "long", "long");
+		final org.scijava.code.api.CompletionRequest[] asked = { null };
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
-			request -> new CompletionResult(Arrays.asList( //
-				method("a", "int", "int"), //
-				method("a", "java.lang.String"), //
-				method("a", "float", "float"), //
-				method("a", "long", "long")), 0, null, types),
-			null);
+			new org.scijava.code.api.CodeCompleter() {
+
+				@Override
+				public CompletionResult complete(
+					final org.scijava.code.api.CompletionRequest request)
+				{
+					return new CompletionResult(Arrays.asList(ints, strings, floats,
+						longs), 0);
+				}
+
+				@Override
+				public org.scijava.code.api.SignatureHelp signatureHelp(
+					final org.scijava.code.api.CompletionRequest request)
+				{
+					asked[0] = request;
+					// The completer rates and orders the signatures: here, as for a
+					// float typed as the first argument.
+					return new org.scijava.code.api.SignatureHelp(Arrays.asList(
+						signature(floats, Fit.MATCH), //
+						signature(ints, Fit.MISMATCH), //
+						signature(longs, Fit.CONVERSION), //
+						signature(strings, Fit.MISMATCH)), 1, 1);
+				}
+			}, null);
 		final List<Completion> completions = provider.getCompletionsImpl(area);
 		final org.fife.ui.autocomplete.ParameterizedCompletion intOverload =
 			(org.fife.ui.autocomplete.ParameterizedCompletion) completions.get(0);
-		final org.fife.ui.autocomplete.ParameterizedCompletion floatOverload =
-			(org.fife.ui.autocomplete.ParameterizedCompletion) completions.get(2);
-		final String gray = "<font color=\"gray\">";
+		final String gray = "<font color=\"" + SciJavaCompletionProvider
+			.dimColor() + "\">";
 
-		// Accepted a(int, int), typed a float, and tabbed onward: the float
-		// overload matches, and the others are struck out.
+		// Accepted a(int, int), typed a float, and tabbed onward: the completer's
+		// order, styled by fit, without the accepted overload.
 		area.setText("a(1.5, p1)");
 		area.setCaretPosition(7);
 		assertEquals("<hr>float p0, float p1" + //
-			"<hr>" + gray + "<s>String p0</s></font>" + //
-			"<hr>" + gray + "<s>long p0, long p1</s></font>", //
+			"<hr>" + gray + "long p0, long p1</font>" + //
+			"<hr>" + gray + "<s>String p0</s></font>", //
 			intOverload.getParam(1).getDescription());
+		// The completer was asked about the caret.
+		assertEquals(7, asked[0].offset());
+		assertEquals("a(1.5, p1)", asked[0].text());
+	}
 
-		// Accepted a(float, float) and typed an int: the integral overloads
-		// match, so they come first.
-		area.setText("a(1, p1)");
+	@Test
+	public void testParameterTooltipIgnoresOtherCalls() {
+		final RSyntaxTextArea area = new RSyntaxTextArea();
+		area.setText("a");
+		area.setCaretPosition(1);
+		final org.scijava.code.api.Completion ints = method("a", "int", "int");
+		final org.scijava.code.api.Completion floats = method("a", "float",
+			"float");
+		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
+			new org.scijava.code.api.CodeCompleter() {
+
+				@Override
+				public CompletionResult complete(
+					final org.scijava.code.api.CompletionRequest request)
+				{
+					return new CompletionResult(Arrays.asList(ints, floats), 0);
+				}
+
+				@Override
+				public org.scijava.code.api.SignatureHelp signatureHelp(
+					final org.scijava.code.api.CompletionRequest request)
+				{
+					// The caret is in a call nested in a's arguments: b's signatures.
+					return new org.scijava.code.api.SignatureHelp(Arrays.asList(
+						signature(method("b", "double"), Fit.MATCH)), 0, 2);
+				}
+			}, null);
+		final org.fife.ui.autocomplete.ParameterizedCompletion intOverload =
+			(org.fife.ui.autocomplete.ParameterizedCompletion) provider
+				.getCompletionsImpl(area).get(0);
+		area.setText("a(b(|), p1)");
+		area.setCaretPosition(4);
+		// Not b's: a's other overloads, unranked.
+		assertEquals("<hr>float p0, float p1", intOverload.getParam(0)
+			.getDescription());
+	}
+
+	@Test
+	public void testLazyDescriptions() {
+		final RSyntaxTextArea area = new RSyntaxTextArea();
+		area.setText("np.ze");
 		area.setCaretPosition(5);
-		assertEquals("<hr>int p0, int p1<hr>long p0, long p1" + //
-			"<hr>" + gray + "<s>String p0</s></font>", //
-			floatOverload.getParam(1).getDescription());
+		final java.util.concurrent.atomic.AtomicInteger asked =
+			new java.util.concurrent.atomic.AtomicInteger();
+		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
+			request -> new CompletionResult(Arrays.asList( //
+				org.scijava.code.api.Completion.builder("zeros").kind(
+					org.scijava.code.api.Completion.Kind.METHOD).parameters(Arrays
+						.asList(new org.scijava.code.api.Completion.Parameter("shape",
+							"int"))).lazyDescription(() -> {
+								asked.incrementAndGet();
+								return "Return a new array of zeros.";
+							}).build(), //
+				org.scijava.code.api.Completion.builder("zeta").lazyDescription(
+					() -> {
+						asked.incrementAndGet();
+						return "The zeta function.";
+					}).build()), 3), null);
+		final List<Completion> completions = provider.getCompletionsImpl(area);
+		// Nothing is described until RSTA shows a completion's description...
+		assertEquals(0, asked.get());
+		// ...and then it is shown, for functions as for everything else.
+		org.junit.Assert.assertTrue(completions.get(0).getSummary().contains(
+			"Return a new array of zeros."));
+		assertEquals("The zeta function.", completions.get(1).getSummary());
+		assertEquals(2, asked.get());
+	}
 
-		// Accepted a(int, int) and typed an int: the float overload would need a
-		// conversion, so it comes after the long one, greyed.
-		assertEquals("<hr>long p0, long p1" + //
-			"<hr>" + gray + "float p0, float p1</font>" + //
-			"<hr>" + gray + "<s>String p0</s></font>", //
-			intOverload.getParam(1).getDescription());
+	@Test
+	public void testResultUpdates() throws Exception {
+		final RSyntaxTextArea area = new RSyntaxTextArea();
+		area.setText("np.z");
+		area.setCaretPosition(4);
+		final java.util.concurrent.CompletableFuture<CompletionResult> later =
+			new java.util.concurrent.CompletableFuture<>();
+		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
+			request -> CompletionResult.EMPTY.withUpdate(later), null);
+		final Boolean[] notified = { null };
+		provider.setUpdateListener(wasEmpty -> notified[0] = wasEmpty);
 
-		// Nothing typed yet: the overloads keep their order, unstyled.
-		area.setText("a(p0, p1)");
+		// At first, nothing; then the better result arrives.
+		assertEquals(0, provider.getCompletionsImpl(area).size());
+		later.complete(new CompletionResult(Arrays.asList(
+			org.scijava.code.api.Completion.of("zeros")), 3));
+		javax.swing.SwingUtilities.invokeAndWait(() -> {});
+		assertEquals(Boolean.TRUE, notified[0]);
+		final List<Completion> completions = provider.getCompletionsImpl(area);
+		assertEquals(1, completions.size());
+		assertEquals("zeros", completions.get(0).getReplacementText());
+
+		// An update for a request the user has typed past is ignored.
+		final java.util.concurrent.CompletableFuture<CompletionResult> stale =
+			new java.util.concurrent.CompletableFuture<>();
+		final SciJavaCompletionProvider provider2 = new SciJavaCompletionProvider(
+			request -> CompletionResult.EMPTY.withUpdate(stale), null);
+		notified[0] = null;
+		provider2.setUpdateListener(wasEmpty -> notified[0] = wasEmpty);
+		provider2.getCompletionsImpl(area);
+		area.setText("np.ze");
+		area.setCaretPosition(5);
+		stale.complete(new CompletionResult(Arrays.asList(
+			org.scijava.code.api.Completion.of("zeros")), 3));
+		javax.swing.SwingUtilities.invokeAndWait(() -> {});
+		org.junit.Assert.assertNull(notified[0]);
+	}
+
+	@Test
+	public void testPrepareOnInstall() {
+		final RSyntaxTextArea area = new RSyntaxTextArea();
+		area.setText("import numpy\n");
+		final org.scijava.code.api.CompletionRequest[] prepared = { null };
+		final java.io.File file = new java.io.File("scripts", "blur.py");
+		final CodeCompleterLanguageSupport support =
+			new CodeCompleterLanguageSupport(new org.scijava.code.api.CodeCompleter()
+			{
+
+				@Override
+				public CompletionResult complete(
+					final org.scijava.code.api.CompletionRequest request)
+				{
+					return CompletionResult.EMPTY;
+				}
+
+				@Override
+				public void prepare(
+					final org.scijava.code.api.CompletionRequest request)
+				{
+					prepared[0] = request;
+				}
+			}, null, null, () -> file);
+		support.install(area);
+		assertEquals("import numpy\n", prepared[0].text());
+		assertEquals(file.getPath(), prepared[0].path());
+		support.uninstall(area);
+	}
+
+	@Test
+	public void testDimColorFollowsLookAndFeel() {
+		final Object old = javax.swing.UIManager.get("Label.disabledForeground");
+		try {
+			javax.swing.UIManager.put("Label.disabledForeground",
+				new java.awt.Color(0x12, 0x34, 0xab));
+			assertEquals("#1234ab", SciJavaCompletionProvider.dimColor());
+		}
+		finally {
+			javax.swing.UIManager.put("Label.disabledForeground", old);
+		}
+	}
+
+	@Test
+	public void testRequestCarriesScriptPath() {
+		final RSyntaxTextArea area = new RSyntaxTextArea();
+		area.setText("x");
+		area.setCaretPosition(1);
+		final String[] path = { "unset" };
+		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
+			request -> {
+				path[0] = request.path();
+				return CompletionResult.EMPTY;
+			}, null);
+
+		// Without a file supplier (e.g. in an interpreter): no path.
+		provider.getCompletionsImpl(area);
+		org.junit.Assert.assertNull(path[0]);
+
+		// With one: the script's path, even if it changes (e.g. Save As).
+		final java.io.File[] file = { new java.io.File("scripts", "a.py") };
+		provider.setFile(() -> file[0]);
+		area.setText("xy");
 		area.setCaretPosition(2);
-		assertEquals("<hr>String p0<hr>float p0, float p1<hr>long p0, long p1", //
-			intOverload.getParam(0).getDescription());
+		provider.getCompletionsImpl(area);
+		assertEquals(file[0].getPath(), path[0]);
+	}
+
+	private static org.scijava.code.api.SignatureHelp.Signature signature(
+		final org.scijava.code.api.Completion callable, final Fit fit)
+	{
+		return new org.scijava.code.api.SignatureHelp.Signature(callable, fit);
 	}
 
 	private static org.scijava.code.api.Completion method(final String name,
