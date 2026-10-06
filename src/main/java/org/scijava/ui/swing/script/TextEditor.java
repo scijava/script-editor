@@ -3152,6 +3152,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	private void removeTab(final int index) {
 		final int menuItemIndex = index + tabsMenuTabsStart;
 		try {
+			// NB: Let the completer release what it keeps for the script.
+			getEditorPane(index).releaseLanguageSupport();
 			tabbed.remove(index);
 			tabsMenuItems.remove(tabsMenu.getItem(menuItemIndex));
 			tabsMenu.remove(menuItemIndex);

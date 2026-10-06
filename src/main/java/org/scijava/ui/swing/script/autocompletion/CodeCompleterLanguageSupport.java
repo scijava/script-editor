@@ -119,5 +119,15 @@ public class CodeCompleterLanguageSupport extends AbstractLanguageSupport {
 	@Override
 	public void uninstall(final RSyntaxTextArea textArea) {
 		uninstallImpl(textArea);
+		// Let the completer release what it keeps for this script.
+		try {
+			final File f = file == null ? null : file.get();
+			final String text = textArea.getText();
+			completer.closed(new CompletionRequest(text, text.length(), language,
+				null, null, f == null ? null : f.getPath()));
+		}
+		catch (final Exception | LinkageError exc) {
+			if (log != null) log.debug("Completer release failed", exc);
+		}
 	}
 }

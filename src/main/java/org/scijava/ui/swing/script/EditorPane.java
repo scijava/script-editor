@@ -733,6 +733,17 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 * @see #setLanguageByFileName(String)
 	 * @see #setLanguage(ScriptLanguage)
 	 */
+	/**
+	 * Uninstalls the language support (e.g. code completion), as the editor
+	 * is closed.
+	 */
+	void releaseLanguageSupport() {
+		if (installedSupport != null) {
+			installedSupport.uninstall(this);
+			installedSupport = null;
+		}
+	}
+
 	protected void setLanguage(final ScriptLanguage language,
 		final boolean addHeader)
 	{
