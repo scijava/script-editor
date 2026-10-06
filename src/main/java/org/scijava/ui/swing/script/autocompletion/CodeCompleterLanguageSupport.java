@@ -30,6 +30,8 @@
 package org.scijava.ui.swing.script.autocompletion;
 
 import java.io.File;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.function.Supplier;
 
 import org.fife.rsta.ac.AbstractLanguageSupport;
@@ -59,6 +61,12 @@ public class CodeCompleterLanguageSupport extends AbstractLanguageSupport {
 	private final ScriptLanguage language;
 	private final Logger log;
 	private final Supplier<File> file;
+	private boolean hoverEnabled = true;
+	private boolean diagnosticsEnabled = true;
+
+	/** What was installed in each text area, to uninstall. */
+	private final Map<RSyntaxTextArea, Installed> installed =
+		new WeakHashMap<>();
 
 	public CodeCompleterLanguageSupport(final CodeCompleter completer,
 		final ScriptLanguage language)
@@ -89,6 +97,22 @@ public class CodeCompleterLanguageSupport extends AbstractLanguageSupport {
 		setShowDescWindow(true);
 	}
 
+	/**
+	 * Sets whether to show what the completer knows about the code under the
+	 * mouse (see {@link CodeCompleter#hover}). Applies to later installs.
+	 */
+	public void setHoverEnabled(final boolean enabled) {
+		hoverEnabled = enabled;
+	}
+
+	/**
+	 * Sets whether to show the problems the completer finds (see
+	 * {@link CodeCompleter#diagnose}). Applies to later installs.
+	 */
+	public void setDiagnosticsEnabled(final boolean enabled) {
+		diagnosticsEnabled = enabled;
+	}
+
 	@Override
 	public void install(final RSyntaxTextArea textArea) {
 		final SciJavaCompletionProvider provider =
@@ -102,6 +126,23 @@ public class CodeCompleterLanguageSupport extends AbstractLanguageSupport {
 		ac.setShowDescWindow(getShowDescWindow());
 		ac.install(textArea);
 		installImpl(textArea, ac);
+
+		// Documentation on hover, problems as squiggles, signatures as typed.
+		final Installed extras = new Installed();
+		if (hoverEnabled) {
+			textArea.setToolTipSupplier(new HoverToolTipSupplier(completer,
+				language, file, log));
+		}
+		if (diagnosticsEnabled) {
+			extras.parser = new DiagnosticsParser(textArea, completer, language,
+				file, log);
+			textArea.addParser(extras.parser);
+		}
+		if (isParameterAssistanceEnabled()) {
+			extras.popup = new SignaturePopup(textArea, provider::signatureHelp);
+			extras.popup.install();
+		}
+		installed.put(textArea, extras);
 
 		// Let the completer get ready for this script, e.g. warm up caches.
 		try {
@@ -119,6 +160,14 @@ public class CodeCompleterLanguageSupport extends AbstractLanguageSupport {
 	@Override
 	public void uninstall(final RSyntaxTextArea textArea) {
 		uninstallImpl(textArea);
+		final Installed extras = installed.remove(textArea);
+		if (extras != null) {
+			if (textArea.getToolTipSupplier() instanceof HoverToolTipSupplier) {
+				textArea.setToolTipSupplier(null);
+			}
+			if (extras.parser != null) textArea.removeParser(extras.parser);
+			if (extras.popup != null) extras.popup.uninstall();
+		}
 		// Let the completer release what it keeps for this script.
 		try {
 			final File f = file == null ? null : file.get();
@@ -129,5 +178,11 @@ public class CodeCompleterLanguageSupport extends AbstractLanguageSupport {
 		catch (final Exception | LinkageError exc) {
 			if (log != null) log.debug("Completer release failed", exc);
 		}
+	}
+
+	private static final class Installed {
+
+		private DiagnosticsParser parser;
+		private SignaturePopup popup;
 	}
 }

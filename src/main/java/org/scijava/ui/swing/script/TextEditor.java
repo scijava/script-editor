@@ -230,6 +230,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	private FindAndReplaceDialog findDialog;
 	private JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport,
 			autocompletion, fallbackAutocompletion, keylessAutocompletion,
+			hoverDocs, diagnostics,
 			markOccurences, paintTabs, whiteSpace, marginLine, lockPane, vimMode;
 	private ButtonGroup themeRadioGroup;
 	private JTextArea errorScreen = new ConsoleArea(ConsoleArea.Content.ERRORS);
@@ -647,6 +648,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		options.add(autocompletion);
 		options.add(keylessAutocompletion);
 		options.add(fallbackAutocompletion);
+		options.add(hoverDocs);
+		options.add(diagnostics);
 
 		GuiUtils.addMenubarSeparator(options, "Key Bindings:");
 		options.add(vimMode);
@@ -1133,6 +1136,20 @@ public class TextEditor extends JFrame implements ActionListener,
 		fallbackAutocompletion.setToolTipText("<HTML>If selected, Java completions will be used when scripting<br>"
 				+ "a language for which auto-completions are not available");
 		fallbackAutocompletion.addItemListener(e -> setFallbackAutoCompletion(fallbackAutocompletion.getState()));
+		hoverDocs = new JCheckBoxMenuItem("Show Documentation on Hover", true);
+		hoverDocs.setToolTipText("<HTML>If selected, resting the mouse on code shows what is known<br>"
+				+ "about it, e.g. a function's documentation. NB: Not all languages support this feature");
+		hoverDocs.addItemListener(e -> {
+			for (int i = 0; i < tabbed.getTabCount(); i++)
+				getEditorPane(i).setHoverEnabled(hoverDocs.getState());
+		});
+		diagnostics = new JCheckBoxMenuItem("Show Problems While Editing", true);
+		diagnostics.setToolTipText("<HTML>If selected, problems in the code (e.g. syntax errors) are<br>"
+				+ "underlined as you edit. NB: Not all languages support this feature");
+		diagnostics.addItemListener(e -> {
+			for (int i = 0; i < tabbed.getTabCount(); i++)
+				getEditorPane(i).setDiagnosticsEnabled(diagnostics.getState());
+		});
 		vimMode = new JCheckBoxMenuItem("Vim Mode", false);
 		vimMode.setToolTipText("<HTML>Edit with vim-style modal key bindings.<br>"
 				+ "Press Esc for normal mode; :w saves, :q closes the tab");
@@ -2544,6 +2561,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		autocompletion.setState(pane.isAutoCompletionEnabled());
 		fallbackAutocompletion.setState(pane.isAutoCompletionFallbackEnabled());
 		keylessAutocompletion.setState(pane.isAutoCompletionKeyless());
+		hoverDocs.setState(pane.isHoverEnabled());
+		diagnostics.setState(pane.isDiagnosticsEnabled());
 		sourceTreePanel.rebuildSourceTree(pane);
 	}
 

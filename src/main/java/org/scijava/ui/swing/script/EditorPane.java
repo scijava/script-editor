@@ -119,6 +119,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private boolean undoInProgress;
 	private boolean redoInProgress;
 	private boolean autoCompletionEnabled;
+	private boolean hoverEnabled = true;
+	private boolean diagnosticsEnabled = true;
 	private boolean autoCompletionJavaFallback;
 	private boolean autoCompletionWithoutKey;
 	private String supportStatus;
@@ -815,9 +817,13 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		if (support == null &&
 			codeCompletionService.getCompleterPlugin(currentLanguage) != null)
 		{
-			support = new CodeCompleterLanguageSupport(
-				codeCompletionService.getCompleterPlugin(currentLanguage),
-				currentLanguage, log, this::getFile);
+			final CodeCompleterLanguageSupport completerSupport =
+				new CodeCompleterLanguageSupport(codeCompletionService
+					.getCompleterPlugin(currentLanguage), currentLanguage, log,
+					this::getFile);
+			completerSupport.setHoverEnabled(hoverEnabled);
+			completerSupport.setDiagnosticsEnabled(diagnosticsEnabled);
+			support = completerSupport;
 		}
 
 		// Tier 3: RSTA's own built-in support for the syntax style.
@@ -887,6 +893,32 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	public boolean isAutoCompletionEnabled() {
 		return autoCompletionEnabled;
+	}
+
+	/**
+	 * Toggles whether what is known about the code under the mouse (e.g. a
+	 * function's documentation) is shown, for languages whose completer knows.
+	 */
+	public void setHoverEnabled(final boolean enabled) {
+		hoverEnabled = enabled;
+		if (currentLanguage != null) setLanguage(currentLanguage);
+	}
+
+	public boolean isHoverEnabled() {
+		return hoverEnabled;
+	}
+
+	/**
+	 * Toggles whether problems in the code (e.g. syntax errors) are shown as
+	 * the code is edited, for languages whose completer finds them.
+	 */
+	public void setDiagnosticsEnabled(final boolean enabled) {
+		diagnosticsEnabled = enabled;
+		if (currentLanguage != null) setLanguage(currentLanguage);
+	}
+
+	public boolean isDiagnosticsEnabled() {
+		return diagnosticsEnabled;
 	}
 
 	public boolean isAutoCompletionKeyless() {
@@ -1096,6 +1128,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public static final String AUTOCOMPLETE_PREFS = "script.editor.AC";
 	public static final String AUTOCOMPLETE_KEYLESS_PREFS = "script.editor.ACNoKey";
 	public static final String AUTOCOMPLETE_FALLBACK_PREFS = "script.editor.ACFallback";
+	public static final String HOVER_PREFS = "script.editor.Hover";
+	public static final String DIAGNOSTICS_PREFS = "script.editor.Diagnostics";
 	public static final String MARK_OCCURRENCES_PREFS = "script.editor.Occurrences";
 	public static final String VIM_PREFS = "script.editor.Vim";
 	public static final String FOLDERS_PREFS = "script.editor.folders";
@@ -1127,6 +1161,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setKeylessAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_KEYLESS_PREFS, true)); // true for backwards compatibility with ImageJ macro
 			setFallbackAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, false));
 			setMarkOccurrences(prefService.getBoolean(getClass(), MARK_OCCURRENCES_PREFS, false));
+			setHoverEnabled(prefService.getBoolean(getClass(), HOVER_PREFS, true));
+			setDiagnosticsEnabled(prefService.getBoolean(getClass(), DIAGNOSTICS_PREFS, true));
 			setMarginLineEnabled(prefService.getBoolean(getClass(), MARGIN_VISIBLE_PREFS, false));
 			setVimEnabled(prefService.getBoolean(getClass(), VIM_PREFS, false));
 			applyTheme(themeName());
@@ -1183,6 +1219,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		prefService.put(getClass(), AUTOCOMPLETE_PREFS, isAutoCompletionEnabled());
 		prefService.put(getClass(), AUTOCOMPLETE_KEYLESS_PREFS, isAutoCompletionKeyless());
 		prefService.put(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, isAutoCompletionFallbackEnabled());
+		prefService.put(getClass(), HOVER_PREFS, isHoverEnabled());
+		prefService.put(getClass(), DIAGNOSTICS_PREFS, isDiagnosticsEnabled());
 		prefService.put(getClass(), MARGIN_VISIBLE_PREFS, isMarginLineEnabled());
 		prefService.put(getClass(), MARK_OCCURRENCES_PREFS, getMarkOccurrences());
 		prefService.put(getClass(), VIM_PREFS, isVimEnabled());
