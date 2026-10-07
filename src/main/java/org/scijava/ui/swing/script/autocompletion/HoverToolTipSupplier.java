@@ -30,26 +30,26 @@
 package org.scijava.ui.swing.script.autocompletion;
 
 import java.awt.event.MouseEvent;
-import java.io.File;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
+import org.eclipse.lsp4j.Hover;
+import org.eclipse.lsp4j.HoverParams;
+import org.eclipse.lsp4j.MarkupContent;
+import org.eclipse.lsp4j.MarkedString;
+import org.eclipse.lsp4j.TextDocumentIdentifier;
+import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.ToolTipSupplier;
-import org.scijava.code.api.CodeCompleter;
-import org.scijava.code.api.CompletionRequest;
-import org.scijava.code.api.Hover;
 import org.scijava.log.Logger;
-import org.scijava.script.ScriptLanguage;
 
 /**
- * Shows what the completer knows about the code under the mouse (see
- * {@link CodeCompleter#hover}), e.g. a function's documentation, as a tooltip.
+ * Shows what the language server knows about the code under the mouse
+ * ({@code textDocument/hover}), e.g. a function's documentation, as a tooltip.
  * <p>
  * RSyntaxTextArea asks for tooltips as the mouse moves, on the event dispatch
- * thread: so the completer's answer for a word is asked once, and awaited only
- * briefly; until it arrives, there is no tooltip.
+ * thread: so the server is asked once per word, and awaited only briefly;
+ * until it answers, there is no tooltip.
  * </p>
  *
  * @author Gabriel Selzer
@@ -62,9 +62,7 @@ public class HoverToolTipSupplier implements ToolTipSupplier {
 	/** How much of an answer to show, at most, in lines. */
 	private static final int MAX_LINES = 25;
 
-	private final CodeCompleter completer;
-	private final ScriptLanguage language;
-	private final Supplier<File> file;
+	private final DocumentSync sync;
 	private final Logger log;
 
 	/** The last question (text and word), and its answer. */
@@ -72,13 +70,8 @@ public class HoverToolTipSupplier implements ToolTipSupplier {
 	private int askedWord = -1;
 	private CompletableFuture<Hover> answer;
 
-	public HoverToolTipSupplier(final CodeCompleter completer,
-		final ScriptLanguage language, final Supplier<File> file,
-		final Logger log)
-	{
-		this.completer = completer;
-		this.language = language;
-		this.file = file;
+	public HoverToolTipSupplier(final DocumentSync sync, final Logger log) {
+		this.sync = sync;
 		this.log = log;
 	}
 
@@ -101,9 +94,8 @@ public class HoverToolTipSupplier implements ToolTipSupplier {
 			answer = ask(text, offset);
 		}
 		try {
-			final Hover h = answer.get(BUDGET, TimeUnit.MILLISECONDS);
-			return h == null || h.isEmpty() ? null : "<html>" + truncate(h
-				.text()) + "</html>";
+			final String html = html(answer.get(BUDGET, TimeUnit.MILLISECONDS));
+			return html == null ? null : "<html>" + truncate(html) + "</html>";
 		}
 		catch (final Exception exc) {
 			return null; // NB: Not yet; or failed.
@@ -112,20 +104,32 @@ public class HoverToolTipSupplier implements ToolTipSupplier {
 
 	private CompletableFuture<Hover> ask(final String text, final int offset) {
 		try {
-			final File f = file == null ? null : file.get();
-			final Hover h = completer.hover(new CompletionRequest(text, offset,
-				language, null, null, f == null ? null : f.getPath()));
-			if (h == null) return CompletableFuture.completedFuture(Hover.NONE);
-			if (!h.isEmpty() || h.update() == null) {
-				return CompletableFuture.completedFuture(h);
-			}
-			return h.update();
+			final String uri = sync.sync(text);
+			return sync.server().getTextDocumentService().hover(new HoverParams(
+				new TextDocumentIdentifier(uri), DocumentSync.position(text, offset)));
 		}
 		catch (final Exception | LinkageError exc) {
-			// NB: Never let a misbehaving completer break the editor.
+			// NB: Never let a misbehaving server break the editor.
 			if (log != null) log.debug("Hover failed", exc);
-			return CompletableFuture.completedFuture(Hover.NONE);
+			return CompletableFuture.completedFuture(null);
 		}
+	}
+
+	/** A hover's contents, as HTML; or null if none. */
+	static String html(final Hover hover) {
+		if (hover == null || hover.getContents() == null) return null;
+		final Either<java.util.List<Either<String, MarkedString>>, MarkupContent> contents =
+			hover.getContents();
+		if (contents.isRight()) {
+			return SciJavaCompletionProvider.html(Either.forRight(contents
+				.getRight()));
+		}
+		final StringBuilder sb = new StringBuilder();
+		for (final Either<String, MarkedString> part : contents.getLeft()) {
+			if (sb.length() > 0) sb.append("\n\n");
+			sb.append(part.isLeft() ? part.getLeft() : part.getRight().getValue());
+		}
+		return SciJavaCompletionProvider.html(Either.forLeft(sb.toString()));
 	}
 
 	/** Keeps the first lines of long answers (e.g. docstrings). */

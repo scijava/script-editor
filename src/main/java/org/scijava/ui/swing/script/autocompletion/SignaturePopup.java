@@ -53,12 +53,14 @@ import javax.swing.event.CaretListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.JTextComponent;
 
-import org.scijava.code.api.Completion;
-import org.scijava.code.api.SignatureHelp;
+import org.eclipse.lsp4j.SignatureHelp;
+import org.eclipse.lsp4j.SignatureInformation;
+import org.scijava.code.api.Signatures;
+import org.scijava.code.lsp.RatedSignatureInformation;
 
 /**
- * Shows the signatures of the call being typed (see
- * {@link org.scijava.code.api.CodeCompleter#signatureHelp}), e.g. all
+ * Shows the signatures of the call being typed (the language server's
+ * signature help), e.g. all
  * overloads of {@code max} once {@code Math.max(} is typed: best fits first,
  * the parameter being typed in bold. It follows the caret through the call,
  * and closes once the caret leaves it, or on Escape.
@@ -155,12 +157,15 @@ public class SignaturePopup {
 	void refresh(final boolean opening) {
 		if (!textArea.isShowing()) return;
 		final SignatureHelp h = help.apply(textArea);
-		if (h == null || h.isEmpty()) {
+		if (h == null || h.getSignatures() == null || h.getSignatures()
+			.isEmpty())
+		{
 			hide();
 			if (opening) retry.restart();
 			return;
 		}
-		show(html(h), h.callStart());
+		show(html(h), Signatures.callStart(textArea.getText(), textArea
+			.getCaretPosition()));
 	}
 
 	/** Renders signatures as HTML, one per line, best fits first. */
@@ -169,11 +174,14 @@ public class SignaturePopup {
 			.dimColor() + "\">";
 		final StringBuilder sb = new StringBuilder("<html>");
 		boolean first = true;
-		for (final SignatureHelp.Signature s : help.signatures()) {
+		for (final SignatureInformation s : help.getSignatures()) {
 			if (!first) sb.append("<br>");
 			first = false;
-			final String sig = signature(s.callable(), help.activeParameter());
-			switch (s.fit()) {
+			final Integer active = s.getActiveParameter() != null ? s
+				.getActiveParameter() : help.getActiveParameter();
+			final String sig = signature(SignatureLabel.of(s), active == null ? -1
+				: active);
+			switch (RatedSignatureInformation.fitOf(s)) {
 				case CONVERSION:
 					sb.append(dim).append(sig).append("</font>");
 					break;
@@ -188,28 +196,17 @@ public class SignaturePopup {
 	}
 
 	/** Renders one signature, e.g. {@code max(double a, <b>double b</b>)}. */
-	private static String signature(final Completion c, final int active) {
-		String name = c.insertionText();
-		if (name.endsWith("()")) name = name.substring(0, name.length() - 2);
-		final StringBuilder sb = new StringBuilder(escape(name)).append('(');
-		final List<Completion.Parameter> params = c.parameters();
+	private static String signature(final SignatureLabel s, final int active) {
+		final StringBuilder sb = new StringBuilder(escape(s.name)).append('(');
+		final List<String> params = s.parameters;
 		for (int i = 0; i < params.size(); i++) {
 			if (i > 0) sb.append(", ");
-			final Completion.Parameter p = params.get(i);
-			final String type = p.type();
-			final StringBuilder param = new StringBuilder();
-			if (type != null) param.append(type.substring(type.lastIndexOf('.') +
-				1));
-			if (p.name() != null) {
-				if (type != null) param.append(' ');
-				param.append(p.name());
-			}
-			final String text = escape(param.toString());
+			final String text = escape(SignatureLabel.simple(params.get(i)));
 			sb.append(i == active ? "<b>" + text + "</b>" : text);
 		}
 		sb.append(')');
-		if (c.returnType() != null) sb.append(" → ").append(escape(c
-			.returnType()));
+		if (s.returnType != null) sb.append(" \u2192 ").append(escape(
+			s.returnType));
 		return sb.toString();
 	}
 

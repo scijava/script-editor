@@ -95,7 +95,8 @@ import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptService;
 import org.scijava.ui.swing.script.vim.VimHandler;
 import org.scijava.code.api.CodeCompletionService;
-import org.scijava.ui.swing.script.autocompletion.CodeCompleterLanguageSupport;
+import org.scijava.code.lsp.LanguageServerService;
+import org.scijava.ui.swing.script.autocompletion.LanguageServerLanguageSupport;
 import org.scijava.util.FileUtils;
 
 /**
@@ -138,6 +139,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private LanguageSupportService languageSupportService;
 	@Parameter
 	private CodeCompletionService codeCompletionService;
+	@Parameter
+	private LanguageServerService languageServerService;
 	@Parameter
 	private ScriptService scriptService;
 	@Parameter
@@ -813,17 +816,14 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		// Tier 1: a heavy RSTA LanguageSupportPlugin (e.g. the Java parser).
 		support = languageSupportService.getLanguageSupport(currentLanguage);
 
-		// Tier 2: a toolkit-agnostic CodeCompleterPlugin for this language.
-		if (support == null &&
-			codeCompletionService.getCompleterPlugin(currentLanguage) != null)
-		{
-			final CodeCompleterLanguageSupport completerSupport =
-				new CodeCompleterLanguageSupport(codeCompletionService
-					.getCompleterPlugin(currentLanguage), currentLanguage, log,
-					this::getFile);
-			completerSupport.setHoverEnabled(hoverEnabled);
-			completerSupport.setDiagnosticsEnabled(diagnosticsEnabled);
-			support = completerSupport;
+		// Tier 2: language servers for this language.
+		if (support == null && languageServerService.supports(currentLanguage)) {
+			final LanguageServerLanguageSupport serverSupport =
+				new LanguageServerLanguageSupport(languageServerService.server(
+					currentLanguage), currentLanguage, log, this::getFile);
+			serverSupport.setHoverEnabled(hoverEnabled);
+			serverSupport.setDiagnosticsEnabled(diagnosticsEnabled);
+			support = serverSupport;
 		}
 
 		// Tier 3: RSTA's own built-in support for the syntax style.

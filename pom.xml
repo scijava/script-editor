@@ -168,6 +168,11 @@
 		</dependency>
 		<dependency>
 			<groupId>org.scijava</groupId>
+			<artifactId>scijava-code-lsp</artifactId>
+			<version>${scijava-code-api.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.scijava</groupId>
 			<artifactId>scijava-search</artifactId>
 		</dependency>
 		<dependency>

@@ -48,13 +48,13 @@ import org.fife.ui.rsyntaxtextarea.parser.ParseResult;
 import org.fife.ui.rsyntaxtextarea.parser.ParserNotice;
 import org.junit.Test;
 import org.scijava.code.api.CodeCompleter;
+import org.scijava.code.lsp.compat.CodeCompleterLanguageServer;
 import org.scijava.code.api.Completion;
 import org.scijava.code.api.CompletionRequest;
 import org.scijava.code.api.CompletionResult;
 import org.scijava.code.api.Diagnostic;
 import org.scijava.code.api.Hover;
 import org.scijava.code.api.SignatureHelp;
-import org.scijava.code.api.SignatureHelp.Fit;
 
 /**
  * Tests {@link HoverToolTipSupplier}, {@link DiagnosticsParser} and
@@ -78,8 +78,9 @@ public class CodeIntelligenceUITest {
 					at - 2) ? new Hover("<pre>Serialize.</pre>", 0, 5) : Hover.NONE;
 			}
 		};
-		final HoverToolTipSupplier supplier = new HoverToolTipSupplier(completer,
-			null, null, null);
+		final HoverToolTipSupplier supplier = new HoverToolTipSupplier(
+			new DocumentSync(new CodeCompleterLanguageServer(completer, null), null),
+			null);
 		final String text = "x.dumps(1)";
 		assertEquals("<html><pre>Serialize.</pre></html>", supplier.toolTip(text,
 			3));
@@ -108,27 +109,19 @@ public class CodeIntelligenceUITest {
 
 	@Test
 	public void testDiagnostics() throws Exception {
-		final CompletableFuture<List<Diagnostic>> found = new CompletableFuture<>();
-		final CodeCompleter completer = new FakeCompleter() {
-
-			@Override
-			public CompletableFuture<List<Diagnostic>> diagnose(
-				final CompletionRequest request)
-			{
-				return found;
-			}
-		};
 		final RSyntaxTextArea[] area = { null };
 		SwingUtilities.invokeAndWait(() -> area[0] = new RSyntaxTextArea(
 			"x = 1\ny = (1 +\n"));
-		final DiagnosticsParser parser = new DiagnosticsParser(area[0], completer,
-			null, null, null);
+		final DiagnosticsParser parser = new DiagnosticsParser(area[0]);
 		final RSyntaxDocument doc = (RSyntaxDocument) area[0].getDocument();
-		// Asked; no answer yet: no problems.
+		// None published yet: no problems.
 		assertTrue(parser.parse(doc, null).getNotices().isEmpty());
-		// The answer: a problem on the second line.
-		found.complete(Collections.singletonList(new Diagnostic(10, 12,
-			Diagnostic.Severity.ERROR, "Unclosed (", "fake")));
+		// Published: a problem on the second line.
+		final org.eclipse.lsp4j.Diagnostic d = new org.eclipse.lsp4j.Diagnostic(
+			new org.eclipse.lsp4j.Range(new org.eclipse.lsp4j.Position(1, 4),
+				new org.eclipse.lsp4j.Position(1, 6)), "Unclosed (");
+		d.setSeverity(org.eclipse.lsp4j.DiagnosticSeverity.Error);
+		parser.accept(Collections.singletonList(d));
 		SwingUtilities.invokeAndWait(() -> {});
 		final ParseResult result = parser.parse(doc, null);
 		assertEquals(1, result.getNotices().size());
@@ -149,13 +142,28 @@ public class CodeIntelligenceUITest {
 		final Completion maxInt = Completion.builder("max").kind(
 			Completion.Kind.METHOD).parameters(Arrays.asList(new Completion.Parameter(
 				"a", "int"), new Completion.Parameter("b", "int"))).build();
-		final String html = SignaturePopup.html(new SignatureHelp(Arrays.asList(
-			new SignatureHelp.Signature(max, Fit.MATCH), new SignatureHelp.Signature(
-				maxInt, Fit.MISMATCH)), 1, 8));
+		final String html = SignaturePopup.html(new org.eclipse.lsp4j.SignatureHelp(
+			Arrays.asList(rated("max(double a, double b) -> double",
+				org.scijava.code.lsp.RatedSignatureInformation.Fit.MATCH, "double a",
+				"double b"), rated("max(int a, int b)",
+					org.scijava.code.lsp.RatedSignatureInformation.Fit.MISMATCH, "int a",
+					"int b")), 0, 1));
 		// The parameter being typed in bold; mismatches struck out.
 		assertTrue(html, html.startsWith(
 			"<html>max(double a, <b>double b</b>) → double<br>"));
 		assertTrue(html, html.contains("<s>max(int a, <b>int b</b>)</s>"));
+	}
+
+	private static org.eclipse.lsp4j.SignatureInformation rated(
+		final String label, final org.scijava.code.lsp.RatedSignatureInformation.Fit fit,
+		final String... params)
+	{
+		final List<org.eclipse.lsp4j.ParameterInformation> ps =
+			new java.util.ArrayList<>();
+		for (final String p : params) {
+			ps.add(new org.eclipse.lsp4j.ParameterInformation(p));
+		}
+		return new org.scijava.code.lsp.RatedSignatureInformation(label, ps, fit);
 	}
 
 	/** A completer completing nothing. */

@@ -33,101 +33,137 @@ import java.awt.Color;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import javax.script.ScriptEngine;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.JTextComponent;
 
+import org.eclipse.lsp4j.CompletionItem;
+import org.eclipse.lsp4j.CompletionItemKind;
+import org.eclipse.lsp4j.CompletionList;
+import org.eclipse.lsp4j.CompletionParams;
+import org.eclipse.lsp4j.InsertTextFormat;
+import org.eclipse.lsp4j.MarkupContent;
+import org.eclipse.lsp4j.MarkupKind;
+import org.eclipse.lsp4j.Range;
+import org.eclipse.lsp4j.SignatureHelp;
+import org.eclipse.lsp4j.SignatureHelpParams;
+import org.eclipse.lsp4j.SignatureInformation;
+import org.eclipse.lsp4j.TextDocumentIdentifier;
+import org.eclipse.lsp4j.TextEdit;
+import org.eclipse.lsp4j.jsonrpc.messages.Either;
+import org.eclipse.lsp4j.services.LanguageServer;
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionCellRenderer;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
-import org.fife.ui.autocomplete.ParameterChoicesProvider;
 import org.fife.ui.autocomplete.ParameterizedCompletion;
+import org.scijava.code.api.CodeCompleter;
+import org.scijava.code.lsp.RatedSignatureInformation;
+import org.scijava.code.lsp.RatedSignatureInformation.Fit;
+import org.scijava.code.lsp.UpdatingCompletionList;
+import org.scijava.code.lsp.compat.CodeCompleterLanguageServer;
 import org.scijava.log.Logger;
 import org.scijava.script.ScriptLanguage;
-import org.scijava.code.api.CodeCompleter;
-import org.scijava.code.api.CompletionRequest;
-import org.scijava.code.api.CompletionResult;
-import org.scijava.code.api.ParameterChoices;
-import org.scijava.code.api.SignatureHelp;
-import org.scijava.code.api.SignatureHelp.Fit;
 
 /**
- * The single bridge between SciJava's toolkit-agnostic code completion SPI
- * ({@link CodeCompleter}, {@link org.scijava.code.api.Completion}) and
- * RSyntaxTextArea's Swing-based completion machinery.
+ * The bridge between a language server (usually one standing for all of a
+ * script language's, see {@code org.scijava.code.lsp.LanguageServerService})
+ * and RSyntaxTextArea's completion machinery.
  * <p>
- * This provider delegates all language intelligence to a {@link CodeCompleter},
- * then translates the resulting neutral {@link CompletionResult} into RSTA
- * {@link Completion}s. Language adapters therefore need no dependency on Swing or
- * RSTA: they implement {@link CodeCompleter} (via a
- * {@link org.scijava.code.api.CodeCompleterPlugin}) and the script editor
- * renders the suggestions here.
+ * Completions with a snippet of parameters (e.g. {@code max(${1:a},
+ * ${2:b})}) become function completions, for parameter assistance; their
+ * parameters' types come from the label details (e.g. {@code (double a,
+ * double b)}). The parameter tooltip lists the other overloads, as signature
+ * help rates them for the arguments typed (see
+ * {@link RatedSignatureInformation}). Documentation is resolved when shown.
+ * Slower completions (see {@link UpdatingCompletionList}) replace the first
+ * ones as they arrive.
  * </p>
  *
  * @author Curtis Rueden
+ * @author Gabriel Selzer
  */
 public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 
-	private final CodeCompleter completer;
+	/** How long to wait for completions, in milliseconds. */
+	private static final long REQUEST_TIMEOUT = 2000;
+
+	/** How long the parameter tooltip waits for signature help, in ms. */
+	private static final long HELP_BUDGET = 150;
+
+	/** How long to wait for documentation, in milliseconds. */
+	private static final long DESCRIBE_TIMEOUT = 1000;
+
+	/** How many choices to offer for a parameter, at most. */
+	private static final int CHOICES = 10;
+
+	/** A snippet placeholder: ${1:name}, ${1} or $1. */
+	private static final Pattern PLACEHOLDER = Pattern.compile(
+		"\\$\\{(\\d+)(?::((?:[^}\\\\]|\\\\.)*))?\\}|\\$(\\d+)");
+
+	private final DocumentSync sync;
 	private final ScriptLanguage language;
 
-	/** Optional logger, for reporting completer failures. */
+	/** Optional logger, for reporting server failures. */
 	private Logger log;
 
-	/** Optional live engine, set when completing in an interpreter. */
-	private ScriptEngine engine;
-
-	/** Optional supplier of the edited script's file. */
-	private Supplier<File> file;
-
-	// Cache so getAlreadyEnteredText() and getCompletionsImpl() — which RSTA
-	// calls in quick succession for the same caret — stay consistent and avoid
-	// recomputation.
+	// Cache so getAlreadyEnteredText() and getCompletionsImpl(), which RSTA
+	// calls in quick succession for the same caret, stay consistent.
 	private int cachedCaret = -1;
 	private String cachedText;
-	private CompletionResult cachedResult;
-
-	/** How long the parameter tooltip waits for better signature help, in ms. */
-	private static final long HELP_BUDGET = 150;
+	private CompletionList cachedList;
+	private int cachedStart;
 
 	// The signature help for the current text and caret.
 	private String helpText;
 	private int helpCaret = -1;
 	private volatile SignatureHelp help;
 
-	/** Notified when a better result arrives for the current request. */
+	/** Notified when better completions arrive for the current request. */
 	private volatile Consumer<Boolean> updateListener;
 
-	/** The parameter-choices provider installed for the cached result, if any. */
-	private ParameterChoicesProvider choicesProvider;
-
-	public SciJavaCompletionProvider(final CodeCompleter completer,
+	public SciJavaCompletionProvider(final LanguageServer server,
 		final ScriptLanguage language)
 	{
-		this.completer = completer;
+		this.sync = new DocumentSync(server, language);
 		this.language = language;
 		setParameterizedCompletionParams('(', ", ", ')');
 		// Show each callable's parameters and return type in the popup list.
 		setListCellRenderer(new CompletionCellRenderer());
 		// Auto-activate after a letter, digit, '.' or '_'.
 		setAutoActivationRules(true, ".");
+		setParameterChoicesProvider(this::parameterChoices);
 	}
 
-	/** Sets a logger with which to report completer failures. */
+	/**
+	 * Uses a single code-api completer. TEMP: Until code-api is removed.
+	 */
+	public SciJavaCompletionProvider(final CodeCompleter completer,
+		final ScriptLanguage language)
+	{
+		this(new CodeCompleterLanguageServer(completer, language), language);
+	}
+
+	/** The synchronization of the edited script with the server. */
+	public DocumentSync sync() {
+		return sync;
+	}
+
+	/** Sets a logger with which to report server failures. */
 	public void setLogger(final Logger log) {
 		this.log = log;
 	}
@@ -137,12 +173,7 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 	 * null, for an unsaved script).
 	 */
 	public void setFile(final Supplier<File> file) {
-		this.file = file;
-	}
-
-	/** Sets a live script engine to enable variable/binding-based completion. */
-	public void setEngine(final ScriptEngine engine) {
-		this.engine = engine;
+		sync.setFile(file);
 	}
 
 	@Override
@@ -152,9 +183,9 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 
 	@Override
 	public String getAlreadyEnteredText(final JTextComponent comp) {
-		final CompletionResult result = compute(comp);
+		compute(comp);
 		final int caret = comp.getCaretPosition();
-		final int start = Math.min(Math.max(result.replaceStart(), 0), caret);
+		final int start = Math.min(Math.max(cachedStart, 0), caret);
 		try {
 			return comp.getText(start, caret - start);
 		}
@@ -165,192 +196,122 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 
 	@Override
 	public List<Completion> getCompletionsImpl(final JTextComponent comp) {
-		final CompletionResult result = compute(comp);
-		final List<org.scijava.code.api.Completion> source =
-			result.completions();
-		// Group callables by name, so each can list its sibling overloads.
-		final Map<String, List<org.scijava.code.api.Completion>> overloads =
-			new HashMap<>();
-		for (final org.scijava.code.api.Completion c : source) {
-			if (!c.isCallable()) continue;
-			overloads.computeIfAbsent(stripParens(c.insertionText()),
-				k -> new ArrayList<>()).add(c);
-		}
-		final int n = source.size();
-		final List<Completion> out = new ArrayList<>(n);
-		for (int i = 0; i < n; i++) {
-			out.add(toRSTA(comp, source.get(i), n - i, overloads));
-		}
-		return out;
-	}
-
-	// -- Helper methods --
-
-	private CompletionResult compute(final JTextComponent comp) {
-		final int caret = comp.getCaretPosition();
-		final String text;
-		try {
-			text = comp.getText(0, comp.getDocument().getLength());
-		}
-		catch (final BadLocationException exc) {
-			return CompletionResult.EMPTY;
-		}
-		if (caret == cachedCaret && text.equals(cachedText) &&
-			cachedResult != null)
-		{
-			return cachedResult;
-		}
-		CompletionResult result;
-		try {
-			final File f = file == null ? null : file.get();
-			final CompletionRequest request = new CompletionRequest(text, caret,
-				language, engine, engine == null ? null : engine.getContext(), f ==
-					null ? null : f.getPath());
-			result = completer.complete(request);
-			if (result == null) result = CompletionResult.EMPTY;
-		}
-		catch (final Exception | LinkageError exc) {
-			// NB: Never let a misbehaving completer break the editor.
-			if (log != null) log.debug("Code completion failed", exc);
-			result = CompletionResult.EMPTY;
-		}
-		cachedCaret = caret;
-		cachedText = text;
-		adopt(result, comp);
-		return result;
+		compute(comp);
+		return convert(comp, cachedList, cachedText, cachedCaret, cachedStart);
 	}
 
 	/**
-	 * Sets a listener to notify when a better result has arrived for the
-	 * current request (see {@link CompletionResult#update()}), e.g. to refresh
-	 * the completion popup. Called on the event dispatch thread.
+	 * Sets a listener to notify when better completions have arrived for the
+	 * current request (see {@link UpdatingCompletionList}), e.g. to refresh the
+	 * completion popup. Called on the event dispatch thread.
 	 *
-	 * @param listener Accepts whether the previous result had no completions
-	 *          (so that no popup may be showing for it).
+	 * @param listener Accepts whether the previous completions were none (so
+	 *          that no popup may be showing for them).
 	 */
 	public void setUpdateListener(final Consumer<Boolean> listener) {
 		this.updateListener = listener;
 	}
 
-	/** Makes the given result current, and awaits its update, if any. */
-	private void adopt(final CompletionResult result, final JTextComponent comp) {
-		cachedResult = result;
-		// Wire up (or clear) parameter assistance for this result's callables.
-		final ParameterChoices choices = result.parameterChoices();
-		choicesProvider =
-			choices == null ? null : new NeutralChoicesProvider(choices);
-		setParameterChoicesProvider(choicesProvider);
-
-		final CompletableFuture<CompletionResult> update = result.update();
-		if (update == null) return;
-		final String text = cachedText;
-		final int caret = cachedCaret;
-		update.whenComplete((better, error) -> {
-			if (better == null) return;
-			SwingUtilities.invokeLater(() -> {
-				// NB: Only if nothing has changed since the request.
-				if (cachedResult != result || caret != comp.getCaretPosition() ||
-					!text.equals(comp.getText())) return;
-				final boolean wasEmpty = result.completions().isEmpty();
-				adopt(better, comp);
-				final Consumer<Boolean> listener = updateListener;
-				if (listener != null) listener.accept(wasEmpty);
-			});
-		});
-	}
-
 	/**
-	 * Returns the candidate values for the given parameter, per the completer's
-	 * {@link ParameterChoices} for the completion state at {@code comp}'s caret.
-	 * Mirrors what RSTA's parameter assistance shows; also handy for non-popup
-	 * front ends and tests.
+	 * Gets choices for a parameter being filled in: what the server completes
+	 * there, variables first (the server ranks those fitting best first).
 	 */
 	List<Completion> parameterChoices(final JTextComponent comp,
 		final ParameterizedCompletion.Parameter param)
 	{
-		compute(comp);
-		return choicesProvider == null ? Collections.emptyList()
-			: choicesProvider.getParameterChoices(comp, param);
-	}
-
-	/**
-	 * Translates a neutral completion into an RSTA completion. Callables become
-	 * {@link org.fife.ui.autocomplete.FunctionCompletion}s (so parameter
-	 * assistance and parameter choices engage); everything else becomes a
-	 * {@link BasicCompletion}. Either may carry additional edits (e.g.
-	 * auto-imports). The {@code orderRelevance} argument preserves the completer's
-	 * ordering when the completion does not specify its own relevance.
-	 */
-	private Completion toRSTA(final JTextComponent comp,
-		final org.scijava.code.api.Completion c, final int orderRelevance,
-		final Map<String, List<org.scijava.code.api.Completion>> overloads)
-	{
-		final Completion rsta = c.isCallable() //
-			? functionCompletion(comp, c, overloads.get(stripParens(c
-				.insertionText()))) //
-			: basicCompletion(c);
-		final double rel = c.relevance();
-		final int relevance = rel != 0 ? (int) Math.round(rel) : orderRelevance;
-		if (rsta instanceof BasicCompletion) {
-			((BasicCompletion) rsta).setRelevance(relevance);
+		final String text = comp.getText();
+		final CompletionList list = request(text, comp.getCaretPosition());
+		final List<Completion> out = new ArrayList<>();
+		for (final CompletionItem item : sorted(list)) {
+			final CompletionItemKind k = item.getKind();
+			if (k != null && k != CompletionItemKind.Variable &&
+				k != CompletionItemKind.Field && k != CompletionItemKind.Constant &&
+				k != CompletionItemKind.Value) continue;
+			final String name = plain(newText(item));
+			out.add(new BasicCompletion(this, name, item.getDetail()));
+			if (out.size() >= CHOICES) break;
 		}
-		return rsta;
-	}
-
-	private Completion basicCompletion(
-		final org.scijava.code.api.Completion c)
-	{
-		// NB: The description may be expensive (computed on demand): ask for it
-		// only when RSTA shows it, i.e. when the completion is selected.
-		return new SciJavaCompletion(this, c.insertionText(), c.summary(),
-			c::description, c.additionalEdits());
-	}
-
-	private Completion functionCompletion(final JTextComponent comp,
-		final org.scijava.code.api.Completion c,
-		final List<org.scijava.code.api.Completion> overloads)
-	{
-		// FunctionCompletion appends the parameter template itself, so strip any
-		// trailing "()" the completer may have included in the insertion text.
-		final String name = stripParens(c.insertionText());
-		final String returnType = c.returnType() == null ? "" : c.returnType();
-
-		final SciJavaFunctionCompletion fc = new SciJavaFunctionCompletion(this,
-			name, returnType, c.additionalEdits());
-		fc.setReturnValueDescription(returnType);
-		fc.setShortDescription(c.summary());
-		fc.setDescription(c::description);
-		fc.setParams(toRSTAParams(comp, c, overloads));
-		return fc;
+		return out;
 	}
 
 	/**
-	 * Lists the parameters of {@code c}'s other overloads as HTML, one overload
-	 * per line, for RSTA's parameter tooltip; or returns null if there are none.
-	 * <p>
-	 * If the completer's signature help is for this call, its signatures are
-	 * listed in its order, styled by how well they fit the arguments typed so
-	 * far: matches plain, those needing a conversion greyed, mismatches struck
-	 * out. Otherwise, {@code overloads} are listed, unstyled.
-	 * </p>
+	 * Gets signature help at the caret, waiting briefly. Remembered per text
+	 * and caret; an answer arriving late is used when asked again.
 	 */
-	static String otherOverloads(final org.scijava.code.api.Completion c,
-		final List<org.scijava.code.api.Completion> overloads,
-		final SignatureHelp help)
+	SignatureHelp signatureHelp(final JTextComponent comp) {
+		final String text;
+		try {
+			text = comp.getText(0, comp.getDocument().getLength());
+		}
+		catch (final BadLocationException exc) {
+			return null;
+		}
+		final int caret = comp.getCaretPosition();
+		if (caret == helpCaret && text.equals(helpText) && help != null) {
+			return help;
+		}
+		SignatureHelp h = null;
+		try {
+			final String uri = sync.sync(text);
+			final CompletableFuture<SignatureHelp> answer = sync.server()
+				.getTextDocumentService().signatureHelp(new SignatureHelpParams(
+					new TextDocumentIdentifier(uri), DocumentSync.position(text,
+						caret)));
+			try {
+				h = answer.get(HELP_BUDGET, TimeUnit.MILLISECONDS);
+			}
+			catch (final TimeoutException exc) {
+				// NB: Not in time: keep it for when RSTA asks again.
+				answer.thenAccept(late -> {
+					if (late != null && text.equals(helpText) && caret == helpCaret) {
+						help = late;
+					}
+				});
+			}
+		}
+		catch (final Exception | LinkageError exc) {
+			// NB: Never let a misbehaving server break the editor.
+			if (log != null) log.debug("Signature help failed", exc);
+		}
+		helpText = text;
+		helpCaret = caret;
+		help = h;
+		return h;
+	}
+
+	/**
+	 * Lists the parameters of a callable's other overloads as HTML, one
+	 * overload per line, for RSTA's parameter tooltip; or returns null if there
+	 * are none.
+	 * <p>
+	 * If the signature help is for this call, its signatures are listed in its
+	 * order, styled by how well they fit the arguments typed so far: matches
+	 * plain, those needing a conversion greyed, mismatches struck out.
+	 * Otherwise, {@code overloads} are listed, unstyled.
+	 * </p>
+	 *
+	 * @param name The callable's name.
+	 * @param own Its parameters (e.g. {@code double a}).
+	 * @param overloads The parameters of its overloads in the completions.
+	 * @param help The signature help at the caret, or null.
+	 */
+	static String otherOverloads(final String name, final List<String> own,
+		final List<List<String>> overloads, final SignatureHelp help)
 	{
-		final String own = parameterList(c);
+		final String ownList = parameterList(own);
 		// NB: A map, since reflection can report the same signature twice.
 		final Map<String, Fit> lines = new LinkedHashMap<>();
-		if (help != null && isFor(help, c)) {
-			for (final SignatureHelp.Signature s : help.signatures()) {
-				final String sig = parameterList(s.callable());
-				if (!sig.equals(own)) lines.putIfAbsent(sig, s.fit());
+		if (help != null && isFor(help, name)) {
+			for (final SignatureInformation s : help.getSignatures()) {
+				final String sig = parameterList(SignatureLabel.of(s).parameters);
+				if (!sig.equals(ownList)) lines.putIfAbsent(sig, RatedSignatureInformation
+					.fitOf(s));
 			}
 		}
 		else if (overloads != null) {
-			for (final org.scijava.code.api.Completion o : overloads) {
+			for (final List<String> o : overloads) {
 				final String sig = parameterList(o);
-				if (!sig.equals(own)) lines.putIfAbsent(sig, Fit.UNKNOWN);
+				if (!sig.equals(ownList)) lines.putIfAbsent(sig, Fit.UNKNOWN);
 			}
 		}
 		if (lines.isEmpty()) return null;
@@ -376,80 +337,6 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 	}
 
 	/**
-	 * True iff the help is about calls to {@code c}, rather than, e.g., a call
-	 * nested in its arguments.
-	 */
-	private static boolean isFor(final SignatureHelp help,
-		final org.scijava.code.api.Completion c)
-	{
-		if (help.isEmpty()) return false;
-		final String name = simpleName(c);
-		for (final SignatureHelp.Signature s : help.signatures()) {
-			if (!simpleName(s.callable()).equals(name)) return false;
-		}
-		return true;
-	}
-
-	private static String simpleName(final org.scijava.code.api.Completion c) {
-		final String name = stripParens(c.insertionText());
-		return name.substring(name.lastIndexOf('.') + 1);
-	}
-
-	/**
-	 * Gets the completer's signature help at the caret (see
-	 * {@link CodeCompleter#signatureHelp}), waiting briefly for a better
-	 * answer, if one is announced. Remembered per text and caret.
-	 */
-	SignatureHelp signatureHelp(final JTextComponent comp) {
-		final String text;
-		try {
-			text = comp.getText(0, comp.getDocument().getLength());
-		}
-		catch (final BadLocationException exc) {
-			return SignatureHelp.NONE;
-		}
-		final int caret = comp.getCaretPosition();
-		if (caret == helpCaret && text.equals(helpText) && help != null) {
-			return help;
-		}
-		SignatureHelp h;
-		try {
-			final File f = file == null ? null : file.get();
-			h = completer.signatureHelp(new CompletionRequest(text, caret, language,
-				engine, engine == null ? null : engine.getContext(), f == null ? null
-					: f.getPath()));
-			if (h == null) h = SignatureHelp.NONE;
-			if (h.update() != null) {
-				try {
-					final SignatureHelp better = h.update().get(HELP_BUDGET,
-						TimeUnit.MILLISECONDS);
-					if (better != null) h = better;
-				}
-				catch (final TimeoutException | ExecutionException exc) {
-					// NB: Not in time: use what there is, and keep the better help
-					// for when RSTA asks again (e.g. at the next parameter).
-					final SignatureHelp first = h;
-					h.update().thenAccept(better -> {
-						if (better != null && help == first) help = better;
-					});
-				}
-				catch (final InterruptedException exc) {
-					Thread.currentThread().interrupt();
-				}
-			}
-		}
-		catch (final Exception | LinkageError exc) {
-			// NB: Never let a misbehaving completer break the editor.
-			if (log != null) log.debug("Signature help failed", exc);
-			h = SignatureHelp.NONE;
-		}
-		helpText = text;
-		helpCaret = caret;
-		help = h;
-		return h;
-	}
-
-	/**
 	 * The Look & Feel's color for disabled text, as an HTML color such as
 	 * {@code #8c8c8c}. RSTA's parameter tooltip takes its other colors from the
 	 * Look & Feel too.
@@ -462,53 +349,183 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 			.getBlue());
 	}
 
-	/**
-	 * A short parameter list such as {@code long[] pos, int d}, or {@code ()} if
-	 * there are no parameters.
-	 */
-	private static String parameterList(
-		final org.scijava.code.api.Completion c)
-	{
-		final StringBuilder sb = new StringBuilder();
-		final List<org.scijava.code.api.Completion.Parameter> params = c
-			.parameters();
-		for (int i = 0; i < params.size(); i++) {
-			if (i > 0) sb.append(", ");
-			final String type = params.get(i).type();
-			if (type != null) sb.append(type.substring(type.lastIndexOf('.') + 1));
-			if (params.get(i).name() != null) {
-				if (type != null) sb.append(' ');
-				sb.append(params.get(i).name());
-			}
+	/** Converts documentation to HTML: Markdown as is (it allows HTML). */
+	static String html(final Either<String, MarkupContent> doc) {
+		if (doc == null) return null;
+		final String text;
+		if (doc.isLeft()) text = "<pre>" + escapeHTML(doc.getLeft()) + "</pre>";
+		else if (MarkupKind.MARKDOWN.equals(doc.getRight().getKind())) {
+			text = doc.getRight().getValue();
 		}
-		return sb.length() == 0 ? "()" : sb.toString();
+		else text = "<pre>" + escapeHTML(doc.getRight().getValue()) + "</pre>";
+		return text == null || text.isEmpty() || text.equals("<pre></pre>") ? null
+			: text;
 	}
 
-	private static String escapeHTML(final String s) {
-		return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+	// -- Helper methods --
+
+	private void compute(final JTextComponent comp) {
+		final int caret = comp.getCaretPosition();
+		final String text;
+		try {
+			text = comp.getText(0, comp.getDocument().getLength());
+		}
+		catch (final BadLocationException exc) {
+			return;
+		}
+		if (caret == cachedCaret && text.equals(cachedText) && cachedList != null) {
+			return;
+		}
+		final CompletionList list = request(text, caret);
+		cachedCaret = caret;
+		cachedText = text;
+		adopt(list, comp);
 	}
 
-	private static String stripParens(final String name) {
-		return name.endsWith("()") ? name.substring(0, name.length() - 2) : name;
+	/** Asks the server for completions; none if it fails. */
+	private CompletionList request(final String text, final int caret) {
+		try {
+			final String uri = sync.sync(text);
+			final Either<List<CompletionItem>, CompletionList> answer = sync.server()
+				.getTextDocumentService().completion(new CompletionParams(
+					new TextDocumentIdentifier(uri), DocumentSync.position(text, caret)))
+				.get(REQUEST_TIMEOUT, TimeUnit.MILLISECONDS);
+			if (answer == null) return new CompletionList();
+			return answer.isRight() ? answer.getRight() : new CompletionList(answer
+				.getLeft());
+		}
+		catch (final Exception | LinkageError exc) {
+			// NB: Never let a misbehaving server break the editor.
+			if (log != null) log.debug("Code completion failed", exc);
+			return new CompletionList();
+		}
+	}
+
+	/** Makes the given completions current, and awaits their update, if any. */
+	private void adopt(final CompletionList list, final JTextComponent comp) {
+		cachedList = list;
+		cachedStart = replaceStart(list, cachedText, cachedCaret);
+		if (!(list instanceof UpdatingCompletionList)) return;
+		final CompletableFuture<CompletionList> update =
+			((UpdatingCompletionList) list).update();
+		if (update == null) return;
+		final String text = cachedText;
+		final int caret = cachedCaret;
+		update.whenComplete((better, error) -> {
+			if (better == null) return;
+			SwingUtilities.invokeLater(() -> {
+				// NB: Only if nothing has changed since the request.
+				if (cachedList != list || caret != comp.getCaretPosition() || !text
+					.equals(comp.getText())) return;
+				final boolean wasEmpty = list.getItems() == null || list.getItems()
+					.isEmpty();
+				adopt(better, comp);
+				final Consumer<Boolean> listener = updateListener;
+				if (listener != null) listener.accept(wasEmpty);
+			});
+		});
 	}
 
 	/**
-	 * Converts {@code c}'s neutral parameters to RSTA ones. RSTA's parameter
-	 * tooltip shows the current parameter's description, as HTML, below the
-	 * signature: there, we list {@code c}'s other overloads.
+	 * Where the completions' replacement starts: the earliest of their edits'
+	 * starts (completions without an edit replace the word before the caret).
 	 */
-	private List<ParameterizedCompletion.Parameter> toRSTAParams(
-		final JTextComponent comp, final org.scijava.code.api.Completion c,
-		final List<org.scijava.code.api.Completion> overloads)
+	private static int replaceStart(final CompletionList list, final String text,
+		final int caret)
 	{
-		final List<org.scijava.code.api.Completion.Parameter> params = c
-			.parameters();
-		final List<ParameterizedCompletion.Parameter> out =
-			new ArrayList<>(params.size());
-		for (final org.scijava.code.api.Completion.Parameter p : params) {
-			// Pass the type as the parameter's "type object" so the choices
-			// provider can dispatch on it.
-			out.add(new ParameterizedCompletion.Parameter(p.type(), p.name()) {
+		int start = caret;
+		for (final CompletionItem item : items(list)) {
+			start = Math.min(start, itemStart(item, text, caret));
+		}
+		return start;
+	}
+
+	private static int itemStart(final CompletionItem item, final String text,
+		final int caret)
+	{
+		if (item.getTextEdit() != null) {
+			final Range r = item.getTextEdit().isLeft() ? item.getTextEdit()
+				.getLeft().getRange() : item.getTextEdit().getRight().getInsert();
+			return Math.min(caret, DocumentSync.offset(text, r.getStart()));
+		}
+		int start = Math.min(caret, text.length());
+		while (start > 0 && Character.isJavaIdentifierPart(text.charAt(start -
+			1))) start--;
+		return start;
+	}
+
+	/** Converts the server's completions to RSTA's. */
+	private List<Completion> convert(final JTextComponent comp,
+		final CompletionList list, final String text, final int caret,
+		final int start)
+	{
+		final List<CompletionItem> items = sorted(list);
+		// Group callables by name, so each can list its sibling overloads.
+		final Map<String, List<List<String>>> overloads = new HashMap<>();
+		final List<Object[]> converted = new ArrayList<>();
+		for (final CompletionItem item : items) {
+			final String prefix = text.substring(start, Math.max(start, itemStart(
+				item, text, caret)));
+			final String inserted = newText(item);
+			final boolean callable = isSnippet(item) && inserted.indexOf('(') > 0;
+			if (callable) {
+				final String name = prefix + inserted.substring(0, inserted.indexOf(
+					'('));
+				final List<String> params = parameters(item, inserted);
+				overloads.computeIfAbsent(name, k -> new ArrayList<>()).add(params);
+				converted.add(new Object[] { item, name, params });
+			}
+			else converted.add(new Object[] { item, prefix + plain(inserted), null });
+		}
+		final int n = converted.size();
+		final List<Completion> out = new ArrayList<>(n);
+		for (int i = 0; i < n; i++) {
+			final CompletionItem item = (CompletionItem) converted.get(i)[0];
+			final String name = (String) converted.get(i)[1];
+			@SuppressWarnings("unchecked")
+			final List<String> params = (List<String>) converted.get(i)[2];
+			final Supplier<String> description = () -> describe(item);
+			final List<org.scijava.code.api.Completion.TextEdit> edits = edits(item,
+				text);
+			final Completion c;
+			if (params != null) {
+				final String returnType = item.getLabelDetails() == null ? null : item
+					.getLabelDetails().getDescription();
+				final SciJavaFunctionCompletion fc = new SciJavaFunctionCompletion(this,
+					name, returnType == null ? "" : returnType, edits);
+				fc.setReturnValueDescription(returnType == null ? "" : returnType);
+				fc.setShortDescription(item.getDetail());
+				fc.setDescription(description);
+				fc.setParams(rstaParams(comp, name, params, overloads.get(name)));
+				fc.setRelevance(n - i);
+				c = fc;
+			}
+			else {
+				final SciJavaCompletion sc = new SciJavaCompletion(this, name, item
+					.getDetail(), description, edits);
+				sc.setRelevance(n - i);
+				c = sc;
+			}
+			out.add(c);
+		}
+		return out;
+	}
+
+	/**
+	 * Converts parameters (e.g. {@code double a}) to RSTA's. RSTA's parameter
+	 * tooltip shows the current parameter's description, as HTML, below the
+	 * signature: there, we list the other overloads.
+	 */
+	private List<ParameterizedCompletion.Parameter> rstaParams(
+		final JTextComponent comp, final String name, final List<String> params,
+		final List<List<String>> overloads)
+	{
+		final List<ParameterizedCompletion.Parameter> out = new ArrayList<>();
+		for (final String p : params) {
+			final String[] typeAndName = SignatureLabel.typeAndName(p);
+			out.add(new ParameterizedCompletion.Parameter(typeAndName[0],
+				typeAndName[1])
+			{
 
 				/**
 				 * Computed when RSTA asks, so the list reflects the arguments typed
@@ -517,7 +534,7 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 				 */
 				@Override
 				public String getDescription() {
-					return otherOverloads(c, overloads, signatureHelp(comp));
+					return otherOverloads(name, params, overloads, signatureHelp(comp));
 				}
 			});
 		}
@@ -525,41 +542,130 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 	}
 
 	/**
-	 * Bridges a neutral {@link ParameterChoices} to RSTA's
-	 * {@link ParameterChoicesProvider}, translating between the two parameter and
-	 * completion representations.
+	 * A callable's parameters: from its label details (typed, e.g.
+	 * {@code (double a, double b)}), if they agree with its snippet's
+	 * placeholders; otherwise the placeholders' names.
 	 */
-	private final class NeutralChoicesProvider implements
-		ParameterChoicesProvider
+	private static List<String> parameters(final CompletionItem item,
+		final String snippet)
 	{
-
-		private final ParameterChoices choices;
-
-		NeutralChoicesProvider(final ParameterChoices choices) {
-			this.choices = choices;
+		final List<String> names = new ArrayList<>();
+		final Matcher m = PLACEHOLDER.matcher(snippet);
+		while (m.find()) {
+			final String name = m.group(2) != null ? m.group(2) : "arg" + names
+				.size();
+			names.add(unescape(name));
 		}
-
-		@Override
-		public List<Completion> getParameterChoices(final JTextComponent tc,
-			final ParameterizedCompletion.Parameter param)
-		{
-			final org.scijava.code.api.Completion.Parameter neutral =
-				new org.scijava.code.api.Completion.Parameter(param.getName(),
-					param.getType());
-			final List<org.scijava.code.api.Completion> result;
-			try {
-				result = choices.choicesFor(neutral);
-			}
-			catch (final Exception exc) {
-				return Collections.emptyList();
-			}
-			if (result == null || result.isEmpty()) return Collections.emptyList();
-			final List<Completion> out = new ArrayList<>(result.size());
-			for (final org.scijava.code.api.Completion c : result) {
-				out.add(new BasicCompletion(SciJavaCompletionProvider.this,
-					c.insertionText(), c.summary(), c.description()));
-			}
-			return out;
+		final String detail = item.getLabelDetails() == null ? null : item
+			.getLabelDetails().getDetail();
+		if (detail != null) {
+			final List<String> typed = SignatureLabel.parameters(detail);
+			if (typed.size() == names.size()) return typed;
 		}
+		return names;
+	}
+
+	/** Gets an item's documentation (resolving it first), as HTML. */
+	private String describe(final CompletionItem item) {
+		if (item.getDocumentation() != null) return html(item.getDocumentation());
+		try {
+			final CompletionItem resolved = sync.server().getTextDocumentService()
+				.resolveCompletionItem(item).get(DESCRIBE_TIMEOUT,
+					TimeUnit.MILLISECONDS);
+			return resolved == null ? null : html(resolved.getDocumentation());
+		}
+		catch (final Exception exc) {
+			return null; // NB: Not in time, or failed.
+		}
+	}
+
+	private static List<org.scijava.code.api.Completion.TextEdit> edits(
+		final CompletionItem item, final String text)
+	{
+		if (item.getAdditionalTextEdits() == null) return Collections.emptyList();
+		final List<org.scijava.code.api.Completion.TextEdit> out =
+			new ArrayList<>();
+		for (final TextEdit e : item.getAdditionalTextEdits()) {
+			out.add(new org.scijava.code.api.Completion.TextEdit(DocumentSync.offset(
+				text, e.getRange().getStart()), DocumentSync.offset(text, e.getRange()
+					.getEnd()), e.getNewText()));
+		}
+		return out;
+	}
+
+	private static List<CompletionItem> items(final CompletionList list) {
+		return list == null || list.getItems() == null ? Collections.emptyList()
+			: list.getItems();
+	}
+
+	/** The items in the server's order (by sortText, or else label). */
+	private static List<CompletionItem> sorted(final CompletionList list) {
+		final List<CompletionItem> items = new ArrayList<>(items(list));
+		items.sort(Comparator.comparing(i -> i.getSortText() != null ? i
+			.getSortText() : i.getLabel()));
+		return items;
+	}
+
+	private static String newText(final CompletionItem item) {
+		if (item.getTextEdit() != null) {
+			return item.getTextEdit().isLeft() ? item.getTextEdit().getLeft()
+				.getNewText() : item.getTextEdit().getRight().getNewText();
+		}
+		return item.getInsertText() != null ? item.getInsertText() : item
+			.getLabel();
+	}
+
+	private static boolean isSnippet(final CompletionItem item) {
+		return item.getInsertTextFormat() == InsertTextFormat.Snippet;
+	}
+
+	/** A snippet's text without its placeholders' markup. */
+	private static String plain(final String snippet) {
+		final Matcher m = PLACEHOLDER.matcher(snippet);
+		final StringBuffer sb = new StringBuffer();
+		while (m.find()) {
+			m.appendReplacement(sb, Matcher.quoteReplacement(m.group(2) == null ? ""
+				: unescape(m.group(2))));
+		}
+		m.appendTail(sb);
+		return sb.toString();
+	}
+
+	private static String unescape(final String s) {
+		return s.replaceAll("\\\\(.)", "$1");
+	}
+
+	/**
+	 * True iff the help is about calls to the named callable, rather than,
+	 * e.g., a call nested in its arguments.
+	 */
+	private static boolean isFor(final SignatureHelp help, final String name) {
+		if (help.getSignatures() == null || help.getSignatures().isEmpty()) {
+			return false;
+		}
+		final String simple = name.substring(name.lastIndexOf('.') + 1);
+		for (final SignatureInformation s : help.getSignatures()) {
+			final String n = SignatureLabel.of(s).name;
+			if (!n.substring(n.lastIndexOf('.') + 1).equals(simple)) return false;
+		}
+		return true;
+	}
+
+	/**
+	 * A short parameter list such as {@code long[] pos, int d}, or {@code ()} if
+	 * there are no parameters.
+	 */
+	private static String parameterList(final List<String> params) {
+		if (params.isEmpty()) return "()";
+		final StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < params.size(); i++) {
+			if (i > 0) sb.append(", ");
+			sb.append(SignatureLabel.simple(params.get(i)));
+		}
+		return sb.toString();
+	}
+
+	private static String escapeHTML(final String s) {
+		return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
 	}
 }

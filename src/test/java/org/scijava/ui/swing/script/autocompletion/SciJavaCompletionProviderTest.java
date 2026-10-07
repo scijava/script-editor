@@ -106,11 +106,11 @@ public class SciJavaCompletionProviderTest {
 	@Test
 	public void testCallablesBecomeFunctionCompletionsWithChoices() {
 		final RSyntaxTextArea area = new RSyntaxTextArea();
-		area.setText("addRoi(");
+		area.setText("addR");
 		area.setCaretPosition(area.getDocument().getLength());
 
-		// A callable completion taking one ij.gui.Roi parameter, plus a
-		// parameter-choices resolver that offers an in-scope variable for it.
+		// A callable completion taking one ij.gui.Roi parameter; and, inside its
+		// argument list, an in-scope variable fitting it (and a method).
 		final org.scijava.code.api.Completion.Parameter roiParam =
 			new org.scijava.code.api.Completion.Parameter("roi", "ij.gui.Roi");
 		final org.scijava.code.api.Completion method =
@@ -118,14 +118,13 @@ public class SciJavaCompletionProviderTest {
 				.kind(org.scijava.code.api.Completion.Kind.METHOD)
 				.parameters(java.util.Collections.singletonList(roiParam))
 				.returnType("void").build();
-		final org.scijava.code.api.ParameterChoices choices = p -> //
-			"ij.gui.Roi".equals(p.type())
-				? java.util.Collections.singletonList(
-					org.scijava.code.api.Completion.of("myRoi"))
-				: java.util.Collections.emptyList();
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
-			request -> new CompletionResult(java.util.Collections.singletonList(
-				method), area.getDocument().getLength(), choices),
+			request -> request.lineToCaret().endsWith("(") //
+				? new CompletionResult(Arrays.asList( //
+					org.scijava.code.api.Completion.builder("myRoi").kind(
+						org.scijava.code.api.Completion.Kind.VARIABLE).build(), method),
+					request.offset()) //
+				: new CompletionResult(java.util.Collections.singletonList(method), 0),
 			null);
 
 		// Callables surface as FunctionCompletions so parameter assistance works.
@@ -134,7 +133,9 @@ public class SciJavaCompletionProviderTest {
 		org.junit.Assert.assertTrue(
 			completions.get(0) instanceof SciJavaFunctionCompletion);
 
-		// And the neutral ParameterChoices drives RSTA's parameter choices.
+		// Parameter choices: the variables completed at the parameter.
+		area.setText("addRoi(");
+		area.setCaretPosition(area.getDocument().getLength());
 		final List<Completion> roiChoices = provider.parameterChoices(area,
 			new org.fife.ui.autocomplete.ParameterizedCompletion.Parameter(
 				"ij.gui.Roi", "roi"));
@@ -374,8 +375,8 @@ public class SciJavaCompletionProviderTest {
 		area.setText("import numpy\n");
 		final org.scijava.code.api.CompletionRequest[] prepared = { null };
 		final java.io.File file = new java.io.File("scripts", "blur.py");
-		final CodeCompleterLanguageSupport support =
-			new CodeCompleterLanguageSupport(new org.scijava.code.api.CodeCompleter()
+		final LanguageServerLanguageSupport support =
+			new LanguageServerLanguageSupport(new org.scijava.code.api.CodeCompleter()
 			{
 
 				@Override
@@ -394,7 +395,7 @@ public class SciJavaCompletionProviderTest {
 			}, null, null, () -> file);
 		support.install(area);
 		assertEquals("import numpy\n", prepared[0].text());
-		assertEquals(file.getPath(), prepared[0].path());
+		assertEquals(file.getAbsolutePath(), prepared[0].path());
 		support.uninstall(area);
 	}
 
@@ -433,7 +434,7 @@ public class SciJavaCompletionProviderTest {
 		area.setText("xy");
 		area.setCaretPosition(2);
 		provider.getCompletionsImpl(area);
-		assertEquals(file[0].getPath(), path[0]);
+		assertEquals(file[0].getAbsolutePath(), path[0]);
 	}
 
 	private static org.scijava.code.api.SignatureHelp.Signature signature(

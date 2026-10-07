@@ -29,16 +29,15 @@
 
 package org.scijava.ui.swing.script.autocompletion;
 
-import java.io.File;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
 
 import javax.swing.SwingUtilities;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Element;
 
+import org.eclipse.lsp4j.Diagnostic;
+import org.eclipse.lsp4j.DiagnosticSeverity;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.parser.AbstractParser;
@@ -46,20 +45,13 @@ import org.fife.ui.rsyntaxtextarea.parser.DefaultParseResult;
 import org.fife.ui.rsyntaxtextarea.parser.DefaultParserNotice;
 import org.fife.ui.rsyntaxtextarea.parser.ParseResult;
 import org.fife.ui.rsyntaxtextarea.parser.ParserNotice;
-import org.scijava.code.api.CodeCompleter;
-import org.scijava.code.api.CompletionRequest;
-import org.scijava.code.api.Diagnostic;
-import org.scijava.log.Logger;
-import org.scijava.script.ScriptLanguage;
 
 /**
- * Shows the problems the completer finds in the script (see
- * {@link CodeCompleter#diagnose}), e.g. syntax errors, as squiggles, with the
- * problem as tooltip.
+ * Shows the problems language servers publish for the script (e.g. syntax
+ * errors), as squiggles, with the problem as tooltip.
  * <p>
- * RSyntaxTextArea parses a while after each edit, on the event dispatch
- * thread; this parser asks the completer then, and shows its answer once it
- * arrives (parsing anew). Until then, the problems found before stay.
+ * Servers publish problems when they like (e.g. a moment after each change):
+ * each time, the text area parses anew to show them.
  * </p>
  *
  * @author Gabriel Selzer
@@ -67,27 +59,20 @@ import org.scijava.script.ScriptLanguage;
 public class DiagnosticsParser extends AbstractParser {
 
 	private final RSyntaxTextArea textArea;
-	private final CodeCompleter completer;
-	private final ScriptLanguage language;
-	private final Supplier<File> file;
-	private final Logger log;
 
-	/** The text asked about last, if not answered yet. */
-	private String pending;
+	/** The problems last published. */
+	private volatile List<Diagnostic> problems = Collections.emptyList();
 
-	/** The text answered last, and the problems found in it. */
-	private String answered;
-	private List<Diagnostic> problems = Collections.emptyList();
-
-	public DiagnosticsParser(final RSyntaxTextArea textArea,
-		final CodeCompleter completer, final ScriptLanguage language,
-		final Supplier<File> file, final Logger log)
-	{
+	public DiagnosticsParser(final RSyntaxTextArea textArea) {
 		this.textArea = textArea;
-		this.completer = completer;
-		this.language = language;
-		this.file = file;
-		this.log = log;
+	}
+
+	/** Shows the given problems (from any thread). */
+	public void accept(final List<Diagnostic> found) {
+		SwingUtilities.invokeLater(() -> {
+			problems = found == null ? Collections.emptyList() : found;
+			textArea.forceReparsing(this);
+		});
 	}
 
 	@Override
@@ -100,53 +85,34 @@ public class DiagnosticsParser extends AbstractParser {
 		catch (final BadLocationException exc) {
 			return result;
 		}
-		if (!text.equals(answered) && !text.equals(pending)) ask(text);
-		// NB: Until the answer arrives, show the problems found before (where
-		// they still fit).
 		final Element root = doc.getDefaultRootElement();
 		for (final Diagnostic d : problems) {
-			if (d.start() >= text.length() && text.length() > 0) continue;
-			final int start = Math.max(0, Math.min(d.start(), text.length() - 1));
-			final int length = Math.max(1, Math.min(d.end(), text.length()) -
-				start);
-			final DefaultParserNotice notice = new DefaultParserNotice(this, d
-				.message(), root.getElementIndex(start), start, length);
-			notice.setLevel(level(d.severity()));
+			int start = DocumentSync.offset(text, d.getRange().getStart());
+			final int end = DocumentSync.offset(text, d.getRange().getEnd());
+			if (start >= text.length() && text.length() > 0) {
+				start = text.length() - 1; // NB: E.g. "unexpected end of file".
+			}
+			start = Math.max(0, start);
+			final int length = Math.max(1, Math.min(end, text.length()) - start);
+			final DefaultParserNotice notice = new DefaultParserNotice(this,
+				message(d), root.getElementIndex(start), start, length);
+			notice.setLevel(level(d.getSeverity()));
 			result.addNotice(notice);
 		}
 		return result;
 	}
 
-	private void ask(final String text) {
-		pending = text;
-		CompletableFuture<List<Diagnostic>> answer;
-		try {
-			final File f = file == null ? null : file.get();
-			answer = completer.diagnose(new CompletionRequest(text, text.length(),
-				language, null, null, f == null ? null : f.getPath()));
-		}
-		catch (final Exception | LinkageError exc) {
-			// NB: Never let a misbehaving completer break the editor.
-			if (log != null) log.debug("Diagnosis failed", exc);
-			answer = CompletableFuture.completedFuture(Collections.emptyList());
-		}
-		answer.whenComplete((found, error) -> SwingUtilities.invokeLater(() -> {
-			if (!text.equals(pending)) return; // NB: Superseded.
-			pending = null;
-			answered = text;
-			problems = found == null ? Collections.emptyList() : found;
-			textArea.forceReparsing(this);
-		}));
+	private static String message(final Diagnostic d) {
+		if (d.getMessage() == null) return "";
+		return d.getMessage().isLeft() ? d.getMessage().getLeft() : d.getMessage()
+			.getRight().getValue();
 	}
 
-	private static ParserNotice.Level level(final Diagnostic.Severity s) {
-		switch (s) {
-			case ERROR:
-				return ParserNotice.Level.ERROR;
-			case WARNING:
-				return ParserNotice.Level.WARNING;
-			default:
-				return ParserNotice.Level.INFO;
+	private static ParserNotice.Level level(final DiagnosticSeverity s) {
+		if (s == null || s == DiagnosticSeverity.Error) {
+			return ParserNotice.Level.ERROR;
 		}
+		return s == DiagnosticSeverity.Warning ? ParserNotice.Level.WARNING
+			: ParserNotice.Level.INFO;
 	}
 }
