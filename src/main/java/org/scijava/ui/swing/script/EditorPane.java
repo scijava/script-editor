@@ -727,15 +727,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	}
 
 	/**
-	 * Set the language of this {@link EditorPane}, optionally adding a header.
-	 * TODO: What is this header?
-	 *
-	 * @param language {@link ScriptLanguage} to set the editors language to.
-	 * @param addHeader set to <code>true</code> to add a header.
-	 * @see #setLanguageByFileName(String)
-	 * @see #setLanguage(ScriptLanguage)
-	 */
-	/**
 	 * Uninstalls the language support (e.g. code completion), as the editor
 	 * is closed.
 	 */
@@ -746,14 +737,20 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		}
 	}
 
+	/**
+	 * Set the language of this {@link EditorPane}, optionally adding a header.
+	 * TODO: What is this header?
+	 *
+	 * @param language {@link ScriptLanguage} to set the editors language to.
+	 * @param addHeader set to <code>true</code> to add a header.
+	 * @see #setLanguageByFileName(String)
+	 * @see #setLanguage(ScriptLanguage)
+	 */
 	protected void setLanguage(final ScriptLanguage language,
 		final boolean addHeader)
 	{
 		// uninstall existing language support.
-		if (installedSupport != null) {
-			installedSupport.uninstall(this);
-			installedSupport = null;
-		}
+		releaseLanguageSupport();
 		LanguageSupport support;
 
 		String languageName;
@@ -871,8 +868,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 * @param enabled Whether Java should be enabled as fallback language for
 	 *                auto-completion
 	 */
-	void setFallbackAutoCompletion(final boolean value) {
-		autoCompletionJavaFallback = value;
+	void setFallbackAutoCompletion(final boolean enabled) {
+		autoCompletionJavaFallback = enabled;
 		if (autoCompletionEnabled && currentLanguage != null)
 			setLanguage(currentLanguage);
 	}
