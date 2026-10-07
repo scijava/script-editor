@@ -34,12 +34,10 @@ import java.util.function.Supplier;
 
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.CompletionProvider;
-import org.scijava.code.api.Completion.TextEdit;
 
 /**
- * An RSTA {@link BasicCompletion} that also carries
- * {@link org.scijava.code.api.Completion#additionalEdits() additional
- * edits} to apply on acceptance (e.g. auto-imports). The edits are applied by
+ * An RSTA {@link BasicCompletion} that also carries additional edits to apply
+ * on acceptance (e.g. auto-imports). The edits are applied by
  * {@link SciJavaAutoCompletion}.
  *
  * @author Curtis Rueden
@@ -48,12 +46,12 @@ public class SciJavaCompletion extends BasicCompletion implements
 	AdditionalEdits
 {
 
-	private final List<TextEdit> additionalEdits;
+	private final List<Edit> additionalEdits;
 	private final Supplier<String> description;
 
 	public SciJavaCompletion(final CompletionProvider provider,
 		final String replacementText, final String shortDesc, final String summary,
-		final List<TextEdit> additionalEdits)
+		final List<Edit> additionalEdits)
 	{
 		this(provider, replacementText, shortDesc, () -> summary,
 			additionalEdits);
@@ -65,7 +63,7 @@ public class SciJavaCompletion extends BasicCompletion implements
 	 */
 	public SciJavaCompletion(final CompletionProvider provider,
 		final String replacementText, final String shortDesc,
-		final Supplier<String> description, final List<TextEdit> additionalEdits)
+		final Supplier<String> description, final List<Edit> additionalEdits)
 	{
 		super(provider, replacementText, shortDesc, null);
 		this.description = description;
@@ -78,7 +76,7 @@ public class SciJavaCompletion extends BasicCompletion implements
 	}
 
 	@Override
-	public List<TextEdit> getAdditionalEdits() {
+	public List<Edit> getAdditionalEdits() {
 		return additionalEdits;
 	}
 }

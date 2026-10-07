@@ -44,7 +44,7 @@ import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.TextDocumentItem;
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier;
 import org.eclipse.lsp4j.services.LanguageServer;
-import org.scijava.code.lsp.LspClient;
+import org.scijava.code.lsp.Positions;
 import org.scijava.script.ScriptLanguage;
 
 /**
@@ -136,13 +136,13 @@ public class DocumentSync {
 
 	/** The position of an offset of the given text, for requests. */
 	public static Position position(final String text, final int offset) {
-		return LspClient.position(text, Math.max(0, Math.min(offset, text
+		return Positions.position(text, Math.max(0, Math.min(offset, text
 			.length())));
 	}
 
 	/** The offset of a position in the given text. */
 	public static int offset(final String text, final Position position) {
-		return LspClient.offset(text, position);
+		return Positions.offset(text, position);
 	}
 
 	private String currentUri() {

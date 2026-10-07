@@ -35,14 +35,12 @@ import java.util.function.Supplier;
 
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.FunctionCompletion;
-import org.scijava.code.api.Completion.TextEdit;
 
 /**
  * An RSTA {@link FunctionCompletion} for callable completions (methods,
  * functions, constructors), so parameter assistance and parameter choices
- * engage. It also carries optional
- * {@link org.scijava.code.api.Completion#additionalEdits() additional
- * edits} (e.g. the auto-import needed by a constructor completion), applied by
+ * engage. It also carries optional additional edits (e.g. the auto-import
+ * needed by a constructor completion), applied by
  * {@link SciJavaAutoCompletion}.
  *
  * @author Curtis Rueden
@@ -51,12 +49,12 @@ public class SciJavaFunctionCompletion extends FunctionCompletion implements
 	AdditionalEdits
 {
 
-	private final List<TextEdit> additionalEdits;
+	private final List<Edit> additionalEdits;
 	private Supplier<String> description;
 
 	public SciJavaFunctionCompletion(final CompletionProvider provider,
 		final String name, final String returnType,
-		final List<TextEdit> additionalEdits)
+		final List<Edit> additionalEdits)
 	{
 		super(provider, name, returnType);
 		this.additionalEdits = additionalEdits == null ? Collections.emptyList()
@@ -64,7 +62,7 @@ public class SciJavaFunctionCompletion extends FunctionCompletion implements
 	}
 
 	@Override
-	public List<TextEdit> getAdditionalEdits() {
+	public List<Edit> getAdditionalEdits() {
 		return additionalEdits;
 	}
 

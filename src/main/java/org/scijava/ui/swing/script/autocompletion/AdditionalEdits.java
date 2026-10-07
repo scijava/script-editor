@@ -31,12 +31,10 @@ package org.scijava.ui.swing.script.autocompletion;
 
 import java.util.List;
 
-import org.scijava.code.api.Completion.TextEdit;
-
 /**
- * Implemented by RSTA completions that carry
- * {@link org.scijava.code.api.Completion#additionalEdits() additional
- * edits} (e.g. auto-imports) to apply when accepted. Both the
+ * Implemented by RSTA completions that carry additional edits (e.g.
+ * auto-imports, a completion's {@code additionalTextEdits}) to apply when
+ * accepted. Both the
  * {@code BasicCompletion}-based and {@code FunctionCompletion}-based SciJava
  * completions implement this, so {@link SciJavaAutoCompletion} can apply the
  * edits regardless of the underlying RSTA completion type.
@@ -46,5 +44,31 @@ import org.scijava.code.api.Completion.TextEdit;
 public interface AdditionalEdits {
 
 	/** Extra edits to apply when the completion is accepted; never null. */
-	List<TextEdit> getAdditionalEdits();
+	List<Edit> getAdditionalEdits();
+
+	/** Replaces the text between two offsets. */
+	final class Edit {
+
+		private final int start;
+		private final int end;
+		private final String newText;
+
+		public Edit(final int start, final int end, final String newText) {
+			this.start = start;
+			this.end = end;
+			this.newText = newText;
+		}
+
+		public int start() {
+			return start;
+		}
+
+		public int end() {
+			return end;
+		}
+
+		public String newText() {
+			return newText;
+		}
+	}
 }

@@ -48,8 +48,6 @@ import org.eclipse.lsp4j.services.LanguageServer;
 import org.fife.rsta.ac.AbstractLanguageSupport;
 import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.scijava.code.api.CodeCompleter;
-import org.scijava.code.lsp.compat.CodeCompleterLanguageServer;
 import org.scijava.log.Logger;
 import org.scijava.script.ScriptLanguage;
 
@@ -97,17 +95,6 @@ public class LanguageServerLanguageSupport extends AbstractLanguageSupport {
 		setAutoCompleteEnabled(true);
 		setParameterAssistanceEnabled(true);
 		setShowDescWindow(true);
-	}
-
-	/**
-	 * Uses a single code-api completer. TEMP: Until code-api is removed.
-	 */
-	public LanguageServerLanguageSupport(final CodeCompleter completer,
-		final ScriptLanguage language, final Logger log,
-		final Supplier<File> file)
-	{
-		this(new CodeCompleterLanguageServer(completer, language), language, log,
-			file);
 	}
 
 	/**

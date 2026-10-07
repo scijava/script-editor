@@ -42,23 +42,21 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.swing.SwingUtilities;
 
+import org.eclipse.lsp4j.CompletionList;
+import org.eclipse.lsp4j.Hover;
+import org.eclipse.lsp4j.MarkupContent;
+import org.eclipse.lsp4j.MarkupKind;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.parser.ParseResult;
 import org.fife.ui.rsyntaxtextarea.parser.ParserNotice;
 import org.junit.Test;
-import org.scijava.code.api.CodeCompleter;
-import org.scijava.code.lsp.compat.CodeCompleterLanguageServer;
-import org.scijava.code.api.Completion;
-import org.scijava.code.api.CompletionRequest;
-import org.scijava.code.api.CompletionResult;
-import org.scijava.code.api.Diagnostic;
-import org.scijava.code.api.Hover;
-import org.scijava.code.api.SignatureHelp;
+import org.scijava.code.lsp.Environment;
+import org.scijava.code.lsp.ScriptLanguageServer;
 
 /**
  * Tests {@link HoverToolTipSupplier}, {@link DiagnosticsParser} and
- * {@link SignaturePopup}, with a fake completer.
+ * {@link SignaturePopup}, with a fake server.
  *
  * @author Gabriel Selzer
  */
@@ -67,20 +65,22 @@ public class CodeIntelligenceUITest {
 	@Test
 	public void testHover() {
 		final AtomicInteger asked = new AtomicInteger();
-		final CodeCompleter completer = new FakeCompleter() {
+		final ScriptLanguageServer server = new FakeServer() {
 
 			@Override
-			public Hover hover(final CompletionRequest request) {
+			protected Hover hover(final Document doc, final int at) {
 				asked.incrementAndGet();
-				final String text = request.text();
-				final int at = request.offset();
-				return text.startsWith("dumps", at - 1) || text.startsWith("dumps",
-					at - 2) ? new Hover("<pre>Serialize.</pre>", 0, 5) : Hover.NONE;
+				final String text = doc.text();
+				if (!text.startsWith("dumps", at - 1) && !text.startsWith("dumps", at -
+					2)) return null;
+				final Hover hover = new Hover(new MarkupContent(MarkupKind.MARKDOWN,
+					"<pre>Serialize.</pre>"));
+				hover.setRange(doc.range(0, 5));
+				return hover;
 			}
 		};
 		final HoverToolTipSupplier supplier = new HoverToolTipSupplier(
-			new DocumentSync(new CodeCompleterLanguageServer(completer, null), null),
-			null);
+			new DocumentSync(server, null), null);
 		final String text = "x.dumps(1)";
 		assertEquals("<html><pre>Serialize.</pre></html>", supplier.toolTip(text,
 			3));
@@ -135,13 +135,6 @@ public class CodeIntelligenceUITest {
 
 	@Test
 	public void testSignaturesHTML() {
-		final Completion max = Completion.builder("max").kind(
-			Completion.Kind.METHOD).parameters(Arrays.asList(new Completion.Parameter(
-				"a", "double"), new Completion.Parameter("b", "double"))).returnType(
-					"double").build();
-		final Completion maxInt = Completion.builder("max").kind(
-			Completion.Kind.METHOD).parameters(Arrays.asList(new Completion.Parameter(
-				"a", "int"), new Completion.Parameter("b", "int"))).build();
 		final String html = SignaturePopup.html(new org.eclipse.lsp4j.SignatureHelp(
 			Arrays.asList(rated("max(double a, double b) -> double",
 				org.scijava.code.lsp.RatedSignatureInformation.Fit.MATCH, "double a",
@@ -166,12 +159,16 @@ public class CodeIntelligenceUITest {
 		return new org.scijava.code.lsp.RatedSignatureInformation(label, ps, fit);
 	}
 
-	/** A completer completing nothing. */
-	private static class FakeCompleter implements CodeCompleter {
+	/** A server completing nothing. */
+	private static class FakeServer extends ScriptLanguageServer {
+
+		FakeServer() {
+			super(Environment.NONE);
+		}
 
 		@Override
-		public CompletionResult complete(final CompletionRequest request) {
-			return CompletionResult.EMPTY;
+		protected CompletionList complete(final Document doc, final int offset) {
+			return new CompletionList();
 		}
 	}
 }

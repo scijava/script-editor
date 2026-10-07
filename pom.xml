@@ -141,11 +141,10 @@
 
 	<properties>
 		<scijava.jvm.version>11</scijava.jvm.version>
-		<!-- TEMP: in-development versions providing the code intelligence SPI.
-		     scijava-code-api needs ParameterScriptProcessor#setLogger from
-		     scijava-common. Remove once releases are pinned by pom-scijava. -->
+		<!-- TEMP: in-development versions providing code intelligence.
+		     Remove once releases are pinned by pom-scijava. -->
 		<scijava-common.version>2.100.2-SNAPSHOT</scijava-common.version>
-		<scijava-code-api.version>0.1.0-SNAPSHOT</scijava-code-api.version>
+		<scijava-code-lsp.version>0.1.0-SNAPSHOT</scijava-code-lsp.version>
 		<main-class>org.scijava.ui.swing.script.Main</main-class>
 		<package-name>org.scijava.ui.swing.script</package-name>
 		<license.licenseName>bsd_2</license.licenseName>
@@ -163,13 +162,8 @@
 		</dependency>
 		<dependency>
 			<groupId>org.scijava</groupId>
-			<artifactId>scijava-code-api</artifactId>
-			<version>${scijava-code-api.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.scijava</groupId>
 			<artifactId>scijava-code-lsp</artifactId>
-			<version>${scijava-code-api.version}</version>
+			<version>${scijava-code-lsp.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.scijava</groupId>

@@ -71,11 +71,9 @@ import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionCellRenderer;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.ParameterizedCompletion;
-import org.scijava.code.api.CodeCompleter;
 import org.scijava.code.lsp.RatedSignatureInformation;
 import org.scijava.code.lsp.RatedSignatureInformation.Fit;
 import org.scijava.code.lsp.UpdatingCompletionList;
-import org.scijava.code.lsp.compat.CodeCompleterLanguageServer;
 import org.scijava.log.Logger;
 import org.scijava.script.ScriptLanguage;
 
@@ -147,15 +145,6 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 		// Auto-activate after a letter, digit, '.' or '_'.
 		setAutoActivationRules(true, ".");
 		setParameterChoicesProvider(this::parameterChoices);
-	}
-
-	/**
-	 * Uses a single code-api completer. TEMP: Until code-api is removed.
-	 */
-	public SciJavaCompletionProvider(final CodeCompleter completer,
-		final ScriptLanguage language)
-	{
-		this(new CodeCompleterLanguageServer(completer, language), language);
 	}
 
 	/** The synchronization of the edited script with the server. */
@@ -485,7 +474,7 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 			@SuppressWarnings("unchecked")
 			final List<String> params = (List<String>) converted.get(i)[2];
 			final Supplier<String> description = () -> describe(item);
-			final List<org.scijava.code.api.Completion.TextEdit> edits = edits(item,
+			final List<AdditionalEdits.Edit> edits = edits(item,
 				text);
 			final Completion c;
 			if (params != null) {
@@ -579,14 +568,14 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 		}
 	}
 
-	private static List<org.scijava.code.api.Completion.TextEdit> edits(
+	private static List<AdditionalEdits.Edit> edits(
 		final CompletionItem item, final String text)
 	{
 		if (item.getAdditionalTextEdits() == null) return Collections.emptyList();
-		final List<org.scijava.code.api.Completion.TextEdit> out =
+		final List<AdditionalEdits.Edit> out =
 			new ArrayList<>();
 		for (final TextEdit e : item.getAdditionalTextEdits()) {
-			out.add(new org.scijava.code.api.Completion.TextEdit(DocumentSync.offset(
+			out.add(new AdditionalEdits.Edit(DocumentSync.offset(
 				text, e.getRange().getStart()), DocumentSync.offset(text, e.getRange()
 					.getEnd()), e.getNewText()));
 		}

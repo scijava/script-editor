@@ -94,7 +94,6 @@ import org.scijava.script.ScriptHeaderService;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptService;
 import org.scijava.ui.swing.script.vim.VimHandler;
-import org.scijava.code.api.CodeCompletionService;
 import org.scijava.code.lsp.LanguageServerService;
 import org.scijava.ui.swing.script.autocompletion.LanguageServerLanguageSupport;
 import org.scijava.util.FileUtils;
@@ -137,8 +136,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	Context context;
 	@Parameter
 	private LanguageSupportService languageSupportService;
-	@Parameter
-	private CodeCompletionService codeCompletionService;
 	@Parameter
 	private LanguageServerService languageServerService;
 	@Parameter

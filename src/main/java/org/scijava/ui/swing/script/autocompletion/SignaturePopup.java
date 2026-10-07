@@ -55,7 +55,7 @@ import javax.swing.text.JTextComponent;
 
 import org.eclipse.lsp4j.SignatureHelp;
 import org.eclipse.lsp4j.SignatureInformation;
-import org.scijava.code.api.Signatures;
+import org.scijava.code.lsp.Signatures;
 import org.scijava.code.lsp.RatedSignatureInformation;
 
 /**

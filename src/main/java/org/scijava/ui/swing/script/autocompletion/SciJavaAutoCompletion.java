@@ -39,13 +39,12 @@ import javax.swing.text.JTextComponent;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.rtextarea.RTextArea;
-import org.scijava.code.api.Completion.TextEdit;
+import org.scijava.ui.swing.script.autocompletion.AdditionalEdits.Edit;
 
 /**
  * An {@link org.fife.ui.autocomplete.AutoCompletion} that, in addition to
- * inserting the chosen completion, applies any
- * {@link org.scijava.code.api.Completion#additionalEdits() additional
- * edits} the completion carries (see {@link SciJavaCompletion}). This is how
+ * inserting the chosen completion, applies any additional edits the
+ * completion carries (see {@link SciJavaCompletion}). This is how
  * language-neutral auto-imports are realized in the Swing editor.
  *
  * @author Curtis Rueden
@@ -92,7 +91,7 @@ public class SciJavaAutoCompletion extends
 			super.insertCompletion(c, typedParamListStartChar);
 			return;
 		}
-		final List<TextEdit> edits = ((AdditionalEdits) c).getAdditionalEdits();
+		final List<Edit> edits = ((AdditionalEdits) c).getAdditionalEdits();
 		if (edits.isEmpty()) {
 			super.insertCompletion(c, typedParamListStartChar);
 			return;
@@ -108,9 +107,9 @@ public class SciJavaAutoCompletion extends
 			// Then apply additional edits. They lie before the completion point,
 			// so applying them from highest to lowest offset keeps each offset
 			// valid, and the caret (tracked by the document) shifts accordingly.
-			final List<TextEdit> sorted = new ArrayList<>(edits);
-			sorted.sort(Comparator.comparingInt(TextEdit::start).reversed());
-			for (final TextEdit edit : sorted) {
+			final List<Edit> sorted = new ArrayList<>(edits);
+			sorted.sort(Comparator.comparingInt(Edit::start).reversed());
+			for (final Edit edit : sorted) {
 				applyEdit(comp, edit);
 			}
 		}
@@ -119,7 +118,7 @@ public class SciJavaAutoCompletion extends
 		}
 	}
 
-	private void applyEdit(final JTextComponent comp, final TextEdit edit) {
+	private void applyEdit(final JTextComponent comp, final Edit edit) {
 		try {
 			final int len = edit.end() - edit.start();
 			if (len > 0) comp.getDocument().remove(edit.start(), len);

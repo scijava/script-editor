@@ -38,20 +38,36 @@ import java.awt.Rectangle;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.swing.JTextArea;
 import javax.swing.text.BadLocationException;
 
+import org.eclipse.lsp4j.CompletionItem;
+import org.eclipse.lsp4j.CompletionList;
+import org.eclipse.lsp4j.CompletionParams;
+import org.eclipse.lsp4j.DidCloseTextDocumentParams;
+import org.eclipse.lsp4j.DidOpenTextDocumentParams;
+import org.eclipse.lsp4j.InsertTextFormat;
+import org.eclipse.lsp4j.Range;
+import org.eclipse.lsp4j.TextDocumentIdentifier;
+import org.eclipse.lsp4j.TextDocumentItem;
+import org.eclipse.lsp4j.services.LanguageServer;
+import org.eclipse.lsp4j.services.TextDocumentService;
 import org.scijava.Context;
 import org.scijava.script.ScriptInterpreter;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptREPL;
-import org.scijava.code.api.CodeCompletionService;
-import org.scijava.code.api.Completion;
-import org.scijava.code.api.CompletionRequest;
-import org.scijava.code.api.CompletionResult;
+import org.scijava.code.lsp.BindingsLanguageServer;
+import org.scijava.code.lsp.LanguageServerService;
+import org.scijava.code.lsp.Positions;
+import org.scijava.code.lsp.UpdatingCompletionList;
 import org.scijava.thread.ThreadService;
 import org.scijava.util.ClassUtils;
 import org.scijava.util.Types;
@@ -64,6 +80,13 @@ import org.scijava.widget.UIComponent;
  * @author Curtis Rueden
  */
 public abstract class PromptPane implements UIComponent<JTextArea> {
+
+	/** The prompt's text, as the servers know it. */
+	private static final String PROMPT_URI = "untitled:/prompt";
+
+	/** How long Tab waits for completions, in milliseconds. */
+	private static final long COMPLETION_WAIT = 2000;
+
 
 	private final ScriptREPL repl;
 	private final VarsPane vars;
@@ -204,55 +227,129 @@ public abstract class PromptPane implements UIComponent<JTextArea> {
 	}
 
 	/**
-	 * Tab-completion for the REPL prompt. Delegates to the language-agnostic
-	 * {@link CodeCompletionService}, which inspects the live engine bindings, so
-	 * every scripting language gets at least baseline completion here.
+	 * Tab-completion for the REPL prompt: what the language's servers know (see
+	 * {@link LanguageServerService}), with the interpreter's live variables; or,
+	 * for languages without servers, its live variables alone (see
+	 * {@link BindingsLanguageServer}). So every scripting language gets at
+	 * least baseline completion here.
 	 */
 	private void complete() {
 		final ScriptInterpreter interpreter = repl.getInterpreter();
 		if (interpreter == null) return;
 		final ScriptEngine engine = interpreter.getEngine();
 		final ScriptLanguage language = interpreter.getLanguage();
+		final ScriptContext live = engine == null ? null : engine.getContext();
 		final int caret = textArea.getCaretPosition();
 		final String text = textArea.getText();
 
-		final CompletionResult result;
+		final List<CompletionItem> items;
 		try {
-			result = context().service(CodeCompletionService.class).complete(//
-				new CompletionRequest(text, caret, language, engine, //
-					engine == null ? null : engine.getContext()));
+			items = items(language, live, text, caret);
 		}
 		catch (final Exception exc) {
 			return;
 		}
-
-		final List<Completion> completions = result.completions();
-		if (completions.isEmpty()) {
+		if (items.isEmpty()) {
 			textArea.getToolkit().beep();
 			return;
 		}
-		final int start = Math.min(Math.max(result.replaceStart(), 0), caret);
+		final int start = Math.min(Math.max(start(items.get(0), text, caret), 0),
+			caret);
 
-		if (completions.size() == 1) {
-			replaceRange(start, caret, completions.get(0).insertionText());
+		if (items.size() == 1) {
+			replaceRange(start, caret, insertion(items.get(0)));
 			return;
 		}
 
 		// Multiple candidates: insert their longest common prefix (if it extends
 		// what is already typed), and list the options in the output pane.
-		final String lcp = longestCommonPrefix(completions);
+		final String lcp = longestCommonPrefix(items);
 		final String current = text.substring(start, caret);
 		if (lcp.length() > current.length()) {
 			replaceRange(start, caret, lcp);
 		}
 		else {
 			final StringBuilder sb = new StringBuilder();
-			for (final Completion c : completions) {
+			for (final CompletionItem item : items) {
 				if (sb.length() > 0) sb.append("    ");
-				sb.append(c.displayText());
+				sb.append(item.getLabel());
+				if (item.getLabelDetails() != null && item.getLabelDetails()
+					.getDetail() != null) sb.append(item.getLabelDetails().getDetail());
 			}
 			output.append(sb.append("\n").toString());
 		}
+	}
+
+	/** Asks the language's servers (or the live variables) for completions. */
+	private List<CompletionItem> items(final ScriptLanguage language,
+		final ScriptContext live, final String text, final int caret)
+		throws Exception
+	{
+		final LanguageServerService servers = context().service(
+			LanguageServerService.class);
+		final LanguageServer server;
+		if (servers != null && language != null && servers.supports(language)) {
+			server = servers.server(language, live);
+		}
+		else if (live != null) server = new BindingsLanguageServer(live);
+		else return Collections.emptyList();
+
+		final TextDocumentService docs = server.getTextDocumentService();
+		docs.didOpen(new DidOpenTextDocumentParams(new TextDocumentItem(PROMPT_URI,
+			language == null ? "" : language.getLanguageName(), 1, text)));
+		try {
+			CompletionList list = docs.completion(new CompletionParams(
+				new TextDocumentIdentifier(PROMPT_URI), Positions.position(text,
+					caret))).get(COMPLETION_WAIT, TimeUnit.MILLISECONDS).getRight();
+			// NB: Tab asks once: wait a moment for slower servers.
+			if (list instanceof UpdatingCompletionList) {
+				try {
+					final CompletionList better = ((UpdatingCompletionList) list)
+						.update().get(COMPLETION_WAIT, TimeUnit.MILLISECONDS);
+					if (better != null) list = better;
+				}
+				catch (final Exception exc) {
+					// NB: Not in time: what there is.
+				}
+			}
+			final List<CompletionItem> items = new ArrayList<>(list.getItems());
+			items.sort(Comparator.comparing(item -> item.getSortText() != null ? item
+				.getSortText() : item.getLabel()));
+			return items;
+		}
+		finally {
+			docs.didClose(new DidCloseTextDocumentParams(new TextDocumentIdentifier(
+				PROMPT_URI)));
+		}
+	}
+
+	/** Where a completion's text starts: what it replaces, up to the caret. */
+	private static int start(final CompletionItem item, final String text,
+		final int caret)
+	{
+		if (item.getTextEdit() == null) return caret;
+		final Range range = item.getTextEdit().isLeft() ? item.getTextEdit()
+			.getLeft().getRange() : item.getTextEdit().getRight().getInsert();
+		return Positions.offset(text, range.getStart());
+	}
+
+	/**
+	 * The text a completion inserts; for a callable (a snippet), up to its
+	 * first parameter, e.g. {@code max(}.
+	 */
+	private static String insertion(final CompletionItem item) {
+		String text = item.getTextEdit() == null ? null : item.getTextEdit()
+			.isLeft() ? item.getTextEdit().getLeft().getNewText() : item
+				.getTextEdit().getRight().getNewText();
+		if (text == null) text = item.getInsertText();
+		if (text == null) text = item.getLabel();
+		if (item.getInsertTextFormat() == InsertTextFormat.Snippet) {
+			final int stop = text.indexOf('$');
+			if (stop >= 0) text = text.substring(0, stop);
+			text = text.replace("\\$", "$").replace("\\}", "}").replace("\\\\",
+				"\\");
+		}
+		return text;
 	}
 
 	private void replaceRange(final int start, final int end,
@@ -267,10 +364,10 @@ public abstract class PromptPane implements UIComponent<JTextArea> {
 		}
 	}
 
-	private static String longestCommonPrefix(final List<Completion> completions) {
-		String prefix = completions.get(0).insertionText();
-		for (final Completion c : completions) {
-			final String s = c.insertionText();
+	private static String longestCommonPrefix(final List<CompletionItem> items) {
+		String prefix = insertion(items.get(0));
+		for (final CompletionItem item : items) {
+			final String s = insertion(item);
 			int i = 0;
 			final int max = Math.min(prefix.length(), s.length());
 			while (i < max && prefix.charAt(i) == s.charAt(i)) i++;
