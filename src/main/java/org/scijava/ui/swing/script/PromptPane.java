@@ -44,29 +44,21 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.swing.JTextArea;
 import javax.swing.text.BadLocationException;
 
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionList;
-import org.eclipse.lsp4j.CompletionParams;
-import org.eclipse.lsp4j.DidCloseTextDocumentParams;
-import org.eclipse.lsp4j.DidOpenTextDocumentParams;
 import org.eclipse.lsp4j.InsertTextFormat;
 import org.eclipse.lsp4j.Range;
-import org.eclipse.lsp4j.TextDocumentIdentifier;
-import org.eclipse.lsp4j.TextDocumentItem;
-import org.eclipse.lsp4j.services.LanguageServer;
-import org.eclipse.lsp4j.services.TextDocumentService;
 import org.scijava.Context;
 import org.scijava.script.ScriptInterpreter;
-import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptREPL;
 import org.scijava.code.lsp.BindingsLanguageServer;
 import org.scijava.code.lsp.LanguageServerService;
 import org.scijava.code.lsp.Positions;
+import org.scijava.code.lsp.ScriptSession;
 import org.scijava.code.lsp.UpdatingCompletionList;
 import org.scijava.thread.ThreadService;
 import org.scijava.util.ClassUtils;
@@ -81,9 +73,6 @@ import org.scijava.widget.UIComponent;
  */
 public abstract class PromptPane implements UIComponent<JTextArea> {
 
-	/** The prompt's text, as the servers know it. */
-	private static final String PROMPT_URI = "untitled:/prompt";
-
 	/** How long Tab waits for completions, in milliseconds. */
 	private static final long COMPLETION_WAIT = 2000;
 
@@ -94,6 +83,10 @@ public abstract class PromptPane implements UIComponent<JTextArea> {
 	private final OutputPane output;
 
 	private boolean executing;
+
+	/** The session about the prompt's text, and the interpreter it is for. */
+	private ScriptSession session;
+	private ScriptInterpreter sessionInterpreter;
 
 	public PromptPane(final ScriptREPL repl, final VarsPane vars,
 		final OutputPane output)
@@ -236,15 +229,12 @@ public abstract class PromptPane implements UIComponent<JTextArea> {
 	private void complete() {
 		final ScriptInterpreter interpreter = repl.getInterpreter();
 		if (interpreter == null) return;
-		final ScriptEngine engine = interpreter.getEngine();
-		final ScriptLanguage language = interpreter.getLanguage();
-		final ScriptContext live = engine == null ? null : engine.getContext();
 		final int caret = textArea.getCaretPosition();
 		final String text = textArea.getText();
 
 		final List<CompletionItem> items;
 		try {
-			items = items(language, live, text, caret);
+			items = items(interpreter, text, caret);
 		}
 		catch (final Exception exc) {
 			return;
@@ -281,46 +271,54 @@ public abstract class PromptPane implements UIComponent<JTextArea> {
 	}
 
 	/** Asks the language's servers (or the live variables) for completions. */
-	private List<CompletionItem> items(final ScriptLanguage language,
-		final ScriptContext live, final String text, final int caret)
-		throws Exception
+	private List<CompletionItem> items(final ScriptInterpreter interpreter,
+		final String text, final int caret) throws Exception
 	{
+		final ScriptSession session = session(interpreter);
+		if (session == null) return Collections.emptyList();
+		CompletionList list = session.completion(text, caret).get(COMPLETION_WAIT,
+			TimeUnit.MILLISECONDS);
+		// NB: Tab asks once: wait a moment for slower servers.
+		if (list instanceof UpdatingCompletionList) {
+			try {
+				final CompletionList better = ((UpdatingCompletionList) list).update()
+					.get(COMPLETION_WAIT, TimeUnit.MILLISECONDS);
+				if (better != null) list = better;
+			}
+			catch (final Exception exc) {
+				// NB: Not in time: what there is.
+			}
+		}
+		final List<CompletionItem> items = new ArrayList<>(list.getItems());
+		items.sort(Comparator.comparing(item -> item.getSortText() != null ? item
+			.getSortText() : item.getLabel()));
+		return items;
+	}
+
+	/**
+	 * The session about the prompt's text, for the given interpreter: kept
+	 * while it is the REPL's; or null if completion is unavailable.
+	 */
+	private synchronized ScriptSession session(
+		final ScriptInterpreter interpreter)
+	{
+		if (session != null && sessionInterpreter == interpreter) return session;
+		dispose();
 		final LanguageServerService servers = context().service(
 			LanguageServerService.class);
-		final LanguageServer server;
-		if (servers != null && language != null && servers.supports(language)) {
-			server = servers.server(language, live);
-		}
-		else if (live != null) server = new BindingsLanguageServer(live);
-		else return Collections.emptyList();
+		final ScriptEngine engine = interpreter.getEngine();
+		if (servers == null || interpreter.getLanguage() == null) return null;
+		session = servers.session(interpreter.getLanguage(), engine == null ? null
+			: engine.getContext());
+		sessionInterpreter = interpreter;
+		return session;
+	}
 
-		final TextDocumentService docs = server.getTextDocumentService();
-		docs.didOpen(new DidOpenTextDocumentParams(new TextDocumentItem(PROMPT_URI,
-			language == null ? "" : language.getLanguageName(), 1, text)));
-		try {
-			CompletionList list = docs.completion(new CompletionParams(
-				new TextDocumentIdentifier(PROMPT_URI), Positions.position(text,
-					caret))).get(COMPLETION_WAIT, TimeUnit.MILLISECONDS).getRight();
-			// NB: Tab asks once: wait a moment for slower servers.
-			if (list instanceof UpdatingCompletionList) {
-				try {
-					final CompletionList better = ((UpdatingCompletionList) list)
-						.update().get(COMPLETION_WAIT, TimeUnit.MILLISECONDS);
-					if (better != null) list = better;
-				}
-				catch (final Exception exc) {
-					// NB: Not in time: what there is.
-				}
-			}
-			final List<CompletionItem> items = new ArrayList<>(list.getItems());
-			items.sort(Comparator.comparing(item -> item.getSortText() != null ? item
-				.getSortText() : item.getLabel()));
-			return items;
-		}
-		finally {
-			docs.didClose(new DidCloseTextDocumentParams(new TextDocumentIdentifier(
-				PROMPT_URI)));
-		}
+	/** Lets the language servers release what they keep for the prompt. */
+	public synchronized void dispose() {
+		if (session != null) session.close();
+		session = null;
+		sessionInterpreter = null;
 	}
 
 	/** Where a completion's text starts: what it replaces, up to the caret. */

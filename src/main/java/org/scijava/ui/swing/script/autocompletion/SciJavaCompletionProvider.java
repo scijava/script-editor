@@ -30,7 +30,6 @@
 package org.scijava.ui.swing.script.autocompletion;
 
 import java.awt.Color;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -54,28 +53,25 @@ import javax.swing.text.JTextComponent;
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
 import org.eclipse.lsp4j.CompletionList;
-import org.eclipse.lsp4j.CompletionParams;
 import org.eclipse.lsp4j.InsertTextFormat;
 import org.eclipse.lsp4j.MarkupContent;
 import org.eclipse.lsp4j.MarkupKind;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.SignatureHelp;
-import org.eclipse.lsp4j.SignatureHelpParams;
 import org.eclipse.lsp4j.SignatureInformation;
-import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
-import org.eclipse.lsp4j.services.LanguageServer;
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionCellRenderer;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.ParameterizedCompletion;
-import org.scijava.code.lsp.RatedSignatureInformation;
+import org.scijava.code.lsp.Positions;
 import org.scijava.code.lsp.RatedSignatureInformation.Fit;
+import org.scijava.code.lsp.RatedSignatureInformation;
+import org.scijava.code.lsp.ScriptSession;
 import org.scijava.code.lsp.UpdatingCompletionList;
 import org.scijava.log.Logger;
-import org.scijava.script.ScriptLanguage;
 
 /**
  * The bridge between a language server (usually one standing for all of a
@@ -113,8 +109,7 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 	private static final Pattern PLACEHOLDER = Pattern.compile(
 		"\\$\\{(\\d+)(?::((?:[^}\\\\]|\\\\.)*))?\\}|\\$(\\d+)");
 
-	private final DocumentSync sync;
-	private final ScriptLanguage language;
+	private final ScriptSession session;
 
 	/** Optional logger, for reporting server failures. */
 	private Logger log;
@@ -134,11 +129,9 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 	/** Notified when better completions arrive for the current request. */
 	private volatile Consumer<Boolean> updateListener;
 
-	public SciJavaCompletionProvider(final LanguageServer server,
-		final ScriptLanguage language)
-	{
-		this.sync = new DocumentSync(server, language);
-		this.language = language;
+	/** @param session Where to ask about the script being edited. */
+	public SciJavaCompletionProvider(final ScriptSession session) {
+		this.session = session;
 		setParameterizedCompletionParams('(', ", ", ')');
 		// Show each callable's parameters and return type in the popup list.
 		setListCellRenderer(new CompletionCellRenderer());
@@ -147,22 +140,14 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 		setParameterChoicesProvider(this::parameterChoices);
 	}
 
-	/** The synchronization of the edited script with the server. */
-	public DocumentSync sync() {
-		return sync;
+	/** Where this asks about the script being edited. */
+	public ScriptSession session() {
+		return session;
 	}
 
 	/** Sets a logger with which to report server failures. */
 	public void setLogger(final Logger log) {
 		this.log = log;
-	}
-
-	/**
-	 * Sets a supplier of the file of the script being edited (which may supply
-	 * null, for an unsaved script).
-	 */
-	public void setFile(final Supplier<File> file) {
-		sync.setFile(file);
 	}
 
 	@Override
@@ -241,11 +226,8 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 		}
 		SignatureHelp h = null;
 		try {
-			final String uri = sync.sync(text);
-			final CompletableFuture<SignatureHelp> answer = sync.server()
-				.getTextDocumentService().signatureHelp(new SignatureHelpParams(
-					new TextDocumentIdentifier(uri), DocumentSync.position(text,
-						caret)));
+			final CompletableFuture<SignatureHelp> answer = session.signatureHelp(
+				text, caret);
 			try {
 				h = answer.get(HELP_BUDGET, TimeUnit.MILLISECONDS);
 			}
@@ -374,14 +356,8 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 	/** Asks the server for completions; none if it fails. */
 	private CompletionList request(final String text, final int caret) {
 		try {
-			final String uri = sync.sync(text);
-			final Either<List<CompletionItem>, CompletionList> answer = sync.server()
-				.getTextDocumentService().completion(new CompletionParams(
-					new TextDocumentIdentifier(uri), DocumentSync.position(text, caret)))
-				.get(REQUEST_TIMEOUT, TimeUnit.MILLISECONDS);
-			if (answer == null) return new CompletionList();
-			return answer.isRight() ? answer.getRight() : new CompletionList(answer
-				.getLeft());
+			return session.completion(text, caret).get(REQUEST_TIMEOUT,
+				TimeUnit.MILLISECONDS);
 		}
 		catch (final Exception | LinkageError exc) {
 			// NB: Never let a misbehaving server break the editor.
@@ -435,7 +411,7 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 		if (item.getTextEdit() != null) {
 			final Range r = item.getTextEdit().isLeft() ? item.getTextEdit()
 				.getLeft().getRange() : item.getTextEdit().getRight().getInsert();
-			return Math.min(caret, DocumentSync.offset(text, r.getStart()));
+			return Math.min(caret, Positions.offset(text, r.getStart()));
 		}
 		int start = Math.min(caret, text.length());
 		while (start > 0 && Character.isJavaIdentifierPart(text.charAt(start -
@@ -558,9 +534,8 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 	private String describe(final CompletionItem item) {
 		if (item.getDocumentation() != null) return html(item.getDocumentation());
 		try {
-			final CompletionItem resolved = sync.server().getTextDocumentService()
-				.resolveCompletionItem(item).get(DESCRIBE_TIMEOUT,
-					TimeUnit.MILLISECONDS);
+			final CompletionItem resolved = session.resolve(item).get(
+				DESCRIBE_TIMEOUT, TimeUnit.MILLISECONDS);
 			return resolved == null ? null : html(resolved.getDocumentation());
 		}
 		catch (final Exception exc) {
@@ -575,9 +550,9 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 		final List<AdditionalEdits.Edit> out =
 			new ArrayList<>();
 		for (final TextEdit e : item.getAdditionalTextEdits()) {
-			out.add(new AdditionalEdits.Edit(DocumentSync.offset(
-				text, e.getRange().getStart()), DocumentSync.offset(text, e.getRange()
-					.getEnd()), e.getNewText()));
+			out.add(new AdditionalEdits.Edit(Positions.offset(text, e.getRange()
+				.getStart()), Positions.offset(text, e.getRange().getEnd()), e
+					.getNewText()));
 		}
 		return out;
 	}

@@ -815,9 +815,10 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 		// Tier 2: language servers for this language.
 		if (support == null && languageServerService.supports(currentLanguage)) {
+			final ScriptLanguage served = currentLanguage;
 			final LanguageServerLanguageSupport serverSupport =
-				new LanguageServerLanguageSupport(languageServerService.server(
-					currentLanguage), currentLanguage, log, this::getFile);
+				new LanguageServerLanguageSupport(() -> languageServerService.session(
+					served), log, this::getFile);
 			serverSupport.setHoverEnabled(hoverEnabled);
 			serverSupport.setDiagnosticsEnabled(diagnosticsEnabled);
 			support = serverSupport;

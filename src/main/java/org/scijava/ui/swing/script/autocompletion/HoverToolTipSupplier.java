@@ -34,13 +34,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.lsp4j.Hover;
-import org.eclipse.lsp4j.HoverParams;
-import org.eclipse.lsp4j.MarkupContent;
 import org.eclipse.lsp4j.MarkedString;
-import org.eclipse.lsp4j.TextDocumentIdentifier;
+import org.eclipse.lsp4j.MarkupContent;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.ToolTipSupplier;
+import org.scijava.code.lsp.ScriptSession;
 import org.scijava.log.Logger;
 
 /**
@@ -62,7 +61,7 @@ public class HoverToolTipSupplier implements ToolTipSupplier {
 	/** How much of an answer to show, at most, in lines. */
 	private static final int MAX_LINES = 25;
 
-	private final DocumentSync sync;
+	private final ScriptSession session;
 	private final Logger log;
 
 	/** The last question (text and word), and its answer. */
@@ -70,8 +69,8 @@ public class HoverToolTipSupplier implements ToolTipSupplier {
 	private int askedWord = -1;
 	private CompletableFuture<Hover> answer;
 
-	public HoverToolTipSupplier(final DocumentSync sync, final Logger log) {
-		this.sync = sync;
+	public HoverToolTipSupplier(final ScriptSession session, final Logger log) {
+		this.session = session;
 		this.log = log;
 	}
 
@@ -104,9 +103,7 @@ public class HoverToolTipSupplier implements ToolTipSupplier {
 
 	private CompletableFuture<Hover> ask(final String text, final int offset) {
 		try {
-			final String uri = sync.sync(text);
-			return sync.server().getTextDocumentService().hover(new HoverParams(
-				new TextDocumentIdentifier(uri), DocumentSync.position(text, offset)));
+			return session.hover(text, offset);
 		}
 		catch (final Exception | LinkageError exc) {
 			// NB: Never let a misbehaving server break the editor.

@@ -45,6 +45,7 @@ import org.fife.ui.rsyntaxtextarea.parser.DefaultParseResult;
 import org.fife.ui.rsyntaxtextarea.parser.DefaultParserNotice;
 import org.fife.ui.rsyntaxtextarea.parser.ParseResult;
 import org.fife.ui.rsyntaxtextarea.parser.ParserNotice;
+import org.scijava.code.lsp.Positions;
 
 /**
  * Shows the problems language servers publish for the script (e.g. syntax
@@ -87,8 +88,8 @@ public class DiagnosticsParser extends AbstractParser {
 		}
 		final Element root = doc.getDefaultRootElement();
 		for (final Diagnostic d : problems) {
-			int start = DocumentSync.offset(text, d.getRange().getStart());
-			final int end = DocumentSync.offset(text, d.getRange().getEnd());
+			int start = Positions.offset(text, d.getRange().getStart());
+			final int end = Positions.offset(text, d.getRange().getEnd());
 			if (start >= text.length() && text.length() > 0) {
 				start = text.length() - 1; // NB: E.g. "unexpected end of file".
 			}

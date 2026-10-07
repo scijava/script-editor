@@ -32,41 +32,31 @@ package org.scijava.ui.swing.script.autocompletion;
 import java.io.File;
 import java.util.Map;
 import java.util.WeakHashMap;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
-import org.eclipse.lsp4j.MessageActionItem;
-import org.eclipse.lsp4j.MessageParams;
-import org.eclipse.lsp4j.PublishDiagnosticsParams;
-import org.eclipse.lsp4j.ShowMessageRequestParams;
-import org.eclipse.lsp4j.services.LanguageClient;
-import org.eclipse.lsp4j.services.LanguageClientAware;
-import org.eclipse.lsp4j.services.LanguageServer;
 import org.fife.rsta.ac.AbstractLanguageSupport;
 import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.scijava.code.lsp.ScriptSession;
 import org.scijava.log.Logger;
-import org.scijava.script.ScriptLanguage;
 
 /**
- * RSyntaxTextArea language support from a language server (usually one
- * standing for all of a script language's, see
+ * RSyntaxTextArea language support from language servers, via a
+ * {@link ScriptSession} per text area (usually from
  * {@code org.scijava.code.lsp.LanguageServerService}): completion with
  * parameter assistance, documentation on hover, problems as squiggles, and
- * signatures as a call is typed. The edited script is kept in sync with the
- * server (see {@link DocumentSync}): opened on install, changed with each
- * edit, closed on uninstall.
+ * signatures as a call is typed. The session is told the script's text on
+ * install and with each edit, and closed on uninstall.
  *
  * @author Curtis Rueden
  * @author Gabriel Selzer
  */
 public class LanguageServerLanguageSupport extends AbstractLanguageSupport {
 
-	private final LanguageServer server;
-	private final ScriptLanguage language;
+	private final Supplier<ScriptSession> sessions;
 	private final Logger log;
 	private final Supplier<File> file;
 	private boolean hoverEnabled = true;
@@ -77,19 +67,17 @@ public class LanguageServerLanguageSupport extends AbstractLanguageSupport {
 		new WeakHashMap<>();
 
 	/**
-	 * @param server The language server (one per support: it is told about the
-	 *          script, and publishes its problems to this support).
-	 * @param language The script's language.
+	 * @param sessions Starts a session about the script, for each text area
+	 *          this is installed in (e.g.
+	 *          {@code () -> languageServerService.session(language)}).
 	 * @param log Where to report problems, or null.
 	 * @param file Supplies the file of the script being edited (or null if
 	 *          unsaved).
 	 */
-	public LanguageServerLanguageSupport(final LanguageServer server,
-		final ScriptLanguage language, final Logger log,
-		final Supplier<File> file)
+	public LanguageServerLanguageSupport(final Supplier<ScriptSession> sessions,
+		final Logger log, final Supplier<File> file)
 	{
-		this.server = server;
-		this.language = language;
+		this.sessions = sessions;
 		this.log = log;
 		this.file = file;
 		setAutoCompleteEnabled(true);
@@ -115,11 +103,10 @@ public class LanguageServerLanguageSupport extends AbstractLanguageSupport {
 
 	@Override
 	public void install(final RSyntaxTextArea textArea) {
+		final ScriptSession session = sessions.get().setFile(file).setLogger(log);
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
-			server, language);
+			session);
 		provider.setLogger(log);
-		provider.setFile(file);
-		final DocumentSync sync = provider.sync();
 		final AutoCompletion ac = new SciJavaAutoCompletion(provider);
 		ac.setAutoCompleteEnabled(isAutoCompleteEnabled());
 		ac.setAutoActivationEnabled(isAutoActivationEnabled());
@@ -129,16 +116,14 @@ public class LanguageServerLanguageSupport extends AbstractLanguageSupport {
 		installImpl(textArea, ac);
 
 		// Documentation on hover, problems as squiggles, signatures as typed.
-		final Installed extras = new Installed(sync);
+		final Installed extras = new Installed(session);
 		if (hoverEnabled) {
-			textArea.setToolTipSupplier(new HoverToolTipSupplier(sync, log));
+			textArea.setToolTipSupplier(new HoverToolTipSupplier(session, log));
 		}
 		if (diagnosticsEnabled) {
 			extras.parser = new DiagnosticsParser(textArea);
 			textArea.addParser(extras.parser);
-		}
-		if (server instanceof LanguageClientAware) {
-			((LanguageClientAware) server).connect(new Client(sync, extras.parser));
+			session.setDiagnosticsListener(extras.parser::accept);
 		}
 		if (isParameterAssistanceEnabled()) {
 			extras.popup = new SignaturePopup(textArea, provider::signatureHelp);
@@ -166,7 +151,7 @@ public class LanguageServerLanguageSupport extends AbstractLanguageSupport {
 
 			private void changed() {
 				try {
-					sync.sync(textArea.getText());
+					session.update(textArea.getText());
 				}
 				catch (final Exception | LinkageError exc) {
 					// NB: Never let a misbehaving server break the editor.
@@ -177,7 +162,7 @@ public class LanguageServerLanguageSupport extends AbstractLanguageSupport {
 		textArea.getDocument().addDocumentListener(extras.listener);
 		installed.put(textArea, extras);
 		try {
-			sync.sync(textArea.getText());
+			session.update(textArea.getText());
 		}
 		catch (final Exception | LinkageError exc) {
 			if (log != null) log.debug("Document sync failed", exc);
@@ -197,7 +182,7 @@ public class LanguageServerLanguageSupport extends AbstractLanguageSupport {
 		if (extras.popup != null) extras.popup.uninstall();
 		// Let the servers release what they keep for this script.
 		try {
-			extras.sync.close();
+			extras.session.close();
 		}
 		catch (final Exception | LinkageError exc) {
 			if (log != null) log.debug("Document close failed", exc);
@@ -206,52 +191,13 @@ public class LanguageServerLanguageSupport extends AbstractLanguageSupport {
 
 	private static final class Installed {
 
-		private final DocumentSync sync;
+		private final ScriptSession session;
 		private DiagnosticsParser parser;
 		private SignaturePopup popup;
 		private DocumentListener listener;
 
-		private Installed(final DocumentSync sync) {
-			this.sync = sync;
-		}
-	}
-
-	/** Receives the server's messages: the script's problems, for the parser. */
-	private final class Client implements LanguageClient {
-
-		private final DocumentSync sync;
-		private final DiagnosticsParser parser;
-
-		private Client(final DocumentSync sync, final DiagnosticsParser parser) {
-			this.sync = sync;
-			this.parser = parser;
-		}
-
-		@Override
-		public void publishDiagnostics(final PublishDiagnosticsParams p) {
-			if (parser != null && p.getUri().equals(sync.uri())) {
-				parser.accept(p.getDiagnostics());
-			}
-		}
-
-		@Override
-		public void telemetryEvent(final Object object) {}
-
-		@Override
-		public void showMessage(final MessageParams m) {
-			if (log != null) log.debug("Language server: " + m.getMessage());
-		}
-
-		@Override
-		public CompletableFuture<MessageActionItem> showMessageRequest(
-			final ShowMessageRequestParams r)
-		{
-			return CompletableFuture.completedFuture(null);
-		}
-
-		@Override
-		public void logMessage(final MessageParams m) {
-			if (log != null) log.debug("Language server: " + m.getMessage());
+		private Installed(final ScriptSession session) {
+			this.session = session;
 		}
 	}
 }
