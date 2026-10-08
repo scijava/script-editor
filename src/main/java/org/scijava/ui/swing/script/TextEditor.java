@@ -133,6 +133,7 @@ import org.fife.ui.rtextarea.RTextAreaEditorKit.SetWritableAction;
 import org.scijava.Context;
 import org.scijava.app.AppService;
 import org.scijava.batch.BatchService;
+import org.scijava.code.lsp.jvm.ClassIndex;
 import org.scijava.command.CommandService;
 import org.scijava.event.ContextDisposingEvent;
 import org.scijava.event.EventHandler;
@@ -155,7 +156,6 @@ import org.scijava.script.ScriptService;
 import org.scijava.thread.ThreadService;
 import org.scijava.ui.CloseConfirmable;
 import org.scijava.ui.UIService;
-import org.scijava.ui.swing.script.autocompletion.ClassUtil;
 import org.scijava.ui.swing.script.commands.ChooseFontSize;
 import org.scijava.ui.swing.script.commands.ChooseTabSize;
 import org.scijava.ui.swing.script.commands.GitGrep;
@@ -3309,7 +3309,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 			final HashMap<String, ArrayList<String>> matches;
 			try {
-				 matches = ClassUtil.findDocumentationForClass(text);
+				 matches = ClassIndex.findDocumentationForClass(text);
 			} finally {
 				setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 			}
