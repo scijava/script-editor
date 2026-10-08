@@ -47,7 +47,6 @@ import java.util.function.Supplier;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
 
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
@@ -64,10 +63,8 @@ import org.junit.Test;
 import org.scijava.code.lsp.jvm.Callable;
 import org.scijava.code.lsp.Environment;
 import org.scijava.code.lsp.Positions;
-import org.scijava.code.lsp.RatedSignatureInformation.Fit;
 import org.scijava.code.lsp.jvm.ScriptLanguageServer;
 import org.scijava.code.lsp.ScriptSession;
-import org.scijava.code.lsp.UpdatingCompletionList;
 
 /**
  * Tests that {@link SciJavaCompletionProvider} faithfully bridges a language
@@ -248,27 +245,24 @@ public class SciJavaCompletionProviderTest {
 		server.help = (doc, caret) -> {
 			askedText[0] = doc.text();
 			askedCaret[0] = caret;
-			// The server rates and orders the signatures: here, as for a float
-			// typed as the first argument.
-			return new SignatureHelp(Arrays.asList(floats.toSignature(Fit.MATCH),
-				ints.toSignature(Fit.MISMATCH), longs.toSignature(Fit.CONVERSION),
-				strings.toSignature(Fit.MISMATCH)), 0, 1);
+			// The server orders the signatures, best fits first: here, as for a
+			// float typed as the first argument.
+			return new SignatureHelp(Arrays.asList(floats.toSignature(), ints
+				.toSignature(), longs.toSignature(), strings.toSignature()), 0, 1);
 		};
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
 			ScriptSession.owning(server, null));
 		final List<Completion> completions = provider.getCompletionsImpl(area);
 		final ParameterizedCompletion intOverload =
 			(ParameterizedCompletion) completions.get(0);
-		final String gray = "<font color=\"" + SciJavaCompletionProvider
-			.dimColor() + "\">";
 
 		// Accepted a(int, int), typed a float, and tabbed onward: the server's
-		// order, styled by fit, without the accepted overload.
+		// order, without the accepted overload.
 		area.setText("a(1.5, p1)");
 		area.setCaretPosition(7);
 		assertEquals("<hr>float p0, float p1" + //
-			"<hr>" + gray + "long p0, long p1</font>" + //
-			"<hr>" + gray + "<s>String p0</s></font>", //
+			"<hr>long p0, long p1" + //
+			"<hr>String p0", //
 			intOverload.getParam(1).getDescription());
 		// The server was asked about the caret.
 		assertEquals(7, askedCaret[0]);
@@ -287,7 +281,7 @@ public class SciJavaCompletionProviderTest {
 			.toItem(), floats.toItem());
 		// The caret is in a call nested in a's arguments: b's signatures.
 		server.help = (doc, caret) -> new SignatureHelp(Collections.singletonList(
-			method("b", "double").toSignature(Fit.MATCH)), 0, 0);
+			method("b", "double").toSignature()), 0, 0);
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
 			ScriptSession.owning(server, null));
 		final ParameterizedCompletion intOverload =
@@ -336,11 +330,11 @@ public class SciJavaCompletionProviderTest {
 		area.setCaretPosition(4);
 		final CompletableFuture<CompletionList> later = new CompletableFuture<>();
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
-			ScriptSession.owning(new UpdatingServer(later), null));
+			ScriptSession.owning(new LateServer(later), null));
 		final Boolean[] notified = { null };
 		provider.setUpdateListener(wasEmpty -> notified[0] = wasEmpty);
 
-		// At first, nothing; then the better result arrives.
+		// At first, nothing (not in time); then the result arrives.
 		assertEquals(0, provider.getCompletionsImpl(area).size());
 		later.complete(zeros("np.z"));
 		SwingUtilities.invokeAndWait(() -> {});
@@ -349,10 +343,10 @@ public class SciJavaCompletionProviderTest {
 		assertEquals(1, completions.size());
 		assertEquals("zeros", completions.get(0).getReplacementText());
 
-		// An update for a request the user has typed past is ignored.
+		// A result for a request the user has typed past is ignored.
 		final CompletableFuture<CompletionList> stale = new CompletableFuture<>();
 		final SciJavaCompletionProvider provider2 = new SciJavaCompletionProvider(
-			ScriptSession.owning(new UpdatingServer(stale), null));
+			ScriptSession.owning(new LateServer(stale), null));
 		notified[0] = null;
 		provider2.setUpdateListener(wasEmpty -> notified[0] = wasEmpty);
 		area.setText("np.z");
@@ -380,19 +374,6 @@ public class SciJavaCompletionProviderTest {
 		assertEquals(file.getAbsolutePath(), server.opened.get(0).path());
 		support.uninstall(area);
 		assertEquals(1, server.closed.size());
-	}
-
-	@Test
-	public void testDimColorFollowsLookAndFeel() {
-		final Object old = UIManager.get("Label.disabledForeground");
-		try {
-			UIManager.put("Label.disabledForeground", new java.awt.Color(0x12, 0x34,
-				0xab));
-			assertEquals("#1234ab", SciJavaCompletionProvider.dimColor());
-		}
-		finally {
-			UIManager.put("Label.disabledForeground", old);
-		}
 	}
 
 	@Test
@@ -496,21 +477,20 @@ public class SciJavaCompletionProviderTest {
 		}
 	}
 
-	/** A server with nothing at first, and more to come. */
-	private static class UpdatingServer extends FakeServer {
+	/** A server whose completions come when they are completed. */
+	private static class LateServer extends FakeServer {
 
-		private final CompletableFuture<CompletionList> update;
+		private final CompletableFuture<CompletionList> later;
 
-		UpdatingServer(final CompletableFuture<CompletionList> update) {
-			this.update = update;
+		LateServer(final CompletableFuture<CompletionList> later) {
+			this.later = later;
 		}
 
 		@Override
 		public CompletableFuture<Either<List<CompletionItem>, CompletionList>>
 			completion(final CompletionParams params)
 		{
-			return CompletableFuture.completedFuture(Either.forRight(
-				new UpdatingCompletionList(Collections.emptyList(), update)));
+			return later.thenApply(Either::forRight);
 		}
 	}
 }

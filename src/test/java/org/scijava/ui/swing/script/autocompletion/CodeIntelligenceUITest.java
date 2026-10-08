@@ -137,27 +137,22 @@ public class CodeIntelligenceUITest {
 	@Test
 	public void testSignaturesHTML() {
 		final String html = SignaturePopup.html(new org.eclipse.lsp4j.SignatureHelp(
-			Arrays.asList(rated("max(double a, double b) -> double",
-				org.scijava.code.lsp.RatedSignatureInformation.Fit.MATCH, "double a",
-				"double b"), rated("max(int a, int b)",
-					org.scijava.code.lsp.RatedSignatureInformation.Fit.MISMATCH, "int a",
-					"int b")), 0, 1));
-		// The parameter being typed in bold; mismatches struck out.
-		assertTrue(html, html.startsWith(
-			"<html>max(double a, <b>double b</b>) → double<br>"));
-		assertTrue(html, html.contains("<s>max(int a, <b>int b</b>)</s>"));
+			Arrays.asList(signature("max(double a, double b) -> double", "double a",
+				"double b"), signature("max(int a, int b)", "int a", "int b")), 0, 1));
+		// One per line, in the server's order; the parameter being typed in bold.
+		assertEquals("<html>max(double a, <b>double b</b>) → double<br>" +
+			"max(int a, <b>int b</b>)</html>", html);
 	}
 
-	private static org.eclipse.lsp4j.SignatureInformation rated(
-		final String label, final org.scijava.code.lsp.RatedSignatureInformation.Fit fit,
-		final String... params)
+	private static org.eclipse.lsp4j.SignatureInformation signature(
+		final String label, final String... params)
 	{
 		final List<org.eclipse.lsp4j.ParameterInformation> ps =
 			new java.util.ArrayList<>();
 		for (final String p : params) {
 			ps.add(new org.eclipse.lsp4j.ParameterInformation(p));
 		}
-		return new org.scijava.code.lsp.RatedSignatureInformation(label, ps, fit);
+		return new org.eclipse.lsp4j.SignatureInformation(label, (String) null, ps);
 	}
 
 	/** A server completing nothing. */

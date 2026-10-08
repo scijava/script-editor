@@ -56,7 +56,6 @@ import javax.swing.text.JTextComponent;
 import org.eclipse.lsp4j.SignatureHelp;
 import org.eclipse.lsp4j.SignatureInformation;
 import org.scijava.code.lsp.jvm.Signatures;
-import org.scijava.code.lsp.RatedSignatureInformation;
 
 /**
  * Shows the signatures of the call being typed (the language server's
@@ -168,10 +167,8 @@ public class SignaturePopup {
 			.getCaretPosition()));
 	}
 
-	/** Renders signatures as HTML, one per line, best fits first. */
+	/** Renders signatures as HTML, one per line, in the server's order. */
 	static String html(final SignatureHelp help) {
-		final String dim = "<font color=\"" + SciJavaCompletionProvider
-			.dimColor() + "\">";
 		final StringBuilder sb = new StringBuilder("<html>");
 		boolean first = true;
 		for (final SignatureInformation s : help.getSignatures()) {
@@ -179,18 +176,8 @@ public class SignaturePopup {
 			first = false;
 			final Integer active = s.getActiveParameter() != null ? s
 				.getActiveParameter() : help.getActiveParameter();
-			final String sig = signature(SignatureLabel.of(s), active == null ? -1
-				: active);
-			switch (RatedSignatureInformation.fitOf(s)) {
-				case CONVERSION:
-					sb.append(dim).append(sig).append("</font>");
-					break;
-				case MISMATCH:
-					sb.append(dim).append("<s>").append(sig).append("</s></font>");
-					break;
-				default:
-					sb.append(sig);
-			}
+			sb.append(signature(SignatureLabel.of(s), active == null ? -1
+				: active));
 		}
 		return sb.append("</html>").toString();
 	}

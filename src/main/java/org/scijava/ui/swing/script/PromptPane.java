@@ -58,7 +58,6 @@ import org.scijava.script.ScriptREPL;
 import org.scijava.code.lsp.LanguageServerService;
 import org.scijava.code.lsp.Positions;
 import org.scijava.code.lsp.ScriptSession;
-import org.scijava.code.lsp.UpdatingCompletionList;
 import org.scijava.thread.ThreadService;
 import org.scijava.util.ClassUtils;
 import org.scijava.util.Types;
@@ -274,19 +273,8 @@ public abstract class PromptPane implements UIComponent<JTextArea> {
 	{
 		final ScriptSession session = session(interpreter);
 		if (session == null) return Collections.emptyList();
-		CompletionList list = session.completion(text, caret).get(COMPLETION_WAIT,
-			TimeUnit.MILLISECONDS);
-		// NB: Tab asks once: wait a moment for slower servers.
-		if (list instanceof UpdatingCompletionList) {
-			try {
-				final CompletionList better = ((UpdatingCompletionList) list).update()
-					.get(COMPLETION_WAIT, TimeUnit.MILLISECONDS);
-				if (better != null) list = better;
-			}
-			catch (final Exception exc) {
-				// NB: Not in time: what there is.
-			}
-		}
+		final CompletionList list = session.completion(text, caret).get(
+			COMPLETION_WAIT, TimeUnit.MILLISECONDS);
 		final List<CompletionItem> items = new ArrayList<>(list.getItems());
 		items.sort(Comparator.comparing(item -> item.getSortText() != null ? item
 			.getSortText() : item.getLabel()));

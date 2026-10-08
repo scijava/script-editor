@@ -29,14 +29,14 @@
 
 package org.scijava.ui.swing.script.autocompletion;
 
-import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -46,7 +46,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.JTextComponent;
 
@@ -67,10 +66,7 @@ import org.fife.ui.autocomplete.CompletionCellRenderer;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.ParameterizedCompletion;
 import org.scijava.code.lsp.Positions;
-import org.scijava.code.lsp.RatedSignatureInformation.Fit;
-import org.scijava.code.lsp.RatedSignatureInformation;
 import org.scijava.code.lsp.ScriptSession;
-import org.scijava.code.lsp.UpdatingCompletionList;
 import org.scijava.log.Logger;
 
 /**
@@ -81,11 +77,9 @@ import org.scijava.log.Logger;
  * Completions with a snippet of parameters (e.g. {@code max(${1:a},
  * ${2:b})}) become function completions, for parameter assistance; their
  * parameters' types come from the label details (e.g. {@code (double a,
- * double b)}). The parameter tooltip lists the other overloads, as signature
- * help rates them for the arguments typed (see
- * {@link RatedSignatureInformation}). Documentation is resolved when shown.
- * Slower completions (see {@link UpdatingCompletionList}) replace the first
- * ones as they arrive.
+ * double b)}). The parameter tooltip lists the other overloads, in signature
+ * help's order. Documentation is resolved when shown. Completions slower than
+ * a moment are shown as they arrive.
  * </p>
  *
  * @author Curtis Rueden
@@ -95,6 +89,12 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 
 	/** How long to wait for completions, in milliseconds. */
 	private static final long REQUEST_TIMEOUT = 2000;
+
+	/**
+	 * How long the editor waits for completions as the user types, in
+	 * milliseconds; those slower are shown as they arrive.
+	 */
+	private static final long ANSWER_WAIT = 50;
 
 	/** How long the parameter tooltip waits for signature help, in ms. */
 	private static final long HELP_BUDGET = 150;
@@ -175,9 +175,9 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 	}
 
 	/**
-	 * Sets a listener to notify when better completions have arrived for the
-	 * current request (see {@link UpdatingCompletionList}), e.g. to refresh the
-	 * completion popup. Called on the event dispatch thread.
+	 * Sets a listener to notify when completions have arrived late for the
+	 * current request, e.g. to refresh the completion popup. Called on the
+	 * event dispatch thread.
 	 *
 	 * @param listener Accepts whether the previous completions were none (so
 	 *          that no popup may be showing for them).
@@ -256,9 +256,8 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 	 * are none.
 	 * <p>
 	 * If the signature help is for this call, its signatures are listed in its
-	 * order, styled by how well they fit the arguments typed so far: matches
-	 * plain, those needing a conversion greyed, mismatches struck out.
-	 * Otherwise, {@code overloads} are listed, unstyled.
+	 * order (servers list those fitting the arguments typed so far first).
+	 * Otherwise, {@code overloads} are listed.
 	 * </p>
 	 *
 	 * @param name The callable's name.
@@ -270,54 +269,24 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 		final List<List<String>> overloads, final SignatureHelp help)
 	{
 		final String ownList = parameterList(own);
-		// NB: A map, since reflection can report the same signature twice.
-		final Map<String, Fit> lines = new LinkedHashMap<>();
+		// NB: A set, since reflection can report the same signature twice.
+		final Set<String> lines = new LinkedHashSet<>();
 		if (help != null && isFor(help, name)) {
 			for (final SignatureInformation s : help.getSignatures()) {
-				final String sig = parameterList(SignatureLabel.of(s).parameters);
-				if (!sig.equals(ownList)) lines.putIfAbsent(sig, RatedSignatureInformation
-					.fitOf(s));
+				lines.add(parameterList(SignatureLabel.of(s).parameters));
 			}
 		}
 		else if (overloads != null) {
-			for (final List<String> o : overloads) {
-				final String sig = parameterList(o);
-				if (!sig.equals(ownList)) lines.putIfAbsent(sig, Fit.UNKNOWN);
-			}
+			for (final List<String> o : overloads) lines.add(parameterList(o));
 		}
+		lines.remove(ownList);
 		if (lines.isEmpty()) return null;
-		// NB: Read the color now, so the tooltip follows Look & Feel changes.
-		final String dim = "<font color=\"" + dimColor() + "\">";
 		final StringBuilder sb = new StringBuilder();
-		for (final Map.Entry<String, Fit> line : lines.entrySet()) {
+		for (final String line : lines) {
 			// NB: A rule between overloads (and after RSTA's own line).
-			sb.append("<hr>");
-			final String sig = escapeHTML(line.getKey());
-			switch (line.getValue()) {
-				case CONVERSION:
-					sb.append(dim).append(sig).append("</font>");
-					break;
-				case MISMATCH:
-					sb.append(dim).append("<s>").append(sig).append("</s></font>");
-					break;
-				default:
-					sb.append(sig);
-			}
+			sb.append("<hr>").append(escapeHTML(line));
 		}
 		return sb.toString();
-	}
-
-	/**
-	 * The Look & Feel's color for disabled text, as an HTML color such as
-	 * {@code #8c8c8c}. RSTA's parameter tooltip takes its other colors from the
-	 * Look & Feel too.
-	 */
-	static String dimColor() {
-		Color c = UIManager.getColor("Label.disabledForeground");
-		if (c == null) c = UIManager.getColor("textInactiveText");
-		if (c == null) c = Color.GRAY;
-		return String.format("#%02x%02x%02x", c.getRed(), c.getGreen(), c
-			.getBlue());
 	}
 
 	/** Converts documentation to HTML: Markdown as is (it allows HTML). */
@@ -347,48 +316,67 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 		if (caret == cachedCaret && text.equals(cachedText) && cachedList != null) {
 			return;
 		}
-		final CompletionList list = request(text, caret);
+		final CompletableFuture<CompletionList> answer = ask(text, caret);
 		cachedCaret = caret;
 		cachedText = text;
-		adopt(list, comp);
+		final CompletionList now = await(answer, ANSWER_WAIT);
+		adopt(now == null ? new CompletionList() : now);
+		if (now != null) return;
+		// NB: Not in time: show the completions when they arrive, unless
+		// anything has changed since the request.
+		final CompletionList pending = cachedList;
+		answer.thenAccept(later -> SwingUtilities.invokeLater(() -> {
+			if (cachedList != pending || caret != comp.getCaretPosition() || !text
+				.equals(comp.getText())) return;
+			adopt(later);
+			final Consumer<Boolean> listener = updateListener;
+			if (listener != null) listener.accept(true);
+		}));
+	}
+
+	/** Asks the server for completions, waiting for them; none if it fails. */
+	private CompletionList request(final String text, final int caret) {
+		final CompletionList list = await(ask(text, caret), REQUEST_TIMEOUT);
+		return list == null ? new CompletionList() : list;
 	}
 
 	/** Asks the server for completions; none if it fails. */
-	private CompletionList request(final String text, final int caret) {
+	private CompletableFuture<CompletionList> ask(final String text,
+		final int caret)
+	{
 		try {
-			return session.completion(text, caret).get(REQUEST_TIMEOUT,
-				TimeUnit.MILLISECONDS);
+			return session.completion(text, caret).exceptionally(exc -> {
+				failed(exc);
+				return new CompletionList();
+			});
 		}
 		catch (final Exception | LinkageError exc) {
-			// NB: Never let a misbehaving server break the editor.
-			if (log != null) log.debug("Code completion failed", exc);
-			return new CompletionList();
+			failed(exc);
+			return CompletableFuture.completedFuture(new CompletionList());
 		}
 	}
 
-	/** Makes the given completions current, and awaits their update, if any. */
-	private void adopt(final CompletionList list, final JTextComponent comp) {
+	/** Waits a while for completions; null if they are not done by then. */
+	private static CompletionList await(
+		final CompletableFuture<CompletionList> answer, final long timeout)
+	{
+		try {
+			return answer.get(timeout, TimeUnit.MILLISECONDS);
+		}
+		catch (final Exception exc) {
+			return null;
+		}
+	}
+
+	private void failed(final Throwable exc) {
+		// NB: Never let a misbehaving server break the editor.
+		if (log != null) log.debug("Code completion failed", exc);
+	}
+
+	/** Makes the given completions current. */
+	private void adopt(final CompletionList list) {
 		cachedList = list;
 		cachedStart = replaceStart(list, cachedText, cachedCaret);
-		if (!(list instanceof UpdatingCompletionList)) return;
-		final CompletableFuture<CompletionList> update =
-			((UpdatingCompletionList) list).update();
-		if (update == null) return;
-		final String text = cachedText;
-		final int caret = cachedCaret;
-		update.whenComplete((better, error) -> {
-			if (better == null) return;
-			SwingUtilities.invokeLater(() -> {
-				// NB: Only if nothing has changed since the request.
-				if (cachedList != list || caret != comp.getCaretPosition() || !text
-					.equals(comp.getText())) return;
-				final boolean wasEmpty = list.getItems() == null || list.getItems()
-					.isEmpty();
-				adopt(better, comp);
-				final Consumer<Boolean> listener = updateListener;
-				if (listener != null) listener.accept(wasEmpty);
-			});
-		});
 	}
 
 	/**
