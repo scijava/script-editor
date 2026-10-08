@@ -52,7 +52,7 @@ import org.fife.ui.rsyntaxtextarea.parser.ParseResult;
 import org.fife.ui.rsyntaxtextarea.parser.ParserNotice;
 import org.junit.Test;
 import org.scijava.code.lsp.Environment;
-import org.scijava.code.lsp.ScriptLanguageServer;
+import org.scijava.code.lsp.jvm.ScriptLanguageServer;
 import org.scijava.code.lsp.ScriptSession;
 
 /**

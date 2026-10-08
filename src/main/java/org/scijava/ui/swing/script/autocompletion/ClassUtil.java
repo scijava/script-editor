@@ -39,7 +39,7 @@ import java.util.stream.Stream;
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionProvider;
-import org.scijava.code.lsp.ClassIndex;
+import org.scijava.code.lsp.jvm.ClassIndex;
 
 /**
  * Thin facade over the toolkit-agnostic {@link ClassIndex} in scijava-code-lsp,

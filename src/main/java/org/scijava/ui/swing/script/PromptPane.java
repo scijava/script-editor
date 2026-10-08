@@ -55,7 +55,6 @@ import org.eclipse.lsp4j.Range;
 import org.scijava.Context;
 import org.scijava.script.ScriptInterpreter;
 import org.scijava.script.ScriptREPL;
-import org.scijava.code.lsp.BindingsLanguageServer;
 import org.scijava.code.lsp.LanguageServerService;
 import org.scijava.code.lsp.Positions;
 import org.scijava.code.lsp.ScriptSession;
@@ -222,9 +221,8 @@ public abstract class PromptPane implements UIComponent<JTextArea> {
 	/**
 	 * Tab-completion for the REPL prompt: what the language's servers know (see
 	 * {@link LanguageServerService}), with the interpreter's live variables; or,
-	 * for languages without servers, its live variables alone (see
-	 * {@link BindingsLanguageServer}). So every scripting language gets at
-	 * least baseline completion here.
+	 * for languages without servers, its live variables alone. So every
+	 * scripting language gets at least baseline completion here.
 	 */
 	private void complete() {
 		final ScriptInterpreter interpreter = repl.getInterpreter();

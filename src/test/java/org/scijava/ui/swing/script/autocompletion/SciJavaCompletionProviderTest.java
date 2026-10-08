@@ -61,11 +61,11 @@ import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.ParameterizedCompletion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.junit.Test;
-import org.scijava.code.lsp.Callable;
+import org.scijava.code.lsp.jvm.Callable;
 import org.scijava.code.lsp.Environment;
 import org.scijava.code.lsp.Positions;
 import org.scijava.code.lsp.RatedSignatureInformation.Fit;
-import org.scijava.code.lsp.ScriptLanguageServer;
+import org.scijava.code.lsp.jvm.ScriptLanguageServer;
 import org.scijava.code.lsp.ScriptSession;
 import org.scijava.code.lsp.UpdatingCompletionList;
 
