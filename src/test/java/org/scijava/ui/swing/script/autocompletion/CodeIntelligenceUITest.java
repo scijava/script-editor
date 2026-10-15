@@ -52,7 +52,7 @@ import org.fife.ui.rsyntaxtextarea.parser.ParseResult;
 import org.fife.ui.rsyntaxtextarea.parser.ParserNotice;
 import org.junit.Test;
 import org.scijava.code.lsp.Environment;
-import org.scijava.code.lsp.jvm.ScriptLanguageServer;
+import org.scijava.code.lsp.jvm.AbstractLanguageServer;
 import org.scijava.code.lsp.ScriptSession;
 
 /**
@@ -66,7 +66,7 @@ public class CodeIntelligenceUITest {
 	@Test
 	public void testHover() {
 		final AtomicInteger asked = new AtomicInteger();
-		final ScriptLanguageServer server = new FakeServer() {
+		final AbstractLanguageServer server = new FakeServer() {
 
 			@Override
 			protected Hover hover(final Document doc, final int at) {
@@ -156,7 +156,7 @@ public class CodeIntelligenceUITest {
 	}
 
 	/** A server completing nothing. */
-	private static class FakeServer extends ScriptLanguageServer {
+	private static class FakeServer extends AbstractLanguageServer {
 
 		FakeServer() {
 			super(Environment.NONE);

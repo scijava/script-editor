@@ -63,7 +63,7 @@ import org.junit.Test;
 import org.scijava.code.lsp.jvm.Callable;
 import org.scijava.code.lsp.Environment;
 import org.scijava.code.lsp.Positions;
-import org.scijava.code.lsp.jvm.ScriptLanguageServer;
+import org.scijava.code.lsp.jvm.AbstractLanguageServer;
 import org.scijava.code.lsp.ScriptSession;
 
 /**
@@ -428,7 +428,7 @@ public class SciJavaCompletionProviderTest {
 	// -- Helper classes --
 
 	/** A server answering as its functions say. */
-	private static class FakeServer extends ScriptLanguageServer {
+	private static class FakeServer extends AbstractLanguageServer {
 
 		BiFunction<Document, Integer, CompletionList> complete = (doc,
 			caret) -> new CompletionList();
