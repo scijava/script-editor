@@ -52,6 +52,7 @@ import org.fife.ui.rsyntaxtextarea.parser.ParseResult;
 import org.fife.ui.rsyntaxtextarea.parser.ParserNotice;
 import org.junit.Test;
 import org.scijava.code.lsp.Environment;
+import org.scijava.code.lsp.ScriptDocument;
 import org.scijava.code.lsp.jvm.AbstractLanguageServer;
 import org.scijava.code.lsp.ScriptSession;
 
@@ -81,7 +82,7 @@ public class CodeIntelligenceUITest {
 			}
 		};
 		final HoverToolTipSupplier supplier = new HoverToolTipSupplier(
-			ScriptSession.owning(server, null), null);
+			new ScriptSession(server, ScriptDocument::of), null);
 		final String text = "x.dumps(1)";
 		assertEquals("<html><pre>Serialize.</pre></html>", supplier.toolTip(text,
 			3));
