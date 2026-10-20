@@ -60,12 +60,10 @@ import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.ParameterizedCompletion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.junit.Test;
-import org.scijava.code.lsp.ScriptDocument;
 import org.scijava.code.lsp.jvm.Callable;
 import org.scijava.code.lsp.Environment;
 import org.scijava.code.lsp.Positions;
 import org.scijava.code.lsp.jvm.AbstractLanguageServer;
-import org.scijava.code.lsp.ScriptSession;
 
 /**
  * Tests that {@link SciJavaCompletionProvider} faithfully bridges a language
@@ -92,7 +90,7 @@ public class SciJavaCompletionProviderTest {
 			return FakeServer.items(doc, 4, caret, bar, new CompletionItem("baz"));
 		};
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
-			new ScriptSession(e -> server, ScriptDocument::of));
+			FakeServers.session(server));
 
 		// The provider must report the already-entered text as the replaced span.
 		assertEquals("ba", provider.getAlreadyEnteredText(area));
@@ -119,7 +117,7 @@ public class SciJavaCompletionProviderTest {
 			return FakeServer.items(doc, 0, caret, roi);
 		};
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
-			new ScriptSession(e -> server, ScriptDocument::of));
+			FakeServers.session(server));
 
 		final List<Completion> completions = provider.getCompletionsImpl(area);
 		assertEquals(1, completions.size());
@@ -155,7 +153,7 @@ public class SciJavaCompletionProviderTest {
 			return FakeServer.items(doc, caret, caret, myRoi, addRoi.toItem());
 		};
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
-			new ScriptSession(e -> server, ScriptDocument::of));
+			FakeServers.session(server));
 
 		// Callables surface as FunctionCompletions so parameter assistance works.
 		final List<Completion> completions = provider.getCompletionsImpl(area);
@@ -182,7 +180,7 @@ public class SciJavaCompletionProviderTest {
 		server.complete = (doc, caret) -> FakeServer.items(doc, 0, caret, method(
 			completionText, "long[]").toItem());
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
-			new ScriptSession(e -> server, ScriptDocument::of));
+			FakeServers.session(server));
 
 		// The popup list must show a callable's parameters, not just its name.
 		final Completion c = provider.getCompletionsImpl(area).get(0);
@@ -206,7 +204,7 @@ public class SciJavaCompletionProviderTest {
 			method("img.getAt", "int[]").toItem(), // e.g. a bridge method
 			method("img.getAtX", "long[]").toItem());
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
-			new ScriptSession(e -> server, ScriptDocument::of));
+			FakeServers.session(server));
 		final List<Completion> completions = provider.getCompletionsImpl(area);
 
 		// Each overload's tooltip lists the others, once each, even before RSTA
@@ -252,7 +250,7 @@ public class SciJavaCompletionProviderTest {
 				.toSignature(), longs.toSignature(), strings.toSignature()), 0, 1);
 		};
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
-			new ScriptSession(e -> server, ScriptDocument::of));
+			FakeServers.session(server));
 		final List<Completion> completions = provider.getCompletionsImpl(area);
 		final ParameterizedCompletion intOverload =
 			(ParameterizedCompletion) completions.get(0);
@@ -284,7 +282,7 @@ public class SciJavaCompletionProviderTest {
 		server.help = (doc, caret) -> new SignatureHelp(Collections.singletonList(
 			method("b", "double").toSignature()), 0, 0);
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
-			new ScriptSession(e -> server, ScriptDocument::of));
+			FakeServers.session(server));
 		final ParameterizedCompletion intOverload =
 			(ParameterizedCompletion) provider.getCompletionsImpl(area).get(0);
 		area.setText("a(b(|), p1)");
@@ -313,7 +311,7 @@ public class SciJavaCompletionProviderTest {
 				return "The zeta function.";
 			}));
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
-			new ScriptSession(e -> server, ScriptDocument::of));
+			FakeServers.session(server));
 		final List<Completion> completions = provider.getCompletionsImpl(area);
 		// Nothing is described until RSTA shows a completion's description...
 		assertEquals(0, asked.get());
@@ -331,7 +329,7 @@ public class SciJavaCompletionProviderTest {
 		area.setCaretPosition(4);
 		final CompletableFuture<CompletionList> later = new CompletableFuture<>();
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
-			new ScriptSession(e -> new LateServer(later), ScriptDocument::of));
+			FakeServers.session(new LateServer(later)));
 		final Boolean[] notified = { null };
 		provider.setUpdateListener(wasEmpty -> notified[0] = wasEmpty);
 
@@ -347,7 +345,7 @@ public class SciJavaCompletionProviderTest {
 		// A result for a request the user has typed past is ignored.
 		final CompletableFuture<CompletionList> stale = new CompletableFuture<>();
 		final SciJavaCompletionProvider provider2 = new SciJavaCompletionProvider(
-			new ScriptSession(e -> new LateServer(stale), ScriptDocument::of));
+			FakeServers.session(new LateServer(stale)));
 		notified[0] = null;
 		provider2.setUpdateListener(wasEmpty -> notified[0] = wasEmpty);
 		area.setText("np.z");
@@ -367,7 +365,7 @@ public class SciJavaCompletionProviderTest {
 		final File file = new File("scripts", "blur.py");
 		final FakeServer server = new FakeServer();
 		final LanguageServerLanguageSupport support =
-			new LanguageServerLanguageSupport(() -> new ScriptSession(e -> server, ScriptDocument::of),
+			new LanguageServerLanguageSupport(() -> FakeServers.session(server),
 				null, () -> file);
 		support.install(area);
 		// NB: Sessions tell their servers off the caller's thread.
@@ -398,7 +396,7 @@ public class SciJavaCompletionProviderTest {
 			return new CompletionList();
 		};
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
-			new ScriptSession(e -> server, ScriptDocument::of));
+			FakeServers.session(server));
 
 		// Without a file supplier (e.g. in an interpreter): no path.
 		provider.getCompletionsImpl(area);
