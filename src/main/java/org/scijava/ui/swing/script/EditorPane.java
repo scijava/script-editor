@@ -95,6 +95,7 @@ import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptService;
 import org.scijava.ui.swing.script.vim.VimHandler;
 import org.scijava.code.lsp.LanguageServerService;
+import org.scijava.code.lsp.ScriptSession;
 import org.scijava.ui.swing.script.autocompletion.LanguageServerLanguageSupport;
 import org.scijava.util.FileUtils;
 
@@ -814,8 +815,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		if (support == null && languageServerService.supports(currentLanguage)) {
 			final ScriptLanguage served = currentLanguage;
 			final LanguageServerLanguageSupport serverSupport =
-				new LanguageServerLanguageSupport(() -> languageServerService.session(
-					served), log, this::getFile);
+				new LanguageServerLanguageSupport(() -> new ScriptSession(
+					languageServerService, served), log, this::getFile);
 			serverSupport.setHoverEnabled(hoverEnabled);
 			serverSupport.setDiagnosticsEnabled(diagnosticsEnabled);
 			support = serverSupport;

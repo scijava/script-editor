@@ -69,7 +69,7 @@ public class LanguageServerLanguageSupport extends AbstractLanguageSupport {
 	/**
 	 * @param sessions Starts a session about the script, for each text area
 	 *          this is installed in (e.g.
-	 *          {@code () -> languageServerService.session(language)}).
+	 *          {@code () -> new ScriptSession(servers, language)}).
 	 * @param log Where to report problems, or null.
 	 * @param file Supplies the file of the script being edited (or null if
 	 *          unsaved).

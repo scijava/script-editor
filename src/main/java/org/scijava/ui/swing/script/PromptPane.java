@@ -295,8 +295,8 @@ public abstract class PromptPane implements UIComponent<JTextArea> {
 			LanguageServerService.class);
 		final ScriptEngine engine = interpreter.getEngine();
 		if (servers == null || interpreter.getLanguage() == null) return null;
-		session = servers.session(interpreter.getLanguage(), engine == null
-			? Environment.NO_STATE : engine.getContext());
+		session = new ScriptSession(servers, interpreter.getLanguage(),
+			engine == null ? Environment.NO_STATE : engine.getContext());
 		sessionInterpreter = interpreter;
 		return session;
 	}

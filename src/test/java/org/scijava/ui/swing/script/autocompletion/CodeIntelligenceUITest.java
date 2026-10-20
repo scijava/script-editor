@@ -82,7 +82,7 @@ public class CodeIntelligenceUITest {
 			}
 		};
 		final HoverToolTipSupplier supplier = new HoverToolTipSupplier(
-			new ScriptSession(server, ScriptDocument::of), null);
+			new ScriptSession(e -> server, ScriptDocument::of), null);
 		final String text = "x.dumps(1)";
 		assertEquals("<html><pre>Serialize.</pre></html>", supplier.toolTip(text,
 			3));
