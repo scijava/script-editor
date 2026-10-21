@@ -158,7 +158,7 @@ public class CodeIntelligenceUITest {
 	private static class FakeServer extends AbstractLanguageServer {
 
 		FakeServer() {
-			super(Environment.NONE);
+			super(new Environment());
 		}
 
 		@Override

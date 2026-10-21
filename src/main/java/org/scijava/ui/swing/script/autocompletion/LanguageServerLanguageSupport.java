@@ -103,7 +103,8 @@ public class LanguageServerLanguageSupport extends AbstractLanguageSupport {
 
 	@Override
 	public void install(final RSyntaxTextArea textArea) {
-		final ScriptSession session = sessions.get().setFile(file).setLogger(log);
+		final ScriptSession session = sessions.get();
+		session.setFile(file);
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
 			session);
 		provider.setLogger(log);

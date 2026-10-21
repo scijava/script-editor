@@ -55,7 +55,6 @@ import org.eclipse.lsp4j.Range;
 import org.scijava.Context;
 import org.scijava.script.ScriptInterpreter;
 import org.scijava.script.ScriptREPL;
-import org.scijava.code.lsp.Environment;
 import org.scijava.code.lsp.LanguageServerService;
 import org.scijava.code.lsp.Positions;
 import org.scijava.code.lsp.ScriptSession;
@@ -295,8 +294,9 @@ public abstract class PromptPane implements UIComponent<JTextArea> {
 			LanguageServerService.class);
 		final ScriptEngine engine = interpreter.getEngine();
 		if (servers == null || interpreter.getLanguage() == null) return null;
-		session = new ScriptSession(servers, interpreter.getLanguage(),
-			engine == null ? Environment.NO_STATE : engine.getContext());
+		session = engine == null ? new ScriptSession(servers, interpreter
+			.getLanguage()) : new ScriptSession(servers, interpreter.getLanguage(),
+				engine.getContext());
 		sessionInterpreter = interpreter;
 		return session;
 	}

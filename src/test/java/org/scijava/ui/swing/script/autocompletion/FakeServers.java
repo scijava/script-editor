@@ -137,9 +137,4 @@ final class FakeServers extends AbstractService implements
 	{
 		return server;
 	}
-
-	@Override
-	public Map<String, Class<?>> scriptParameters(final String text) {
-		return Collections.emptyMap();
-	}
 }

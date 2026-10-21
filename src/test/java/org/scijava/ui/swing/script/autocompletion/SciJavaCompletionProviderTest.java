@@ -445,7 +445,7 @@ public class SciJavaCompletionProviderTest {
 		final List<Document> closed = new ArrayList<>();
 
 		FakeServer() {
-			super(Environment.NONE);
+			super(new Environment());
 		}
 
 		/** Completions replacing the text from {@code start} to the caret. */
