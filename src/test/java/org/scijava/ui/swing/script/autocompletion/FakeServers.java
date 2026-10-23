@@ -80,7 +80,7 @@ final class FakeServers extends AbstractService implements
 		}
 
 		@Override
-		public Header header(final Map<String, Class<?>> parameters) {
+		public Header header(final Map<String, Variable> variables) {
 			return new Header("", Collections.emptySet());
 		}
 	};
@@ -116,7 +116,8 @@ final class FakeServers extends AbstractService implements
 
 	@Override
 	public ScriptDocument document(final String script,
-		final ScriptDialect dialect)
+		final ScriptDialect dialect,
+		final Map<String, ScriptDialect.Variable> variables)
 	{
 		return ScriptDocument.of(script);
 	}
