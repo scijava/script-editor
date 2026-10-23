@@ -94,6 +94,9 @@ import org.scijava.script.ScriptHeaderService;
 import org.scijava.script.ScriptLanguage;
 import org.scijava.script.ScriptService;
 import org.scijava.ui.swing.script.vim.VimHandler;
+import org.scijava.code.lsp.LanguageServerService;
+import org.scijava.code.lsp.ScriptSession;
+import org.scijava.ui.swing.script.autocompletion.LanguageServerLanguageSupport;
 import org.scijava.util.FileUtils;
 
 /**
@@ -117,9 +120,13 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private boolean undoInProgress;
 	private boolean redoInProgress;
 	private boolean autoCompletionEnabled;
+	private boolean hoverEnabled = true;
+	private boolean diagnosticsEnabled = true;
 	private boolean autoCompletionJavaFallback;
 	private boolean autoCompletionWithoutKey;
 	private String supportStatus;
+	/** The completion support currently installed on this pane, if any. */
+	private LanguageSupport installedSupport;
 	private final ErrorParser errorHighlighter;
 	private final JMenu noneLangSyntaxMenu;
 	private final EditorPaneActions actions;
@@ -130,6 +137,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	Context context;
 	@Parameter
 	private LanguageSupportService languageSupportService;
+	@Parameter
+	private LanguageServerService languageServerService;
 	@Parameter
 	private ScriptService scriptService;
 	@Parameter
@@ -719,6 +728,17 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	}
 
 	/**
+	 * Uninstalls the language support (e.g. code completion), as the editor
+	 * is closed.
+	 */
+	void releaseLanguageSupport() {
+		if (installedSupport != null) {
+			installedSupport.uninstall(this);
+			installedSupport = null;
+		}
+	}
+
+	/**
 	 * Set the language of this {@link EditorPane}, optionally adding a header.
 	 * TODO: What is this header?
 	 *
@@ -731,11 +751,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		final boolean addHeader)
 	{
 		// uninstall existing language support.
-		LanguageSupport support =
-			languageSupportService.getLanguageSupport(currentLanguage);
-		if (support != null) {
-			support.uninstall(this);
-		}
+		releaseLanguageSupport();
+		LanguageSupport support;
 
 		String languageName;
 		String defaultExtension;
@@ -791,15 +808,26 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			return; // no need to update console any further
 		}
 		String supportLevel = "SciJava supported";
-		// try to get language support for current language, may be null.
+		// Tier 1: a heavy RSTA LanguageSupportPlugin (e.g. the Java parser).
 		support = languageSupportService.getLanguageSupport(currentLanguage);
 
-		// that did not work. See if there is internal support for it.
+		// Tier 2: language servers for this language.
+		if (support == null && languageServerService.supports(currentLanguage)) {
+			final ScriptLanguage served = currentLanguage;
+			final LanguageServerLanguageSupport serverSupport =
+				new LanguageServerLanguageSupport(() -> new ScriptSession(
+					languageServerService, served), log, this::getFile);
+			serverSupport.setHoverEnabled(hoverEnabled);
+			serverSupport.setDiagnosticsEnabled(diagnosticsEnabled);
+			support = serverSupport;
+		}
+
+		// Tier 3: RSTA's own built-in support for the syntax style.
 		if (support == null) {
 			support = LanguageSupportFactory.get().getSupportFor(styleName);
 			supportLevel = "Legacy supported";
 		}
-		// that did not work, Fallback to Java
+		// Tier 4: fall back to Java completion, if requested.
 		if (support == null && autoCompletionJavaFallback) {
 			support = languageSupportService.getLanguageSupport(scriptService.getLanguageByName("Java"));
 			supportLevel = "N/A. Using Java as fallback";
@@ -808,6 +836,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			support.setAutoCompleteEnabled(autoCompletionEnabled);
 			support.setAutoActivationEnabled(autoCompletionWithoutKey);
 			support.install(this);
+			installedSupport = support;
 			if (!autoCompletionEnabled)
 				supportLevel += " but currently disabled\n";
 			else {
@@ -840,8 +869,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 * @param enabled Whether Java should be enabled as fallback language for
 	 *                auto-completion
 	 */
-	void setFallbackAutoCompletion(final boolean value) {
-		autoCompletionJavaFallback = value;
+	void setFallbackAutoCompletion(final boolean enabled) {
+		autoCompletionJavaFallback = enabled;
 		if (autoCompletionEnabled && currentLanguage != null)
 			setLanguage(currentLanguage);
 	}
@@ -860,6 +889,32 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	public boolean isAutoCompletionEnabled() {
 		return autoCompletionEnabled;
+	}
+
+	/**
+	 * Toggles whether what is known about the code under the mouse (e.g. a
+	 * function's documentation) is shown, for languages whose completer knows.
+	 */
+	public void setHoverEnabled(final boolean enabled) {
+		hoverEnabled = enabled;
+		if (currentLanguage != null) setLanguage(currentLanguage);
+	}
+
+	public boolean isHoverEnabled() {
+		return hoverEnabled;
+	}
+
+	/**
+	 * Toggles whether problems in the code (e.g. syntax errors) are shown as
+	 * the code is edited, for languages whose completer finds them.
+	 */
+	public void setDiagnosticsEnabled(final boolean enabled) {
+		diagnosticsEnabled = enabled;
+		if (currentLanguage != null) setLanguage(currentLanguage);
+	}
+
+	public boolean isDiagnosticsEnabled() {
+		return diagnosticsEnabled;
 	}
 
 	public boolean isAutoCompletionKeyless() {
@@ -1069,6 +1124,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public static final String AUTOCOMPLETE_PREFS = "script.editor.AC";
 	public static final String AUTOCOMPLETE_KEYLESS_PREFS = "script.editor.ACNoKey";
 	public static final String AUTOCOMPLETE_FALLBACK_PREFS = "script.editor.ACFallback";
+	public static final String HOVER_PREFS = "script.editor.Hover";
+	public static final String DIAGNOSTICS_PREFS = "script.editor.Diagnostics";
 	public static final String MARK_OCCURRENCES_PREFS = "script.editor.Occurrences";
 	public static final String VIM_PREFS = "script.editor.Vim";
 	public static final String FOLDERS_PREFS = "script.editor.folders";
@@ -1100,6 +1157,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setKeylessAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_KEYLESS_PREFS, true)); // true for backwards compatibility with ImageJ macro
 			setFallbackAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, false));
 			setMarkOccurrences(prefService.getBoolean(getClass(), MARK_OCCURRENCES_PREFS, false));
+			setHoverEnabled(prefService.getBoolean(getClass(), HOVER_PREFS, true));
+			setDiagnosticsEnabled(prefService.getBoolean(getClass(), DIAGNOSTICS_PREFS, true));
 			setMarginLineEnabled(prefService.getBoolean(getClass(), MARGIN_VISIBLE_PREFS, false));
 			setVimEnabled(prefService.getBoolean(getClass(), VIM_PREFS, false));
 			applyTheme(themeName());
@@ -1156,6 +1215,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		prefService.put(getClass(), AUTOCOMPLETE_PREFS, isAutoCompletionEnabled());
 		prefService.put(getClass(), AUTOCOMPLETE_KEYLESS_PREFS, isAutoCompletionKeyless());
 		prefService.put(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, isAutoCompletionFallbackEnabled());
+		prefService.put(getClass(), HOVER_PREFS, isHoverEnabled());
+		prefService.put(getClass(), DIAGNOSTICS_PREFS, isDiagnosticsEnabled());
 		prefService.put(getClass(), MARGIN_VISIBLE_PREFS, isMarginLineEnabled());
 		prefService.put(getClass(), MARK_OCCURRENCES_PREFS, getMarkOccurrences());
 		prefService.put(getClass(), VIM_PREFS, isVimEnabled());

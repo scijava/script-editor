@@ -172,6 +172,7 @@ public class InterpreterPane implements UIComponent<JComponent> {
 
 	public void dispose() {
 		output.close();
+		prompt.dispose();
 	}
 
 	// -- UIComponent methods --
