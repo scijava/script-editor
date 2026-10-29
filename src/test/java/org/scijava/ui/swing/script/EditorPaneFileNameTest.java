@@ -29,59 +29,46 @@
 package org.scijava.ui.swing.script;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import javax.script.ScriptEngine;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
-import org.scijava.Context;
-import org.scijava.log.LogService;
-import org.scijava.platform.PlatformService;
-import org.scijava.prefs.PrefService;
 import org.scijava.script.AbstractScriptLanguage;
-import org.scijava.script.ScriptHeaderService;
-import org.scijava.script.ScriptService;
 
 public class EditorPaneFileNameTest {
 
-	private Context context;
-
-	@Before
-	public void setUp() {
-		context = new Context(LanguageSupportService.class, ScriptService.class,
-			ScriptHeaderService.class, PrefService.class, PlatformService.class,
-			LogService.class);
-	}
-
-	@After
-	public void tearDown() {
-		context.dispose();
-	}
-
 	@Test
-	public void testSuppliedLanguageExtensionIsNotDuplicated() {
+	public void testDetectsLanguageBeforeSettingFileName() {
 		final TestEditorPane editorPane = new TestEditorPane();
-		context.inject(editorPane);
 
 		TextEditor.setNewDocumentLanguageAndFileName(editorPane, "Macro.ijm");
 
-		assertEquals("Macro.ijm", editorPane.getFileName());
-		assertTrue(editorPane.languageWasDetected);
+		assertEquals(Arrays.asList("language", "filename"), editorPane.operations);
+	}
+
+	@Test
+	public void testStripsExistingLanguageExtension() {
+		assertEquals("Macro", EditorPane.stripLanguageExtension("Macro.ijm",
+			new TestMacroLanguage()));
 	}
 
 	private static final class TestEditorPane extends EditorPane {
 
-		private boolean languageWasDetected;
+		private final List<String> operations = new ArrayList<>();
 
 		@Override
 		protected void setLanguageByFileName(final String name) {
-			languageWasDetected = true;
-			setLanguage(new TestMacroLanguage());
+			operations.add("language");
+		}
+
+		@Override
+		public void setFileName(final String baseName) {
+			operations.add("filename");
 		}
 	}
 

@@ -621,19 +621,24 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		if (currentLanguage == null) {
 			return;
 		}
-		for (String extension : currentLanguage.getExtensions()) {
-			extension = "." + extension;
-			if (baseName.endsWith(extension)) {
-				fallBackBaseName =
-					fallBackBaseName.substring(0, fallBackBaseName.length() -
-						extension.length());
-				break;
-			}
-		}
+		fallBackBaseName = stripLanguageExtension(baseName, currentLanguage);
 
 		if (currentLanguage.getLanguageName().equals("Java")) {
 			new TokenFunctions(this).setClassName(fallBackBaseName);
 		}
+	}
+
+	static String stripLanguageExtension(final String baseName,
+		final ScriptLanguage language)
+	{
+		if (language == null) return baseName;
+		for (String extension : language.getExtensions()) {
+			extension = "." + extension;
+			if (baseName.endsWith(extension)) {
+				return baseName.substring(0, baseName.length() - extension.length());
+			}
+		}
+		return baseName;
 	}
 
 	/**
