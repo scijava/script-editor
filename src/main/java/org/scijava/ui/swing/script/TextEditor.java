@@ -1593,9 +1593,15 @@ public class TextEditor extends JFrame implements ActionListener,
 		open(null);
 		final EditorPane editorPane = getEditorPane();
 		editorPane.setText(text);
-		editorPane.setLanguageByFileName(title);
-		setEditorPaneFileName(title);
+		setNewDocumentLanguageAndFileName(editorPane, title);
 		updateLanguageMenu(editorPane.getCurrentLanguage());
+	}
+
+	static void setNewDocumentLanguageAndFileName(final EditorPane editorPane,
+		final String title)
+	{
+		editorPane.setLanguageByFileName(title);
+		editorPane.setFileName(title);
 	}
 
 	/**

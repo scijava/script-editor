@@ -29,6 +29,12 @@
 package org.scijava.ui.swing.script;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.util.Collections;
+import java.util.List;
+
+import javax.script.ScriptEngine;
 
 import org.junit.After;
 import org.junit.Before;
@@ -37,6 +43,7 @@ import org.scijava.Context;
 import org.scijava.log.LogService;
 import org.scijava.platform.PlatformService;
 import org.scijava.prefs.PrefService;
+import org.scijava.script.AbstractScriptLanguage;
 import org.scijava.script.ScriptHeaderService;
 import org.scijava.script.ScriptService;
 
@@ -58,12 +65,41 @@ public class EditorPaneFileNameTest {
 
 	@Test
 	public void testSuppliedLanguageExtensionIsNotDuplicated() {
-		final EditorPane editorPane = new EditorPane();
+		final TestEditorPane editorPane = new TestEditorPane();
 		context.inject(editorPane);
 
-		editorPane.setLanguageByFileName("Macro.java");
-		editorPane.setFileName("Macro.java");
+		TextEditor.setNewDocumentLanguageAndFileName(editorPane, "Macro.ijm");
 
-		assertEquals("Macro.java", editorPane.getFileName());
+		assertEquals("Macro.ijm", editorPane.getFileName());
+		assertTrue(editorPane.languageWasDetected);
+	}
+
+	private static final class TestEditorPane extends EditorPane {
+
+		private boolean languageWasDetected;
+
+		@Override
+		protected void setLanguageByFileName(final String name) {
+			languageWasDetected = true;
+			setLanguage(new TestMacroLanguage());
+		}
+	}
+
+	private static final class TestMacroLanguage extends AbstractScriptLanguage {
+
+		@Override
+		public String getLanguageName() {
+			return "ImageJ Macro";
+		}
+
+		@Override
+		public List<String> getExtensions() {
+			return Collections.singletonList("ijm");
+		}
+
+		@Override
+		public ScriptEngine getScriptEngine() {
+			throw new UnsupportedOperationException("Test language has no script engine");
+		}
 	}
 }
