@@ -102,14 +102,38 @@ import java.util.Vector;
 import java.util.concurrent.ExecutionException;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
-import java.util.zip.ZipException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipException;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
-import javax.swing.*;
-import javax.swing.border.BevelBorder;
+import javax.swing.AbstractAction;
+import javax.swing.AbstractButton;
+import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JDialog;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JRadioButtonMenuItem;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.JTextPane;
+import javax.swing.JTree;
+import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
@@ -1569,9 +1593,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		open(null);
 		final EditorPane editorPane = getEditorPane();
 		editorPane.setText(text);
-		setEditorPaneFileName(title);
-
 		editorPane.setLanguageByFileName(title);
+		setEditorPaneFileName(title);
 		updateLanguageMenu(editorPane.getCurrentLanguage());
 	}
 
