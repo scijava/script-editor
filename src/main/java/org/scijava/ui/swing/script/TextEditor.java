@@ -2618,24 +2618,24 @@ public class TextEditor extends JFrame implements ActionListener,
 				public void run() {
 					try {
 						execute();
-						// Wait until any children threads die:
-						int activeCount = getThreadGroup().activeCount();
-						while (activeCount > 1) {
+						// Wait for script-owned child threads, but not idle pooled workers.
+						List<Thread> threads = getThreadsToWaitFor();
+						while (threads.size() > 1) {
 							if (isInterrupted()) break;
 							try {
 								Thread.sleep(500);
-								final List<Thread> ts = getAllThreads();
-								activeCount = ts.size();
-								if (activeCount <= 1) break;
-								log.debug("Waiting for " + ts.size() + " threads to die");
-								int count_zSelector = 0;
-								for (final Thread t : ts) {
+								threads = getThreadsToWaitFor();
+								if (threads.size() <= 1) break;
+								log.debug("Waiting for " + threads.size() +
+									" threads to die");
+								int zSelectorCount = 0;
+								for (final Thread t : threads) {
 									if (t.getName().equals("zSelector")) {
-										count_zSelector++;
+										zSelectorCount++;
 									}
 									log.debug("THREAD: " + t.getName());
 								}
-								if (activeCount == count_zSelector + 1) {
+								if (threads.size() == zSelectorCount + 1) {
 									// Do not wait on the stack slice selector thread.
 									break;
 								}
@@ -2663,6 +2663,16 @@ public class TextEditor extends JFrame implements ActionListener,
 					}
 				}
 			};
+		}
+
+		private List<Thread> getThreadsToWaitFor() {
+			final Set<Thread> seen = new HashSet<>();
+			final List<Thread> threads = new ArrayList<>();
+			for (final Thread thread : getAllThreads()) {
+				if (seen.add(thread) && isScriptOwnedThread(thread, this,
+					threadService)) threads.add(thread);
+			}
+			return threads;
 		}
 
 		/** The method to extend, that will do the actual work. */
@@ -2724,6 +2734,61 @@ public class TextEditor extends JFrame implements ActionListener,
 		public String toString() {
 			return getName();
 		}
+	}
+
+	static boolean isScriptOwnedThread(final Thread thread,
+		final ThreadGroup runGroup, final ThreadService threadService)
+	{
+		if (thread == null || runGroup == null) return false;
+		if (threadService == null) return isInThreadGroup(thread, runGroup);
+
+		final ThreadService.ThreadContext threadContext;
+		try {
+			threadContext = threadService.getThreadContext(thread);
+		}
+		catch (final RuntimeException e) {
+			return isInThreadGroup(thread, runGroup);
+		}
+		if (threadContext == null || threadContext == ThreadService.ThreadContext.NONE) {
+			return isInThreadGroup(thread, runGroup);
+		}
+
+		final Set<Thread> seenParents = new HashSet<>();
+		Thread parent = threadService.getParent(thread);
+		while (parent != null && seenParents.add(parent)) {
+			if (isInThreadGroup(parent, runGroup)) return true;
+			parent = threadService.getParent(parent);
+		}
+		return isInThreadGroup(thread, runGroup) && !isIdleThreadServiceWorker(thread);
+	}
+
+	private static boolean isIdleThreadServiceWorker(final Thread thread) {
+		final Thread.State state = thread.getState();
+		if (state != Thread.State.WAITING && state != Thread.State.TIMED_WAITING) {
+			return false;
+		}
+
+		final StackTraceElement[] stack = thread.getStackTrace();
+		for (int i = 0; i + 1 < stack.length; i++) {
+			if (stack[i].getClassName().equals(
+				"java.util.concurrent.ThreadPoolExecutor") && stack[i].getMethodName()
+					.equals("getTask") && stack[i + 1].getClassName().equals(
+						"java.util.concurrent.ThreadPoolExecutor") && stack[i + 1]
+							.getMethodName().equals("runWorker")) return true;
+		}
+		return false;
+	}
+
+	private static boolean isInThreadGroup(final Thread thread,
+		final ThreadGroup targetGroup)
+	{
+		if (thread == null) return false;
+		ThreadGroup group = thread.getThreadGroup();
+		while (group != null) {
+			if (group == targetGroup) return true;
+			group = group.getParent();
+		}
+		return false;
 	}
 
 	/** Returns a list of currently executing tasks */
