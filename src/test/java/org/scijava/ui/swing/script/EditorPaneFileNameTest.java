@@ -34,6 +34,11 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.scijava.Context;
+import org.scijava.log.LogService;
+import org.scijava.platform.PlatformService;
+import org.scijava.prefs.PrefService;
+import org.scijava.script.ScriptHeaderService;
+import org.scijava.script.ScriptService;
 
 public class EditorPaneFileNameTest {
 
@@ -41,7 +46,9 @@ public class EditorPaneFileNameTest {
 
 	@Before
 	public void setUp() {
-		context = new Context();
+		context = new Context(LanguageSupportService.class, ScriptService.class,
+			ScriptHeaderService.class, PrefService.class, PlatformService.class,
+			LogService.class);
 	}
 
 	@After
