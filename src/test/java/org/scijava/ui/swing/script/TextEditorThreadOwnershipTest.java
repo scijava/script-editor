@@ -34,6 +34,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
+import java.lang.reflect.Modifier;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -59,6 +60,12 @@ public class TextEditorThreadOwnershipTest {
 	@After
 	public void tearDown() {
 		context.dispose();
+	}
+
+	@Test
+	public void testTitleSetterDoesNotSynchronizeOnEditor() throws Exception {
+		assertFalse(Modifier.isSynchronized(TextEditor.class.getMethod("setTitle",
+			String.class).getModifiers()));
 	}
 
 	@Test

@@ -2590,14 +2590,13 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	void setTitle() {
-		final EditorPane editorPane = getEditorPane();
-
-		final boolean fileChanged = editorPane.fileChanged();
-		final String fileName = editorPane.getFileName();
-		final String title =
-			(fileChanged ? "*" : "") + fileName +
-				(executingTasks.isEmpty() ? "" : " (Running)");
 		SwingUtilities.invokeLater(() -> {
+			final EditorPane editorPane = getEditorPane();
+			final boolean fileChanged = editorPane.fileChanged();
+			final String fileName = editorPane.getFileName();
+			final String title =
+				(fileChanged ? "*" : "") + fileName +
+					(executingTasks.isEmpty() ? "" : " (Running)");
 			setTitle(title); // to the main window
 			// Update all tabs: could have changed
 			for (int i = 0; i < tabbed.getTabCount(); i++)
@@ -2607,7 +2606,11 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	@Override
-	public synchronized void setTitle(final String title) {
+	public void setTitle(final String title) {
+		if (!SwingUtilities.isEventDispatchThread()) {
+			SwingUtilities.invokeLater(() -> setTitle(title));
+			return;
+		}
 		super.setTitle(title);
 		final int index = tabsMenuTabsStart + tabbed.getSelectedIndex();
 		if (index < tabsMenu.getItemCount()) {
