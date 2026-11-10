@@ -39,7 +39,6 @@ import org.scijava.Context;
 import org.scijava.code.lsp.Environment;
 import org.scijava.code.lsp.LanguageServerService;
 import org.scijava.code.lsp.ScriptDialect;
-import org.scijava.code.lsp.ScriptDocument;
 import org.scijava.code.lsp.ScriptSession;
 import org.scijava.script.AbstractScriptLanguage;
 import org.scijava.script.ScriptLanguage;
@@ -112,14 +111,6 @@ final class FakeServers extends AbstractService implements
 	@Override
 	public ScriptDialect dialect(final ScriptLanguage language) {
 		return AS_IS;
-	}
-
-	@Override
-	public ScriptDocument document(final String script,
-		final ScriptDialect dialect,
-		final Map<String, ScriptDialect.Variable> variables)
-	{
-		return ScriptDocument.of(script);
 	}
 
 	@Override
