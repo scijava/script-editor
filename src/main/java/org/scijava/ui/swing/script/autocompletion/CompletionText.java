@@ -39,6 +39,7 @@ import java.util.List;
 import org.fife.ui.autocomplete.AbstractCompletion;
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.CompletionProvider;
+import org.scijava.code.lsp.jvm.ClassIndex;
 
 public class CompletionText {
 
@@ -59,17 +60,17 @@ public class CompletionText {
 	}
 
 	public CompletionText(final String replacementText, final Class<?> c, final Field f) {
-		this(replacementText, ClassUtil.getSummaryCompletion(f, c), null);
+		this(replacementText, ClassIndex.getSummaryCompletion(f, c), null);
 	}
 
 	public CompletionText(final String replacementText, final Class<?> c, final Method m) {
-		this(replacementText, ClassUtil.getSummaryCompletion(m, c), null);
+		this(replacementText, ClassIndex.getSummaryCompletion(m, c), null);
 		this.method_args = Arrays.asList(m.getParameters());
 		this.method_returnType = m.getReturnType().getCanonicalName();
 	}
 	
 	public CompletionText(final String replacementText, final Class<?> c, final Constructor<?> constructor) {
-		this(replacementText, ClassUtil.getSummaryCompletion(constructor, c), null);
+		this(replacementText, ClassIndex.getSummaryCompletion(constructor, c), null);
 		this.method_args = Arrays.asList(constructor.getParameters());
 		this.method_returnType = c.getCanonicalName();
 	}

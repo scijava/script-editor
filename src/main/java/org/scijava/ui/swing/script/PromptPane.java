@@ -31,18 +31,33 @@ package org.scijava.ui.swing.script;
 
 import static java.awt.event.KeyEvent.VK_DOWN;
 import static java.awt.event.KeyEvent.VK_ENTER;
+import static java.awt.event.KeyEvent.VK_TAB;
 import static java.awt.event.KeyEvent.VK_UP;
 
 import java.awt.Rectangle;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+import javax.script.ScriptEngine;
 import javax.swing.JTextArea;
 import javax.swing.text.BadLocationException;
 
+import org.eclipse.lsp4j.CompletionItem;
+import org.eclipse.lsp4j.CompletionList;
+import org.eclipse.lsp4j.InsertTextFormat;
+import org.eclipse.lsp4j.Range;
 import org.scijava.Context;
+import org.scijava.script.ScriptInterpreter;
 import org.scijava.script.ScriptREPL;
+import org.scijava.code.lsp.LanguageServerService;
+import org.scijava.code.lsp.Positions;
+import org.scijava.code.lsp.ScriptSession;
 import org.scijava.thread.ThreadService;
 import org.scijava.util.ClassUtils;
 import org.scijava.util.Types;
@@ -56,12 +71,20 @@ import org.scijava.widget.UIComponent;
  */
 public abstract class PromptPane implements UIComponent<JTextArea> {
 
+	/** How long Tab waits for completions, in milliseconds. */
+	private static final long COMPLETION_WAIT = 2000;
+
+
 	private final ScriptREPL repl;
 	private final VarsPane vars;
 	private final TextArea textArea;
 	private final OutputPane output;
 
 	private boolean executing;
+
+	/** The session about the prompt's text, and the interpreter it is for. */
+	private ScriptSession session;
+	private ScriptInterpreter sessionInterpreter;
 
 	public PromptPane(final ScriptREPL repl, final VarsPane vars,
 		final OutputPane output)
@@ -101,6 +124,12 @@ public abstract class PromptPane implements UIComponent<JTextArea> {
 					case VK_UP:
 						if (isInRow(0)) {
 							up();
+							event.consume();
+						}
+						break;
+					case VK_TAB:
+						if (!executing) {
+							complete();
 							event.consume();
 						}
 						break;
@@ -178,11 +207,159 @@ public abstract class PromptPane implements UIComponent<JTextArea> {
 	}
 
 	private ThreadService threadService() {
+		return context().service(ThreadService.class);
+	}
+
+	private Context context() {
 		// HACK: Get the SciJava context from the REPL.
 		// This can be fixed if/when the REPL offers a getter for it.
-		final Context ctx = (Context) ClassUtils.getValue(//
+		return (Context) ClassUtils.getValue(//
 			Types.field(repl.getClass(), "context"), repl);
-		return ctx.service(ThreadService.class);
+	}
+
+	/**
+	 * Tab-completion for the REPL prompt: what the language's servers know (see
+	 * {@link LanguageServerService}), with the interpreter's live variables; or,
+	 * for languages without servers, its live variables alone. So every
+	 * scripting language gets at least baseline completion here.
+	 */
+	private void complete() {
+		final ScriptInterpreter interpreter = repl.getInterpreter();
+		if (interpreter == null) return;
+		final int caret = textArea.getCaretPosition();
+		final String text = textArea.getText();
+
+		final List<CompletionItem> items;
+		try {
+			items = items(interpreter, text, caret);
+		}
+		catch (final Exception exc) {
+			return;
+		}
+		if (items.isEmpty()) {
+			textArea.getToolkit().beep();
+			return;
+		}
+		final int start = Math.min(Math.max(start(items.get(0), text, caret), 0),
+			caret);
+
+		if (items.size() == 1) {
+			replaceRange(start, caret, insertion(items.get(0)));
+			return;
+		}
+
+		// Multiple candidates: insert their longest common prefix (if it extends
+		// what is already typed), and list the options in the output pane.
+		final String lcp = longestCommonPrefix(items);
+		final String current = text.substring(start, caret);
+		if (lcp.length() > current.length()) {
+			replaceRange(start, caret, lcp);
+		}
+		else {
+			final StringBuilder sb = new StringBuilder();
+			for (final CompletionItem item : items) {
+				if (sb.length() > 0) sb.append("    ");
+				sb.append(item.getLabel());
+				if (item.getLabelDetails() != null && item.getLabelDetails()
+					.getDetail() != null) sb.append(item.getLabelDetails().getDetail());
+			}
+			output.append(sb.append("\n").toString());
+		}
+	}
+
+	/** Asks the language's servers (or the live variables) for completions. */
+	private List<CompletionItem> items(final ScriptInterpreter interpreter,
+		final String text, final int caret) throws Exception
+	{
+		final ScriptSession session = session(interpreter);
+		if (session == null) return Collections.emptyList();
+		final CompletionList list = session.completion(text, caret).get(
+			COMPLETION_WAIT, TimeUnit.MILLISECONDS);
+		final List<CompletionItem> items = new ArrayList<>(list.getItems());
+		items.sort(Comparator.comparing(item -> item.getSortText() != null ? item
+			.getSortText() : item.getLabel()));
+		return items;
+	}
+
+	/**
+	 * The session about the prompt's text, for the given interpreter: kept
+	 * while it is the REPL's; or null if completion is unavailable.
+	 */
+	private synchronized ScriptSession session(
+		final ScriptInterpreter interpreter)
+	{
+		if (session != null && sessionInterpreter == interpreter) return session;
+		dispose();
+		final LanguageServerService servers = context().service(
+			LanguageServerService.class);
+		final ScriptEngine engine = interpreter.getEngine();
+		if (servers == null || interpreter.getLanguage() == null) return null;
+		session = engine == null ? new ScriptSession(servers, interpreter
+			.getLanguage()) : new ScriptSession(servers, interpreter.getLanguage(),
+				engine.getContext());
+		sessionInterpreter = interpreter;
+		return session;
+	}
+
+	/** Lets the language servers release what they keep for the prompt. */
+	public synchronized void dispose() {
+		if (session != null) session.close();
+		session = null;
+		sessionInterpreter = null;
+	}
+
+	/** Where a completion's text starts: what it replaces, up to the caret. */
+	private static int start(final CompletionItem item, final String text,
+		final int caret)
+	{
+		if (item.getTextEdit() == null) return caret;
+		final Range range = item.getTextEdit().isLeft() ? item.getTextEdit()
+			.getLeft().getRange() : item.getTextEdit().getRight().getInsert();
+		return Positions.offset(text, range.getStart());
+	}
+
+	/**
+	 * The text a completion inserts; for a callable (a snippet), up to its
+	 * first parameter, e.g. {@code max(}.
+	 */
+	private static String insertion(final CompletionItem item) {
+		String text = item.getTextEdit() == null ? null : item.getTextEdit()
+			.isLeft() ? item.getTextEdit().getLeft().getNewText() : item
+				.getTextEdit().getRight().getNewText();
+		if (text == null) text = item.getInsertText();
+		if (text == null) text = item.getLabel();
+		if (item.getInsertTextFormat() == InsertTextFormat.Snippet) {
+			final int stop = text.indexOf('$');
+			if (stop >= 0) text = text.substring(0, stop);
+			text = text.replace("\\$", "$").replace("\\}", "}").replace("\\\\",
+				"\\");
+		}
+		return text;
+	}
+
+	private void replaceRange(final int start, final int end,
+		final String replacement)
+	{
+		try {
+			textArea.getDocument().remove(start, end - start);
+			textArea.getDocument().insertString(start, replacement, null);
+		}
+		catch (final BadLocationException exc) {
+			// ignore: the prompt changed underneath us
+		}
+	}
+
+	private static String longestCommonPrefix(final List<CompletionItem> items) {
+		String prefix = insertion(items.get(0));
+		for (final CompletionItem item : items) {
+			final String s = insertion(item);
+			int i = 0;
+			final int max = Math.min(prefix.length(), s.length());
+			while (i < max && prefix.charAt(i) == s.charAt(i)) i++;
+			prefix = prefix.substring(0, i);
+			if (prefix.isEmpty()) break;
+		}
+		return prefix;
 	}
 
 	// -- Helper classes --
