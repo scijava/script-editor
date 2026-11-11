@@ -55,7 +55,7 @@ import javax.swing.text.JTextComponent;
 
 import org.eclipse.lsp4j.SignatureHelp;
 import org.eclipse.lsp4j.SignatureInformation;
-import org.scijava.code.lsp.jvm.Signatures;
+import org.scijava.code.lsp.Positions;
 
 /**
  * Shows the signatures of the call being typed (the language server's
@@ -163,7 +163,7 @@ public class SignaturePopup {
 			if (opening) retry.restart();
 			return;
 		}
-		show(html(h), Signatures.callStart(textArea.getText(), textArea
+		show(html(h), Positions.callStart(textArea.getText(), textArea
 			.getCaretPosition()));
 	}
 
