@@ -107,9 +107,11 @@ final class SignatureLabel {
 
 	/**
 	 * A parameter (e.g. {@code java.lang.String name}) with simple type names
-	 * ({@code String name}).
+	 * ({@code String name}). One written name first (e.g.
+	 * {@code name: str}) is kept as it is.
 	 */
 	static String simple(final String parameter) {
+		if (parameter.contains(":")) return parameter;
 		final int space = parameter.lastIndexOf(' ');
 		if (space < 0) return parameter;
 		final String type = parameter.substring(0, space);
@@ -117,11 +119,20 @@ final class SignatureLabel {
 			space);
 	}
 
-	/** Splits a parameter into its type (or null) and its name. */
+	/**
+	 * Splits a parameter into its type (or null) and its name: written type
+	 * first (e.g. {@code double a}) or name first (e.g. {@code a: float}), and
+	 * without a default (e.g. {@code a: float = 1.0}).
+	 */
 	static String[] typeAndName(final String parameter) {
-		final int space = parameter.lastIndexOf(' ');
-		return space < 0 ? new String[] { null, parameter } : new String[] {
-			parameter.substring(0, space).trim(), parameter.substring(space + 1) };
+		final int eq = parameter.indexOf('=');
+		final String p = (eq < 0 ? parameter : parameter.substring(0, eq)).trim();
+		final int colon = p.indexOf(':');
+		if (colon >= 0) return new String[] { p.substring(colon + 1).trim(), p
+			.substring(0, colon).trim() };
+		final int space = p.lastIndexOf(' ');
+		return space < 0 ? new String[] { null, p } : new String[] { p.substring(0,
+			space).trim(), p.substring(space + 1) };
 	}
 
 	private static String label(final String signature,

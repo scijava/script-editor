@@ -43,6 +43,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -52,18 +53,20 @@ import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
 import org.eclipse.lsp4j.CompletionList;
 import org.eclipse.lsp4j.CompletionParams;
+import org.eclipse.lsp4j.ParameterInformation;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.SignatureHelp;
+import org.eclipse.lsp4j.SignatureInformation;
 import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.ParameterizedCompletion;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.junit.Test;
-import org.scijava.code.lsp.jvm.Callable;
 import org.scijava.code.lsp.Environment;
-import org.scijava.code.lsp.Positions;
 import org.scijava.code.lsp.jvm.AbstractInProcessLanguageServer;
+import org.scijava.code.lsp.CompletionItems;
+import org.scijava.code.lsp.Positions;
 
 /**
  * Tests that {@link SciJavaCompletionProvider} faithfully bridges a language
@@ -140,17 +143,16 @@ public class SciJavaCompletionProviderTest {
 
 		// A callable completion taking one ij.gui.Roi parameter; and, inside its
 		// argument list, an in-scope variable fitting it (and a method).
-		final Callable addRoi = new Callable("addRoi", Collections.singletonList(
-			new Callable.Param("roi", "ij.gui.Roi")), "void").kind(
-				CompletionItemKind.Method);
+		final CompletionItem addRoi = CompletionItems.methodSnippet("addRoi",
+			Collections.singletonList("roi"), "(ij.gui.Roi roi)");
 		final FakeServer server = new FakeServer();
 		server.complete = (doc, caret) -> {
 			if (!doc.lineTo(caret).endsWith("(")) {
-				return FakeServer.items(doc, 0, caret, addRoi.toItem());
+				return FakeServer.items(doc, 0, caret, addRoi);
 			}
 			final CompletionItem myRoi = new CompletionItem("myRoi");
 			myRoi.setKind(CompletionItemKind.Variable);
-			return FakeServer.items(doc, caret, caret, myRoi, addRoi.toItem());
+			return FakeServer.items(doc, caret, caret, myRoi, addRoi);
 		};
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
 			FakeServers.session(server));
@@ -178,7 +180,7 @@ public class SciJavaCompletionProviderTest {
 
 		final FakeServer server = new FakeServer();
 		server.complete = (doc, caret) -> FakeServer.items(doc, 0, caret, method(
-			completionText, "long[]").toItem());
+			completionText, "long[]"));
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
 			FakeServers.session(server));
 
@@ -199,10 +201,10 @@ public class SciJavaCompletionProviderTest {
 
 		final FakeServer server = new FakeServer();
 		server.complete = (doc, caret) -> FakeServer.items(doc, 0, caret, //
-			method("img.getAt", "int[]").toItem(), //
-			method("img.getAt", "net.imglib2.Localizable").toItem(), //
-			method("img.getAt", "int[]").toItem(), // e.g. a bridge method
-			method("img.getAtX", "long[]").toItem());
+			method("img.getAt", "int[]"), //
+			method("img.getAt", "net.imglib2.Localizable"), //
+			method("img.getAt", "int[]"), // e.g. a bridge method
+			method("img.getAtX", "long[]"));
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
 			FakeServers.session(server));
 		final List<Completion> completions = provider.getCompletionsImpl(area);
@@ -232,22 +234,20 @@ public class SciJavaCompletionProviderTest {
 		area.setText("a");
 		area.setCaretPosition(1);
 
-		final Callable ints = method("a", "int", "int");
-		final Callable strings = method("a", "java.lang.String");
-		final Callable floats = method("a", "float", "float");
-		final Callable longs = method("a", "long", "long");
 		final String[] askedText = { null };
 		final int[] askedCaret = { -1 };
 		final FakeServer server = new FakeServer();
-		server.complete = (doc, caret) -> FakeServer.items(doc, 0, caret, ints
-			.toItem(), strings.toItem(), floats.toItem(), longs.toItem());
+		server.complete = (doc, caret) -> FakeServer.items(doc, 0, caret, method(
+			"a", "int", "int"), method("a", "java.lang.String"), method("a", "float",
+				"float"), method("a", "long", "long"));
 		server.help = (doc, caret) -> {
 			askedText[0] = doc.text();
 			askedCaret[0] = caret;
 			// The server orders the signatures, best fits first: here, as for a
 			// float typed as the first argument.
-			return new SignatureHelp(Arrays.asList(floats.toSignature(), ints
-				.toSignature(), longs.toSignature(), strings.toSignature()), 0, 1);
+			return new SignatureHelp(Arrays.asList(signature("a", "float", "float"),
+				signature("a", "int", "int"), signature("a", "long", "long"), signature(
+					"a", "java.lang.String")), 0, 1);
 		};
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
 			FakeServers.session(server));
@@ -273,14 +273,12 @@ public class SciJavaCompletionProviderTest {
 		final RSyntaxTextArea area = new RSyntaxTextArea();
 		area.setText("a");
 		area.setCaretPosition(1);
-		final Callable ints = method("a", "int", "int");
-		final Callable floats = method("a", "float", "float");
 		final FakeServer server = new FakeServer();
-		server.complete = (doc, caret) -> FakeServer.items(doc, 0, caret, ints
-			.toItem(), floats.toItem());
+		server.complete = (doc, caret) -> FakeServer.items(doc, 0, caret, method(
+			"a", "int", "int"), method("a", "float", "float"));
 		// The caret is in a call nested in a's arguments: b's signatures.
 		server.help = (doc, caret) -> new SignatureHelp(Collections.singletonList(
-			method("b", "double").toSignature()), 0, 0);
+			signature("b", "double")), 0, 0);
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
 			FakeServers.session(server));
 		final ParameterizedCompletion intOverload =
@@ -300,9 +298,8 @@ public class SciJavaCompletionProviderTest {
 		final AtomicInteger asked = new AtomicInteger();
 		final FakeServer server = new FakeServer();
 		server.complete = (doc, caret) -> FakeServer.items(doc, 3, caret, //
-			server.described(new Callable("zeros", Collections.singletonList(
-				new Callable.Param("shape", "int")), null).kind(
-					CompletionItemKind.Method).toItem(), () -> {
+			server.described(CompletionItems.methodSnippet("zeros",
+				Collections.singletonList("shape"), "(int shape)"), () -> {
 						asked.incrementAndGet();
 						return "Return a new array of zeros.";
 					}), //
@@ -413,15 +410,35 @@ public class SciJavaCompletionProviderTest {
 
 	// -- Helper methods --
 
-	private static Callable method(final String name,
+	/** A method's completion, with parameters p0, p1, ... of the types. */
+	private static CompletionItem method(final String name,
 		final String... paramTypes)
 	{
-		final List<Callable.Param> params = new ArrayList<>();
+		final List<String> names = new ArrayList<>();
+		for (int i = 0; i < paramTypes.length; i++) names.add("p" + i);
+		return CompletionItems.methodSnippet(name, names, "(" + String.join(
+			", ", params(paramTypes)) + ")");
+	}
+
+	/** A method's signature, with parameters p0, p1, ... of the types. */
+	private static SignatureInformation signature(final String name,
+		final String... paramTypes)
+	{
+		final List<String> params = params(paramTypes);
+		final SignatureInformation s = new SignatureInformation(name + "(" + String
+			.join(", ", params) + ") -> java.lang.Object");
+		s.setParameters(params.stream().map(ParameterInformation::new).collect(
+			Collectors.toList()));
+		return s;
+	}
+
+	/** E.g. {@code int p0}, {@code float p1}. */
+	private static List<String> params(final String... paramTypes) {
+		final List<String> out = new ArrayList<>();
 		for (int i = 0; i < paramTypes.length; i++) {
-			params.add(new Callable.Param("p" + i, paramTypes[i]));
+			out.add(paramTypes[i] + " p" + i);
 		}
-		return new Callable(name, params, "java.lang.Object").kind(
-			CompletionItemKind.Method);
+		return out;
 	}
 
 	/** "zeros", replacing what follows the dot, up to the end of the text. */

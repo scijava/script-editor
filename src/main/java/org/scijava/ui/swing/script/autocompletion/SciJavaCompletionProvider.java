@@ -442,11 +442,10 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 				text);
 			final Completion c;
 			if (params != null) {
-				final String returnType = item.getLabelDetails() == null ? null : item
-					.getLabelDetails().getDescription();
+				// NB: No return type: LSP has no field for one. The detail (e.g.
+				// the full signature) is the short description.
 				final SciJavaFunctionCompletion fc = new SciJavaFunctionCompletion(this,
-					name, returnType == null ? "" : returnType, edits);
-				fc.setReturnValueDescription(returnType == null ? "" : returnType);
+					name, null, edits);
 				fc.setShortDescription(item.getDetail());
 				fc.setDescription(description);
 				fc.setParams(rstaParams(comp, name, params, overloads.get(name)));
