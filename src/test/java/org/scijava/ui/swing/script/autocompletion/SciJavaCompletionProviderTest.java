@@ -63,7 +63,7 @@ import org.junit.Test;
 import org.scijava.code.lsp.jvm.Callable;
 import org.scijava.code.lsp.Environment;
 import org.scijava.code.lsp.Positions;
-import org.scijava.code.lsp.jvm.AbstractLanguageServer;
+import org.scijava.code.lsp.jvm.AbstractInProcessLanguageServer;
 
 /**
  * Tests that {@link SciJavaCompletionProvider} faithfully bridges a language
@@ -436,7 +436,7 @@ public class SciJavaCompletionProviderTest {
 	// -- Helper classes --
 
 	/** A server answering as its functions say. */
-	private static class FakeServer extends AbstractLanguageServer {
+	private static class FakeServer extends AbstractInProcessLanguageServer {
 
 		BiFunction<Document, Integer, CompletionList> complete = (doc,
 			caret) -> new CompletionList();
