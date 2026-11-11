@@ -143,7 +143,7 @@ public class SciJavaCompletionProviderTest {
 
 		// A callable completion taking one ij.gui.Roi parameter; and, inside its
 		// argument list, an in-scope variable fitting it (and a method).
-		final CompletionItem addRoi = CompletionItems.methodSnippet("addRoi",
+		final CompletionItem addRoi = CompletionItems.method("addRoi",
 			Collections.singletonList("roi"), "(ij.gui.Roi roi)");
 		final FakeServer server = new FakeServer();
 		server.complete = (doc, caret) -> {
@@ -298,7 +298,7 @@ public class SciJavaCompletionProviderTest {
 		final AtomicInteger asked = new AtomicInteger();
 		final FakeServer server = new FakeServer();
 		server.complete = (doc, caret) -> FakeServer.items(doc, 3, caret, //
-			server.described(CompletionItems.methodSnippet("zeros",
+			server.described(CompletionItems.method("zeros",
 				Collections.singletonList("shape"), "(int shape)"), () -> {
 						asked.incrementAndGet();
 						return "Return a new array of zeros.";
@@ -416,7 +416,7 @@ public class SciJavaCompletionProviderTest {
 	{
 		final List<String> names = new ArrayList<>();
 		for (int i = 0; i < paramTypes.length; i++) names.add("p" + i);
-		return CompletionItems.methodSnippet(name, names, "(" + String.join(
+		return CompletionItems.method(name, names, "(" + String.join(
 			", ", params(paramTypes)) + ")");
 	}
 
