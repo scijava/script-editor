@@ -372,7 +372,7 @@ public class FileFunctions {
 			" more line" + (count > 1 ? "s" : "") + ")...\n";
 	}
 
-	public class LengthWarner implements DocumentListener {
+	public static class LengthWarner implements DocumentListener {
 
 		protected int width;
 		protected JTextComponent component;
@@ -404,7 +404,7 @@ public class FileFunctions {
 		}
 	}
 
-	public class TextWrapper implements DocumentListener {
+	public static class TextWrapper implements DocumentListener {
 
 		protected int width;
 

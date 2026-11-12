@@ -124,6 +124,7 @@ public class TextEditorTab extends JSplitPane {
 		super(JSplitPane.VERTICAL_SPLIT);
 		super.setResizeWeight(350.0 / 430.0);
 		setOneTouchExpandable(true);
+		TextEditor.GuiUtils.flattenSplitPane(this);
 
 		this.textEditor = textEditor;
 		editorPane = new EditorPane();
@@ -281,6 +282,7 @@ public class TextEditorTab extends JSplitPane {
 		bc.weighty = 1;
 		bc.gridwidth = 8;
 		scroll = new JScrollPane(screen);
+		TextEditor.GuiUtils.flattenScrollBars(scroll);
 		bottom.add(scroll, bc);
 
 		prompt.setEnabled(false);
@@ -354,6 +356,7 @@ public class TextEditorTab extends JSplitPane {
 		});
 
 		screenAndPromptSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, bottom, prompt_panel);
+		TextEditor.GuiUtils.flattenSplitPane(screenAndPromptSplit);
 
 		// Enable ErrorSrip à la Eclipse. This will keep track of lines with 'Mark All'
 		// occurrences as well as lines associated with ParserNotice.Level.WARNING and

@@ -191,7 +191,7 @@ public abstract class PromptPane implements UIComponent<JTextArea> {
 	 * Trivial extension of {@link JTextArea} to expose its {@code getRowHeight()}
 	 * method.
 	 */
-	public class TextArea extends JTextArea {
+	public static class TextArea extends JTextArea {
 		public TextArea(int rows, int columns) {
 			super(rows, columns);
 		}
