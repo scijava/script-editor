@@ -28,17 +28,12 @@
  */
 package org.scijava.ui.swing.script;
 
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 
-import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.text.BadLocationException;
 
-import org.fife.ui.rtextarea.FoldIndicator;
 import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.GutterIconInfo;
 
@@ -51,22 +46,6 @@ public class GutterUtils {
 		gutter.setSpacingBetweenLineNumbersAndFoldIndicator(0);
 		//gutter.setFoldIndicatorStyle(org.fife.ui.rtextarea.FoldIndicatorStyle.MODERN); // DEFAULT
 		gutter.setShowCollapsedRegionToolTips(true);
-	}
-
-	@SuppressWarnings("unused")
-	private void updateFoldIcons() { // no longer needed since v3.3.0
-		int size;
-		try {
-			size = (int) new FoldIndicator(null).getPreferredSize().getWidth();
-		} catch (final Exception | Error ignored) {
-			size = 12; // FoldIndicator#WIDTH
-		}
-		if (size < 8)
-			size = 8;  // the default foldicon size in FoldIndicator
-		final int fontSize = gutter.getLineNumberFont().getSize();
-		if (size > fontSize)
-			size = fontSize;
-		//gutter.setFoldIcons(new FoldIcon(true, size), new FoldIcon(false, size));
 	}
 
 	private ImageIcon getBookmarkIcon() {
@@ -97,50 +76,6 @@ public class GutterUtils {
 
 	public static void updateIcons(final Gutter gutter) {
 		final GutterUtils utils = new GutterUtils(gutter);
-		//utils.updateFoldIcons();
 		utils.updateBookmarkIcon();
-	}
-
-	@SuppressWarnings("unused")
-	private class FoldIcon implements Icon {
-
-		private final boolean collapsed;
-		private final Color background;
-		private final Color foreground;
-		private final int size;
-
-		FoldIcon(final boolean collapsed, final int size) {
-			this.collapsed = collapsed;
-			this.background = gutter.getBorderColor();
-			this.foreground = gutter.getActiveLineRangeColor();
-			this.size = size;
-		}
-
-		@Override
-		public int getIconHeight() {
-			return size;
-		}
-
-		@Override
-		public int getIconWidth() {
-			return size;
-		}
-
-		@Override
-		public void paintIcon(final Component c, final Graphics g, final int x, final int y) {
-			// the default '+'/'-' symbols are to small with scaled fonts, and we don't
-			// have an easy way to resize the space allocated for the icon in the gutter
-			if (collapsed) {
-				g.setColor(foreground);
-				g.fillRect(x, y, size, size);
-				g.setColor(background);
-				g.drawRect(x, y, size-2, size-1); // no idea why the extra pixel is needed
-			} else {
-				g.setColor(background);
-				g.fillRect(x, y, size, size);
-				g.setColor(foreground);
-				g.drawRect(x, y, size-2, size-1);
-			}
-		}
 	}
 }

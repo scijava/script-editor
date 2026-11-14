@@ -248,24 +248,24 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		// this is the only access point in the GUI for these
 		// see #createPopupMenu(); #appendFoldingMenu();
 		final JPopupMenu popup = new JPopupMenu();
-		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Code Editing:");
+		GuiUtils.addPopupMenuSeparator(popup, "Code Editing:");
 		popup.add(getMenuItem("Copy", EditorPaneActions.copyAction, false));
 		popup.add(getMenuItem("Cut", EditorPaneActions.cutAction, true));
 		popup.add(getMenuItem("Paste", EditorPaneActions.pasteAction, true));
 		popup.add(getMenuItem("Delete Line", EditorPaneActions.rtaDeleteLineAction, true));
 		popup.add(getMenuItem("Delete Rest of Line", EditorPaneActions.rtaDeleteRestOfLineAction, true));
-		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Code Selection:");
+		GuiUtils.addPopupMenuSeparator(popup, "Code Selection:");
 		popup.add(getMenuItem("Select All", EditorPaneActions.selectAllAction, false));
 		popup.add(getMenuItem("Select Line", EditorPaneActions.selectLineAction, false));
 		popup.add(getMenuItem("Select Paragraph", EditorPaneActions.selectParagraphAction, false));
-		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Code Folding:");
+		GuiUtils.addPopupMenuSeparator(popup, "Code Folding:");
 		popup.add(getMenuItem("Collapse Fold", EditorPaneActions.rstaCollapseFoldAction, false));
 		popup.add(getMenuItem("Expand Fold", EditorPaneActions.rstaExpandFoldAction, false));
 		popup.add(getMenuItem("Toggle Current Fold", EditorPaneActions.rstaToggleCurrentFoldAction, false));
 		popup.add(getMenuItem("Collapse All Folds", EditorPaneActions.rstaCollapseAllFoldsAction, false));
 		popup.add(getMenuItem("Expand All Folds", EditorPaneActions.rstaExpandAllFoldsAction, false));
 		popup.add(getMenuItem("Collapse All Comments", EditorPaneActions.rstaCollapseAllCommentFoldsAction, false));
-		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Code Formatting:");
+		GuiUtils.addPopupMenuSeparator(popup, "Code Formatting:");
 		popup.add(getMenuItem("Indent Right", EditorPaneActions.epaIncreaseIndentAction, true));
 		popup.add(getMenuItem("Indent Left", EditorPaneActions.rstaDecreaseIndentAction, true));
 		popup.add(getMenuItem("Move Up", EditorPaneActions.rtaLineUpAction, true));
@@ -280,10 +280,10 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		menu.add(getMenuItem("Lower Case ('_' Sep.)", EditorPaneActions.epaLowerCaseUndAction, true));
 		menu.add(getMenuItem("Title Case", EditorPaneActions.epaTitleCaseAction, true));
 		menu.add(getMenuItem("Upper Case", EditorPaneActions.rtaUpperSelectionCaseAction, true));
-		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Ocurrences:");
+		GuiUtils.addPopupMenuSeparator(popup, "Ocurrences:");
 		popup.add(getMenuItem("Next Occurrence", EditorPaneActions.rtaNextOccurrenceAction, false));
 		popup.add(getMenuItem("Previous Occurrence", EditorPaneActions.rtaPrevOccurrenceAction, false));
-		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Utilities:");
+		GuiUtils.addPopupMenuSeparator(popup, "Utilities:");
 		popup.add(new OpenLinkUnderCursor().getMenuItem());
 		popup.add(new SearchWebOnSelectedText().getMenuItem());
 		popup.add(noneLangSyntaxMenu);
@@ -335,7 +335,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	}
 
 	void error(final String message) {
-		TextEditor.GuiUtils.error(this, message);
+		GuiUtils.error(this, message);
 	}
 
 	private void updateNoneLangSyntaxMenu(final ScriptLanguage language) {
@@ -383,7 +383,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		final RTextScrollPane sp = new RTextScrollPane(this);
 		sp.setPreferredSize(new Dimension(600, 350));
 		sp.setIconRowHeaderEnabled(true);
-		TextEditor.GuiUtils.flattenScrollBars(sp);
+		GuiUtils.flattenScrollBars(sp);
 		gutter = sp.getGutter();
 		gutter.setBookmarkingEnabled(true);
 		gutter.setShowCollapsedRegionToolTips(true);
@@ -1123,7 +1123,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public void applyTheme(final String theme) throws IllegalArgumentException {
 		try {
 			// If dark L&F and using the default theme, assume 'dark' theme
-			final boolean dark = DEFAULT_THEME.equals(theme) && TextEditor.GuiUtils.isDarkLaF();
+			final boolean dark = DEFAULT_THEME.equals(theme) && GuiUtils.isDarkLaF();
 			applyTheme(TextEditor.getTheme(dark ? "dark" : theme));
 		} catch (final Exception ex) {
 			throw new IllegalArgumentException(ex);
@@ -1212,7 +1212,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			if (selection == null) {
 				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
 			} else {
-				TextEditor.GuiUtils.runSearchQueryInBrowser(EditorPane.this, platformService, selection.trim());
+				GuiUtils.runSearchQueryInBrowser(EditorPane.this, platformService, selection.trim());
 			}
 			textArea.requestFocusInWindow();
 		}

@@ -99,7 +99,7 @@ class NotesPanel extends JPanel {
 		scratch.setBorder(new EmptyBorder(4, 4, 4, 4));
 		scratch.setToolTipText("Scratchpad: free text, saved between sessions");
 		final JScrollPane scratchPane = new JScrollPane(scratch);
-		TextEditor.GuiUtils.flattenScrollBars(scratchPane);
+		GuiUtils.flattenScrollBars(scratchPane);
 
 		// Scratchpad
 		final JPanel pane1 = new JPanel(new BorderLayout());
@@ -111,7 +111,7 @@ class NotesPanel extends JPanel {
 		list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		list.setCellRenderer(new Renderer());
 		final JScrollPane listPane = new JScrollPane(list);
-		TextEditor.GuiUtils.flattenScrollBars(listPane);
+		GuiUtils.flattenScrollBars(listPane);
 		final JPanel pane2 = new JPanel(new BorderLayout());
 		final JLabel clipboardHeader = header("Clipboard History (Double-click to Insert)");
 		pane2.add(clipboardHeader, BorderLayout.NORTH);
@@ -120,7 +120,7 @@ class NotesPanel extends JPanel {
 		final JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, pane1, pane2);
 		split.setResizeWeight(.75);
 		// No divider: the Scratchpad header (with a hairline on top) is the drag handle
-		TextEditor.GuiUtils.installSplitHandle(clipboardHeader, split);
+		GuiUtils.installSplitHandle(clipboardHeader, split);
 		add(split, BorderLayout.CENTER);
 
 		// List interaction
@@ -220,7 +220,7 @@ class NotesPanel extends JPanel {
 		final JLabel label = new JLabel(text);
 		label.setBorder(BorderFactory.createEmptyBorder(2, 2,0,0));
 		label.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
-        label.setForeground(TextEditor.GuiUtils.secondaryColor());
+        label.setForeground(GuiUtils.secondaryColor());
 		return label;
 	}
 

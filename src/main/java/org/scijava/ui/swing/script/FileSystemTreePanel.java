@@ -110,7 +110,7 @@ class FileSystemTreePanel extends JPanel {
 		bc.weighty = 1.0;
 		bc.fill = GridBagConstraints.BOTH;
 		final JScrollPane treePane = new JScrollPane(tree);
-		TextEditor.GuiUtils.flattenScrollBars(treePane);
+		GuiUtils.flattenScrollBars(treePane);
 		add(treePane, bc);
 		bc.gridy = 2;
 		bc.weightx = 0;
@@ -123,7 +123,7 @@ class FileSystemTreePanel extends JPanel {
 					addRootFromFile(files[0]);
 				} else if (dirs.size() == 1) { // A single folder dropped
 					addRootFromFile(dirs.get(0));
-				} else if (TextEditor.GuiUtils.confirm(this,
+				} else if (GuiUtils.confirm(this,
 						"Replace contents with the " + dirs.size() + " dropped folders?",
 						"Replace Contents?", "Confirm")) {
 					tree.clearTopLevelFolders(); // Blank out the entire tree
@@ -131,7 +131,7 @@ class FileSystemTreePanel extends JPanel {
 				}
 
 			} catch (final Throwable ignored) {
-				TextEditor.GuiUtils.warn(this, "Could not retrieve location of dropped file(s).");
+				GuiUtils.warn(this, "Could not retrieve location of dropped file(s).");
 			}
 		});
 	}
@@ -172,12 +172,12 @@ class FileSystemTreePanel extends JPanel {
 		toolbar.setBorder(BorderFactory.createCompoundBorder(new SideBorder(), toolbar.getBorder()));
 		final JToggleButton statusFast = new JToggleButton("Fast Mode");
 		statusFast.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
-		statusFast.setForeground(TextEditor.GuiUtils.secondaryColor());
+		statusFast.setForeground(GuiUtils.secondaryColor());
 		statusFast.setToolTipText("Fast mode for large folders: turns off live updates and the search of collapsed folders");
 		statusFast.addActionListener(e -> {
 			final boolean selected = statusFast.isSelected();
 			setFastMode(selected);
-			final Color fGrnd = (selected) ? UIManager.getColor("Tree.selectionForeground") : TextEditor.GuiUtils.secondaryColor();
+			final Color fGrnd = (selected) ? UIManager.getColor("Tree.selectionForeground") : GuiUtils.secondaryColor();
 			final Color bGrnd = (selected) ? UIManager.getColor("Tree.selectionBackground") : toolbar.getBackground();
 			if (fGrnd!=null) statusFast.setForeground(fGrnd);
 			if (bGrnd!=null) statusFast.setBackground(bGrnd);
@@ -186,7 +186,7 @@ class FileSystemTreePanel extends JPanel {
 		final FlatFileChooserDetailsViewIcon optionsIcon = new FlatFileChooserDetailsViewIcon();
 		optionsIcon.setScale(.8f); // matches the font size set by the "small" style
 		statusOptions.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
-		statusOptions.setForeground(TextEditor.GuiUtils.secondaryColor());
+		statusOptions.setForeground(GuiUtils.secondaryColor());
 		statusOptions.addActionListener(e -> tree.getComponentPopupMenu().show(statusOptions, 0, 0));
 		statusOptions.setIcon(optionsIcon);
 		toolbar.add(statusFast);
@@ -195,7 +195,7 @@ class FileSystemTreePanel extends JPanel {
 		toolbar.add(Box.createHorizontalGlue());
 		final FlatHelpButtonIcon helpIcon = new FlatHelpButtonIcon();
 		helpIcon.setScale(.8f); // matches the font size set by the "small" style
-		helpIcon.applyStyleProperty("questionMarkColor", TextEditor.GuiUtils.secondaryColor());
+		helpIcon.applyStyleProperty("questionMarkColor", GuiUtils.secondaryColor());
 		helpIcon.applyStyleProperty("background", toolbar.getBackground());
 		final JButton statusHelp = new JButton(helpIcon);
 		statusHelp.addActionListener(e -> showHelpMsg());
@@ -377,7 +377,7 @@ class FileSystemTreePanel extends JPanel {
 					final File ref = files[0].getAbsoluteFile();
 					c.setCurrentDirectory((ref.isDirectory()) ? ref : ref.getParentFile());
 				} catch (final Throwable ignored) {
-					TextEditor.GuiUtils.warn(this, "Could not retrieve location of dropped file(s).");
+					GuiUtils.warn(this, "Could not retrieve location of dropped file(s).");
 				}
 			});
 			if (JFileChooser.APPROVE_OPTION == c.showOpenDialog(this)) {
@@ -403,7 +403,7 @@ class FileSystemTreePanel extends JPanel {
 				}
 
 			} catch (Exception ex) {
-				TextEditor.GuiUtils.error(this, "Could not remove top-level folders.");
+				GuiUtils.error(this, "Could not remove top-level folders.");
             }
 		});
 		return remove_directory;
@@ -465,7 +465,7 @@ class FileSystemTreePanel extends JPanel {
 	private void addContextualMenuToTree() {
 		final JPopupMenu popup = new JPopupMenu();
 
-		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "List:");
+		GuiUtils.addPopupMenuSeparator(popup, "List:");
 		final JMenuItem selected = new JMenuItem("Selected Folder", new FlatFileViewDirectoryIcon());
 		selected.setToolTipText("Makes the selected folder (or the folder of the selected file) the only top-level folder");
 		selected.addActionListener(e -> {
@@ -491,13 +491,13 @@ class FileSystemTreePanel extends JPanel {
 		popup.add(jmi);
 		popup.add(addDirectoryMenuItem());
 
-		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Open In:");
+		GuiUtils.addPopupMenuSeparator(popup, "Open In:");
 		final JMenuItem fileSystem = new JMenuItem("File System", new FlatFileViewComputerIcon());
 		jmi = fileSystem;
 		jmi.addActionListener(e -> {
 			final TreePath path = tree.getSelectionPath();
 			if (path == null) {
-				TextEditor.GuiUtils.info(this, "No items are currently selected.", "Invalid Selection");
+				GuiUtils.info(this, "No items are currently selected.", "Invalid Selection");
 				return;
 			}
 			try {
@@ -505,7 +505,7 @@ class FileSystemTreePanel extends JPanel {
 				final File f = new File(filepath);
 				Desktop.getDesktop().open((f.isDirectory()) ? f : f.getParentFile());
 			} catch (final Throwable ignored) {
-				TextEditor.GuiUtils.error(this, "Folder of selected item does not seem to be accessible.");
+				GuiUtils.error(this, "Folder of selected item does not seem to be accessible.");
 			}
 		});
 		popup.add(jmi);
@@ -514,22 +514,22 @@ class FileSystemTreePanel extends JPanel {
 		jmi.addActionListener(e -> {
 			final TreePath path = tree.getSelectionPath();
 			if (path == null) {
-				TextEditor.GuiUtils.info(this,  "No items are currently selected.", "Invalid Selection");
+				GuiUtils.info(this,  "No items are currently selected.", "Invalid Selection");
 				return;
 			}
 			try {
 				final String filepath = (String) ((FileSystemTree.Node) path.getLastPathComponent()).getUserObject();
-				TextEditor.GuiUtils.openTerminal(new File(filepath));
+				GuiUtils.openTerminal(new File(filepath));
 			} catch (final Throwable ignored) {
-				TextEditor.GuiUtils.error(this, "Could not open path in Terminal.");
+				GuiUtils.error(this, "Could not open path in Terminal.");
 			}
 		});
 		popup.add(jmi);
 
-		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Contents:");
+		GuiUtils.addPopupMenuSeparator(popup, "Contents:");
 		final JMenuItem collapseAll = new JMenuItem("Collapse All");
 		jmi = collapseAll;
-		jmi.addActionListener(e -> TextEditor.GuiUtils.collapseAllTreeNodes(tree));
+		jmi.addActionListener(e -> GuiUtils.collapseAllTreeNodes(tree));
 		popup.add(jmi);
 		final JMenuItem expandLevel = new JMenuItem("Expand One Level");
 		jmi = expandLevel;
@@ -548,7 +548,7 @@ class FileSystemTreePanel extends JPanel {
 		});
 		popup.add(live);
 
-		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Reset:");
+		GuiUtils.addPopupMenuSeparator(popup, "Reset:");
 		final JMenuItem removeLast = removeDirectoryMenuItem();
 		popup.add(removeLast);
 		final JMenuItem wipe = new JMenuItem("Clear All");
@@ -688,7 +688,7 @@ class FileSystemTreePanel extends JPanel {
 				+ "<i>^Demo</i> (names starting with <i>Demo</i>)</dd>" //
 				+ "</dl></div></HTML>";
 
-		TextEditor.GuiUtils.showHTMLDialog(this.getRootPane(), "Files Pane", msg);
+		GuiUtils.showHTMLDialog(this.getRootPane(), "Files Pane", msg);
 	}
 
 	private boolean isCaseSensitive() {
@@ -715,7 +715,7 @@ class FileSystemTreePanel extends JPanel {
 		applyFilter();
 	}
 
-	private class SearchField extends TextEditor.TextFieldWithPlaceholder {
+	private class SearchField extends TextFieldWithPlaceholder {
 
 		private static final long serialVersionUID = 7004232238240585434L;
 		private static final String DEF_HOLDER = "File filter...";
@@ -740,8 +740,8 @@ class FileSystemTreePanel extends JPanel {
 			collapsedToggle = optionToggle(null, "Include collapsed folders in searches (slower)", FileSystemTreePanel.this::setCollapsedEnabled);
 			collapsedToggle.setSelected(tree.isSearchCollapsedFolders()); // reflect the default
 			// Tree chevrons (collapsed/expanded) instead of text
-			collapsedToggle.setIcon(new ChevronIcon(false));
-			collapsedToggle.setSelectedIcon(new ChevronIcon(true));
+			collapsedToggle.setIcon(Icons.chevron(false));
+			collapsedToggle.setSelectedIcon(Icons.chevron(true));
 
 			final JToolBar tb = new JToolBar();
 			tb.setMargin(new Insets(0, 0, 0, 2));
@@ -809,7 +809,7 @@ class FileSystemTreePanel extends JPanel {
 
 				@Override
 				public Color getForeground() {
-					final Color c = TextEditor.GuiUtils.secondaryColor();
+					final Color c = GuiUtils.secondaryColor();
 					return (c != null) ? c : super.getForeground();
 				}
 			};
@@ -835,51 +835,6 @@ class FileSystemTreePanel extends JPanel {
 			tree.setSearchCollapsedFolders(true);
 			caseSensitive = false;
 			regex = false;
-		}
-	}
-	/** A chevron pointing right (collapsed) or down (expanded), painted with the foreground of its button */
-	private static final class ChevronIcon implements Icon {
-
-		private final boolean down;
-
-		ChevronIcon(final boolean down) {
-			this.down = down;
-		}
-
-		@Override
-		public int getIconWidth() {
-			return UIScale.scale(10);
-		}
-
-		@Override
-		public int getIconHeight() {
-			return UIScale.scale(10);
-		}
-
-		@Override
-		public void paintIcon(final Component c, final Graphics g, final int x, final int y) {
-			final Graphics2D g2 = (Graphics2D) g.create();
-			try {
-				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-				g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
-				g2.setColor(c.getForeground());
-				g2.setStroke(new BasicStroke(UIScale.scale(1.3f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-				final float s = getIconWidth();
-				final float a = s * .3f; // inset
-				final java.awt.geom.Path2D.Float p = new java.awt.geom.Path2D.Float();
-				if (down) {
-					p.moveTo(x + a * .5f, y + s * .35f);
-					p.lineTo(x + s / 2, y + s * .65f);
-					p.lineTo(x + s - a * .5f, y + s * .35f);
-				} else {
-					p.moveTo(x + s * .35f, y + a * .5f);
-					p.lineTo(x + s * .65f, y + s / 2);
-					p.lineTo(x + s * .35f, y + s - a * .5f);
-				}
-				g2.draw(p);
-			} finally {
-				g2.dispose();
-			}
 		}
 	}
 }

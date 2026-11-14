@@ -362,7 +362,7 @@ public class FileSystemTree extends JTree {
 		try {
 			g2.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING,
 					java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-			g2.setColor(TextEditor.GuiUtils.secondaryColor());
+			g2.setColor(GuiUtils.secondaryColor());
 			final java.awt.FontMetrics fm = g2.getFontMetrics();
 			int y = (getHeight() - fm.getHeight() * lines.length) / 2 + fm.getAscent();
 			for (final String line : lines) {

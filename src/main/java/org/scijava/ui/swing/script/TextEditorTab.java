@@ -32,11 +32,8 @@ package org.scijava.ui.swing.script;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Component;
 import java.awt.Font;
 import java.awt.Insets;
-import java.awt.Graphics2D;
-import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.FlowLayout;
 import java.awt.datatransfer.DataFlavor;
@@ -49,6 +46,8 @@ import java.awt.dnd.DropTargetEvent;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.io.File;
 import java.util.List;
 import javax.swing.*;
@@ -58,7 +57,6 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.JTextComponent;
 
 import com.formdev.flatlaf.FlatClientProperties;
-import com.formdev.flatlaf.icons.FlatAbstractIcon;
 import com.formdev.flatlaf.icons.FlatFileChooserDetailsViewIcon;
 import com.formdev.flatlaf.icons.FlatHelpButtonIcon;
 import org.fife.ui.rsyntaxtextarea.ErrorStrip;
@@ -187,23 +185,23 @@ public class TextEditorTab extends JSplitPane {
 		bar.setFloatable(false);
 		bar.setBorder(BorderFactory.createEmptyBorder(1, 2, 1, 2));
 
-		runit = new JButton("Run", new PlayIcon(false));
-		runit.setDisabledIcon(new PlayIcon(true));
+		runit = new JButton("Run", Icons.play(false));
+		runit.setDisabledIcon(Icons.play(true));
 		runit.setToolTipText("Control+R, F5, or F11");
 		textEditor.cmdPalette.register(runit, "Interpreter");
 		runit.addActionListener(ae -> textEditor.runText());
 		bar.add(runit);
 
-		batchit = new JButton("Batch", new FastForwardIcon(false));
+		batchit = new JButton("Batch", Icons.fastForward(false));
 		batchit.putClientProperty("JButton.buttonType", "borderless");
 
-		batchit.setDisabledIcon(new FastForwardIcon(true));
+		batchit.setDisabledIcon(Icons.fastForward(true));
 		batchit.setToolTipText("Requires at least one @File SciJava parameter to be declared");
 		batchit.addActionListener(e -> textEditor.runBatch());
 		bar.add(batchit);
 
-		killit = new JButton("Stop", new StopIcon(false));
-		killit.setDisabledIcon(new StopIcon(true));
+		killit = new JButton("Stop", Icons.stop(false));
+		killit.setDisabledIcon(Icons.stop(true));
 		killit.setToolTipText("Stop the running script (interrupts its thread)");
 		killit.setEnabled(false);
 		killit.addActionListener(ae -> kill());
@@ -224,8 +222,8 @@ public class TextEditorTab extends JSplitPane {
 		bar.add(viewPanel);
 		bar.add(Box.createHorizontalStrut(4));
 
-		final JButton clear = new JButton("Clear", new TrashIcon(false));
-		clear.setDisabledIcon(new TrashIcon(true));
+		final JButton clear = new JButton("Clear", Icons.trash(false));
+		clear.setDisabledIcon(Icons.trash(true));
 		clear.addActionListener(ae -> {
 			screen.setText("");
 			textEditor.getErrorScreen().setText("");
@@ -236,7 +234,7 @@ public class TextEditorTab extends JSplitPane {
 		textEditor.cmdPalette.register(clear, "Console");
 
 		scroll = new JScrollPane(screen);
-		TextEditor.GuiUtils.flattenScrollBars(scroll);
+		GuiUtils.flattenScrollBars(scroll);
 		bottom.add(bar, BorderLayout.PAGE_START);
 		bottom.add(scroll, BorderLayout.CENTER);
 
@@ -257,11 +255,11 @@ public class TextEditorTab extends JSplitPane {
 		prompt_panel.add(promptBar, BorderLayout.PAGE_START);
 		// Same scroll pane (and thus border) as the console
 		final JScrollPane promptScroll = new JScrollPane(prompt);
-		TextEditor.GuiUtils.flattenScrollBars(promptScroll);
+		GuiUtils.flattenScrollBars(promptScroll);
 		prompt_panel.add(promptScroll, BorderLayout.CENTER);
 		final JLabel label = new JLabel();
-		label.setForeground(TextEditor.GuiUtils.secondaryColor());
-		label.setIcon(new TextEditor.ReplIcon());
+		label.setForeground(GuiUtils.secondaryColor());
+		label.setIcon(Icons.repl());
 		promptBar.add(label);
 		promptBar.add(Box.createHorizontalGlue());
 		updownarrows.setText("Arrow Keys");
@@ -270,22 +268,28 @@ public class TextEditorTab extends JSplitPane {
 		promptBar.add(updownarrows);
 		final FlatHelpButtonIcon helpIcon = new FlatHelpButtonIcon();
 		helpIcon.setScale(.8f); // matches the font size set by the "small" style
-		helpIcon.applyStyleProperty("questionMarkColor", TextEditor.GuiUtils.secondaryColor());
+		helpIcon.applyStyleProperty("questionMarkColor", GuiUtils.secondaryColor());
 		helpIcon.applyStyleProperty("background", promptBar.getBackground());
 		final JButton statusHelp = new JButton(helpIcon);
 		statusHelp.addActionListener(a -> {
-			final String msg = "This REPL (Read-Evaluate-Print-Loop) parses " + textEditor.getCurrentLanguage().getLanguageName() + " code.\n\n"
-					+ "Key bindings:\n"
-					+ "  [Enter]:   Evaluate code\n"
-					+ "  [Shift+Enter]:   Add line break (also alt-enter and meta-enter)\n"
-					+ "  [Page UP] or [Ctrl+P]:   Show previous entry in the history\n"
-					+ "  [Page DOWN] or [Ctrl+N]:   Show next entry in the history\n"
-					+ "\n"
-					+ "If 'Use arrow keys' is checked, then up/down arrows work like\n"
-					+ "Page UP/DOWN, and Shift+up/down arrows work like arrow\n"
-					+ "keys before for caret movement within a multi-line prompt."
-					;
-			textEditor.info(msg, "REPL Help");
+			final int shift = InputEvent.SHIFT_DOWN_MASK;
+			final int ctrl = InputEvent.CTRL_DOWN_MASK;
+			final String html = """
+					<html><body>
+					<table cellpadding="3">
+					<tr><td>%s</td><td>Evaluate code</td></tr>
+					<tr><td>%s</td><td>Add line break (also with Ctrl, Alt or Meta)</td></tr>
+					<tr><td>%s or %s</td><td>Previous entry in the history</td></tr>
+					<tr><td>%s or %s</td><td>Next entry in the history</td></tr>
+					</table>
+					<p>With <i>Arrow Keys</i> on, %s and %s also navigate the history. Combined<br>
+					with a modifier (e.g., %s) they move the caret within a multi-line prompt.</p>
+					</body></html>"""
+					.formatted(keyHtml(KeyEvent.VK_ENTER, 0), keyHtml(KeyEvent.VK_ENTER, shift),
+							keyHtml(KeyEvent.VK_PAGE_UP, 0), keyHtml(KeyEvent.VK_P, ctrl),
+							keyHtml(KeyEvent.VK_PAGE_DOWN, 0), keyHtml(KeyEvent.VK_N, ctrl),
+							keyHtml(KeyEvent.VK_UP, 0), keyHtml(KeyEvent.VK_DOWN, 0), keyHtml(KeyEvent.VK_UP, shift));
+			textEditor.showHTMLDialog("REPL (Read-Evaluate-Print-Loop)", html);
 		});
 
 		promptBar.add(statusHelp);
@@ -293,12 +297,12 @@ public class TextEditorTab extends JSplitPane {
 		// Compact bar: drop the vertical padding FlatLaf adds to toolbar buttons (margin 3 + spacing 1)
 		final String tight = "toolbar.margin: 0,3,0,3; toolbar.spacingInsets: 0,0,0,0";
 		updownarrows.putClientProperty(FlatClientProperties.STYLE, tight);
-		updownarrows.setForeground(TextEditor.GuiUtils.secondaryColor()); // Must come after the style properties: applying them resets UIResource foregrounds
+		updownarrows.setForeground(GuiUtils.secondaryColor()); // Must come after the style properties: applying them resets UIResource foregrounds
 		statusHelp.putClientProperty(FlatClientProperties.STYLE, tight);
 		screenAndPromptSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, bottom, prompt_panel);
 		// No divider: the prompt bar is the handle. Keep promptDividerSize at 0 so toggling the REPL
 		// never brings the divider back
-		TextEditor.GuiUtils.installSplitHandle(promptBar, screenAndPromptSplit);
+		GuiUtils.installSplitHandle(promptBar, screenAndPromptSplit);
 		promptDividerSize = 0;
 
 		// Enable ErrorSrip à la Eclipse. This will keep track of lines with 'Mark All'
@@ -324,7 +328,7 @@ public class TextEditorTab extends JSplitPane {
 		editorPane.getVimHandler().setExHandler(textEditor::handleVimCommand);
 		super.setLeftComponent(holder);
 		super.setRightComponent(screenAndPromptSplit);
-		TextEditor.GuiUtils.installSplitHandle(bar, this); // no divider in the "below" layout: the toolbar is the handle
+		GuiUtils.installSplitHandle(bar, this); // no divider in the "below" layout: the toolbar is the handle
 		screenAndPromptSplit.setDividerLocation(1.0);
 
 		setView(view); // sync the console and chooser with the initial view
@@ -387,118 +391,6 @@ public class TextEditorTab extends JSplitPane {
 					: (int) (axisSize() * .7));
 		} else {
 			setDividerLocation(1d); // all the way down
-		}
-	}
-
-	/**
-	 * Icon painted from SVG path data (absolute M, L, C and Z commands, 640x640 view box). Glyphs by
-	 * Font Awesome Free (https://fontawesome.com), licensed CC BY 4.0. Colors adapt to light/dark themes
-	 */
-	private static class GlyphIcon extends FlatAbstractIcon {
-
-		private final Path2D path;
-		private final boolean disabled;
-		private final Color light, dark;
-
-		GlyphIcon(final String svgPath, final Color light, final Color dark, final boolean disabled) {
-			super(16, 16, null);
-			this.path = parse(svgPath);
-			this.light = light;
-			this.dark = dark;
-			this.disabled = disabled;
-		}
-
-		@Override
-		protected void paintIcon(final Component c, final Graphics2D g) {
-			Color color = com.formdev.flatlaf.FlatLaf.isLafDark() ? dark : light;
-			if (disabled) {
-				final Color d = UIManager.getColor("Button.disabledText");
-				color = (d != null) ? d : Color.GRAY;
-			}
-			g.setColor(color);
-			g.fill(path);
-		}
-
-		/** Parses the path, scaling it from the 640 unit view box to the 16 unit icon */
-		private static Path2D parse(final String d) {
-			final double k = 16d / 640d;
-			final java.util.regex.Matcher m = java.util.regex.Pattern.compile("[MLCZz]|-?\\d*\\.?\\d+").matcher(d);
-			final List<String> tokens = new java.util.ArrayList<>();
-			while (m.find())
-				tokens.add(m.group());
-			final Path2D.Double p = new Path2D.Double();
-			char cmd = 'M';
-			int i = 0;
-			while (i < tokens.size()) {
-				final String t = tokens.get(i);
-				if (Character.isLetter(t.charAt(0))) {
-					cmd = t.charAt(0);
-					i++;
-					if (cmd == 'Z' || cmd == 'z') {
-						p.closePath();
-						continue;
-					}
-				}
-				switch (cmd) {
-				case 'M':
-					p.moveTo(k * Double.parseDouble(tokens.get(i)), k * Double.parseDouble(tokens.get(i + 1)));
-					i += 2;
-					cmd = 'L'; // further pairs are line segments
-					break;
-				case 'L':
-					p.lineTo(k * Double.parseDouble(tokens.get(i)), k * Double.parseDouble(tokens.get(i + 1)));
-					i += 2;
-					break;
-				case 'C':
-					p.curveTo(k * Double.parseDouble(tokens.get(i)), k * Double.parseDouble(tokens.get(i + 1)),
-							k * Double.parseDouble(tokens.get(i + 2)), k * Double.parseDouble(tokens.get(i + 3)),
-							k * Double.parseDouble(tokens.get(i + 4)), k * Double.parseDouble(tokens.get(i + 5)));
-					i += 6;
-					break;
-				default:
-					throw new IllegalArgumentException("Unsupported path command: " + cmd);
-				}
-			}
-			return p;
-		}
-	}
-
-	private static final Color GREEN = new Color(0x44774E), GREEN_DARK = new Color(0x446E4B);
-	private static final Color RED = new Color(0xDF5663), RED_DARK = new Color(0xB45355);
-
-	/** Green "play" triangle (Font Awesome) */
-	private static final class PlayIcon extends GlyphIcon {
-
-		PlayIcon(final boolean disabled) {
-			super("M187.2 100.9C174.8 94.1 159.8 94.4 147.6 101.6C135.4 108.8 128 121.9 128 136L128 504C128 518.1 135.5 531.2 147.6 538.4C159.7 545.6 174.8 545.9 187.2 539.1L523.2 355.1C536 348.1 544 334.6 544 320C544 305.4 536 291.9 523.2 284.9L187.2 100.9z",
-					GREEN_DARK, GREEN, disabled);
-		}
-	}
-
-	/** Green "fast forward" (double play) icon (Font Awesome), for batch runs */
-	private static final class FastForwardIcon extends GlyphIcon {
-
-		FastForwardIcon(final boolean disabled) {
-			super("M403.7 107.1C392.1 96 375 92.9 360.3 99.2C345.6 105.5 336 120 336 136L336 272.3L163.7 107.2C152.1 96 135 92.9 120.3 99.2C105.6 105.5 96 120 96 136L96 504C96 520 105.6 534.5 120.3 540.8C135 547.1 152.1 544 163.7 532.9L336 367.7L336 504C336 520 345.6 534.5 360.3 540.8C375 547.1 392.1 544 403.7 532.9L595.7 348.9C603.6 341.4 608 330.9 608 320C608 309.1 603.5 298.7 595.7 291.1L403.7 107.1z",
-					GREEN, GREEN_DARK, disabled);
-		}
-	}
-
-	/** Red "stop" rounded square (Font Awesome) */
-	private static final class StopIcon extends GlyphIcon {
-
-		StopIcon(final boolean disabled) {
-			super("M160 96L480 96C515.3 96 544 124.7 544 160L544 480C544 515.3 515.3 544 480 544L160 544C124.7 544 96 515.3 96 480L96 160C96 124.7 124.7 96 160 96z",
-					RED, RED_DARK, disabled);
-		}
-	}
-
-	/** Neutral "trash can" icon (Font Awesome), for the Clear button */
-	private static final class TrashIcon extends GlyphIcon {
-
-		TrashIcon(final boolean disabled) {
-			super("M232.7 69.9C237.1 56.8 249.3 48 263.1 48L377 48C390.8 48 403 56.8 407.4 69.9L416 96L512 96C529.7 96 544 110.3 544 128C544 145.7 529.7 160 512 160L128 160C110.3 160 96 145.7 96 128C96 110.3 110.3 96 128 96L224 96L232.7 69.9zM128 208L512 208L512 512C512 547.3 483.3 576 448 576L192 576C156.7 576 128 547.3 128 512L128 208zM216 272C202.7 272 192 282.7 192 296L192 488C192 501.3 202.7 512 216 512C229.3 512 240 501.3 240 488L240 296C240 282.7 229.3 272 216 272zM320 272C306.7 272 296 282.7 296 296L296 488C296 501.3 306.7 512 320 512C333.3 512 344 501.3 344 488L344 296C344 282.7 333.3 272 320 272zM424 272C410.7 272 400 282.7 400 296L400 488C400 501.3 410.7 512 424 512C437.3 512 448 501.3 448 488L448 296C448 282.7 437.3 272 424 272z",
-					new Color(0x6E6E6E), new Color(0xA9A9A9), disabled);
 		}
 	}
 
@@ -635,6 +527,11 @@ public class TextEditorTab extends JSplitPane {
 		combinedScreen.startNewRun();
 		final JTextArea errors = textEditor.getErrorScreen();
 		if (errors instanceof ConsoleArea) ((ConsoleArea) errors).startNewRun();
+	}
+
+	/** HTML for a key stroke, e.g., for help dialogs */
+	private static String keyHtml(final int keyCode, final int modifiers) {
+		return "<tt>" + GuiUtils.prettifiedKey(KeyStroke.getKeyStroke(keyCode, modifiers)).trim() + "</tt>";
 	}
 
 	/** Makes the consoles and REPL prompt use the editor pane's colors. */

@@ -30,7 +30,6 @@
 package org.scijava.ui.swing.script;
 
 import java.awt.AlphaComposite;
-import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -44,26 +43,19 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
-import java.awt.event.InputEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionAdapter;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.awt.geom.Ellipse2D;
-import java.awt.geom.Line2D;
-import java.awt.geom.Path2D;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.function.Consumer;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.swing.AbstractAction;
@@ -72,7 +64,6 @@ import javax.swing.Action;
 import javax.swing.ActionMap;
 import javax.swing.Box;
 import javax.swing.BorderFactory;
-import javax.swing.Icon;
 import javax.swing.InputMap;
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -101,7 +92,6 @@ import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 
 import org.fife.ui.rtextarea.RecordableTextAction;
-import org.scijava.util.PlatformUtils;
 
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.icons.FlatSearchWithHistoryIcon;
@@ -172,7 +162,7 @@ class CommandPalette {
 
 	/** Menu bar button that toggles the palette, for the right end of the menu bar */
 	JButton getMenuButton() {
-		final JButton button = new JButton(new AbstractAction(null, new MagnifierIcon()) {
+		final JButton button = new JButton(new AbstractAction(null, Icons.magnifier()) {
 
 			private static final long serialVersionUID = 1L;
 
@@ -189,7 +179,7 @@ class CommandPalette {
 	}
 
 	String getAcceleratorString() {
-		return noHitsCmd.prettifiedKey(ACCELERATOR).trim();
+		return GuiUtils.prettifiedKey(ACCELERATOR).trim();
 	}
 
 	Map<String, String> getShortcuts() {
@@ -263,35 +253,8 @@ class CommandPalette {
 		populateList("");
 		frame.add(table.getScrollPane(), BorderLayout.SOUTH);
 		frame.pack();
-		enableDrag(frame.getRootPane());
-		enableDrag(titleBar);
-	}
-
-	private static void enableDrag(final JComponent component) {
-		final Point[] dragStart = { null };
-		component.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mousePressed(final MouseEvent e) {
-				dragStart[0] = e.getPoint();
-			}
-
-			@Override
-			public void mouseReleased(final MouseEvent e) {
-				dragStart[0] = null;
-			}
-		});
-		component.addMouseMotionListener(new MouseMotionAdapter() {
-			@Override
-			public void mouseDragged(final MouseEvent e) {
-				if (dragStart[0] != null) {
-					final java.awt.Window w = SwingUtilities.getWindowAncestor(component);
-					if (w == null)
-						return;
-					final Point loc = w.getLocation();
-					w.setLocation(loc.x + e.getX() - dragStart[0].x, loc.y + e.getY() - dragStart[0].y);
-				}
-			}
-		});
+		GuiUtils.enableDrag(frame.getRootPane());
+		GuiUtils.enableDrag(titleBar);
 	}
 
 	private void initSearchField() {
@@ -524,14 +487,13 @@ class CommandPalette {
 	}
 
 	private static Color iconColor() {
-		final Color c = TextEditor.GuiUtils.secondaryColor();
+		final Color c = GuiUtils.secondaryColor();
 		return (c != null) ? c : Color.GRAY;
 	}
 
 	/**
-	 * Toggle painted with the LAF's secondary color. The color is returned as a plain
-	 * Color because FlatLaf ignores foregrounds that are UIResources, and resolved on
-	 * every paint so that it follows Look and Feel changes
+	 * Toggle painted with the LAF's secondary color, resolved on every paint so that
+	 * it follows Look and Feel changes
 	 */
 	private static JToggleButton secondaryToggle(final String text, final String tooltip) {
 		final JToggleButton b = new JToggleButton(text) {
@@ -539,8 +501,8 @@ class CommandPalette {
 
 			@Override
 			public Color getForeground() {
-				final Color c = TextEditor.GuiUtils.secondaryColor();
-				return (c != null) ? new Color(c.getRGB()) : super.getForeground();
+				final Color c = GuiUtils.secondaryColor();
+				return (c != null) ? c : super.getForeground();
 			}
 		};
 		b.setToolTipText(tooltip);
@@ -555,32 +517,8 @@ class CommandPalette {
 		return (c != null) ? c : new Color(75, 110, 175);
 	}
 
-	private static Color alpha(final Color c, final int percent) {
-		return new Color(c.getRed(), c.getGreen(), c.getBlue(), Math.round(percent / 100f * 255));
-	}
-
-	/** Returns a color that is weight of a plus (1 - weight) of b */
-	private static Color mix(final Color a, final Color b, final double weight) {
-		final double w = Math.clamp(weight, 0d, 1d);
-		return new Color((int) Math.round(a.getRed() * w + b.getRed() * (1 - w)),
-				(int) Math.round(a.getGreen() * w + b.getGreen() * (1 - w)),
-				(int) Math.round(a.getBlue() * w + b.getBlue() * (1 - w)));
-	}
-
-	private static void recolorTracks(final JScrollPane scrollPane, final Color color) {
-		Component corner = scrollPane.getCorner(JScrollPane.LOWER_TRAILING_CORNER);
-		if (corner == null) {
-			corner = new JPanel();
-			scrollPane.setCorner(JScrollPane.LOWER_TRAILING_CORNER, corner);
-		}
-		corner.setBackground(color);
-		final Map<String, Object> style = Map.of("track", color, "hoverTrackColor", color);
-		scrollPane.getHorizontalScrollBar().putClientProperty(FlatClientProperties.STYLE, style);
-		scrollPane.getVerticalScrollBar().putClientProperty(FlatClientProperties.STYLE, style);
-	}
-
 	/** The search field, with options menu, and case and whitespace toggles */
-	private static class SearchField extends TextEditor.TextFieldWithPlaceholder {
+	private static class SearchField extends TextFieldWithPlaceholder {
 		private static final long serialVersionUID = 1L;
 		private static final float ENLARGE_FACTOR = 1.1f;
 		final JPopupMenu optionsMenu = new JPopupMenu();
@@ -632,7 +570,7 @@ class CommandPalette {
 		private void styleBorder() {
 			final int padding = (int) (getFont().getSize2D() * .8);
 			setBorder(BorderFactory.createCompoundBorder(
-					BorderFactory.createMatteBorder(1, 0, 1, 0, alpha(iconColor(), 40)),
+					BorderFactory.createMatteBorder(1, 0, 1, 0, GuiUtils.alpha(iconColor(), 40)),
 					BorderFactory.createEmptyBorder(padding, padding, padding, padding)));
 		}
 
@@ -655,104 +593,6 @@ class CommandPalette {
 			} catch (final Exception ignored) {
 				return 1f;
 			}
-		}
-	}
-
-	/** Magnifier icon, painted with the foreground of its component */
-	private static final class MagnifierIcon implements Icon {
-
-		@Override
-		public void paintIcon(final Component c, final Graphics g, final int x, final int y) {
-			final Graphics2D g2 = (Graphics2D) g.create();
-			try {
-				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-				g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
-				g2.setColor(c.getForeground());
-				g2.setStroke(new BasicStroke(UIScale.scale(1.6f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-				final float s = getIconWidth();
-				g2.draw(new Ellipse2D.Float(x + .1f * s, y + .1f * s, .6f * s, .6f * s));
-				g2.draw(new Line2D.Float(x + .62f * s, y + .62f * s, x + .88f * s, y + .88f * s));
-			} finally {
-				g2.dispose();
-			}
-		}
-
-		@Override
-		public int getIconWidth() {
-			return UIScale.scale(16);
-		}
-
-		@Override
-		public int getIconHeight() {
-			return UIScale.scale(16);
-		}
-	}
-
-	/** Light bulb icon (Font Awesome Free 7.3.1). Painted with the foreground of its component */
-	private static final class BulbIcon implements Icon {
-		private static final String PATH = "M424.5 355.1C449 329.2 464 294.4 464 256C464 176.5 399.5 112 320 112"
-				+ "C240.5 112 176 176.5 176 256C176 294.4 191 329.2 215.5 355.1C236.8 377.5 260.4 409.1 268.8 448"
-				+ "L371.2 448C379.6 409 403.2 377.5 424.5 355.1z"
-				+ "M459.3 388.1C435.7 413 416 443.4 416 477.7L416 496C416 540.2 380.2 576 336 576L304 576"
-				+ "C259.8 576 224 540.2 224 496L224 477.7C224 443.4 204.3 413 180.7 388.1C148 353.7 128 307.2 128 256"
-				+ "C128 150 214 64 320 64C426 64 512 150 512 256C512 307.2 492 353.7 459.3 388.1z"
-				+ "M272 248C272 261.3 261.3 272 248 272C234.7 272 224 261.3 224 248C224 199.4 263.4 160 312 160"
-				+ "C325.3 160 336 170.7 336 184C336 197.3 325.3 208 312 208C289.9 208 272 225.9 272 248z";
-		// Glyph bounds within the 640x640 view box
-		private static final double X0 = 128;
-		private static final double Y0 = 64;
-		private static final double GLYPH_W = 384;
-		private static final double GLYPH_H = 512;
-		private static final Path2D SHAPE = parse(PATH);
-		private final int height;
-
-		BulbIcon(final int height) {
-			this.height = height;
-		}
-
-		/** Parses absolute M, L, C and z commands, the only ones in PATH */
-		private static Path2D parse(final String d) {
-			final Path2D.Double p = new Path2D.Double(Path2D.WIND_NON_ZERO);
-			final Matcher m = Pattern.compile("([MLCz])([^MLCz]*)").matcher(d);
-			while (m.find()) {
-				final String args = m.group(2).trim();
-				final String[] n = args.isEmpty() ? new String[0] : args.split("[ ,]+");
-				switch (m.group(1).charAt(0)) {
-				case 'M' -> p.moveTo(Double.parseDouble(n[0]), Double.parseDouble(n[1]));
-				case 'L' -> p.lineTo(Double.parseDouble(n[0]), Double.parseDouble(n[1]));
-				case 'C' -> p.curveTo(Double.parseDouble(n[0]), Double.parseDouble(n[1]), Double.parseDouble(n[2]),
-						Double.parseDouble(n[3]), Double.parseDouble(n[4]), Double.parseDouble(n[5]));
-				default -> p.closePath();
-				}
-			}
-			return p;
-		}
-
-		@Override
-		public void paintIcon(final Component c, final Graphics g, final int x, final int y) {
-			final Graphics2D g2 = (Graphics2D) g.create();
-			try {
-				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-				g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
-				g2.setColor(c.getForeground());
-				final double s = height / GLYPH_H;
-				g2.translate(x, y);
-				g2.scale(s, s);
-				g2.translate(-X0, -Y0);
-				g2.fill(SHAPE);
-			} finally {
-				g2.dispose();
-			}
-		}
-
-		@Override
-		public int getIconWidth() {
-			return (int) Math.round(height * GLYPH_W / GLYPH_H);
-		}
-
-		@Override
-		public int getIconHeight() {
-			return height;
 		}
 	}
 
@@ -854,9 +694,9 @@ class CommandPalette {
 			label.setFont(label.getFont().deriveFont(label.getFont().getSize2D() * FONT_SCALE));
 			label.setForeground(iconColor());
 			label.setFocusable(false);
-			enableDrag(label);
+			GuiUtils.enableDrag(label);
 			parent.add(label);
-			final JButton button = new JButton(new BulbIcon((int) Math.round(label.getFont().getSize2D() * 1.2)));
+			final JButton button = new JButton(Icons.bulb(Math.round(UIScale.unscale(label.getFont().getSize2D() * 1.2f))));
 			button.setToolTipText("Search hints");
 			button.setForeground(iconColor());
 			button.setFocusable(false);
@@ -1037,7 +877,7 @@ class CommandPalette {
 
 				@Override
 				public void updateUI() {
-					recolorTracks(this, background());
+					GuiUtils.recolorTracks(this, background());
 					super.updateUI();
 				}
 			};
@@ -1066,11 +906,11 @@ class CommandPalette {
 			super.getTableCellRendererComponent(table, text, false, false, row, column);
 			final Color bg = table.getBackground();
 			final Color fg = table.getForeground();
-			setBackground((isSelected) ? mix(selectionColor(), bg, .35) : bg);
+			setBackground((isSelected) ? GuiUtils.mix(selectionColor(), bg, .35) : bg);
 			if (cmd != null && cmd.isDisabled())
-				setForeground(mix(fg, bg, .45));
+				setForeground(GuiUtils.mix(fg, bg, .45));
 			else
-				setForeground((column == 0) ? fg : mix(fg, bg, .6));
+				setForeground((column == 0) ? fg : GuiUtils.mix(fg, bg, .6));
 			setHorizontalAlignment((column == 0) ? JLabel.LEFT : JLabel.RIGHT);
 			setFont((column == 0) ? col0Font : col1Font);
 			setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 6));
@@ -1251,10 +1091,10 @@ class CommandPalette {
 
 		void setkeyString(final KeyStroke key) {
 			if (hotkey.isEmpty()) {
-				hotkey = prettifiedKey(key);
+				hotkey = GuiUtils.prettifiedKey(key);
 			} else {
 				final String oldHotkey = hotkey;
-				final String newHotKey = prettifiedKey(key);
+				final String newHotKey = GuiUtils.prettifiedKey(key);
 				if (!oldHotkey.contains(newHotKey)) {
 					hotkey = oldHotkey + " or " + newHotKey;
 				}
@@ -1265,105 +1105,6 @@ class CommandPalette {
 			return string.substring(0, 1).toUpperCase() + string.substring(1);
 		}
 
-		private String prettifiedKey(final KeyStroke key) {
-			if (key == null)
-				return "";
-			final StringBuilder s = new StringBuilder();
-			final int m = key.getModifiers();
-			if ((m & InputEvent.CTRL_DOWN_MASK) != 0) {
-				s.append((PlatformUtils.isMac()) ? "⌃ " : "Ctrl ");
-			}
-			if ((m & InputEvent.META_DOWN_MASK) != 0) {
-				s.append((PlatformUtils.isMac()) ? "⌘ " : "Ctrl ");
-			}
-			if ((m & InputEvent.ALT_DOWN_MASK) != 0) {
-				s.append((PlatformUtils.isMac()) ? "⎇ " : "Alt ");
-			}
-			if ((m & InputEvent.SHIFT_DOWN_MASK) != 0) {
-				s.append("⇧ ");
-			}
-			if ((m & InputEvent.BUTTON1_DOWN_MASK) != 0) {
-				s.append("L-click ");
-			}
-			if ((m & InputEvent.BUTTON2_DOWN_MASK) != 0) {
-				s.append("R-click ");
-			}
-			if ((m & InputEvent.BUTTON3_DOWN_MASK) != 0) {
-				s.append("M-click ");
-			}
-			switch (key.getKeyEventType()) {
-			case KeyEvent.KEY_TYPED:
-				s.append(key.getKeyChar()).append(" ");
-				break;
-			case KeyEvent.KEY_PRESSED:
-			case KeyEvent.KEY_RELEASED:
-				s.append(getKeyText(key.getKeyCode())).append(" ");
-				break;
-			default:
-				break;
-			}
-			return s.toString();
-		}
-
-		String getKeyText(final int keyCode) {
-			if (keyCode >= KeyEvent.VK_0 && keyCode <= KeyEvent.VK_9
-					|| keyCode >= KeyEvent.VK_A && keyCode <= KeyEvent.VK_Z) {
-				return String.valueOf((char) keyCode);
-			}
-            return switch (keyCode) {
-                case KeyEvent.VK_COMMA -> ",";
-                case KeyEvent.VK_PERIOD -> ".";
-                case KeyEvent.VK_SLASH -> "/";
-                case KeyEvent.VK_SEMICOLON -> ";";
-                case KeyEvent.VK_EQUALS -> "=";
-                case KeyEvent.VK_OPEN_BRACKET -> "[";
-                case KeyEvent.VK_BACK_SLASH -> "\\";
-                case KeyEvent.VK_CLOSE_BRACKET -> "]";
-                case KeyEvent.VK_ENTER -> "↵";
-                case KeyEvent.VK_BACK_SPACE -> "⌫";
-                case KeyEvent.VK_TAB -> "↹";
-                case KeyEvent.VK_CANCEL -> "Cancel";
-                case KeyEvent.VK_CLEAR -> "Clear";
-                case KeyEvent.VK_PAUSE -> "Pause";
-                case KeyEvent.VK_CAPS_LOCK -> "Caps Lock";
-                case KeyEvent.VK_ESCAPE -> "Esc";
-                case KeyEvent.VK_SPACE -> "Space";
-                case KeyEvent.VK_PAGE_UP -> "⇞";
-                case KeyEvent.VK_PAGE_DOWN -> "⇟";
-                case KeyEvent.VK_END -> "END";
-                case KeyEvent.VK_HOME -> "Home"; // "⌂";
-                case KeyEvent.VK_LEFT -> "←";
-                case KeyEvent.VK_UP -> "↑";
-                case KeyEvent.VK_RIGHT -> "→";
-                case KeyEvent.VK_DOWN -> "↓";
-                case KeyEvent.VK_MULTIPLY -> "[Num ×]";
-                case KeyEvent.VK_ADD -> "[Num +]";
-                case KeyEvent.VK_SUBTRACT -> "[Num −]";
-                case KeyEvent.VK_DIVIDE -> "[Num /]";
-                case KeyEvent.VK_DELETE -> "⌦";
-                case KeyEvent.VK_INSERT -> "Ins";
-                case KeyEvent.VK_BACK_QUOTE -> "`";
-                case KeyEvent.VK_QUOTE -> "'";
-                case KeyEvent.VK_AMPERSAND -> "&";
-                case KeyEvent.VK_ASTERISK -> "*";
-                case KeyEvent.VK_QUOTEDBL -> "\"";
-                case KeyEvent.VK_LESS -> "<";
-                case KeyEvent.VK_GREATER -> ">";
-                case KeyEvent.VK_BRACELEFT -> "{";
-                case KeyEvent.VK_BRACERIGHT -> "}";
-                case KeyEvent.VK_COLON -> ":";
-                case KeyEvent.VK_CIRCUMFLEX -> "^";
-                case KeyEvent.VK_DEAD_TILDE -> "~";
-                case KeyEvent.VK_DOLLAR -> "$";
-                case KeyEvent.VK_EXCLAMATION_MARK -> "!";
-                case KeyEvent.VK_LEFT_PARENTHESIS -> "(";
-                case KeyEvent.VK_MINUS -> "-";
-                case KeyEvent.VK_PLUS -> "+";
-                case KeyEvent.VK_RIGHT_PARENTHESIS -> ")";
-                case KeyEvent.VK_UNDERSCORE -> "_";
-                default -> KeyEvent.getKeyText(keyCode);
-            };
-		}
 	}
 
 	/** Levenshtein test that bails out once the distance is known to exceed max */
@@ -1577,7 +1318,7 @@ class CommandPalette {
 
 				@Override
 				public void actionPerformed(final ActionEvent e) {
-					TextEditor.GuiUtils.runSearchQueryInBrowser(textEditor, textEditor.getPlatformService(),
+					GuiUtils.runSearchQueryInBrowser(textEditor, textEditor.getPlatformService(),
 							searchField.getText());
 				}
 			});

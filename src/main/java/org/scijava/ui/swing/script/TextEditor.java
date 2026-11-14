@@ -68,7 +68,6 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.io.Writer;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -154,12 +153,10 @@ import org.scijava.ui.swing.script.commands.KillScript;
 import org.scijava.util.FileUtils;
 import org.scijava.util.MiscUtils;
 import org.scijava.util.POM;
-import org.scijava.util.PlatformUtils;
 import org.scijava.util.Types;
 import org.scijava.widget.FileWidget;
 
 import com.formdev.flatlaf.FlatClientProperties;
-import com.formdev.flatlaf.FlatLaf;
 
 /**
  * A versatile script editor for SciJava applications.
@@ -348,7 +345,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		outlineSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, pane1, pane2);
 		outlineSplit.setResizeWeight(.75);
 		// No divider: the Scratchpad header (with a hairline on top) is the drag handle
-		TextEditor.GuiUtils.installSplitHandle(bookmarkHeader, outlineSplit);
+		GuiUtils.installSplitHandle(bookmarkHeader, outlineSplit);
 
 		sideTabs.addTab("Outline", outlineSplit);
 		notesPanel = new NotesPanel(() -> {
@@ -894,7 +891,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final JLabel label = new JLabel(text);
 		label.setBorder(BorderFactory.createEmptyBorder(2, 2,0,0));
 		label.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
-		label.setForeground(TextEditor.GuiUtils.secondaryColor());
+		label.setForeground(GuiUtils.secondaryColor());
 		return label;
 	}
 
@@ -1915,7 +1912,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			menu.show(statusTab, 0, -menu.getPreferredSize().height); // opens upwards: the bar is at the bottom
 		});
 		filesPanel.setStatusListener(t -> statusText.setText(t == null || t.isEmpty() ? " " : t));
-		statusSide = new JToggleButton(new SidebarIcon());
+		statusSide = new JToggleButton(Icons.sidebar());
 		statusSide.setToolTipText("Shows/hides the side panel (Files, Outline, Notes)");
 		statusSide.setFocusable(false);
 		statusSide.setSelected(true);
@@ -1932,9 +1929,9 @@ public class TextEditor extends JFrame implements ActionListener,
 			statusSide.setSelected(loc > 5);
 		});
 		// Layout of the console: below or beside the editor. Clicking the active one collapses/restores it
-		statusBelow = new JToggleButton(new BottomPaneIcon());
+		statusBelow = new JToggleButton(Icons.bottomPane());
 		statusBelow.setToolTipText("<HTML>Vertical Layout: Console below the editor.<br>Click again to hide/show it");
-		statusRight = new JToggleButton(new RightPaneIcon());
+		statusRight = new JToggleButton(Icons.rightPane());
 		statusRight.setToolTipText("<HTML>Horizontal Layout: Console beside the editor.<br>Click again to hide/show it");
 		for (final JToggleButton b : new JToggleButton[] { statusBelow, statusRight }) {
 			b.setFocusable(false);
@@ -1948,7 +1945,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			getTab().toggleLayout(false);
 			syncStatusBar();
 		});
-		statusRepl = new JToggleButton("REPL", new ReplIcon());
+		statusRepl = new JToggleButton("REPL", Icons.repl());
 		cmdPalette.register(statusRepl, "Interpreter");
 		statusRepl.setFont(statusRepl.getFont().deriveFont(statusRepl.getFont().getSize2D() * .9f));
 		statusRepl.setToolTipText("Turns the REPL prompt on/off (of the active tab). Requires a language");
@@ -2086,119 +2083,6 @@ public class TextEditor extends JFrame implements ActionListener,
 			statusText.setText("Converted the indentation of " + changed + (changed == 1 ? " line" : " lines"));
 		} catch (final BadLocationException | RuntimeException ex) {
 			error("Could not convert the indentation: " + ex.getMessage());
-		}
-	}
-
-	/** REPL icon: a prompt (&gt;_) inside a window. Painted with the foreground of its button */
-	static final class ReplIcon implements Icon {
-
-		@Override
-		public void paintIcon(final Component c, final Graphics g, final int x, final int y) {
-			final Graphics2D g2 = (Graphics2D) g.create();
-			try {
-				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-				g2.setColor(c.getForeground());
-				g2.drawRoundRect(x + 1, y + 2, 13, 11, 3, 3);
-				g2.drawLine(x + 4, y + 5, x + 6, y + 7); // chevron
-				g2.drawLine(x + 6, y + 7, x + 4, y + 9);
-				g2.drawLine(x + 8, y + 10, x + 11, y + 10); // cursor
-			} finally {
-				g2.dispose();
-			}
-		}
-
-		@Override
-		public int getIconWidth() {
-			return 16;
-		}
-
-		@Override
-		public int getIconHeight() {
-			return 16;
-		}
-	}
-
-	/** Right pane icon: a window with a pane on its right side, filled when the pane is shown */
-	private static final class RightPaneIcon implements Icon {
-
-		@Override
-		public void paintIcon(final Component c, final Graphics g, final int x, final int y) {
-			final Graphics2D g2 = (Graphics2D) g.create();
-			try {
-				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-				g2.setColor(c.getForeground());
-				g2.drawRoundRect(x + 1, y + 2, 13, 11, 3, 3);
-				if (c instanceof AbstractButton && ((AbstractButton) c).isSelected()) g2.fillRect(x + 9, y + 3, 4, 10);
-				else g2.drawLine(x + 9, y + 3, x + 9, y + 12);
-			} finally {
-				g2.dispose();
-			}
-		}
-
-		@Override
-		public int getIconWidth() {
-			return 16;
-		}
-
-		@Override
-		public int getIconHeight() {
-			return 16;
-		}
-	}
-
-	/** Bottom pane icon: a window with a pane below, filled when the pane is shown */
-	private static final class BottomPaneIcon implements Icon {
-
-		@Override
-		public void paintIcon(final Component c, final Graphics g, final int x, final int y) {
-			final Graphics2D g2 = (Graphics2D) g.create();
-			try {
-				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-				g2.setColor(c.getForeground());
-				g2.drawRoundRect(x + 1, y + 2, 13, 11, 3, 3);
-				if (c instanceof AbstractButton && ((AbstractButton) c).isSelected()) g2.fillRect(x + 2, y + 8, 12, 4);
-				else g2.drawLine(x + 2, y + 8, x + 13, y + 8);
-			} finally {
-				g2.dispose();
-			}
-		}
-
-		@Override
-		public int getIconWidth() {
-			return 16;
-		}
-
-		@Override
-		public int getIconHeight() {
-			return 16;
-		}
-	}
-
-	/** Side panel icon: a window with a left pane, filled when the pane is shown. Painted with the foreground of its button */
-	private static final class SidebarIcon implements Icon {
-
-		@Override
-		public void paintIcon(final Component c, final Graphics g, final int x, final int y) {
-			final Graphics2D g2 = (Graphics2D) g.create();
-			try {
-				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-				g2.setColor(c.getForeground());
-				g2.drawRoundRect(x + 1, y + 2, 13, 11, 3, 3);
-				if (c instanceof AbstractButton && ((AbstractButton) c).isSelected()) g2.fillRect(x + 2, y + 3, 4, 10);
-				else g2.drawLine(x + 6, y + 3, x + 6, y + 12);
-			} finally {
-				g2.dispose();
-			}
-		}
-
-		@Override
-		public int getIconWidth() {
-			return 16;
-		}
-
-		@Override
-		public int getIconHeight() {
-			return 16;
 		}
 	}
 
@@ -4457,332 +4341,4 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		return collection;
 	}
-
-	protected static class GuiUtils {
-
-		private GuiUtils() {
-		}
-
-		static void error(final Component parent, final String message) {
-			JOptionPane.showMessageDialog(parent, message, "Error", JOptionPane.ERROR_MESSAGE);
-		}
-
-		static void warn(final Component parent, final String message) {
-			JOptionPane.showMessageDialog(parent, message, "Warning", JOptionPane.WARNING_MESSAGE);
-		}
-
-		static void info(final Component parent, final String message, final String title) {
-			JOptionPane.showMessageDialog(parent, message, title, JOptionPane.INFORMATION_MESSAGE);
-		}
-
-		static boolean confirm(final Component parent, final String message, final String title,
-				final String yesButtonLabel) {
-			return JOptionPane.showConfirmDialog(parent, message, title, JOptionPane.YES_NO_OPTION) == 
-					JOptionPane.YES_OPTION;
-		}
-
-		static void showHTMLDialog(final Component parent, final String title, final String htmlContents) {
-			final JTextPane f = new JTextPane();
-			f.setContentType("text/html");
-			f.setEditable(false);
-			f.setBackground(null);
-			f.setBorder(null);
-			f.setText(htmlContents);
-			f.setCaretPosition(0);
-			final JScrollPane sp = new JScrollPane(f);
-			final JOptionPane pane = new JOptionPane(sp);
-			final JDialog dialog = pane.createDialog(parent, title);
-			dialog.setResizable(true);
-			dialog.pack();
-			dialog.setPreferredSize(
-				new Dimension(
-					(int) Math.min(parent.getWidth()  * .5, pane.getPreferredSize().getWidth() + (3 * sp.getVerticalScrollBar().getWidth())),
-					(int) Math.min(parent.getHeight() * .8, pane.getPreferredSize().getHeight())));
-			dialog.pack();
-			pane.addPropertyChangeListener(JOptionPane.VALUE_PROPERTY, ignored -> {
-				dialog.dispose();
-			});
-			dialog.setModal(false);
-			dialog.setLocationRelativeTo(parent);
-			dialog.setVisible(true);
-		}
-
-		static String getString(final Component parent, final String message, final String title) {
-			return (String) JOptionPane.showInputDialog(parent, message, title, JOptionPane.QUESTION_MESSAGE);
-		}
-
-		static void runSearchQueryInBrowser(final Component parentComponent, final PlatformService platformService,
-				final String query) {
-			String url;
-			try {
-				url = "https://forum.image.sc/search?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8.toString());
-			} catch (final Exception ignored) {
-				url = query.trim().replace(" ", "%20");
-			}
-			openURL(parentComponent, platformService, url);
-		}
-
-		static void openURL(final Component parentComponent, final PlatformService platformService, final String url) {
-			try {
-				platformService.open(new URL(url));
-			} catch (final Exception ignored) {
-				// Error message with selectable text
-				final JTextPane f = new JTextPane();
-				f.setContentType("text/html");
-				f.setText("<HTML>Web page could not be open. Please visit<br>" + url + "<br>using your web browser.");
-				f.setEditable(false);
-				f.setBackground(null);
-				f.setBorder(null);
-				JOptionPane.showMessageDialog(parentComponent, f, "Error", JOptionPane.ERROR_MESSAGE);
-			}
-		}
-
-		static void openTerminal(final File pwd) throws IOException, InterruptedException {
-			final String[] wrappedCommand;
-			final File dir = (pwd.isDirectory()) ? pwd : pwd.getParentFile();
-			if (PlatformUtils.isWindows()) {
-				// this should probably be replaced with powershell!?
-				wrappedCommand = new String[] { "cmd", "/c", "start", "/wait", "cmd.exe", "/K" };
-			} else if (PlatformUtils.isLinux()) {
-				// this will likely only work on debian-based distros
-				wrappedCommand = new String[] { "/usr/bin/x-terminal-emulator" };
-			} else if (PlatformUtils.isMac()) {
-				// On MacOS ProcessBuilder#directory() fails!? so we'll use applescript :)
-				wrappedCommand = new String[] { "osascript", "-e", //
-						"tell application \"Terminal\" to (do script \"cd '" + dir.getAbsolutePath() + "';clear\")" };
-			} else {
-				throw new IllegalArgumentException("Unsupported OS");
-			}
-			final ProcessBuilder pb = new ProcessBuilder(wrappedCommand);
-			pb.directory(dir); // does nothing on macOS !?
-			pb.start();
-		}
-
-		static void addMenubarSeparator(final JMenu menu, final String header) {
-			if (menu.getMenuComponentCount() > 0) {
-				menu.addSeparator();
-			}
-			try {
-				final JLabel label = new JLabel(" "+ header);
-				label.setEnabled(false);
-				label.setForeground(getDisabledComponentColor());
-				menu.add(label);
-			} catch (final Exception ignored) {
-				// do nothing
-			}
-		}
-
-		static void addPopupMenuSeparator(final JPopupMenu menu, final String header) {
-			if (menu.getComponentCount() > 1) {
-				menu.addSeparator();
-			}
-			final JLabel label = new JLabel(header);
-			// label.setHorizontalAlignment(SwingConstants.LEFT);
-			label.setEnabled(false);
-			label.setForeground(getDisabledComponentColor());
-			menu.add(label);
-
-		}
-
-		static Color getDisabledComponentColor() {
-			try {
-				return UIManager.getColor("MenuItem.disabledForeground");
-			} catch (final Exception ignored) {
-				return Color.GRAY;
-			}
-		}
-
-		public static Color secondaryColor() {
-			try {
-				return UIManager.getColor("SearchField.searchIconColor");
-			} catch (final Exception ignored) {
-				return getDisabledComponentColor();
-			}
-		}
-
-		public static Color accentColor() {
-			try {
-				return UIManager.getColor("Component.accentColor");
-			} catch (final Exception ignored) {
-				return Color.ORANGE.darker();
-			}
-		}
-
-		static boolean isDarkLaF() {
-			return FlatLaf.isLafDark() || isDark(new JLabel().getBackground());
-		}
-	
-		static boolean isDark(final Color c) {
-			// see https://stackoverflow.com/a/3943023
-			return (c.getRed() * 0.299 + c.getGreen() * 0.587 + c.getBlue() * 0.114) < 186;
-		}
-
-		/** Small "+" button for the trailing area of a tabbed pane */
-		static JButton newTabButton(final Runnable action) {
-			final JButton b = new JButton("+");
-			b.setToolTipText("New file");
-			b.setFocusable(false);
-			b.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
-			b.addActionListener(e -> action.run());
-			return b;
-		}
-
-		static JButton ellipsisButton(final Runnable action) {
-			final JButton b = new JButton("⋮");
-			b.setFont(b.getFont().deriveFont(Font.BOLD));
-			b.setFocusable(false);
-			b.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
-			b.addActionListener(e -> action.run());
-			return b;
-		}
-
-
-		/** Rounded scrollbar thumbs without arrow buttons (FlatLaf only) */
-		static void flattenScrollBars(final JScrollPane scrollPane) {
-			final String style = "showButtons: false; trackArc: 999; thumbArc: 999; "
-					+ "trackInsets: 2,2,2,2; thumbInsets: 2,2,2,2";
-			scrollPane.getVerticalScrollBar().putClientProperty(FlatClientProperties.STYLE, style);
-			scrollPane.getHorizontalScrollBar().putClientProperty(FlatClientProperties.STYLE, style);
-		}
-
-		/**
-		 * Removes the divider of a vertical (top/bottom) split pane and lets {@code handle} act as
-		 * the divider instead. {@code handle} must sit at the top edge of the lower component, e.g.,
-		 * a header label or a toolbar. Dragging any part of it that does not handle mouse events
-		 * itself (labels, glue, gaps) moves the split. If the split pane is later switched to a
-		 * horizontal (left/right) orientation, its regular divider is restored.
-		 */
-		static void installSplitHandle(final JComponent handle, final JSplitPane split) {
-			split.setContinuousLayout(true);
-			split.setOneTouchExpandable(false);
-			split.putClientProperty(FlatClientProperties.STYLE, "style: plain;");
-			if (handle == null) return;
-			final int regularSize = split.getDividerSize();
-			final Runnable update = () -> {
-				final boolean active = split.getOrientation() == JSplitPane.VERTICAL_SPLIT;
-				split.setDividerSize(active ? 0 : regularSize);
-				handle.setCursor(active ? java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.N_RESIZE_CURSOR) : null);
-			};
-			// children must not inherit the resize cursor
-			final java.util.function.Consumer<java.awt.Container>[] resetCursors = new java.util.function.Consumer[1];
-			resetCursors[0] = parent -> {
-				for (final java.awt.Component child : parent.getComponents()) {
-					if (!child.isCursorSet()) child.setCursor(java.awt.Cursor.getDefaultCursor());
-					if (child instanceof java.awt.Container) resetCursors[0].accept((java.awt.Container) child);
-				}
-			};
-			resetCursors[0].accept(handle);
-			update.run();
-			split.addPropertyChangeListener(JSplitPane.ORIENTATION_PROPERTY, evt -> update.run());
-			final int[] grab = new int[1];
-			handle.addMouseListener(new java.awt.event.MouseAdapter() {
-
-				@Override
-				public void mousePressed(final java.awt.event.MouseEvent e) {
-					grab[0] = e.getY();
-				}
-			});
-			handle.addMouseMotionListener(new java.awt.event.MouseAdapter() {
-
-				@Override
-				public void mouseDragged(final java.awt.event.MouseEvent e) {
-					if (split.getOrientation() != JSplitPane.VERTICAL_SPLIT) return;
-					final int y = SwingUtilities.convertPoint(handle, e.getPoint(), split).y;
-					split.setDividerLocation(Math.max(0, y - grab[0]));
-				}
-			});
-		}
-
-		static void collapseAllTreeNodes(final JTree tree) {
-			final int row1 = (tree.isRootVisible()) ? 1 : 0;
-			for (int i = row1; i < tree.getRowCount(); i++)
-				tree.collapseRow(i);
-		}
-
-		static void expandAllTreeNodes(final JTree tree) {
-			for (int i = 0; i < tree.getRowCount(); i++)
-				tree.expandRow(i);
-		}
-
-		/* Tweaks for tabbed pane */
-		static JTabbedPane getJTabbedPane() {
-			final JTabbedPane tabbed = new JTabbedPane();
-			tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_ROTATION,
-					FlatClientProperties.TABBED_PANE_TAB_ROTATION_AUTO);
-			final JPopupMenu popup = new JPopupMenu();
-			tabbed.setComponentPopupMenu(popup);
-			GuiUtils.addPopupMenuSeparator(popup, "Tab Style:");
-			ButtonGroup bGroup = new ButtonGroup();
-			for (final String option : new String[]{"Card", "Underlined"}) {
-				final JCheckBoxMenuItem jcbmi = new JCheckBoxMenuItem(option, "Underlined".equals(option));
-				jcbmi.addItemListener(e -> tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_TYPE,
-						option.toLowerCase()));
-				bGroup.add(jcbmi);
-				popup.add(jcbmi);
-			}
-			GuiUtils.addPopupMenuSeparator(popup, "Tab Placement:");
-			bGroup = new ButtonGroup();
-			for (final String pos : new String[] { "Top", "Left", "Bottom", "Right" }) {
-				final JMenuItem jcbmi = new JCheckBoxMenuItem(pos, "Top".equals(pos));
-				jcbmi.addItemListener(e -> {
-					switch (pos) {
-					case "Top":
-						tabbed.setTabPlacement(JTabbedPane.TOP);
-						break;
-					case "Bottom":
-						tabbed.setTabPlacement(JTabbedPane.BOTTOM);
-						break;
-					case "Left":
-						tabbed.setTabPlacement(JTabbedPane.LEFT);
-						break;
-					case "Right":
-						tabbed.setTabPlacement(JTabbedPane.RIGHT);
-						break;
-					}
-				});
-				bGroup.add(jcbmi);
-				popup.add(jcbmi);
-			}
-			return tabbed;
-		}
-	}
-
-	/**
-	 * Text field displaying a hint while empty. Relies on FlatLaf's placeholder
-	 * support, falling back to manual painting under other look and feels.
-	 */
-	static class TextFieldWithPlaceholder extends JTextField {
-
-		private static final long serialVersionUID = 1L;
-
-		TextFieldWithPlaceholder() {
-			putClientProperty(FlatClientProperties.TEXT_FIELD_SHOW_CLEAR_BUTTON, true);
-		}
-
-		void setPlaceholder(final String placeholder) {
-			putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, placeholder);
-			repaint();
-		}
-
-		String getPlaceholder() {
-			final Object p = getClientProperty(FlatClientProperties.PLACEHOLDER_TEXT);
-			return (p == null) ? "" : p.toString();
-		}
-
-		@Override
-		protected void paintComponent(final java.awt.Graphics g) {
-			super.paintComponent(g);
-			if (getText().isEmpty() && !(UIManager.getLookAndFeel() instanceof FlatLaf)) {
-				final Graphics2D g2 = (Graphics2D) g.create();
-				g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-				g2.setColor(getDisabledTextColor());
-				g2.setFont(getFont().deriveFont(Font.ITALIC));
-				g2.drawString(getPlaceholder(), getInsets().left,
-						g2.getFontMetrics().getHeight() + getInsets().top - getInsets().bottom);
-				g2.dispose();
-			}
-		}
-
-	}
-
 }

@@ -71,7 +71,7 @@ class OutlineTreePanel extends JScrollPane {
 		super();
 		fontSize = getFont().getSize();
 		setViewportView(new UnsupportedLangTree());
-		placeholdColor = TextEditor.GuiUtils.getDisabledComponentColor();
+		placeholdColor = GuiUtils.getDisabledComponentColor();
 	}
 
 	protected void rebuildSourceTree(final EditorPane pane) {
@@ -115,10 +115,10 @@ class OutlineTreePanel extends JScrollPane {
 		JMenuItem jmi;
 		if (tree instanceof AbstractSourceTree) {
 			jmi = new JMenuItem("Collapse All");
-			jmi.addActionListener(e -> TextEditor.GuiUtils.collapseAllTreeNodes(tree));
+			jmi.addActionListener(e -> GuiUtils.collapseAllTreeNodes(tree));
 			popup.add(jmi);
 			jmi = new JMenuItem("Expand All");
-			jmi.addActionListener(e -> TextEditor.GuiUtils.expandAllTreeNodes(tree));
+			jmi.addActionListener(e -> GuiUtils.expandAllTreeNodes(tree));
 			popup.add(jmi);
 			popup.addSeparator();
 			final JCheckBoxMenuItem jcmi1 = new JCheckBoxMenuItem("Hide 'Minor' Elements", major);

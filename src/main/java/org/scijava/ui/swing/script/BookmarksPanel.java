@@ -99,7 +99,7 @@ class BookmarksPanel extends JPanel {
 		list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		list.setCellRenderer(new Renderer());
 		final JScrollPane pane = new JScrollPane(list);
-		TextEditor.GuiUtils.flattenScrollBars(pane);
+		GuiUtils.flattenScrollBars(pane);
 		add(pane, BorderLayout.CENTER);
 
 		list.addMouseListener(new MouseAdapter() {
@@ -153,7 +153,7 @@ class BookmarksPanel extends JPanel {
 		try {
 			g2.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING,
 				java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-			g2.setColor(TextEditor.GuiUtils.secondaryColor());
+			g2.setColor(GuiUtils.secondaryColor());
 			final java.awt.FontMetrics fm = g2.getFontMetrics();
 			int y = (c.getHeight() - fm.getHeight() * lines.length) / 2 + fm
 				.getAscent();

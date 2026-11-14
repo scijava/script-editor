@@ -184,7 +184,7 @@ public class ConsoleArea extends JTextArea {
 
 	private Color colorAt(final int pos) {
 		final Color fg = getForeground(), bg = getBackground();
-		final boolean dark = TextEditor.GuiUtils.isDark(bg);
+		final boolean dark = GuiUtils.isDark(bg);
 		final Color base = isError(pos) ? (dark ? new Color(255, 95, 95) : new Color(200, 0, 0)) : fg;
 		return pos < runStart.offset ? blend(base, bg, 0.5) : base;
 	}
