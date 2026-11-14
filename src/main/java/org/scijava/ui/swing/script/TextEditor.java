@@ -715,6 +715,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		appendPreferences(options);
 		mbar.add(options);
 		mbar.add(helpMenu());
+		mbar.add(Box.createHorizontalGlue());
+		mbar.add(cmdPalette.getMenuButton());
 
 		// -- END MENUS --
 
@@ -793,6 +795,12 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		// make sure that the window is not closed by accident
 		addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowOpened(final WindowEvent e) {
+				showTemporaryStatus("Tip: press " + cmdPalette.getAcceleratorString()
+						+ " to search all commands and actions", 10000);
+			}
+
 			@Override
 			public void windowClosing(final WindowEvent e) {
 				if (!confirmClose()) return;
@@ -1842,6 +1850,27 @@ public class TextEditor extends JFrame implements ActionListener,
 			getEditorPane(i).setAutoCompletion(enabled);
 		keylessAutocompletion.setEnabled(enabled);
 		fallbackAutocompletion.setEnabled(enabled);
+	}
+
+	private Timer statusRestoreTimer;
+	private String statusRestoreText;
+
+	/**
+	 * Shows a message in the status bar and restores the previous text after the
+	 * given delay. Text set by other means in the meantime is left untouched
+	 */
+	void showTemporaryStatus(final String message, final int millis) {
+		if (statusRestoreTimer != null && statusRestoreTimer.isRunning())
+			statusRestoreTimer.stop(); // keep the text saved by the pending message
+		else
+			statusRestoreText = statusText.getText();
+		statusText.setText(message);
+		statusRestoreTimer = new Timer(millis, e -> {
+			if (message.equals(statusText.getText()))
+				statusText.setText(statusRestoreText);
+		});
+		statusRestoreTimer.setRepeats(false);
+		statusRestoreTimer.start();
 	}
 
 	/** Builds the permanent, full-width status bar: Fast | status text | glue | GoTo | Tab | Lock */
