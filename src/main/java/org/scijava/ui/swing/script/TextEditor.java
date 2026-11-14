@@ -1877,7 +1877,6 @@ public class TextEditor extends JFrame implements ActionListener,
 	private JComponent assembleStatusBar() {
 		statusText = new JLabel(" ");
 		statusText.setFont(statusText.getFont().deriveFont(statusText.getFont().getSize2D() * .9f));
-		statusText.setForeground(GuiUtils.secondaryColor());
 		//statusText.setMinimumSize(new Dimension(0, 0));
 		statusPos = new JButton("Ln 1, Col 1") {
 
@@ -1886,19 +1885,17 @@ public class TextEditor extends JFrame implements ActionListener,
 			@Override
 			public Dimension getPreferredSize() { // fixed width: neighbors do not move as the caret does
 				final Dimension d = super.getPreferredSize();
-				d.width = Math.max(d.width, getFontMetrics(getFont()).stringWidth("Ln 99999, Col 999") + 16);
+				d.width = Math.max(d.width, getFontMetrics(getFont()).stringWidth("Ln 9999, Col 999"));
 				return d;
 			}
 		};
 		statusPos.setToolTipText("Caret position. Click to go to line...");
 		statusPos.setFocusable(false);
-		statusPos.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
 		statusPos.setFont(statusPos.getFont().deriveFont(statusPos.getFont().getSize2D() * .9f));
 		statusPos.addActionListener(e -> gotoLine());
 		statusLang = new JButton("None");
 		statusLang.setToolTipText("Language of the active script. Click to change");
 		statusLang.setFocusable(false);
-		statusLang.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
 		statusLang.setFont(statusLang.getFont().deriveFont(statusLang.getFont().getSize2D() * .9f));
 		statusLang.addActionListener(e -> {
 			final JPopupMenu menu = languageMenu.getPopupMenu();
@@ -1912,7 +1909,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		statusTab = new JButton("Spaces: 4");
 		statusTab.setToolTipText("Indentation. Click for options");
 		statusTab.setFocusable(false);
-		statusTab.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
 		statusTab.setFont(statusTab.getFont().deriveFont(statusTab.getFont().getSize2D() * .9f));
 		statusTab.addActionListener(e -> {
 			final JPopupMenu menu = indentationMenu();
@@ -1923,7 +1919,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		statusSide.setToolTipText("Shows/hides the side panel (Files, Outline, Notes)");
 		statusSide.setFocusable(false);
 		statusSide.setSelected(true);
-		statusSide.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
 		statusSide.addActionListener(e -> {
 			if (statusSide.isSelected()) { // restore
 				body.setDividerLocation(sideLastLocation > 50 ? sideLastLocation : (int) (body.getWidth() * .2));
@@ -1938,12 +1933,11 @@ public class TextEditor extends JFrame implements ActionListener,
 		});
 		// Layout of the console: below or beside the editor. Clicking the active one collapses/restores it
 		statusBelow = new JToggleButton(new BottomPaneIcon());
-		statusBelow.setToolTipText("Console below the editor (click again to hide/show it)");
+		statusBelow.setToolTipText("<HTML>Vertical Layout: Console below the editor.<br>Click again to hide/show it");
 		statusRight = new JToggleButton(new RightPaneIcon());
-		statusRight.setToolTipText("Console beside the editor (click again to hide/show it)");
+		statusRight.setToolTipText("<HTML>Horizontal Layout: Console beside the editor.<br>Click again to hide/show it");
 		for (final JToggleButton b : new JToggleButton[] { statusBelow, statusRight }) {
 			b.setFocusable(false);
-			b.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
 		}
 		statusBelow.setSelected(true);
 		statusBelow.addActionListener(e -> {
@@ -1964,20 +1958,24 @@ public class TextEditor extends JFrame implements ActionListener,
 			syncStatusBar(); // e.g., no language: the request was refused
 		});
 		final JToolBar bar = new JToolBar();
+		final int gap = 4;
+		bar.setBorder(BorderFactory.createEmptyBorder(0, gap, 0, gap));
 		bar.add(statusSide);
 		bar.add(statusBelow);
 		bar.add(statusRight);
-		bar.add(Box.createHorizontalStrut(8));
+		bar.add(Box.createHorizontalStrut(gap));
+		bar.addSeparator();
+		bar.add(Box.createHorizontalStrut(gap));
 		bar.add(statusText);
 		bar.add(Box.createHorizontalGlue());
+		bar.addSeparator();
+		bar.add(Box.createHorizontalStrut(gap));
 		bar.add(statusRepl);
 		//bar.add(Box.createHorizontalStrut(8));
 		bar.add(statusPos);
 		bar.add(statusLang);
 		bar.add(statusWrap);
 		bar.add(statusTab);
-		bar.add(Box.createHorizontalStrut(8));
-		bar.setBorder(null);
 		bar.setAlignmentX(Component.LEFT_ALIGNMENT); // same as body (JSplitPane), or BoxLayout shifts the body
 		syncStatusBar();
 		return bar;

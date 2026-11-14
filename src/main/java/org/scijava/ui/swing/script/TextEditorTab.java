@@ -34,6 +34,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Component;
 import java.awt.Font;
+import java.awt.Insets;
 import java.awt.Graphics2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
@@ -254,7 +255,10 @@ public class TextEditorTab extends JSplitPane {
 		promptBar.setBorder(null);
 		promptBar.setMargin(null);
 		prompt_panel.add(promptBar, BorderLayout.PAGE_START);
-		prompt_panel.add(prompt, BorderLayout.CENTER);
+		// Same scroll pane (and thus border) as the console
+		final JScrollPane promptScroll = new JScrollPane(prompt);
+		TextEditor.GuiUtils.flattenScrollBars(promptScroll);
+		prompt_panel.add(promptScroll, BorderLayout.CENTER);
 		final JLabel label = new JLabel();
 		label.setForeground(TextEditor.GuiUtils.secondaryColor());
 		label.setIcon(new TextEditor.ReplIcon());
@@ -289,6 +293,7 @@ public class TextEditorTab extends JSplitPane {
 		// Compact bar: drop the vertical padding FlatLaf adds to toolbar buttons (margin 3 + spacing 1)
 		final String tight = "toolbar.margin: 0,3,0,3; toolbar.spacingInsets: 0,0,0,0";
 		updownarrows.putClientProperty(FlatClientProperties.STYLE, tight);
+		updownarrows.setForeground(TextEditor.GuiUtils.secondaryColor()); // Must come after the style properties: applying them resets UIResource foregrounds
 		statusHelp.putClientProperty(FlatClientProperties.STYLE, tight);
 		screenAndPromptSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, bottom, prompt_panel);
 		// No divider: the prompt bar is the handle. Keep promptDividerSize at 0 so toggling the REPL
@@ -359,14 +364,25 @@ public class TextEditorTab extends JSplitPane {
 	/** Whether the bottom part (output and prompt) is showing, i.e., not collapsed */
 	boolean isBottomVisible() {
 		if (axisSize() <= 0) return true; // not laid out yet
-		return getDividerLocation() < getMaximumDividerLocation() - 5;
+		return getDividerLocation() < collapsedLocation() - 5;
+	}
+
+	/**
+	 * Divider location at which the bottom part is fully collapsed. Unlike
+	 * getMaximumDividerLocation() this ignores the minimum size of the bottom part: in a window
+	 * too narrow (or short) to honor it, the part is shown truncated and would wrongly count as
+	 * collapsed, so that it could not be collapsed again
+	 */
+	private int collapsedLocation() {
+		final Insets in = getInsets();
+		return axisSize() - getDividerSize() - (isLayoutBelow() ? in.top + in.bottom : in.left + in.right);
 	}
 
 	/** Collapses the bottom part (output and prompt), or restores it to its last height */
 	void setBottomVisible(final boolean visible) {
 		if (visible == isBottomVisible()) return;
 		if (visible) {
-			final int max = getMaximumDividerLocation();
+			final int max = collapsedLocation();
 			setDividerLocation(bottomLastLocation > 50 && bottomLastLocation < max - 5 ? bottomLastLocation
 					: (int) (axisSize() * .7));
 		} else {

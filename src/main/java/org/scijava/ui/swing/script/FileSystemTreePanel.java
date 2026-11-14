@@ -39,6 +39,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 import javax.swing.*;
+import javax.swing.border.AbstractBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.PopupMenuEvent;
@@ -135,9 +136,40 @@ class FileSystemTreePanel extends JPanel {
 		});
 	}
 
+	/** Border with the color of scroll pane outlines, drawn on the left, right and bottom edges only */
+	private static final class SideBorder extends AbstractBorder {
+
+		private static final long serialVersionUID = 1L;
+
+		private static int thickness() {
+			return Math.max(1, Math.round(UIScale.scale(1f)));
+		}
+
+		@Override
+		public void paintBorder(final Component c, final Graphics g, final int x, final int y, final int w,
+				final int h) {
+			final Color color = UIManager.getColor("Component.borderColor"); // resolved on paint: follows the LAF
+			if (color == null)
+				return;
+			final int t = thickness();
+			g.setColor(color);
+			g.fillRect(x, y, t, h);
+			g.fillRect(x + w - t, y, t, h);
+			g.fillRect(x, y + h - t, w, t);
+		}
+
+		@Override
+		public Insets getBorderInsets(final Component c) {
+			final int t = thickness();
+			return new Insets(0, t, t, t);
+		}
+	}
+
 	private JToolBar statusToolbar() {
 		final JToolBar toolbar = new JToolBar();
 		toolbar.setBackground(tree.getBackground());
+		// Continue the outline of the tree's scroll pane (the latter provides the top edge)
+		toolbar.setBorder(BorderFactory.createCompoundBorder(new SideBorder(), toolbar.getBorder()));
 		final JToggleButton statusFast = new JToggleButton("Fast Mode");
 		statusFast.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
 		statusFast.setForeground(TextEditor.GuiUtils.secondaryColor());

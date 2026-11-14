@@ -146,6 +146,13 @@ class CommandPalette {
 		this.textEditor = textEditor;
 		noHitsCmd = new SearchWebCmd();
 		cmdScrapper = new CmdScrapper(textEditor);
+		// The palette must not outlive its parent, whatever way the latter is closed
+		textEditor.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosed(final WindowEvent e) {
+				dispose();
+			}
+		});
 	}
 
 	void install(final JMenu toolsMenu) {
@@ -349,7 +356,7 @@ class CommandPalette {
 		};
 		msgTimer.addActionListener(e -> msgTimer.stop()); // same restore path on timeout
 		SwingUtilities.invokeLater(() -> {
-			if (frame != null)
+			if (frame != null && textEditor.isDisplayable())
 				frame.setVisible(true); // dispose() may have cleared it in the meantime
 			msgTimer.start();
 		});
@@ -451,7 +458,11 @@ class CommandPalette {
 	}
 
 	private void toggleVisibility() {
-		if (frame == null) {
+		if (!textEditor.isDisplayable()) { // parent is gone: do not resurrect the palette
+			dispose();
+			return;
+		}
+		if (frame == null || !frame.isDisplayable()) {
 			assemblePalette();
 		}
 		if (frame.isVisible()) {
@@ -1282,11 +1293,11 @@ class CommandPalette {
 			}
 			switch (key.getKeyEventType()) {
 			case KeyEvent.KEY_TYPED:
-				s.append(key.getKeyChar() + " ");
+				s.append(key.getKeyChar()).append(" ");
 				break;
 			case KeyEvent.KEY_PRESSED:
 			case KeyEvent.KEY_RELEASED:
-				s.append(getKeyText(key.getKeyCode()) + " ");
+				s.append(getKeyText(key.getKeyCode())).append(" ");
 				break;
 			default:
 				break;
@@ -1418,7 +1429,7 @@ class CommandPalette {
 			}
 			final JPopupMenu popup = textEditor.getEditorPane().getPopupMenu();
 			if (popup != null) {
-				getMenuItems(popup).forEach(mi -> registerMenuItem(mi, List.of("Popup Menu")));
+				getMenuItems(popup).forEach(mi -> registerMenuItem(mi, List.of("Context Menu")));
 			}
 		}
 
