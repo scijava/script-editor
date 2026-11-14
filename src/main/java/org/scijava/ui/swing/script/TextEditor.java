@@ -99,37 +99,7 @@ import java.util.zip.ZipException;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
-import javax.swing.AbstractAction;
-import javax.swing.AbstractButton;
-import javax.swing.Icon;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.JComponent;
-import javax.swing.JToggleButton;
-import javax.swing.ButtonGroup;
-import javax.swing.JButton;
-import javax.swing.JCheckBoxMenuItem;
-import javax.swing.JDialog;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import javax.swing.JRadioButtonMenuItem;
-import javax.swing.JScrollPane;
-import javax.swing.JSplitPane;
-import javax.swing.JTabbedPane;
-import javax.swing.JTextArea;
-import javax.swing.JToolBar;
-import javax.swing.JTextField;
-import javax.swing.JTextPane;
-import javax.swing.JTree;
-import javax.swing.KeyStroke;
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
+import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
@@ -254,12 +224,11 @@ public class TextEditor extends JFrame implements ActionListener,
 	private int tabsMenuTabsStart;
 	private Set<JMenuItem> tabsMenuItems;
 	private FindAndReplaceDialog findDialog;
-	private JToggleButton statusFast;
 	private JButton statusTab;
 	private FlatSearchIcon statusFastIcon;
 	private JToggleButton statusWrap;
 	private JButton statusPos, statusLang;
-	private JToggleButton statusSide;
+	private JToggleButton statusSide, statusBelow, statusRight, statusRepl;
 	private int sideLastLocation = -1;
 	private JMenu languageMenu;
 	private JLabel statusText;
@@ -360,12 +329,27 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		});
 		sideTabs.addTab("Files", filesPanel);
+
 		sourceTreePanel = new OutlineTreePanel();
 		bookmarksPanel = new BookmarksPanel(this::collectBookmarks, this::goToBookmark);
-		outlineSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, sourceTreePanel, bookmarksPanel);
+
+		// Scratchpad
+		final JPanel pane1 = new JPanel(new BorderLayout());
+		final JLabel outlineHeader = header("Structure");
+		pane1.add(outlineHeader, BorderLayout.NORTH);
+		pane1.add(sourceTreePanel, BorderLayout.CENTER);
+
+		// Clipboard history
+		final JPanel pane2 = new JPanel(new BorderLayout());
+		final JLabel bookmarkHeader = header("Bookmarks");
+		pane2.add(bookmarkHeader, BorderLayout.NORTH);
+		pane2.add(bookmarksPanel, BorderLayout.CENTER);
+		
+		outlineSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, pane1, pane2);
 		outlineSplit.setResizeWeight(.75);
-		outlineSplit.setContinuousLayout(true);
-		GuiUtils.flattenSplitPane(outlineSplit);
+		// No divider: the Scratchpad header (with a hairline on top) is the drag handle
+		TextEditor.GuiUtils.installSplitHandle(bookmarkHeader, outlineSplit);
+
 		sideTabs.addTab("Outline", outlineSplit);
 		notesPanel = new NotesPanel(() -> {
 			try {
@@ -376,6 +360,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		}, prefService, getClass());
 		sideTabs.addTab("Notes", notesPanel);
 		body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sideTabs, tabbed);
+		GuiUtils.installSplitHandle(null, body);
 		// These items are dynamic and need to be initialized before EditorPane creation
 		initializeDynamicMenuComponents();
 
@@ -757,8 +742,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 
 		// Tweaks for JSplitPane
-		body.setOneTouchExpandable(false); // the side panel is collapsed from the status bar
-		GuiUtils.flattenSplitPane(body);
 		body.addPropertyChangeListener(evt -> {
 			if ("dividerLocation".equals(evt.getPropertyName())) saveWindowSizeToPrefs();
 		});
@@ -897,6 +880,14 @@ public class TextEditor extends JFrame implements ActionListener,
 			getTab().getScreenAndPromptSplit().setDividerLocation(.5d);
 		getTab().setREPLVisible(incremental);
 		pack();
+	}
+
+	private JLabel header(final String text) {
+		final JLabel label = new JLabel(text);
+		label.setBorder(BorderFactory.createEmptyBorder(2, 2,0,0));
+		label.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
+		label.setForeground(TextEditor.GuiUtils.secondaryColor());
+		return label;
 	}
 
 	private void assembleEditMenu() {
@@ -1855,13 +1846,6 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	/** Builds the permanent, full-width status bar: Fast | status text | glue | GoTo | Tab | Lock */
 	private JComponent assembleStatusBar() {
-		statusFast = statusButton("Fast Mode", "Fast mode for large folders: turns off live updates and the search of collapsed folders", true);
-		statusFastIcon = new FlatSearchIcon(true);
-		statusFast.setIcon(statusFastIcon);
-		statusFast.addActionListener(e -> {
-			filesPanel.setFastMode(statusFast.isSelected());
-			updateFastLook();
-		});
 		statusText = new JLabel(" ");
 		statusText.setFont(statusText.getFont().deriveFont(statusText.getFont().getSize2D() * .9f));
 		statusText.setForeground(GuiUtils.secondaryColor());
@@ -1906,13 +1890,6 @@ public class TextEditor extends JFrame implements ActionListener,
 			menu.show(statusTab, 0, -menu.getPreferredSize().height); // opens upwards: the bar is at the bottom
 		});
 		filesPanel.setStatusListener(t -> statusText.setText(t == null || t.isEmpty() ? " " : t));
-		filesPanel.setFastModeListener(b -> {
-			statusFast.setSelected(b);
-			updateFastLook();
-		});
-		filesPanel.setFastModeSuggestionListener(() -> setFastColor(GuiUtils.accentColor()));
-		statusFast.setSelected(filesPanel.isFastMode());
-		updateFastLook();
 		statusSide = new JToggleButton(new SidebarIcon());
 		statusSide.setToolTipText("Shows/hides the side panel (Files, Outline, Notes)");
 		statusSide.setFocusable(false);
@@ -1929,20 +1906,48 @@ public class TextEditor extends JFrame implements ActionListener,
 			final int loc = body.getDividerLocation();
 			if (loc > 50) sideLastLocation = loc;
 			statusSide.setSelected(loc > 5);
-			statusFast.setVisible(loc > 5); // Fast mode only concerns the Files pane
+		});
+		// Layout of the console: below or beside the editor. Clicking the active one collapses/restores it
+		statusBelow = new JToggleButton(new BottomPaneIcon());
+		statusBelow.setToolTipText("Console below the editor (click again to hide/show it)");
+		statusRight = new JToggleButton(new RightPaneIcon());
+		statusRight.setToolTipText("Console beside the editor (click again to hide/show it)");
+		for (final JToggleButton b : new JToggleButton[] { statusBelow, statusRight }) {
+			b.setFocusable(false);
+			b.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
+		}
+		statusBelow.setSelected(true);
+		statusBelow.addActionListener(e -> {
+			getTab().toggleLayout(true);
+			syncStatusBar();
+		});
+		statusRight.addActionListener(e -> {
+			getTab().toggleLayout(false);
+			syncStatusBar();
+		});
+		statusRepl = new JToggleButton("REPL", new ReplIcon());
+		cmdPalette.register(statusRepl, "Interpreter");
+		statusRepl.setFont(statusRepl.getFont().deriveFont(statusRepl.getFont().getSize2D() * .9f));
+		statusRepl.setToolTipText("Turns the REPL prompt on/off (of the active tab). Requires a language");
+		statusRepl.setFocusable(false);
+		statusRepl.addActionListener(e -> {
+			getTab().setREPLEnabled(statusRepl.isSelected());
+			syncStatusBar(); // e.g., no language: the request was refused
 		});
 		final JToolBar bar = new JToolBar();
 		bar.add(statusSide);
-		bar.add(Box.createHorizontalStrut(4));
-		bar.add(statusFast);
+		bar.add(statusBelow);
+		bar.add(statusRight);
 		bar.add(Box.createHorizontalStrut(8));
 		bar.add(statusText);
 		bar.add(Box.createHorizontalGlue());
+		bar.add(statusRepl);
+		//bar.add(Box.createHorizontalStrut(8));
 		bar.add(statusPos);
 		bar.add(statusLang);
 		bar.add(statusWrap);
 		bar.add(statusTab);
-		bar.add(Box.createHorizontalStrut(10));
+		bar.add(Box.createHorizontalStrut(8));
 		bar.setBorder(null);
 		bar.setAlignmentX(Component.LEFT_ALIGNMENT); // same as body (JSplitPane), or BoxLayout shifts the body
 		syncStatusBar();
@@ -1956,18 +1961,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (toolbarStyle) b.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
 		b.setFont(b.getFont().deriveFont(b.getFont().getSize2D() * .9f));
 		return b;
-	}
-
-	/** Fast button: accent color while on, secondary otherwise (whatever changed the state: button, menu, auto-switch) */
-	private void updateFastLook() {
-		setFastColor(statusFast.isSelected() ? GuiUtils.accentColor() : GuiUtils.secondaryColor());
-	}
-
-	/** Colors the label and the (search) icon of the Fast button */
-	private void setFastColor(final Color c) {
-		statusFast.setForeground(c);
-		if (c != null) statusFastIcon.applyStyleProperty("searchIconColor", c);
-		statusFast.repaint();
 	}
 
 	/** Menu of the indentation button: what the Tab key inserts, tab width, and conversion of existing indentation */
@@ -2069,6 +2062,91 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 	}
 
+	/** REPL icon: a prompt (&gt;_) inside a window. Painted with the foreground of its button */
+	static final class ReplIcon implements Icon {
+
+		@Override
+		public void paintIcon(final Component c, final Graphics g, final int x, final int y) {
+			final Graphics2D g2 = (Graphics2D) g.create();
+			try {
+				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+				g2.setColor(c.getForeground());
+				g2.drawRoundRect(x + 1, y + 2, 13, 11, 3, 3);
+				g2.drawLine(x + 4, y + 5, x + 6, y + 7); // chevron
+				g2.drawLine(x + 6, y + 7, x + 4, y + 9);
+				g2.drawLine(x + 8, y + 10, x + 11, y + 10); // cursor
+			} finally {
+				g2.dispose();
+			}
+		}
+
+		@Override
+		public int getIconWidth() {
+			return 16;
+		}
+
+		@Override
+		public int getIconHeight() {
+			return 16;
+		}
+	}
+
+	/** Right pane icon: a window with a pane on its right side, filled when the pane is shown */
+	private static final class RightPaneIcon implements Icon {
+
+		@Override
+		public void paintIcon(final Component c, final Graphics g, final int x, final int y) {
+			final Graphics2D g2 = (Graphics2D) g.create();
+			try {
+				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+				g2.setColor(c.getForeground());
+				g2.drawRoundRect(x + 1, y + 2, 13, 11, 3, 3);
+				if (c instanceof AbstractButton && ((AbstractButton) c).isSelected()) g2.fillRect(x + 9, y + 3, 4, 10);
+				else g2.drawLine(x + 9, y + 3, x + 9, y + 12);
+			} finally {
+				g2.dispose();
+			}
+		}
+
+		@Override
+		public int getIconWidth() {
+			return 16;
+		}
+
+		@Override
+		public int getIconHeight() {
+			return 16;
+		}
+	}
+
+	/** Bottom pane icon: a window with a pane below, filled when the pane is shown */
+	private static final class BottomPaneIcon implements Icon {
+
+		@Override
+		public void paintIcon(final Component c, final Graphics g, final int x, final int y) {
+			final Graphics2D g2 = (Graphics2D) g.create();
+			try {
+				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+				g2.setColor(c.getForeground());
+				g2.drawRoundRect(x + 1, y + 2, 13, 11, 3, 3);
+				if (c instanceof AbstractButton && ((AbstractButton) c).isSelected()) g2.fillRect(x + 2, y + 8, 12, 4);
+				else g2.drawLine(x + 2, y + 8, x + 13, y + 8);
+			} finally {
+				g2.dispose();
+			}
+		}
+
+		@Override
+		public int getIconWidth() {
+			return 16;
+		}
+
+		@Override
+		public int getIconHeight() {
+			return 16;
+		}
+	}
+
 	/** Side panel icon: a window with a left pane, filled when the pane is shown. Painted with the foreground of its button */
 	private static final class SidebarIcon implements Icon {
 
@@ -2116,16 +2194,21 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	/** Updates the toggles of the status bar from the state of the active editor */
-	private void syncStatusBar() {
+	void syncStatusBar() {
 		if (statusTab == null || statusWrap == null) return;
 		try {
 			final EditorPane pane = getEditorPane();
 			statusWrap.setSelected(pane.getLineWrap());
+			if (statusBelow != null) {
+				final TextEditorTab tab = getTab();
+				final boolean shown = tab.isBottomVisible();
+				statusBelow.setSelected(shown && tab.isLayoutBelow());
+				statusRight.setSelected(shown && !tab.isLayoutBelow());
+			}
+			if (statusRepl != null) statusRepl.setSelected(getTab().isREPLEnabled());
 			statusLang.setText(languageLabel(pane.getCurrentLanguage()));
 			updateCaretStatus();
 			statusTab.setText((pane.getTabsEmulated() ? "Spaces: " : "Tab: ") + pane.getTabSize());
-			statusFast.setSelected(filesPanel.isFastMode());
-			updateFastLook();
 		} catch (final RuntimeException ignored) {
 			// no editor yet
 		}
@@ -4535,9 +4618,52 @@ public class TextEditor extends JFrame implements ActionListener,
 			scrollPane.getHorizontalScrollBar().putClientProperty(FlatClientProperties.STYLE, style);
 		}
 
-		/** Plain divider with triangular one-touch arrows (FlatLaf only) */
-		static void flattenSplitPane(final JSplitPane splitPane) {
-			splitPane.putClientProperty(FlatClientProperties.STYLE, "style: plain; arrowType: triangle");
+		/**
+		 * Removes the divider of a vertical (top/bottom) split pane and lets {@code handle} act as
+		 * the divider instead. {@code handle} must sit at the top edge of the lower component, e.g.,
+		 * a header label or a toolbar. Dragging any part of it that does not handle mouse events
+		 * itself (labels, glue, gaps) moves the split. If the split pane is later switched to a
+		 * horizontal (left/right) orientation, its regular divider is restored.
+		 */
+		static void installSplitHandle(final JComponent handle, final JSplitPane split) {
+			split.setContinuousLayout(true);
+			split.setOneTouchExpandable(false);
+			split.putClientProperty(FlatClientProperties.STYLE, "style: plain;");
+			if (handle == null) return;
+			final int regularSize = split.getDividerSize();
+			final Runnable update = () -> {
+				final boolean active = split.getOrientation() == JSplitPane.VERTICAL_SPLIT;
+				split.setDividerSize(active ? 0 : regularSize);
+				handle.setCursor(active ? java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.N_RESIZE_CURSOR) : null);
+			};
+			// children must not inherit the resize cursor
+			final java.util.function.Consumer<java.awt.Container>[] resetCursors = new java.util.function.Consumer[1];
+			resetCursors[0] = parent -> {
+				for (final java.awt.Component child : parent.getComponents()) {
+					if (!child.isCursorSet()) child.setCursor(java.awt.Cursor.getDefaultCursor());
+					if (child instanceof java.awt.Container) resetCursors[0].accept((java.awt.Container) child);
+				}
+			};
+			resetCursors[0].accept(handle);
+			update.run();
+			split.addPropertyChangeListener(JSplitPane.ORIENTATION_PROPERTY, evt -> update.run());
+			final int[] grab = new int[1];
+			handle.addMouseListener(new java.awt.event.MouseAdapter() {
+
+				@Override
+				public void mousePressed(final java.awt.event.MouseEvent e) {
+					grab[0] = e.getY();
+				}
+			});
+			handle.addMouseMotionListener(new java.awt.event.MouseAdapter() {
+
+				@Override
+				public void mouseDragged(final java.awt.event.MouseEvent e) {
+					if (split.getOrientation() != JSplitPane.VERTICAL_SPLIT) return;
+					final int y = SwingUtilities.convertPoint(handle, e.getPoint(), split).y;
+					split.setDividerLocation(Math.max(0, y - grab[0]));
+				}
+			});
 		}
 
 		static void collapseAllTreeNodes(final JTree tree) {
