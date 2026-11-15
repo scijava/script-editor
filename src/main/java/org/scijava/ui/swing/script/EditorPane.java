@@ -1124,16 +1124,14 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	/**
 	 * Applies a theme to this pane.
 	 *
-	 * @param theme either "default", "dark", "druid", "eclipse", "idea", "monokai",
-	 *              "vs"
+	 * @param theme either "default", "scijava-light", "scijava-dark", "druid",
+	 *              "eclipse", "idea", "monokai", "vs"
 	 * @throws IllegalArgumentException If {@code theme} is not a valid option, or
 	 *                                  the resource could not be loaded
 	 */
 	public void applyTheme(final String theme) throws IllegalArgumentException {
 		try {
-			// If dark L&F and using the default theme, assume 'dark' theme
-			final boolean dark = DEFAULT_THEME.equals(theme) && GuiUtils.isDarkLaF();
-			applyTheme(TextEditor.getTheme(dark ? "dark" : theme));
+			applyTheme(TextEditor.getTheme(theme)); // aliases such as "default" are resolved there
 		} catch (final Exception ex) {
 			throw new IllegalArgumentException(ex);
 		}

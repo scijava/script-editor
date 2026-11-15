@@ -53,6 +53,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.beans.PropertyChangeListener;
 import java.io.BufferedReader;
 import java.io.CharArrayWriter;
 import java.io.File;
@@ -153,6 +154,7 @@ import org.scijava.script.ScriptService;
 import org.scijava.thread.ThreadService;
 import org.scijava.ui.CloseConfirmable;
 import org.scijava.ui.UIService;
+import org.scijava.ui.swing.laf.OptionsLookAndFeel;
 import org.scijava.ui.swing.script.autocompletion.ClassUtil;
 import org.scijava.ui.swing.script.commands.ChooseFontSize;
 import org.scijava.ui.swing.script.commands.ChooseTabSize;
@@ -185,8 +187,11 @@ public class TextEditor extends JFrame implements ActionListener,
 	ChangeListener, CloseConfirmable, DocumentListener
 {
 
+	/* default themes */
+	private static final String SCIJAVA_LIGHT = "scijava-light";
+	private static final String SCIJAVA_DARK = "scijava-dark";
+
 	private static final Set<String> TEMPLATE_PATHS = new HashSet<>();
-//	private static final int BORDER_SIZE = 4;
 	public static final String AUTO_IMPORT_PREFS = "script.editor.AutoImport";
 	public static final String WINDOW_HEIGHT = "script.editor.height";
 	public static final String WINDOW_WIDTH = "script.editor.width";
@@ -259,6 +264,17 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private boolean respectAutoImports;
 	private String activeTheme;
+	// Re-resolves the automatic theme when the application switches between light and dark
+	private final PropertyChangeListener lookAndFeelListener = evt -> {
+		if (!"lookAndFeel".equals(evt.getPropertyName()) || !"default".equals(activeTheme)) return;
+		SwingUtilities.invokeLater(() -> {
+			try {
+				applyTheme("default", false);
+			} catch (final IllegalArgumentException ignored) {
+				// keep the current colors
+			}
+		});
+	};
 	private int[] panePositions;
 
 
@@ -824,6 +840,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowOpened(final WindowEvent e) {
+				UIManager.addPropertyChangeListener(lookAndFeelListener);
 				showTemporaryStatus("Tip: press " + cmdPalette.getAcceleratorString()
 						+ " to search all commands and actions", 10000);
 			}
@@ -831,6 +848,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			@Override
 			public void windowClosing(final WindowEvent e) {
 				if (!confirmClose()) return;
+				UIManager.removePropertyChangeListener(lookAndFeelListener);
 				tree.destroy();
 				// Necessary to prevent memory leaks
 				for (final DragSourceListener l : dragSource.getDragSourceListeners()) {
@@ -894,9 +912,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		open(null);
 
 		final EditorPane editorPane = getEditorPane();
-		// If dark L&F and using the default theme, assume 'dark' theme
-		applyTheme((GuiUtils.isDarkLaF() && "default".equals(editorPane.themeName())) ? "dark" : editorPane.themeName(),
-				true);
+		applyTheme(editorPane.themeName(), true);
 
 		// Ensure font sizes are consistent across all panels
 		setFontSize(getEditorPane().getFontSize());
@@ -2434,11 +2450,12 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private JMenu applyThemeMenu() {
 		final LinkedHashMap<String, String> map = new LinkedHashMap<>();
-		map.put("Default", "default");
-		map.put("-", "-");
-		map.put("Dark", "dark");
-		map.put("Druid", "druid");
-		map.put("Monokai", "monokai");
+		map.put("Automatic (Light or Dark)", "default");
+		map.put("SciJava Light", SCIJAVA_LIGHT);
+		map.put("SciJava Dark", SCIJAVA_DARK);
+		map.put("-", "Legacy:");
+		map.put("Druid (Dark)", "druid");
+		map.put("Monokai (Dark)", "monokai");
 		map.put("Eclipse (Light)", "eclipse");
 		map.put("IntelliJ (Light)", "idea");
 		map.put("Visual Studio (Light)", "vs");
@@ -2446,7 +2463,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final JMenu menu = new JMenu("Theme");
 		map.forEach((k, v) -> {
 			if ("-".equals(k)) {
-				menu.addSeparator();
+				GuiUtils.addMenubarSeparator(menu, v);
 				return;
 			}
 			final JRadioButtonMenuItem item = new JRadioButtonMenuItem(k);
@@ -2457,6 +2474,9 @@ public class TextEditor extends JFrame implements ActionListener,
 					applyTheme(v, false);
 					// make the choice available for the next tab
 					prefService.put(EditorPane.class, EditorPane.THEME_PREFS, v);
+					if (!"default".equals(v) && GuiUtils.isDark(getEditorPane().getBackground()) != GuiUtils.isDarkLaF())
+						showTemporaryStatus("Editor theme differs from the application's. "
+								+ "Use Theme > Application Look & Feel... to match", 8000);
 				} catch (final IllegalArgumentException ex) {
 					error("Theme could not be loaded. See Console for details.");
 					ex.printStackTrace();
@@ -2464,14 +2484,21 @@ public class TextEditor extends JFrame implements ActionListener,
 			});
 			menu.add(item);
 		});
+		GuiUtils.addMenubarSeparator(menu, "Application:");
+		final JMenuItem laf = new JMenuItem("Application Look & Feel...");
+		laf.setToolTipText("Opens the options for the look and feel (light/dark) of the application");
+		laf.addActionListener(e -> commandService.run(OptionsLookAndFeel.class, true));
+		menu.add(laf);
 		return menu;
 	}
 
 	/**
 	 * Applies a theme to all the panes of this editor.
 	 *
-	 * @param theme either "default", "dark", "druid", "eclipse", "idea", "monokai",
-	 *              "vs"
+	 * @param theme either "default" (SciJava light or dark, matching the look and
+	 *              feel), "scijava-light", "scijava-dark", "druid", "eclipse",
+	 *              "idea", "monokai", "vs". The legacy "dark" is an alias of
+	 *              "scijava-dark"
 	 * @throws IllegalArgumentException If {@code theme} is not a valid option, or
 	 *                                  the resource could not be loaded
 	 */
@@ -2503,10 +2530,19 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (updateMenus) updateThemeControls(theme);
 	}
 
+	/** Resolves aliases: "default" follows the look and feel, "dark" is the legacy name */
+	private static String resolveTheme(final String theme) {
+		if ("dark".equals(theme)) return SCIJAVA_DARK;
+		if ("default".equals(theme)) return GuiUtils.isDarkLaF() ? SCIJAVA_DARK : SCIJAVA_LIGHT;
+		return theme;
+	}
+
 	static Theme getTheme(final String theme) throws IllegalArgumentException {
 		try {
-			return Theme
-					.load(TextEditor.class.getResourceAsStream("/org/fife/ui/rsyntaxtextarea/themes/" + theme + ".xml"));
+			final String name = resolveTheme(theme);
+			final InputStream in = name.startsWith("scijava-") ? TextEditor.class.getResourceAsStream("themes/" + name + ".xml")
+					: TextEditor.class.getResourceAsStream("/org/fife/ui/rsyntaxtextarea/themes/" + name + ".xml");
+			return Theme.load(in);
 		} catch (final Exception ex) {
 			throw new IllegalArgumentException(ex);
 		}

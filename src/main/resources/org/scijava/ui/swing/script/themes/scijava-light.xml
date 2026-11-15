@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE RSyntaxTheme SYSTEM "theme.dtd">
+
+<!--
+	SciJava Light: IntelliJ (New UI) inspired theme and SciJava default.
+	See theme.dtd and org.fife.ui.rsyntaxtextarea.Theme for details.
+-->
+<RSyntaxTheme version="1.0">
+
+	<!-- Omitting baseFont will use a system-appropriate monospaced. -->
+
+	<!-- General editor colors. -->
+	<background color="ffffff" />
+	<caret color="000000" />
+	<selection useFG="false" bg="a6d2ff" roundedEdges="false" />
+	<currentLineHighlight color="fcfaed" fade="false" />
+	<tabLine color="dfe1e5" />
+	<marginLine fg="ebecf0" />
+	<markAllHighlight color="ffee9a" />
+	<markOccurrencesHighlight color="e8f2fe" border="false" />
+	<matchedBracket fg="080808" bg="93d9d9" highlightBoth="true" animate="false" />
+	<hyperlinks fg="2470b3" />
+	<secondaryLanguages>
+		<language index="1" bg="fdf6e3" />
+		<language index="2" bg="eef7ee" />
+		<language index="3" bg="f9eef4" />
+	</secondaryLanguages>
+	<!-- Gutter styling. -->
+	<gutterBackground color="ffffff" />
+	<gutterBorder color="ebecf0" />
+	<lineNumbers fg="999999" currentFG="1f1f1f" />
+	<foldIndicator fg="9aa0a8" armedFg="6c707e" iconBg="ffffff" iconArmedBg="ebecf0" />
+	<iconRowHeader activeLineRange="a6d2ff" />
+	<!-- Syntax tokens. -->
+	<tokenStyles>
+		<style token="IDENTIFIER" fg="080808" />
+		<style token="RESERVED_WORD" fg="0033b3" />
+		<style token="RESERVED_WORD_2" fg="0033b3" />
+		<style token="ANNOTATION" fg="9e880d" />
+		<style token="COMMENT_DOCUMENTATION" fg="8c8c8c" />
+		<style token="COMMENT_EOL" fg="8c8c8c" />
+		<style token="COMMENT_MULTILINE" fg="8c8c8c" />
+		<style token="COMMENT_KEYWORD" fg="5f7f9c" />
+		<style token="COMMENT_MARKUP" fg="8c8c8c" />
+		<style token="DATA_TYPE" fg="0033b3" />
+		<style token="FUNCTION" fg="00627a" />
+		<style token="LITERAL_BOOLEAN" fg="0033b3" />
+		<style token="LITERAL_NUMBER_DECIMAL_INT" fg="1750eb" />
+		<style token="LITERAL_NUMBER_FLOAT" fg="1750eb" />
+		<style token="LITERAL_NUMBER_HEXADECIMAL" fg="1750eb" />
+		<style token="LITERAL_STRING_DOUBLE_QUOTE" fg="067d17" />
+		<style token="LITERAL_CHAR" fg="067d17" />
+		<style token="LITERAL_BACKQUOTE" fg="067d17" />
+		<style token="MARKUP_TAG_DELIMITER" fg="080808" />
+		<style token="MARKUP_TAG_NAME" fg="0033b3" />
+		<style token="MARKUP_TAG_ATTRIBUTE" fg="174ad4" />
+		<style token="MARKUP_TAG_ATTRIBUTE_VALUE" fg="067d17" />
+		<style token="MARKUP_COMMENT" fg="8c8c8c" />
+		<style token="MARKUP_DTD" fg="8c8c8c" />
+		<style token="MARKUP_PROCESSING_INSTRUCTION" fg="8c8c8c" />
+		<style token="MARKUP_CDATA" fg="067d17" />
+		<style token="MARKUP_CDATA_DELIMITER" fg="0033b3" />
+		<style token="MARKUP_ENTITY_REFERENCE" fg="871094" />
+		<style token="OPERATOR" fg="080808" />
+		<style token="PREPROCESSOR" fg="9e880d" />
+		<style token="REGEX" fg="0a7d5a" />
+		<style token="SEPARATOR" fg="080808" />
+		<style token="VARIABLE" fg="871094" />
+		<style token="WHITESPACE" fg="080808" />
+		<style token="ERROR_IDENTIFIER" fg="080808" bg="ffd6d6" />
+		<style token="ERROR_NUMBER_FORMAT" fg="080808" bg="ffd6d6" />
+		<style token="ERROR_STRING_DOUBLE" fg="080808" bg="ffd6d6" />
+		<style token="ERROR_CHAR" fg="080808" bg="ffd6d6" />
+	</tokenStyles>
+
+</RSyntaxTheme>

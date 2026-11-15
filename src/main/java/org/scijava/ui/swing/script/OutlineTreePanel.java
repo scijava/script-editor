@@ -119,8 +119,13 @@ class OutlineTreePanel extends JScrollPane {
 			popup.add(jcmi1);
 			final JCheckBoxMenuItem jcmi2 = new JCheckBoxMenuItem("Sort Elements", sorted);
 			jcmi2.addItemListener(e -> {
-				sorted = jcmi2.isSelected();
-				((AbstractSourceTree) tree).setSorted(sorted); // will refresh
+				try {
+					sorted = jcmi2.isSelected();
+					((AbstractSourceTree) tree).setSorted(sorted); // will refresh
+				} catch (final Throwable throwable) {
+					GuiUtils.error(OutlineTreePanel.this, "Outline could not be sorted.");
+					jcmi2.setSelected(sorted = false);
+				}
 			});
 			popup.add(jcmi2);
 			popup.addSeparator();
