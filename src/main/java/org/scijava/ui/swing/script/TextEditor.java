@@ -3580,6 +3580,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		else {
 			text = tab.getEditorPane().getText();
+			getEditorPane().getErrorHighlighter().setSelectedCodeExecution(false);
 		}
 		
 		execute(tab, text, false);
@@ -3596,6 +3597,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	private void execute(final TextEditorTab tab, final String text, final boolean writeCommandLog) throws IOException {
 
 		tab.prepare();
+		// Prompt commands have no lines in the editor
+		if (writeCommandLog) getEditorPane().getErrorHighlighter().setPromptExecution();
 
 		final JTextAreaWriter output = new JTextAreaWriter(tab.screen, log);
 		final JTextAreaWriter errors = new JTextAreaWriter(errorScreen, log);
@@ -3749,6 +3752,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		else getTab().showOutput();
 
 		markCompileStart();
+		getEditorPane().getErrorHighlighter().setSelectedCodeExecution(false);
 		final JTextAreaWriter output = new JTextAreaWriter(getTab().screen, log);
 		final JTextAreaWriter errors = new JTextAreaWriter(errorScreen, log);
 
@@ -3813,6 +3817,8 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	public void markCompileStart(final boolean with_timestamp) {
 		errorHandler = null;
+		// Errors flagged by a previous run are outdated
+		getEditorPane().getErrorHighlighter().reset();
 		getTab().startNewRun();
 
 		if (with_timestamp) {
@@ -4297,6 +4303,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		catch (final ExecutionException e) {
 			log.error(e);
+			getEditorPane().getErrorHighlighter().parse(e);
 		} finally {
 			getEditorPane().getErrorHighlighter().parse();
 		}
