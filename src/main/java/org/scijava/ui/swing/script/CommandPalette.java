@@ -157,6 +157,7 @@ class CommandPalette {
 
 		};
 		action.putValue(Action.ACCELERATOR_KEY, ACCELERATOR);
+		action.putValue(Action.SMALL_ICON, Icons.magnifier());
 		menu.add(new JMenuItem(action));
 	}
 

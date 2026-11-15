@@ -170,10 +170,10 @@ public class TextEditorTab extends JSplitPane {
 
 		// tweaks for console
 		screen.setEditable(false);
-		screen.setLineWrap(false);
+		screen.setLineWrap(textEditor.isConsoleWrap());
 		screen.setFont(getEditorPane().getFont());
 		combinedScreen.setEditable(false);
-		combinedScreen.setLineWrap(false);
+		combinedScreen.setLineWrap(textEditor.isConsoleWrap());
 		combinedScreen.setFont(getEditorPane().getFont());
 		textEditor.applyConsolePopupMenu(screen);
 		textEditor.applyConsolePopupMenu(combinedScreen);
@@ -243,6 +243,7 @@ public class TextEditorTab extends JSplitPane {
 		prompt.setEnabled(false);
 		prompt.setFont(getEditorPane().getFont());
 		prompt.setTabSize(editorPane.getTabSize());
+		prompt.setLineWrap(textEditor.isReplWrap());
 
 		final JPanel prompt_panel = new JPanel();
 		prompt_panel.setMinimumSize(new Dimension(0, 0));
@@ -593,6 +594,15 @@ public class TextEditorTab extends JSplitPane {
 			default:
 				return screen;
 		}
+	}
+
+	void setConsoleWrap(final boolean wrap) {
+		screen.setLineWrap(wrap);
+		combinedScreen.setLineWrap(wrap);
+	}
+
+	void setPromptWrap(final boolean wrap) {
+		prompt.setLineWrap(wrap);
 	}
 
 	public JTextArea getPrompt() {

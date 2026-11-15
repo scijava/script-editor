@@ -227,7 +227,11 @@ public class TextEditor extends JFrame implements ActionListener,
 	private FindAndReplaceDialog findDialog;
 	private JButton statusTab;
 	private FlatSearchIcon statusFastIcon;
-	private JToggleButton statusWrap;
+	private JButton statusWrap;
+	private JCheckBoxMenuItem wrapEditorItem;
+	private boolean consoleWrap, replWrap;
+	private static final String CONSOLE_WRAP_PREFS = "script.editor.ConsoleWrap";
+	private static final String REPL_WRAP_PREFS = "script.editor.ReplWrap";
 	private JButton statusPos, statusLang;
 	private JToggleButton statusSide, statusBelow, statusRight, statusRepl;
 	private int sideLastLocation = -1;
@@ -304,6 +308,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		contexts.add(context);
 		context.inject(this);
 		initializeTokenMakers();
+		consoleWrap = prefService.getBoolean(getClass(), CONSOLE_WRAP_PREFS, false);
+		replWrap = prefService.getBoolean(getClass(), REPL_WRAP_PREFS, false);
 
 		// NB: All panes must be initialized before menus are assembled!
 		tabbed = GuiUtils.getJTabbedPane();
@@ -841,7 +847,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		// Tweaks for Console
 		errorScreen.setFont(getEditorPane().getFont());
 		errorScreen.setEditable(false);
-		errorScreen.setLineWrap(false);
+		errorScreen.setLineWrap(consoleWrap);
 		applyConsolePopupMenu(errorScreen);
 
 		setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -1941,11 +1947,30 @@ public class TextEditor extends JFrame implements ActionListener,
 			final JPopupMenu menu = languageMenu.getPopupMenu();
 			menu.show(statusLang, 0, -menu.getPreferredSize().height); // opens upwards: the bar is at the bottom
 		});
-		statusWrap = statusButton("Wrap", "Wraps long lines", true);
-		statusWrap.addActionListener(e -> {
-			wrapLines.setState(statusWrap.isSelected());
+		statusWrap = new JButton("Wrap: Off");
+		statusWrap.setToolTipText("Line wrapping. Click for options");
+		statusWrap.setFocusable(false);
+		statusWrap.setFont(statusWrap.getFont().deriveFont(statusWrap.getFont().getSize2D() * .9f));
+		final JPopupMenu wrapMenu = new JPopupMenu();
+		wrapEditorItem = new JCheckBoxMenuItem("Wrap Editor Lines", wrapLines.getState());
+		wrapEditorItem.addActionListener(e -> {
+			wrapLines.setState(wrapEditorItem.isSelected());
 			syncStatusBar();
 		});
+		final JCheckBoxMenuItem wrapConsoleItem = new JCheckBoxMenuItem("Wrap Console Lines", consoleWrap);
+		wrapConsoleItem.addActionListener(e -> setConsoleWrap(wrapConsoleItem.isSelected()));
+		final JCheckBoxMenuItem wrapReplItem = new JCheckBoxMenuItem("Wrap REPL Prompt Lines", replWrap);
+		wrapReplItem.addActionListener(e -> setReplWrap(wrapReplItem.isSelected()));
+		wrapMenu.add(wrapEditorItem);
+		wrapMenu.addSeparator();
+		wrapMenu.add(wrapConsoleItem);
+		wrapMenu.add(wrapReplItem);
+		statusWrap.addActionListener(e -> {
+			wrapEditorItem.setSelected(getEditorPane().getLineWrap());
+			wrapMenu.show(statusWrap, 0, -wrapMenu.getPreferredSize().height); // opens upwards: the bar is at the bottom
+		});
+		cmdPalette.register(wrapConsoleItem, "Status Bar");
+		cmdPalette.register(wrapReplItem, "Status Bar");
 		statusTab = new JButton("Spaces: 4");
 		statusTab.setToolTipText("Indentation. Click for options");
 		statusTab.setFocusable(false);
@@ -2161,7 +2186,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (statusTab == null || statusWrap == null) return;
 		try {
 			final EditorPane pane = getEditorPane();
-			statusWrap.setSelected(pane.getLineWrap());
+			statusWrap.setText("Wrap: " + (pane.getLineWrap() ? "On" : "Off"));
+			if (wrapEditorItem != null) wrapEditorItem.setSelected(pane.getLineWrap());
 			if (statusBelow != null) {
 				final TextEditorTab tab = getTab();
 				final boolean shown = tab.isBottomVisible();
@@ -2217,6 +2243,29 @@ public class TextEditor extends JFrame implements ActionListener,
 		for (int i = 0; i < tabbed.getTabCount(); i++)
 			getEditorPane(i).setLineWrap(wrap);
 		getEditorPane().requestFocusInWindow();
+	}
+
+	boolean isConsoleWrap() {
+		return consoleWrap;
+	}
+
+	boolean isReplWrap() {
+		return replWrap;
+	}
+
+	private void setConsoleWrap(final boolean wrap) {
+		consoleWrap = wrap;
+		prefService.put(getClass(), CONSOLE_WRAP_PREFS, wrap);
+		errorScreen.setLineWrap(wrap);
+		for (int i = 0; i < tabbed.getTabCount(); i++)
+			getTab(i).setConsoleWrap(wrap);
+	}
+
+	private void setReplWrap(final boolean wrap) {
+		replWrap = wrap;
+		prefService.put(getClass(), REPL_WRAP_PREFS, wrap);
+		for (int i = 0; i < tabbed.getTabCount(); i++)
+			getTab(i).setPromptWrap(wrap);
 	}
 
 	private void setMarginLineEnabled(final boolean enabled) {
@@ -4378,11 +4427,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		popup.add(jmi);
 		jmi.addActionListener(e -> textArea.getHighlighter().removeAllHighlights());
 		cmdPalette.register(jmi, scope);
-		popup.addSeparator();
-		final JCheckBoxMenuItem jmc = new JCheckBoxMenuItem("Wrap Lines");
-		popup.add(jmc);
-		jmc.addActionListener( e -> textArea.setLineWrap(jmc.isSelected()));
-		cmdPalette.register(jmc, scope);
 	}
 
 	private static Collection<File> assembleFlatFileCollection(final Collection<File> collection, final File[] files) {
