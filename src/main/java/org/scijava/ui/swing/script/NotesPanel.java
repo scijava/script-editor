@@ -110,7 +110,7 @@ class NotesPanel extends JPanel {
 			@Override
 			protected void paintComponent(final java.awt.Graphics g) {
 				super.paintComponent(g);
-				if (getDocument().getLength() == 0) GuiUtils.paintEmptyHint(g, this, "Jot down notes",
+				if (getDocument().getLength() == 0) GuiUtils.paintEmptyHint(g, this, "Jot down snippets",
 						"They are saved between sessions");
 			}
 		};

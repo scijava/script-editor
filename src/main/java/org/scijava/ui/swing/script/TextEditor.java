@@ -49,6 +49,8 @@ import java.awt.event.ItemEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
@@ -89,6 +91,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.function.IntPredicate;
 import java.util.TreeMap;
 import java.util.Vector;
 import java.util.concurrent.ExecutionException;
@@ -105,6 +108,8 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultHighlighter;
 import javax.swing.text.DefaultHighlighter.DefaultHighlightPainter;
@@ -313,6 +318,8 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		// NB: All panes must be initialized before menus are assembled!
 		tabbed = GuiUtils.getJTabbedPane();
+		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_AREA_ALIGNMENT,
+				FlatClientProperties.TABBED_PANE_ALIGN_FILL);
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_CLOSABLE, true);
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_CLOSE_TOOLTIPTEXT, "Close");
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_CLOSE_CALLBACK,
@@ -320,13 +327,12 @@ public class TextEditor extends JFrame implements ActionListener,
 					pane.setSelectedIndex(index);
 					closeTab(true);
 				});
-		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TRAILING_COMPONENT,
-				GuiUtils.newTabButton(() -> newFile.doClick()));
+		installCloseTabsPopup();
+
 		tree = new FileSystemTree(log);
 		sideTabs = GuiUtils.getJTabbedPane();
 		sideTabs.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_AREA_ALIGNMENT,
 				FlatClientProperties.TABBED_PANE_ALIGN_FILL);
-
 		filesPanel = new FileSystemTreePanel(tree, context);
 		filesPanel.setActiveScriptSupplier(() -> {
 			try {
@@ -2289,6 +2295,80 @@ public class TextEditor extends JFrame implements ActionListener,
 		removeTab(index);
 		if (index > 0) index--;
 		switchTo(index);
+	}
+
+	/** Adds the "Close:" section to the top of the tab popup menu */
+	private void installCloseTabsPopup() {
+		final JPopupMenu popup = tabbed.getComponentPopupMenu();
+		final JPopupMenu tmp = new JPopupMenu();
+		GuiUtils.addPopupMenuSeparator(tmp, "Close:");
+		final JMenuItem others = new JMenuItem("Close Others");
+		others.addActionListener(e -> {
+			final int sel = tabbed.getSelectedIndex();
+			closeTabs(i -> i != sel, true);
+		});
+		final JMenuItem right = new JMenuItem("Close Tabs to the Right");
+		right.addActionListener(e -> {
+			final int sel = tabbed.getSelectedIndex();
+			closeTabs(i -> i > sel, true);
+		});
+		final JMenuItem unmodified = new JMenuItem("Close Unmodified");
+		unmodified.addActionListener(e -> closeTabs(i -> !getEditorPane(i).fileChanged(), false));
+		final JMenuItem all = new JMenuItem("Close All");
+		all.addActionListener(e -> closeTabs(i -> true, true));
+		for (final JMenuItem mi : new JMenuItem[] { others, right, unmodified, all })
+			tmp.add(mi);
+		final java.awt.Component[] items = tmp.getComponents();
+		for (int i = 0; i < items.length; i++)
+			popup.insert(items[i], i);
+		popup.insert(new JPopupMenu.Separator(), items.length);
+		popup.addPopupMenuListener(new PopupMenuListener() {
+
+			@Override
+			public void popupMenuWillBecomeVisible(final PopupMenuEvent e) {
+				final int n = tabbed.getTabCount();
+				others.setEnabled(n > 1);
+				right.setEnabled(tabbed.getSelectedIndex() < n - 1);
+			}
+
+			@Override
+			public void popupMenuWillBecomeInvisible(final PopupMenuEvent e) {}
+
+			@Override
+			public void popupMenuCanceled(final PopupMenuEvent e) {}
+		});
+		// Right-click acts on the tab under the pointer
+		tabbed.addMouseListener(new MouseAdapter() {
+
+			@Override
+			public void mousePressed(final MouseEvent e) {
+				if (!SwingUtilities.isRightMouseButton(e) && !e.isPopupTrigger()) return;
+				final int i = tabbed.indexAtLocation(e.getX(), e.getY());
+				if (i >= 0) tabbed.setSelectedIndex(i);
+			}
+		});
+	}
+
+	/**
+	 * Closes the tabs whose index (evaluated up front) matches the filter. Stops
+	 * if the user cancels a save prompt. Never closes the window: a new
+	 * document is opened if no tab is left.
+	 */
+	private void closeTabs(final IntPredicate filter, final boolean prompt) {
+		final TextEditorTab current = getTab();
+		final List<TextEditorTab> targets = new ArrayList<>();
+		for (int i = 0; i < tabbed.getTabCount(); i++) {
+			if (filter.test(i)) targets.add(getTab(i));
+		}
+		for (final TextEditorTab tab : targets) {
+			final int index = tabbed.indexOfComponent(tab);
+			if (index < 0) continue;
+			tabbed.setSelectedIndex(index);
+			if (prompt && !handleUnsavedChanges()) return;
+			removeTab(index);
+		}
+		if (tabbed.getTabCount() == 0) createNewDocument();
+		else if (tabbed.indexOfComponent(current) >= 0) tabbed.setSelectedComponent(current);
 	}
 
 	/**

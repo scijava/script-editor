@@ -356,11 +356,12 @@ final class GuiUtils {
 	}
 
 	static JButton ellipsisButton(final Runnable action) {
-		final JButton b = new JButton("\u22ee");
+		final JButton b = new JButton("⋮");
+		b.setFont(b.getFont().deriveFont(b.getFont().getSize()*1.2f));
 		b.setFont(b.getFont().deriveFont(Font.BOLD));
 		b.setFocusable(false);
 		b.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
-		b.addActionListener(e -> action.run());
+		if (action != null) b.addActionListener(e -> action.run());
 		return b;
 	}
 
@@ -435,6 +436,9 @@ final class GuiUtils {
 	/* Tweaks for tabbed pane */
 	static JTabbedPane getJTabbedPane() {
 		final JTabbedPane tabbed = new JTabbedPane();
+		tabbed.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
+		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TABS_POPUP_POLICY, "asNeeded"); // overflow dropdown
+		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_SCROLL_BUTTONS_POLICY, "never"); // do not show arrows
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_ROTATION,
 				FlatClientProperties.TABBED_PANE_TAB_ROTATION_AUTO);
 		final JPopupMenu popup = new JPopupMenu();
@@ -471,6 +475,10 @@ final class GuiUtils {
 			bGroup.add(jcbmi);
 			popup.add(jcbmi);
 		}
+		final JButton triggerButton = ellipsisButton(null);
+		triggerButton.addActionListener( e -> popup.show(triggerButton,
+				triggerButton.getWidth() /2, triggerButton.getHeight() /2));
+		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TRAILING_COMPONENT, triggerButton);
 		return tabbed;
 	}
 
