@@ -320,6 +320,7 @@ public class TextEditorTab extends JSplitPane {
 		holder.add(es, BorderLayout.LINE_END);
 		editorPane.getVimHandler().setStatusListener(status -> textEditor.setVimStatus(this, status));
 		editorPane.getVimHandler().setExHandler(textEditor::handleVimCommand);
+		editorPane.setBookmarkListener(textEditor::bookmarksChanged);
 		super.setLeftComponent(holder);
 		super.setRightComponent(screenAndPromptSplit);
 		GuiUtils.installSplitHandle(bar, this); // no divider in the "below" layout: the toolbar is the handle

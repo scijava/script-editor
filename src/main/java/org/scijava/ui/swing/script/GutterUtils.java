@@ -43,9 +43,7 @@ public class GutterUtils {
 
 	GutterUtils(final Gutter gutter) {
 		this.gutter = gutter;
-		gutter.setSpacingBetweenLineNumbersAndFoldIndicator(0);
 		//gutter.setFoldIndicatorStyle(org.fife.ui.rtextarea.FoldIndicatorStyle.MODERN); // DEFAULT
-		gutter.setShowCollapsedRegionToolTips(true);
 	}
 
 	private ImageIcon getBookmarkIcon() {

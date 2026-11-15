@@ -30,7 +30,7 @@
 	<gutterBackground color="1e1f22" />
 	<gutterBorder color="393b41" />
 	<lineNumbers fg="4b5059" currentFG="a1a3ab" />
-	<foldIndicator fg="6f737a" armedFg="a1a3ab" iconBg="1e1f22" iconArmedBg="393b41" />
+	<foldIndicator bg="2b2d30" fg="6f737a" armedFg="a1a3ab" iconBg="1e1f22" iconArmedBg="393b41" />
 	<iconRowHeader activeLineRange="3574f0" />
 
 	<!-- Syntax tokens. -->

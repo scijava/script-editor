@@ -77,6 +77,11 @@ import org.fife.ui.rsyntaxtextarea.TokenTypes;
  */
 public class MatlabTokenMaker extends AbstractJFlexTokenMaker {
 
+	@Override
+	public String getBracketPairs() {
+		return "()[]{}";
+	}
+
 	/** This character denotes the end of file */
 	public static final int YYEOF = -1;
 

@@ -65,7 +65,7 @@ import javax.swing.text.BadLocationException;
 class BookmarksPanel extends JPanel {
 
 	private static final long serialVersionUID = 1L;
-	private static final int REFRESH_DELAY_MS = 750;
+	private static final int REFRESH_DELAY_MS = 1500;
 	private static final int TEXT_MAX_CHARS = 100;
 
 	private final Supplier<List<Bookmark>> source;

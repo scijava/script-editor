@@ -2690,6 +2690,11 @@ public class TextEditor extends JFrame implements ActionListener,
 		bookmark.setCaret();
 	}
 
+	/** Brings the Bookmarks panel up to date after a bookmark was added or removed */
+	void bookmarksChanged() {
+		if (bookmarksPanel != null) bookmarksPanel.refresh();
+	}
+
 	/** Shows the bookmarks side panel, listing bookmarks of all open tabs. */
 	public void listBookmarks() {
 		if (!SwingUtilities.isEventDispatchThread()) {
