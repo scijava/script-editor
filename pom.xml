@@ -148,6 +148,10 @@
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
+
+		<!-- Dependency versions -->
+		<flatlaf.version>3.8</flatlaf.version> <!-- scijava-pom 45.1.0: 3.7.2 -->
+		<rsyntaxtextarea.version>4.0.1</rsyntaxtextarea.version> <!-- scijava-pom 45.1.0: 3.6.3 -->
 	</properties>
 
 	<dependencies>
@@ -173,6 +177,7 @@
 		<dependency>
 			<groupId>com.fifesoft</groupId>
 			<artifactId>rsyntaxtextarea</artifactId>
+			<version>${rsyntaxtextarea.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fifesoft</groupId>
