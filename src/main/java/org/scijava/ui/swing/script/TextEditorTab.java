@@ -32,7 +32,10 @@ package org.scijava.ui.swing.script;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
 import java.awt.Insets;
+import java.awt.Rectangle;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.FlowLayout;
 import java.awt.datatransfer.DataFlavor;
@@ -53,11 +56,13 @@ import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
+import javax.swing.text.DefaultCaret;
 import javax.swing.text.JTextComponent;
 
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.icons.FlatFileChooserDetailsViewIcon;
 import com.formdev.flatlaf.icons.FlatHelpButtonIcon;
+import com.formdev.flatlaf.util.UIScale;
 import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.fife.ui.rsyntaxtextarea.Style;
 import org.fife.ui.rsyntaxtextarea.Token;
@@ -242,6 +247,10 @@ public class TextEditorTab extends JSplitPane {
 		prompt.setFont(getEditorPane().getFont());
 		prompt.setTabSize(editorPane.getTabSize());
 		prompt.setLineWrap(textEditor.isReplWrap());
+		// Underscore caret: console look, distinct from the editor (and Vim block) caret
+		final UnderscoreCaret caret = new UnderscoreCaret();
+		caret.setBlinkRate(prompt.getCaret().getBlinkRate());
+		prompt.setCaret(caret);
 
 		final JPanel prompt_panel = new JPanel();
 		prompt_panel.setMinimumSize(new Dimension(0, 0));
@@ -651,5 +660,37 @@ public class TextEditorTab extends JSplitPane {
 
 	public JTextComponent getEditorPane() {
 		return editorPane;
+	}
+
+	/** A caret drawn as an underscore below the current character cell */
+	private static class UnderscoreCaret extends DefaultCaret {
+
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		protected synchronized void damage(final Rectangle r) {
+			if (r == null) return;
+			final JTextComponent c = getComponent();
+			x = r.x;
+			y = r.y;
+			width = c.getFontMetrics(c.getFont()).charWidth('m') + 1;
+			height = r.height;
+			repaint();
+		}
+
+		@Override
+		public void paint(final Graphics g) {
+			if (!isVisible()) return;
+			final JTextComponent c = getComponent();
+			try {
+				final Rectangle r = c.modelToView2D(getDot()).getBounds();
+				final FontMetrics fm = c.getFontMetrics(c.getFont());
+				final int thickness = Math.max(2, UIScale.scale(2));
+				g.setColor(c.getCaretColor());
+				g.fillRect(r.x, r.y + fm.getAscent() + fm.getDescent() - thickness, fm.charWidth('m'), thickness);
+			} catch (final BadLocationException ignored) {
+				// Caret outside of the document: nothing to paint
+			}
+		}
 	}
 }
