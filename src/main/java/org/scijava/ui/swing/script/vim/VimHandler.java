@@ -241,21 +241,13 @@ public class VimHandler {
 	private String modeStatus() {
 		if (mode == Mode.COMMAND_LINE) return cmdLineType + cmdLine.toString();
 		if (message != null) return message;
-		final String modeText;
-		switch (mode) {
-			case INSERT:
-				modeText = "-- INSERT --";
-				break;
-			case VISUAL:
-				modeText = "-- VISUAL --";
-				break;
-			case VISUAL_LINE:
-				modeText = "-- VISUAL LINE --";
-				break;
-			default:
-				modeText = "";
-		}
-		if (pending.length() == 0) return modeText;
+		final String modeText = switch (mode) {
+            case INSERT -> "-- INSERT --";
+            case VISUAL -> "-- VISUAL --";
+            case VISUAL_LINE -> "-- VISUAL LINE --";
+            default -> "";
+        };
+        if (pending.isEmpty()) return modeText;
 		return modeText + (modeText.isEmpty() ? "" : "   ") + printable(pending);
 	}
 

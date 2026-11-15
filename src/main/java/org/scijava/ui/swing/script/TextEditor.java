@@ -238,10 +238,11 @@ public class TextEditor extends JFrame implements ActionListener,
 	private static final String CONSOLE_WRAP_PREFS = "script.editor.ConsoleWrap";
 	private static final String REPL_WRAP_PREFS = "script.editor.ReplWrap";
 	private JButton statusPos, statusLang;
-	private JToggleButton statusSide, statusBelow, statusRight, statusRepl;
+	private JToggleButton statusSide, statusBelow, statusRight, statusRepl, statusVimToggle;
 	private int sideLastLocation = -1;
 	private JMenu languageMenu;
 	private JLabel statusText;
+	private JLabel statusVim;
 	private FileSystemTreePanel filesPanel;
 	private JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport,
 			autocompletion, fallbackAutocompletion, keylessAutocompletion,
@@ -1930,6 +1931,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		statusText = new JLabel(" ");
 		statusText.setFont(statusText.getFont().deriveFont(statusText.getFont().getSize2D() * .9f));
 		//statusText.setMinimumSize(new Dimension(0, 0));
+		statusVim = new JLabel();
+		statusVim.setFont(new Font(Font.MONOSPACED, Font.PLAIN, statusText.getFont().getSize()));
+		statusVim.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 12));
+		statusVim.setVisible(false);
 		statusPos = new JButton("Ln 1, Col 1") {
 
 			private static final long serialVersionUID = 1L;
@@ -2028,6 +2033,11 @@ public class TextEditor extends JFrame implements ActionListener,
 			getTab().setREPLEnabled(statusRepl.isSelected());
 			syncStatusBar(); // e.g., no language: the request was refused
 		});
+		statusVimToggle = new JToggleButton("Vim");
+		statusVimToggle.setFont(statusVimToggle.getFont().deriveFont(statusVimToggle.getFont().getSize2D() * .9f));
+		statusVimToggle.setToolTipText(vimMode.getToolTipText());
+		statusVimToggle.setFocusable(false);
+		statusVimToggle.addActionListener(e -> vimMode.setState(statusVimToggle.isSelected()));
 		final JToolBar bar = new JToolBar();
 		bar.setFloatable(false);
 		final int gap = 4;
@@ -2038,10 +2048,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		bar.add(Box.createHorizontalStrut(gap));
 		bar.addSeparator();
 		bar.add(Box.createHorizontalStrut(gap));
+		bar.add(statusVim);
 		bar.add(statusText);
 		bar.add(Box.createHorizontalGlue());
 		bar.addSeparator();
 		bar.add(Box.createHorizontalStrut(gap));
+		bar.add(statusVimToggle);
 		bar.add(statusRepl);
 		//bar.add(Box.createHorizontalStrut(8));
 		bar.add(statusPos);
@@ -2187,6 +2199,19 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 	}
 
+	/** Shows the Vim status of the given tab, if it is the active one */
+	void setVimStatus(final TextEditorTab tab, final String status) {
+		if (statusVim == null || tabbed.getSelectedComponent() != tab) return;
+		statusVim.setText(status == null ? "" : status);
+		statusVim.setVisible(status != null && !status.isEmpty());
+		// Mode text ("-- INSERT --") stands out, command line and messages stay plain
+		final boolean mode = status != null && status.startsWith("-- ");
+		final int style = mode ? Font.BOLD : Font.PLAIN;
+		if (statusVim.getFont().getStyle() != style) statusVim.setFont(statusVim.getFont().deriveFont(style));
+		final Color c = mode ? GuiUtils.accentColor() : UIManager.getColor("Label.foreground");
+		if (c != null) statusVim.setForeground(c);
+	}
+
 	/** Updates the toggles of the status bar from the state of the active editor */
 	void syncStatusBar() {
 		if (statusTab == null || statusWrap == null) return;
@@ -2201,8 +2226,10 @@ public class TextEditor extends JFrame implements ActionListener,
 				statusRight.setSelected(shown && !tab.isLayoutBelow());
 			}
 			if (statusRepl != null) statusRepl.setSelected(getTab().isREPLEnabled());
+			if (statusVimToggle != null) statusVimToggle.setSelected(pane.isVimEnabled());
 			statusLang.setText(languageLabel(pane.getCurrentLanguage()));
 			updateCaretStatus();
+			setVimStatus(getTab(), pane.getVimHandler().getStatus());
 			statusTab.setText((pane.getTabsEmulated() ? "Spaces: " : "Tab: ") + pane.getTabSize());
 		} catch (final RuntimeException ignored) {
 			// no editor yet
@@ -2759,6 +2786,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				tab.editorPane.loadPreferences();
 				tab.applyConsoleColors(); // the theme was just applied to the editor pane
 				addDefaultAccelerators(tab.editorPane);
+				if (vimMode != null) tab.editorPane.setVimEnabled(vimMode.getState()); // global setting
 			} else {
 				// the Edit menu can only be populated after an editor pane exists, as it reads
 				// actions from its input map. We will built it here, if it has not been assembled

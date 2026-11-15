@@ -330,10 +330,13 @@ final class GuiUtils {
 
 	static Color accentColor() {
 		try {
-			return UIManager.getColor("Component.accentColor");
+			Color c = UIManager.getColor("Component.accentColor");
+			if (c == null) c = UIManager.getColor("Component.focusColor");
+			return (c == null) ? new Color(0x3E73B9) : new Color(c.getRGB()); // plain color: UIResource ones are reset
 		} catch (final Exception ignored) {
-			return Color.ORANGE.darker();
+			// do nothing
 		}
+		return new Color(0x3E73B9);
 	}
 
 	static boolean isDarkLaF() {
