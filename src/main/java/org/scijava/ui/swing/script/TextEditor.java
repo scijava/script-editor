@@ -140,6 +140,7 @@ import org.scijava.event.EventHandler;
 import org.scijava.io.IOService;
 import org.scijava.log.LogService;
 import org.scijava.module.ModuleException;
+import org.scijava.module.ModuleItem;
 import org.scijava.module.ModuleService;
 import org.scijava.options.OptionsService;
 import org.scijava.platform.PlatformService;
@@ -3552,8 +3553,15 @@ public class TextEditor extends JFrame implements ActionListener,
 			return;
 		}
 		final ScriptInfo info = new ScriptInfo(context, //
-			"dummy." + getCurrentLanguage().getExtensions().get(0), //
+			"batch_submission." + getCurrentLanguage().getExtensions().getFirst(), //
 			new StringReader(script));
+		boolean hasFileInput = false;
+		for (final ModuleItem<?> input : info.inputs())
+			hasFileInput |= File.class.isAssignableFrom(input.getType());
+		if (!hasFileInput) {
+			error("This option requires at least one @File parameter to be declared in the script.");
+			return;
+		}
 		batchService.run(info);
 	}
 
