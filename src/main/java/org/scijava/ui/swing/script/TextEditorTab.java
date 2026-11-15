@@ -312,7 +312,7 @@ public class TextEditorTab extends JSplitPane {
 		// ParserNotice.Level.ERROR. NB: As is, the end of the strip corresponds to the
 		// last line of text in the text area: E.g., for a text area with just 3 lines,
 		// line 2 will be marked at the strip's half height
-		final ErrorStrip es = new ErrorStrip(editorPane);
+		final ErrorStrip es = new ScalableErrorStrip(editorPane);
 		es.setShowMarkAll(true);
 		es.setShowMarkedOccurrences(true);
 		final JPanel holder = new JPanel(new BorderLayout());
