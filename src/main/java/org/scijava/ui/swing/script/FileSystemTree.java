@@ -356,22 +356,9 @@ public class FileSystemTree extends JTree {
 		super.paintComponent(g);
 		// Plain hints while the tree is empty (no content, or all folders hidden by the filter)
 		if (root().getChildCount() > 0) return;
-		final String[] lines = hidden_tops.isEmpty() ? new String[] { "Drag folders here", "or right-click for options" }
+		final String[] lines = hidden_tops.isEmpty() ? new String[] { "Drag folders here", "Or right-click for options" }
 				: new String[] { scanning ? "Searching..." : "No matches" };
-		final java.awt.Graphics2D g2 = (java.awt.Graphics2D) g.create();
-		try {
-			g2.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING,
-					java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-			g2.setColor(GuiUtils.secondaryColor());
-			final java.awt.FontMetrics fm = g2.getFontMetrics();
-			int y = (getHeight() - fm.getHeight() * lines.length) / 2 + fm.getAscent();
-			for (final String line : lines) {
-				g2.drawString(line, (getWidth() - fm.stringWidth(line)) / 2, y);
-				y += fm.getHeight();
-			}
-		} finally {
-			g2.dispose();
-		}
+		GuiUtils.paintEmptyHint(g, this, lines);
 	}
 
 	/**

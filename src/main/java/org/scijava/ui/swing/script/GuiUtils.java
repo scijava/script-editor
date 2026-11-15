@@ -33,6 +33,11 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.RenderingHints;
+import java.awt.Insets;
+import java.awt.Graphics2D;
+import java.awt.Graphics;
+import java.awt.FontMetrics;
 import java.awt.Point;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
@@ -45,6 +50,8 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
@@ -491,6 +498,50 @@ final class GuiUtils {
 		final Map<String, Object> style = Map.of("track", color, "hoverTrackColor", color);
 		scrollPane.getHorizontalScrollBar().putClientProperty(FlatClientProperties.STYLE, style);
 		scrollPane.getVerticalScrollBar().putClientProperty(FlatClientProperties.STYLE, style);
+	}
+
+	/**
+	 * Paints centered, word-wrapped hint text over an empty component (e.g., a list or a text area), in the
+	 * secondary color. To be called from paintComponent(), after the superclass has painted. Each argument is
+	 * a paragraph.
+	 */
+	static void paintEmptyHint(final Graphics g, final JComponent c, final String... paragraphs) {
+		final Graphics2D g2 = (Graphics2D) g.create();
+		try {
+			g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+			g2.setFont(c.getFont());
+			g2.setColor(secondaryColor());
+			final FontMetrics fm = g2.getFontMetrics();
+			final Insets in = c.getInsets();
+			final int maxWidth = Math.max(20, c.getWidth() - in.left - in.right - 2 * fm.getHeight());
+			final List<String> lines = new ArrayList<>();
+			final List<Boolean> paragraphStart = new ArrayList<>();
+			for (final String paragraph : paragraphs) {
+				final StringBuilder line = new StringBuilder();
+				boolean first = true;
+				for (final String word : paragraph.split(" ")) {
+					if (line.length() > 0 && fm.stringWidth(line + " " + word) > maxWidth) {
+						lines.add(line.toString());
+						paragraphStart.add(first);
+						first = false;
+						line.setLength(0);
+					}
+					line.append(line.length() > 0 ? " " : "").append(word);
+				}
+				lines.add(line.toString());
+				paragraphStart.add(first);
+			}
+			final int gap = fm.getHeight() / 3;
+			final int height = fm.getHeight() * lines.size() + gap * (paragraphs.length - 1);
+			int y = (c.getHeight() - height) / 2 + fm.getAscent();
+			for (int i = 0; i < lines.size(); i++) {
+				if (i > 0 && paragraphStart.get(i)) y += gap;
+				g2.drawString(lines.get(i), (c.getWidth() - fm.stringWidth(lines.get(i))) / 2, y);
+				y += fm.getHeight();
+			}
+		} finally {
+			g2.dispose();
+		}
 	}
 
 	/** Makes the window containing the component draggable by it */

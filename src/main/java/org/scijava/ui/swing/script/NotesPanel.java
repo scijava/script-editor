@@ -80,7 +80,17 @@ class NotesPanel extends JPanel {
 	private final Class<?> prefsOwner;
 	private final JTextArea scratch;
 	private final DefaultListModel<String> model = new DefaultListModel<>();
-	private final JList<String> list = new JList<>(model);
+	private final JList<String> list = new JList<>(model) {
+
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		protected void paintComponent(final java.awt.Graphics g) {
+			super.paintComponent(g);
+			if (model.isEmpty()) GuiUtils.paintEmptyHint(g, this, "Paste history will appear here",
+					"Double-click an entry to insert it");
+		}
+	};
 	private final Timer saveTimer;
 	private boolean loading;
 
@@ -93,7 +103,17 @@ class NotesPanel extends JPanel {
 		this.prefsOwner = prefsOwner;
 
 		// Scratchpad
-		scratch = new JTextArea();
+		scratch = new JTextArea() {
+
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			protected void paintComponent(final java.awt.Graphics g) {
+				super.paintComponent(g);
+				if (getDocument().getLength() == 0) GuiUtils.paintEmptyHint(g, this, "Jot down notes",
+						"They are saved between sessions");
+			}
+		};
 		scratch.setLineWrap(true);
 		scratch.setWrapStyleWord(true);
 		scratch.setBorder(new EmptyBorder(4, 4, 4, 4));
@@ -113,7 +133,7 @@ class NotesPanel extends JPanel {
 		final JScrollPane listPane = new JScrollPane(list);
 		GuiUtils.flattenScrollBars(listPane);
 		final JPanel pane2 = new JPanel(new BorderLayout());
-		final JLabel clipboardHeader = header("Clipboard History (Double-click to Insert)");
+		final JLabel clipboardHeader = header("Clipboard History");
 		pane2.add(clipboardHeader, BorderLayout.NORTH);
 		pane2.add(listPane, BorderLayout.CENTER);
 

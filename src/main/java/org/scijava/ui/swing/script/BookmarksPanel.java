@@ -92,8 +92,8 @@ class BookmarksPanel extends JPanel {
             @Override
             protected void paintComponent(final Graphics g) {
                 super.paintComponent(g);
-                if (model.isEmpty()) paintEmptyHint((java.awt.Graphics2D) g.create(),
-                        this, "No bookmarks", "Click next to a line number", "to bookmark it");
+                if (model.isEmpty()) GuiUtils.paintEmptyHint(g, this, "No bookmarks",
+                        "Click next to a line number to bookmark it");
             }
         };
 		list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -145,26 +145,6 @@ class BookmarksPanel extends JPanel {
 			if (isShowing()) refresh();
 		});
 		poll.start();
-	}
-
-	private static void paintEmptyHint(final java.awt.Graphics2D g2,
-		final Component c, final String... lines)
-	{
-		try {
-			g2.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING,
-				java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-			g2.setColor(GuiUtils.secondaryColor());
-			final java.awt.FontMetrics fm = g2.getFontMetrics();
-			int y = (c.getHeight() - fm.getHeight() * lines.length) / 2 + fm
-				.getAscent();
-			for (final String line : lines) {
-				g2.drawString(line, (c.getWidth() - fm.stringWidth(line)) / 2, y);
-				y += fm.getHeight();
-			}
-		}
-		finally {
-			g2.dispose();
-		}
 	}
 
 	/** Brings the list up to date (cheap if nothing changed). */
