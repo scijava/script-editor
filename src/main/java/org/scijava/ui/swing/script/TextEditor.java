@@ -122,6 +122,8 @@ import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Theme;
+import org.fife.ui.rsyntaxtextarea.parser.ParserNotice;
+import org.fife.ui.rsyntaxtextarea.parser.TaskTagParser;
 import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
 import org.fife.ui.rtextarea.ClipboardHistory;
 import org.fife.ui.rtextarea.Macro;
@@ -217,7 +219,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	private JTabbedPane sideTabs;
 	private NotesPanel notesPanel;
 	private BookmarksPanel bookmarksPanel;
-	private JSplitPane outlineSplit;
+	private JSplitPane markersSplit;
+	private TasksPanel tasksPanel;
 	private JMenuItem newFile, open, save, saveas, compileAndRun, compile,
 			close, undo, redo, cut, copy, paste, find, selectAll, kill,
 			gotoLine, makeJar, makeJarWithSource, removeUnusedImports, sortImports,
@@ -350,6 +353,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		sideTabs = GuiUtils.getJTabbedPane();
 		sideTabs.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_AREA_ALIGNMENT,
 				FlatClientProperties.TABBED_PANE_ALIGN_FILL);
+		// Icon-only tabs: only the selected tab shows its title, keeping the pane narrow
+		sideTabs.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_WIDTH_MODE,
+				FlatClientProperties.TABBED_PANE_TAB_WIDTH_MODE_COMPACT);
 		filesPanel = new FileSystemTreePanel(tree, context);
 		filesPanel.setActiveScriptSupplier(() -> {
 			try {
@@ -358,29 +364,33 @@ public class TextEditor extends JFrame implements ActionListener,
 				return null;
 			}
 		});
-		sideTabs.addTab("Files", filesPanel);
+		addSideTab("Files", Icons.folder(), filesPanel);
 
 		sourceTreePanel = new OutlineTreePanel();
 		bookmarksPanel = new BookmarksPanel(this::collectBookmarks, this::goToBookmark);
+		tasksPanel = new TasksPanel(this::collectTasks, this::goToTask);
 
-		// Scratchpad
+		// Outline
 		final JPanel pane1 = new JPanel(new BorderLayout());
 		final JLabel outlineHeader = header("Structure");
 		pane1.add(outlineHeader, BorderLayout.NORTH);
 		pane1.add(sourceTreePanel, BorderLayout.CENTER);
 
-		// Clipboard history
-		final JPanel pane2 = new JPanel(new BorderLayout());
-		final JLabel bookmarkHeader = header("Bookmarks");
-		pane2.add(bookmarkHeader, BorderLayout.NORTH);
-		pane2.add(bookmarksPanel, BorderLayout.CENTER);
-		
-		outlineSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, pane1, pane2);
-		outlineSplit.setResizeWeight(.75);
-		// No divider: the Scratchpad header (with a hairline on top) is the drag handle
-		GuiUtils.installSplitHandle(bookmarkHeader, outlineSplit);
+		addSideTab("Outline", Icons.outline(), pane1);
 
-		sideTabs.addTab("Outline", outlineSplit);
+		// Markers: bookmarks and tasks of all open tabs
+		final JPanel pane2 = new JPanel(new BorderLayout());
+		pane2.add(header("Bookmarks"), BorderLayout.NORTH);
+		pane2.add(bookmarksPanel, BorderLayout.CENTER);
+		final JPanel pane3 = new JPanel(new BorderLayout());
+		final JLabel tasksHeader = header("Tasks");
+		pane3.add(tasksHeader, BorderLayout.NORTH);
+		pane3.add(tasksPanel, BorderLayout.CENTER);
+		markersSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, pane2, pane3);
+		markersSplit.setResizeWeight(.5);
+		// No divider: the Tasks header (with a hairline on top) is the drag handle
+		GuiUtils.installSplitHandle(tasksHeader, markersSplit);
+		addSideTab("Markers", Icons.markers(), markersSplit);
 		notesPanel = new NotesPanel(() -> {
 			try {
 				return getEditorPane();
@@ -388,7 +398,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				return null;
 			}
 		}, prefService, getClass());
-		sideTabs.addTab("Notes", notesPanel);
+		addSideTab("Notes", Icons.clipboard(), notesPanel);
 		body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sideTabs, tabbed);
 		GuiUtils.installSplitHandle(null, body);
 		// These items are dynamic and need to be initialized before EditorPane creation
@@ -880,7 +890,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		try {
 			threadService.invoke(() -> {
 				pack();
-				body.setDividerLocation(0.2); // Important!: will be read as prefs. default
+				body.setDividerLocation(0.25); // Important!: will be read as prefs. default
 				getTab().setREPLVisible(false);
 				loadWindowSizePreferences();
 				pack();
@@ -924,13 +934,18 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	private void resetLayout() {
-		body.setDividerLocation(.2d);
+		body.setDividerLocation(.25d);
 		getTab().setOrientation(JSplitPane.VERTICAL_SPLIT);
 		getTab().setDividerLocation((incremental) ? .7d : .75d);
 		if (incremental)
 			getTab().getScreenAndPromptSplit().setDividerLocation(.5d);
 		getTab().setREPLVisible(incremental);
 		pack();
+	}
+
+	private void addSideTab(final String title, final Icon icon, final Component c) {
+		sideTabs.addTab(title, icon, c);
+		sideTabs.setToolTipTextAt(sideTabs.getTabCount() - 1, title);
 	}
 
 	private JLabel header(final String text) {
@@ -2015,7 +2030,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		statusSide.setSelected(true);
 		statusSide.addActionListener(e -> {
 			if (statusSide.isSelected()) { // restore
-				body.setDividerLocation(sideLastLocation > 50 ? sideLastLocation : (int) (body.getWidth() * .2));
+				body.setDividerLocation(sideLastLocation > 50 ? sideLastLocation : (int) (body.getWidth() * .25));
 			} else { // collapse (the location is remembered by the divider listener)
 				body.setDividerLocation(0);
 			}
@@ -2690,6 +2705,35 @@ public class TextEditor extends JFrame implements ActionListener,
 		bookmark.setCaret();
 	}
 
+	private List<TasksPanel.Task> collectTasks() {
+		final List<TasksPanel.Task> tasks = new ArrayList<>();
+		for (int i = 0; i < tabbed.getTabCount(); i++) {
+			final TextEditorTab tab = (TextEditorTab) tabbed.getComponentAt(i);
+			for (final ParserNotice n : tab.editorPane.getParserNotices()) {
+				if (!(n instanceof TaskTagParser.TaskNotice)) continue;
+				// Multi-line comments may carry their closing delimiter
+				final String text = n.getMessage().replaceAll("\\s*\\*/\\s*$", "").trim();
+				tasks.add(new TasksPanel.Task(tab, n.getLine(), n.getOffset(), text));
+			}
+		}
+		return tasks;
+	}
+
+	private void goToTask(final TasksPanel.Task task) {
+		final int index = tabbed.indexOfComponent(task.tab());
+		if (index < 0) return;
+		switchTo(index);
+		task.tab().requestFocus();
+		final RSyntaxTextArea area = task.tab().editorPane;
+		try {
+			final int offs = task.offset() >= 0 && task.offset() <= area.getDocument().getLength() ? task.offset()
+					: area.getLineStartOffset(task.line() - 1);
+			area.setCaretPosition(offs);
+		} catch (final BadLocationException | RuntimeException ignored) {
+			// Stale task; the list refreshes shortly
+		}
+	}
+
 	/** Brings the Bookmarks panel up to date after a bookmark was added or removed */
 	void bookmarksChanged() {
 		if (bookmarksPanel != null) bookmarksPanel.refresh();
@@ -2701,8 +2745,9 @@ public class TextEditor extends JFrame implements ActionListener,
 			SwingUtilities.invokeLater(this::listBookmarks);
 			return;
 		}
-		sideTabs.setSelectedComponent(outlineSplit);
+		sideTabs.setSelectedComponent(markersSplit);
 		bookmarksPanel.refresh();
+		tasksPanel.refresh();
 		if (!statusSide.isSelected()) statusSide.doClick();
 	}
 
