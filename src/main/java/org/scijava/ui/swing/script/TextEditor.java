@@ -77,6 +77,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -111,6 +113,7 @@ import javax.swing.tree.TreePath;
 
 import com.formdev.flatlaf.icons.FlatSearchIcon;
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
+import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Theme;
 import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
@@ -216,8 +219,9 @@ public class TextEditor extends JFrame implements ActionListener,
 			chooseTabSize, gitGrep, replaceTabsWithSpaces,
 			replaceSpacesWithTabs, zapGremlins,openClassOrPackageHelp;
 	private RecentFilesMenuItem openRecent;
-	private JMenu editMenu, gitMenu, tabsMenu, fontSizeMenu, tabSizeMenu, toolsMenu,
+	private JMenu editMenu, gitMenu, tabsMenu, fontSizeMenu, tabSizeMenu, codeMenu,
 			runMenu;
+	private int codeMenuCommentsIndex;
 	private int tabsMenuTabsStart;
 	private Set<JMenuItem> tabsMenuItems;
 	private FindAndReplaceDialog findDialog;
@@ -385,6 +389,20 @@ public class TextEditor extends JFrame implements ActionListener,
 		save.setMnemonic(KeyEvent.VK_S);
 		saveas = addToMenu(file, "Save As...", KeyEvent.VK_S, ctrl + shift);
 		saveas.setMnemonic(KeyEvent.VK_A);
+		JMenuItem jmi = new JMenuItem("Revert...");
+		jmi.addActionListener(e -> {
+			if (getEditorPane().isLocked()) {
+				error("File is currently locked.");
+				return;
+			}
+			final File f = getEditorPane().getFile();
+			if (f == null || !f.exists()) {
+				error(getEditorPane().getFileName() + "\nhas not been saved or its file is not available.");
+			} else {
+				reloadRevert("Revert to Saved File? Any unsaved changes will be lost.", "Revert");
+			}
+		});
+		file.add(jmi);
 		file.addSeparator();
 		makeJar = addToMenu(file, "Export as JAR...", 0, 0);
 		makeJar.setMnemonic(KeyEvent.VK_E);
@@ -402,21 +420,6 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 			syncStatusBar();
 		});
-		JMenuItem jmi = new JMenuItem("Revert...");
-		jmi.addActionListener(e -> {
-			if (getEditorPane().isLocked()) {
-				error("File is currently locked.");
-				return;
-			}
-			final File f = getEditorPane().getFile();
-			if (f == null || !f.exists()) {
-				error(getEditorPane().getFileName() + "\nhas not been saved or its file is not available.");
-			} else {
-				reloadRevert("Revert to Saved File? Any unsaved changes will be lost.", "Revert");
-			}
-		});
-		file.add(jmi);
-		file.addSeparator();
 		jmi = new JMenuItem("Show in System Explorer");
 		jmi.addActionListener(e -> {
 			final File f = getEditorPane().getFile();
@@ -531,15 +534,14 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		mbar.add(runMenu);
 
-		// -- Tools menu --
+		// -- Code menu --
 
-		toolsMenu = new JMenu("Tools");
-		toolsMenu.setMnemonic(KeyEvent.VK_O);
+		codeMenu = new JMenu("Code");
+		codeMenu.setMnemonic(KeyEvent.VK_D);
 		cmdPalette = new CommandPalette(this);
-		cmdPalette.install(toolsMenu);
-	
-		GuiUtils.addMenubarSeparator(toolsMenu, "Imports:");
-		addImport = addToMenu(toolsMenu, "Add Import...", 0, 0);
+
+		GuiUtils.addMenubarSeparator(codeMenu, "Imports:");
+		addImport = addToMenu(codeMenu, "Add Import...", 0, 0);
 		addImport.setMnemonic(KeyEvent.VK_I);
 		respectAutoImports = prefService.getBoolean(getClass(), AUTO_IMPORT_PREFS, false);
 		autoImport =
@@ -553,22 +555,37 @@ public class TextEditor extends JFrame implements ActionListener,
 			else
 				write("Auto-imports off. Lines associated with execution errors can be marked");
 		});
-		toolsMenu.add(autoImport);
-		removeUnusedImports = addToMenu(toolsMenu, "Remove Unused Imports", 0, 0);
+		codeMenu.add(autoImport);
+		removeUnusedImports = addToMenu(codeMenu, "Remove Unused Imports", 0, 0);
 		removeUnusedImports.setMnemonic(KeyEvent.VK_U);
-		sortImports = addToMenu(toolsMenu, "Sort Imports", 0, 0);
+		sortImports = addToMenu(codeMenu, "Sort Imports", 0, 0);
 		sortImports.setMnemonic(KeyEvent.VK_S);
 
-		GuiUtils.addMenubarSeparator(toolsMenu, "Source & APIs:");
-		extractSourceJar = addToMenu(toolsMenu, "Extract Source Jar...", 0, 0);
+		GuiUtils.addMenubarSeparator(codeMenu, "Comments:");
+		// "Toggle Comment" is inserted here by assembleEditMenu(): it needs an editor pane
+		codeMenuCommentsIndex = codeMenu.getMenuComponentCount();
+		final JMenuItem timeStamp = new JMenuItem("Insert Time Stamp Comment");
+		timeStamp.setToolTipText("Inserts the current date and time as a comment");
+		timeStamp.addActionListener(e -> insertTimeStampComment());
+		codeMenu.add(timeStamp);
+
+		GuiUtils.addMenubarSeparator(codeMenu, "Format:");
+		removeTrailingWhitespace = addToMenu(codeMenu, "Remove Trailing Whitespace", 0, 0);
+		replaceSpacesWithTabs = addToMenu(codeMenu, "Replace Spaces With Tabs", 0, 0);
+		replaceTabsWithSpaces = addToMenu(codeMenu, "Replace Tabs With Spaces", 0, 0);
+		zapGremlins = addToMenu(codeMenu, "Zap Gremlins", 0, 0);
+		zapGremlins.setToolTipText("Removes invalid (non-printable) ASCII characters");
+
+		GuiUtils.addMenubarSeparator(codeMenu, "Source & APIs:");
+		extractSourceJar = addToMenu(codeMenu, "Extract Source Jar...", 0, 0);
 		extractSourceJar.setMnemonic(KeyEvent.VK_E);
-		openSourceForClass = addToMenu(toolsMenu, "Open Java File for Class...", 0, 0);
+		openSourceForClass = addToMenu(codeMenu, "Open Java File for Class...", 0, 0);
 		openSourceForClass.setMnemonic(KeyEvent.VK_J);
-		//openSourceForMenuItem = addToMenu(toolsMenu, "Open Java File for Menu Item...", 0, 0);
+		//openSourceForMenuItem = addToMenu(codeMenu, "Open Java File for Menu Item...", 0, 0);
 		//openSourceForMenuItem.setMnemonic(KeyEvent.VK_M);
 
-		addScritpEditorMacroCommands(toolsMenu);
-		mbar.add(toolsMenu);
+		addScritpEditorMacroCommands(codeMenu);
+		mbar.add(codeMenu);
 
 		// -- Git menu --
 
@@ -689,10 +706,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		bg.add(chooseTabSize);
 		tabSizeMenu.add(chooseTabSize);
 		options.add(tabSizeMenu);
-		replaceSpacesWithTabs = addToMenu(options, "Replace Spaces With Tabs", 0, 0);
-		replaceTabsWithSpaces = addToMenu(options, "Replace Tabs With Spaces", 0, 0);
 
-		GuiUtils.addMenubarSeparator(options, "View:");
+		GuiUtils.addMenubarSeparator(options, "Appearance:");
 		options.add(markOccurences);
 		options.add(paintTabs);
 		options.add(marginLine);
@@ -912,6 +927,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		notesItem.addActionListener(e -> {
 			sideTabs.setSelectedComponent(notesPanel);
 			notesPanel.refresh();
+			if (!statusSide.isSelected()) statusSide.doClick();
 		});
 		editMenu.add(notesItem);
 		GuiUtils.addMenubarSeparator(editMenu, "Find:");
@@ -953,20 +969,35 @@ public class TextEditor extends JFrame implements ActionListener,
 		final JMenuItem clearBookmarks = addToMenu(editMenu, "Clear Bookmarks...", 0, 0);
 		clearBookmarks.addActionListener(e -> clearAllBookmarks());
 
-		GuiUtils.addMenubarSeparator(editMenu, "Utilities:");
-		final JMenuItem commentJMI = addMappedActionToMenu(editMenu, "Toggle Comment",
-				EditorPaneActions.rstaToggleCommentAction, true);
+		final JMenuItem commentJMI = addMappedActionToMenu(codeMenu, "Toggle Comment",
+				EditorPaneActions.rstaToggleCommentAction, true, codeMenuCommentsIndex);
 		commentJMI.setToolTipText("Alternative shortcut: "
 				+ getEditorPane().getPaneActions().getAcceleratorLabel(EditorPaneActions.epaToggleCommentAltAction));
-		addMappedActionToMenu(editMenu, "Insert Time Stamp", EditorPaneActions.rtaTimeDateAction, true);
-		removeTrailingWhitespace = addToMenu(editMenu, "Remove Trailing Whitespace", 0, 0);
-		zapGremlins = addToMenu(editMenu, "Zap Gremlins", 0, 0);
-		zapGremlins.setToolTipText("Removes invalid (non-printable) ASCII characters");
+	}
+
+	/** Inserts the current date and time at the caret, as a comment in the current language */
+	private void insertTimeStampComment() {
+		final EditorPane pane = getEditorPane();
+		if (pane.isLocked()) {
+			warn("File is currently locked.");
+			return;
+		}
+		String text = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+		try {
+			// {start, end}: end is null for line comments. Both are null if the language has no comments
+			final String[] c = ((RSyntaxDocument) pane.getDocument()).getLineCommentStartAndEnd(0);
+			if (c != null && c[0] != null) text = c[0] + " " + text + (c[1] != null ? " " + c[1] : "");
+		} catch (final RuntimeException ignored) {
+			// no comment syntax: insert plain text
+		}
+		pane.requestFocusInWindow();
+		pane.replaceSelection(text);
 	}
 
 	private void addScritpEditorMacroCommands(final JMenu menu) {
-		GuiUtils.addMenubarSeparator(menu, "Script Editor Macros:");
-		final JMenuItem startMacro = new JMenuItem("Start/Resume Macro Recording");
+		GuiUtils.addMenubarSeparator(menu, "Action Recorder:");
+		final JMenuItem startMacro = new JMenuItem("Start/Resume Recording");
+		startMacro.setToolTipText("Starts (or resumes) recording a macro of editor actions");
 		startMacro.addActionListener(e -> {
 			if (getEditorPane().isLocked()) {
 				error("File is currently locked.");
@@ -977,7 +1008,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			RTextArea.beginRecordingMacro();
 		});
 		menu.add(startMacro);
-		final JMenuItem pauseMacro = new JMenuItem("Pause Macro Recording...");
+		final JMenuItem pauseMacro = new JMenuItem("Pause Recording...");
+		pauseMacro.setToolTipText("Pauses the macro recording");
 		pauseMacro.addActionListener(e -> {
 			if (!RTextArea.isRecordingMacro() || RTextArea.getCurrentMacro() == null) {
 				warn("No Script Editor Macro recording exists.");
@@ -992,6 +1024,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		});
 		menu.add(pauseMacro);
 		final JMenuItem endMacro = new JMenuItem("Stop/Save Recording...");
+		endMacro.setToolTipText("Stops the macro recording and saves it to a file");
 		endMacro.addActionListener(e -> {
 			pauseMacro.doClick();
 			if (RTextArea.getCurrentMacro() != null) {
@@ -1007,7 +1040,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		});
 		menu.add(endMacro);
-		final JMenuItem clearMacro = new JMenuItem("Clear Recorded Macro...");
+		final JMenuItem clearMacro = new JMenuItem("Clear Recording...");
+		clearMacro.setToolTipText("Discards the current macro recording");
 		clearMacro.addActionListener(e -> {
 			if (RTextArea.getCurrentMacro() == null) {
 				warn("Nothing to clear: No macro has been recorded.");
@@ -1019,8 +1053,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		});
 		menu.add(clearMacro);
-		final JMenuItem playMacro = new JMenuItem("Run Recorded Macro");
-		playMacro.setToolTipText("Runs current recordings. Prompts for\nrecordings file if no recordings exist");
+		final JMenuItem playMacro = new JMenuItem("Run Recording");
+		playMacro.setToolTipText("Runs the current macro recording. Prompts for\nrecordings file if no recordings exist");
 		playMacro.addActionListener(e -> {
 			if (getEditorPane().isLocked()) {
 				error("File is currently locked.");
@@ -1194,7 +1228,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			setWrapLines(wrapLines.getState());
 			syncStatusBar();
 		});
-		markOccurences = new JCheckBoxMenuItem("Mark Occurences", false);
+		markOccurences = new JCheckBoxMenuItem("Mark Occurrences", false);
 		markOccurences.setToolTipText("Allows for all occurrences of a double-clicked string to be"
 				+ " highlighted.\nLines with hits are marked on the Editor's notification strip");
 		markOccurences.addItemListener(e -> setMarkOccurrences(markOccurences.getState()));
@@ -1390,6 +1424,12 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	private JMenuItem addMappedActionToMenu(final JMenu menu, String label, String actionID, final boolean editingAction) {
+		return addMappedActionToMenu(menu, label, actionID, editingAction, -1);
+	}
+
+	/** Same as above, adding the item at the specified position of the menu (-1 appends it) */
+	private JMenuItem addMappedActionToMenu(final JMenu menu, String label, String actionID, final boolean editingAction,
+			final int index) {
 		final JMenuItem jmi = new JMenuItem(label);
 		jmi.addActionListener(e -> {
 			try {
@@ -1409,7 +1449,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		});
 		jmi.setAccelerator(getEditorPane().getPaneActions().getAccelerator(actionID));
-		menu.add(jmi);
+		if (index < 0) menu.add(jmi);
+		else menu.insert(jmi, index);
 		return jmi;
 	}
 
@@ -1955,6 +1996,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			syncStatusBar(); // e.g., no language: the request was refused
 		});
 		final JToolBar bar = new JToolBar();
+		bar.setFloatable(false);
 		final int gap = 4;
 		bar.setBorder(BorderFactory.createEmptyBorder(0, gap, 0, gap));
 		bar.add(statusSide);
@@ -2446,8 +2488,13 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	/** Shows the bookmarks side panel, listing bookmarks of all open tabs. */
 	public void listBookmarks() {
+		if (!SwingUtilities.isEventDispatchThread()) {
+			SwingUtilities.invokeLater(this::listBookmarks);
+			return;
+		}
 		sideTabs.setSelectedComponent(outlineSplit);
 		bookmarksPanel.refresh();
+		if (!statusSide.isSelected()) statusSide.doClick();
 	}
 
 	void clearAllBookmarks() {
@@ -4205,6 +4252,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private JMenu helpMenu() {
 		final JMenu menu = new JMenu("Help");
+		cmdPalette.install(menu);
 		GuiUtils.addMenubarSeparator(menu, "Offline Help:");
 		JMenuItem item = new JMenuItem("List Shortcuts...");
 		item.addActionListener(e -> displayKeyMap());
@@ -4241,14 +4289,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		//menu.addSeparator();
 		menu.add(helpMenuItem("SciJava Javadoc Portal", "https://javadoc.scijava.org/"));
 		menu.add(helpMenuItem("SciJava Maven Repository", "https://maven.scijava.org/"));
-		menu.addSeparator();
 		menu.add(helpMenuItem("Fiji on GitHub", "https://github.com/fiji"));
 		menu.add(helpMenuItem("SciJava on GitHub", "https://github.com/scijava/"));
-		menu.addSeparator();
+		GuiUtils.addMenubarSeparator(menu, "Documentation:");
 		menu.add(helpMenuItem("ImageJ Macro Functions", "https://imagej.nih.gov/ij/developer/macro/functions.html"));
 		menu.add(helpMenuItem("ImageJ Docs: Development", "https://imagej.net/develop/"));
 		menu.add(helpMenuItem("ImageJ Docs: Scripting", "https://imagej.net/scripting/"));
-		menu.addSeparator();
 		menu.add(helpMenuItem("ImageJ Notebook Tutorials", "https://github.com/imagej/tutorials#readme"));
 		return menu;
 	}

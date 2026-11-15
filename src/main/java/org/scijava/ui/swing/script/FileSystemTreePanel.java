@@ -167,6 +167,7 @@ class FileSystemTreePanel extends JPanel {
 
 	private JToolBar statusToolbar() {
 		final JToolBar toolbar = new JToolBar();
+		toolbar.setFloatable(false);
 		toolbar.setBackground(tree.getBackground());
 		// Continue the outline of the tree's scroll pane (the latter provides the top edge)
 		toolbar.setBorder(BorderFactory.createCompoundBorder(new SideBorder(), toolbar.getBorder()));
@@ -465,7 +466,7 @@ class FileSystemTreePanel extends JPanel {
 	private void addContextualMenuToTree() {
 		final JPopupMenu popup = new JPopupMenu();
 
-		GuiUtils.addPopupMenuSeparator(popup, "List:");
+		GuiUtils.addPopupMenuSeparator(popup, "List Folder:");
 		final JMenuItem selected = new JMenuItem("Selected Folder", new FlatFileViewDirectoryIcon());
 		selected.setToolTipText("Makes the selected folder (or the folder of the selected file) the only top-level folder");
 		selected.addActionListener(e -> {
@@ -744,6 +745,7 @@ class FileSystemTreePanel extends JPanel {
 			collapsedToggle.setSelectedIcon(Icons.chevron(true));
 
 			final JToolBar tb = new JToolBar();
+			tb.setFloatable(false);
 			tb.setMargin(new Insets(0, 0, 0, 2));
 			tb.add(collapsedToggle);
 			tb.add(caseToggle);

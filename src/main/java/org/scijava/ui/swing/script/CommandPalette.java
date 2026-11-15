@@ -145,7 +145,7 @@ class CommandPalette {
 		});
 	}
 
-	void install(final JMenu toolsMenu) {
+	void install(final JMenu menu) {
 		final Action action = new AbstractAction(NAME) {
 
 			private static final long serialVersionUID = -7030359886427866104L;
@@ -157,7 +157,7 @@ class CommandPalette {
 
 		};
 		action.putValue(Action.ACCELERATOR_KEY, ACCELERATOR);
-		toolsMenu.add(new JMenuItem(action));
+		menu.add(new JMenuItem(action));
 	}
 
 	/** Menu bar button that toggles the palette, for the right end of the menu bar */

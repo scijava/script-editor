@@ -216,7 +216,9 @@ public class TextEditorTab extends JSplitPane {
 		});
 		final JPanel viewPanel = new JPanel();
 		viewPanel.setOpaque(false);
-		viewPanel.add(new JLabel("Show:"));
+		final JLabel showLabel = new JLabel("Show:");
+		showLabel.setEnabled(false);
+		viewPanel.add(showLabel);
 		viewPanel.add(viewChooser);
 		viewPanel.setMaximumSize(viewPanel.getPreferredSize()); // do not stretch
 		bar.add(viewPanel);
@@ -249,6 +251,7 @@ public class TextEditorTab extends JSplitPane {
 		prompt_panel.setLayout(new BorderLayout());
 
 		final JToolBar promptBar = new JToolBar();
+		promptBar.setFloatable(false);
 		promptBar.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
 		promptBar.setBorder(null);
 		promptBar.setMargin(null);
@@ -289,7 +292,7 @@ public class TextEditorTab extends JSplitPane {
 							keyHtml(KeyEvent.VK_PAGE_UP, 0), keyHtml(KeyEvent.VK_P, ctrl),
 							keyHtml(KeyEvent.VK_PAGE_DOWN, 0), keyHtml(KeyEvent.VK_N, ctrl),
 							keyHtml(KeyEvent.VK_UP, 0), keyHtml(KeyEvent.VK_DOWN, 0), keyHtml(KeyEvent.VK_UP, shift));
-			textEditor.showHTMLDialog("REPL (Read-Evaluate-Print-Loop)", html);
+			textEditor.showHTMLDialog("REPL (Read-Evaluate-Print-Loop) Key Bindings", html);
 		});
 
 		promptBar.add(statusHelp);

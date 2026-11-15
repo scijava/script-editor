@@ -130,7 +130,6 @@ public class EditorPaneActions extends RSyntaxTextAreaEditorKit {
 			map.put(rtaLineDownAction, new LineMoveAction(rtaLineUpAction, 1));
 
 		// actions that are not registered by default
-		map.put(rtaTimeDateAction, new TimeDateAction());
 		map.put(clipboardHistoryAction, new ClipboardHistoryActionImpl());
 		// NB: This action is present in rsyntaxtextarea 3.1.1, but not 3.1.6.
 		// So we disable it for the time being.
