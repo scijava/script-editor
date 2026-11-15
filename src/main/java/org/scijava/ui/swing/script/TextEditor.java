@@ -216,8 +216,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			previousTab, runSelection, extractSourceJar, openSourceForClass,
 			//openSourceForMenuItem, // this never had an actionListener!??
 			openMacroFunctions, decreaseFontSize, increaseFontSize, chooseFontSize,
-			chooseTabSize, gitGrep, replaceTabsWithSpaces,
-			replaceSpacesWithTabs, zapGremlins,openClassOrPackageHelp;
+			chooseTabSize, gitGrep, convertToSpaces,
+			convertToTabs, zapGremlins,openClassOrPackageHelp;
 	private RecentFilesMenuItem openRecent;
 	private JMenu editMenu, gitMenu, tabsMenu, fontSizeMenu, tabSizeMenu, codeMenu,
 			runMenu;
@@ -571,8 +571,10 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		GuiUtils.addMenubarSeparator(codeMenu, "Format:");
 		removeTrailingWhitespace = addToMenu(codeMenu, "Remove Trailing Whitespace", 0, 0);
-		replaceSpacesWithTabs = addToMenu(codeMenu, "Replace Spaces With Tabs", 0, 0);
-		replaceTabsWithSpaces = addToMenu(codeMenu, "Replace Tabs With Spaces", 0, 0);
+		convertToSpaces = addToMenu(codeMenu, "Convert Indentation to Spaces...", 0, 0);
+		convertToSpaces.setToolTipText("Converts the leading tabs of the selected lines (or of the whole file) to spaces");
+		convertToTabs = addToMenu(codeMenu, "Convert Indentation to Tabs...", 0, 0);
+		convertToTabs.setToolTipText("Converts the leading spaces of the selected lines (or of the whole file) to tabs");
 		zapGremlins = addToMenu(codeMenu, "Zap Gremlins", 0, 0);
 		zapGremlins.setToolTipText("Removes invalid (non-printable) ASCII characters");
 
@@ -1874,10 +1876,10 @@ public class TextEditor extends JFrame implements ActionListener,
 				new TokenFunctions(getTextArea()).sortImports();
 			else if (source == removeTrailingWhitespace)
 				new TokenFunctions(getTextArea()).removeTrailingWhitespace();
-			else if (source == replaceTabsWithSpaces)
-				getTextArea().convertTabsToSpaces();
-			else if (source == replaceSpacesWithTabs)
-				getTextArea().convertSpacesToTabs();
+			else if (source == convertToSpaces)
+				convertIndentation(true);
+			else if (source == convertToTabs)
+				convertIndentation(false);
 			else if (source == zapGremlins)
 				zapGremlins();
 		}
@@ -2045,15 +2047,21 @@ public class TextEditor extends JFrame implements ActionListener,
 		final JMenu width = new JMenu("Tab Width");
 		final ButtonGroup sizes = new ButtonGroup();
 		final int current = getEditorPane().getTabSize();
+		boolean custom = true;
 		for (final int size : new int[] { 2, 4, 8 }) {
 			final JRadioButtonMenuItem item = new JRadioButtonMenuItem("" + size, size == current);
 			item.addActionListener(e -> {
 				getEditorPane().setTabSize(size);
 				updateTabAndFontSize(false);
 			});
+			if (size == current) custom = false;
 			sizes.add(item);
 			width.add(item);
 		}
+		final JRadioButtonMenuItem other = new JRadioButtonMenuItem(chooseTabSize.getText(), custom);
+		other.addActionListener(e -> chooseTabSize.doClick());
+		sizes.add(other);
+		width.add(other);
 		menu.add(width);
 		menu.addSeparator();
 		final JMenuItem toSpaces = new JMenuItem("Convert Indentation to Spaces...");
@@ -2078,8 +2086,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		final boolean selection = ta.getSelectionStart() != ta.getSelectionEnd();
 		final String scope = selection ? "the selected lines" : "the whole file";
-		if (!GuiUtils.confirm(this, "Convert the indentation of " + scope + " to " + (toSpaces ? "spaces" : "tabs") + "?",
-				"Convert Indentation?", "Convert")) return;
 		try {
 			final int length = ta.getDocument().getLength();
 			int start = 0;
@@ -2121,6 +2127,10 @@ public class TextEditor extends JFrame implements ActionListener,
 				statusText.setText("Indentation already uses " + (toSpaces ? "spaces" : "tabs"));
 				return;
 			}
+			final String rule = toSpaces ? "1 tab = " + tabSize + " spaces" : tabSize + " spaces = 1 tab";
+			if (!GuiUtils.confirm(this, "Convert the indentation of " + scope + " to " + (toSpaces ? "spaces" : "tabs")
+					+ " (" + rule + ")?\n\n" + changed + (changed == 1 ? " line" : " lines") + " will change.",
+					"Convert Indentation?", "Convert")) return;
 			ta.replaceRange(out.toString(), start, end);
 			statusText.setText("Converted the indentation of " + changed + (changed == 1 ? " line" : " lines"));
 		} catch (final BadLocationException | RuntimeException ex) {
