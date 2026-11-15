@@ -355,7 +355,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private void updateGutterIcons() {
 		quietBookmarks = true;
 		try {
-			GutterUtils.updateIcons(gutter);
+			GutterUtils.updateIcons(gutter, this);
 		} finally {
 			quietBookmarks = false;
 		}

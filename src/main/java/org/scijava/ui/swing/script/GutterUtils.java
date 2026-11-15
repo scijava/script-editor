@@ -28,52 +28,51 @@
  */
 package org.scijava.ui.swing.script;
 
-import java.awt.Graphics2D;
-import java.awt.image.BufferedImage;
+import java.awt.Color;
 
-import javax.swing.ImageIcon;
 import javax.swing.text.BadLocationException;
 
 import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.GutterIconInfo;
+import org.fife.ui.rtextarea.RTextArea;
+
+import com.formdev.flatlaf.util.UIScale;
 
 public class GutterUtils {
 
+	private static final String CACHE_KEY = "scijava.bookmarkIcon";
 	private final Gutter gutter;
+	private final RTextArea textArea;
 
-	GutterUtils(final Gutter gutter) {
+	GutterUtils(final Gutter gutter, final RTextArea textArea) {
 		this.gutter = gutter;
+		this.textArea = textArea;
 		//gutter.setFoldIndicatorStyle(org.fife.ui.rtextarea.FoldIndicatorStyle.MODERN); // DEFAULT
 	}
 
-	private ImageIcon getBookmarkIcon() {
-		final int size = gutter.getLineNumberFont().getSize();
-		final BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
-		final Graphics2D graphics = image.createGraphics();
-		graphics.setColor(gutter.getLineNumberColor());
-		graphics.fillRect(0, 0, size, size);
-		graphics.setXORMode(gutter.getBorderColor());
-		graphics.drawRect(0, 0, size - 1, size - 1);
-		image.flush();
-		return new ImageIcon(image);
-	}
-
 	private void updateBookmarkIcon() {
+		final int height = gutter.getLineNumberFont().getSize();
+		final Color color = GuiUtils.accentColor();
+		// The icon only depends on these: skip the rebuild (and the bookmark restore) if unchanged
+		final String key = height + ":" + color.getRGB();
+		if (key.equals(gutter.getClientProperty(CACHE_KEY)) && gutter.getBookmarkIcon() != null) return;
+		gutter.putClientProperty(CACHE_KEY, key);
+
 		// this will clear existing bookmarks, so we'll need restore existing ones
 		final GutterIconInfo[] stash = gutter.getBookmarks();
-		gutter.setBookmarkIcon(getBookmarkIcon());
+		gutter.setBookmarkIcon(Icons.bookmark(color, UIScale.unscale(height)));
 
 		for (final GutterIconInfo info : stash) {
 			try {
-				gutter.toggleBookmark(info.getMarkedOffset());
+				gutter.toggleBookmark(textArea.getLineOfOffset(info.getMarkedOffset()));
 			} catch (final BadLocationException ignored) {
 				// do nothing
 			}
 		}
 	}
 
-	public static void updateIcons(final Gutter gutter) {
-		final GutterUtils utils = new GutterUtils(gutter);
+	public static void updateIcons(final Gutter gutter, final RTextArea textArea) {
+		final GutterUtils utils = new GutterUtils(gutter, textArea);
 		utils.updateBookmarkIcon();
 	}
 }

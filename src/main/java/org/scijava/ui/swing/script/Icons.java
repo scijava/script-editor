@@ -95,6 +95,21 @@ final class Icons {
 	}
 
 	/**
+	 * Bookmark ribbon, for the gutter
+	 *
+	 * @param color  the fill color
+	 * @param height the height in unscaled pixels
+	 */
+	static Icon bookmark(final Color color, final int height) {
+		return new GlyphIcon(
+				"M192 64C156.7 64 128 92.7 128 128L128 544C128 555.5 134.2 566.2 144.2 571.8"
+						+ "C154.2 577.4 166.5 577.3 176.4 571.4L320 485.3L463.5 571.4"
+						+ "C473.4 577.3 485.7 577.5 495.7 571.8C505.7 566.1 512 555.5 512 544L512 128"
+						+ "C512 92.7 483.3 64 448 64L192 64z",
+				color, color, false, 128, 64, 384, 512, height);
+	}
+
+	/**
 	 * Light bulb icon.
 	 *
 	 * @param height the height in unscaled pixels
