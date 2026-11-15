@@ -481,6 +481,15 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		return modifyCount != 0;
 	}
 
+	/**
+	 * Marks the current content as the unmodified baseline and clears the undo
+	 * history. For content loaded after the pane was created (e.g., templates)
+	 */
+	void resetModified() {
+		discardAllEdits();
+		modifyCount = 0;
+	}
+
 	@Override
 	public void insertUpdate(final DocumentEvent e) {
 		modified();

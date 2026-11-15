@@ -1691,6 +1691,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 			final String path = url.getPath();
 			setEditorPaneFileName(path.substring(path.lastIndexOf('/') + 1));
+			getEditorPane().resetModified();
 		}
 		catch (final Exception e) {
 			log.error(e);
@@ -1707,6 +1708,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final EditorPane editorPane = getEditorPane();
 		editorPane.setText(text);
 		setNewDocumentLanguageAndFileName(editorPane, title);
+		editorPane.resetModified();
 		updateLanguageMenu(editorPane.getCurrentLanguage());
 	}
 
