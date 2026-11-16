@@ -60,8 +60,6 @@ import javax.swing.text.DefaultCaret;
 import javax.swing.text.JTextComponent;
 
 import com.formdev.flatlaf.FlatClientProperties;
-import com.formdev.flatlaf.icons.FlatFileChooserDetailsViewIcon;
-import com.formdev.flatlaf.icons.FlatHelpButtonIcon;
 import com.formdev.flatlaf.util.UIScale;
 import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.fife.ui.rsyntaxtextarea.Style;
@@ -277,11 +275,7 @@ public class TextEditorTab extends JSplitPane {
 		updownarrows.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
 		promptBar.add(Box.createHorizontalGlue());
 		promptBar.add(updownarrows);
-		final FlatHelpButtonIcon helpIcon = new FlatHelpButtonIcon();
-		helpIcon.setScale(.8f); // matches the font size set by the "small" style
-		helpIcon.applyStyleProperty("questionMarkColor", GuiUtils.secondaryColor());
-		helpIcon.applyStyleProperty("background", promptBar.getBackground());
-		final JButton statusHelp = new JButton(helpIcon);
+		final JButton statusHelp = GuiUtils.helpButton(null);
 		statusHelp.addActionListener(a -> {
 			final int shift = InputEvent.SHIFT_DOWN_MASK;
 			final int ctrl = InputEvent.CTRL_DOWN_MASK;
@@ -367,6 +361,7 @@ public class TextEditorTab extends JSplitPane {
 		prompt.setEnabled(enable);
 		promptPanel.setVisible(enable);
 		textEditor.syncStatusBar();
+		if (enable) prompt.requestFocusInWindow();
 	}
 
 	/** Whether the bottom part (output and prompt) is showing, i.e., not collapsed */

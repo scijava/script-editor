@@ -381,10 +381,10 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		// Markers: bookmarks and tasks of all open tabs
 		final JPanel pane2 = new JPanel(new BorderLayout());
-		pane2.add(header("Bookmarks"), BorderLayout.NORTH);
+		pane2.add(header("Bookmarks", this::showBookmarksHelp), BorderLayout.NORTH);
 		pane2.add(bookmarksPanel, BorderLayout.CENTER);
 		final JPanel pane3 = new JPanel(new BorderLayout());
-		final JLabel tasksHeader = header("Tasks");
+		final JComponent tasksHeader = header("Tasks", this::showTasksHelp);
 		pane3.add(tasksHeader, BorderLayout.NORTH);
 		pane3.add(tasksPanel, BorderLayout.CENTER);
 		markersSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, pane2, pane3);
@@ -955,6 +955,44 @@ public class TextEditor extends JFrame implements ActionListener,
 		label.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
 		label.setForeground(GuiUtils.secondaryColor());
 		return label;
+	}
+
+	/** A header with a help button on its right, which is also a split handle */
+	private JComponent header(final String text, final Runnable help) {
+		final JLabel label = header(text);
+		// installSplitHandle() leaves explicitly set cursors of children alone
+		label.setCursor(Cursor.getPredefinedCursor(Cursor.N_RESIZE_CURSOR));
+		final JPanel panel = new JPanel(new BorderLayout());
+		panel.setOpaque(false);
+		panel.add(label, BorderLayout.CENTER);
+		panel.add(GuiUtils.helpButton(help), BorderLayout.EAST);
+		return panel;
+	}
+
+	private void showTasksHelp() {
+		showHTMLDialog("Task Tags Help", """
+			<p>Comments containing <code>TODO</code>, <code>FIXME</code> or <code>HACK</code> are
+			registered as tasks automatically:</p>
+			<ul>
+			<li>They are listed in the <i>Tasks</i> section of the <i>Markers</i> tab, for all open
+			tabs. Double-click (or press Enter on) an entry to jump to it</li>
+			<li>They are marked on the rightmost side of the editor, each keyword with its own color:
+			blue (<code>TODO</code>), orange (<code>FIXME</code>) and purple (<code>HACK</code>).
+			Mouse over a mark for a summary of the task, and click on it to go to the line</li>
+			<li>To remove a task, delete the keyword from the comment</li>
+			</ul>""");
+	}
+
+	private void showBookmarksHelp() {
+		showHTMLDialog("Bookmarks Help", """
+			<p>Bookmarks flag lines you want to come back to:</p>
+			<ul>
+			<li>Click next to a line number to add or remove a bookmark</li>
+			<li>They are listed in the <i>Bookmarks</i> section of the <i>Markers</i> tab, for all
+			open tabs. Double-click (or press Enter on) an entry to jump to it</li>
+			<li>Press Delete to remove the selected bookmark. Right-click an entry for more options,
+			e.g., to clear all bookmarks</li>
+			</ul>""");
 	}
 
 	private void assembleEditMenu() {
@@ -4531,20 +4569,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		item.addActionListener(e -> displayRecordableMap());
 		menu.add(item);
 		item = new JMenuItem("Task Tags How-To...");
-		item.addActionListener(e -> {
-			showHTMLDialog("Task Tags Help", //
-				"<p>"
-				+ "When inserted in source code comments, the following keywords will automatically " //
-				+ "register task definitions on the rightmost side of the Editor: <code>TODO</code>, " //
-				+ "<code>README</code>, and <code>HACK</code>.</p>" //
-				+ "<ul>" //
-				+ "<li>To add a task, simply type one of the keywords in a commented line, e.g., "//
-				+ "<code>TODO</code></li>"//
-				+ "<li>To remove a task, delete the keyword from the comment</li>" //
-				+ "<li>Mouse over the annotation mark to access a summary of the task</li>" //
-				+ "<li>Click on the mark to go to the annotated line</li>"
-				+ "</ul>");
-		});
+		item.addActionListener(e -> showTasksHelp());
+		menu.add(item);
+		item = new JMenuItem("Bookmarks How-To...");
+		item.addActionListener(e -> showBookmarksHelp());
 		menu.add(item);
 		GuiUtils.addMenubarSeparator(menu, "Contextual Help:");
 		menu.add(openHelpWithoutFrames);

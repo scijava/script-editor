@@ -30,6 +30,7 @@
 package org.scijava.ui.swing.script;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.event.KeyAdapter;
@@ -64,6 +65,8 @@ class TasksPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
 	private static final int REFRESH_DELAY_MS = 1500;
 	private static final int TEXT_MAX_CHARS = 100;
+	private static final String[] TAGS = { "TODO", "FIXME", "HACK" };
+	private static final Color[] TAG_COLORS = { new Color(48, 150, 252), new Color(237, 137, 54), new Color(155, 112, 225) };
 
 	private final Supplier<List<Task>> source;
 	private final DefaultListModel<Task> model = new DefaultListModel<>();
@@ -125,6 +128,24 @@ class TasksPanel extends JPanel {
 		poll.start();
 	}
 
+	/** The task keyword a comment starts with, or null */
+	static String tagOf(final String text) {
+		for (final String tag : TAGS)
+			if (text.startsWith(tag)) return tag;
+		return null;
+	}
+
+	/** The color of the keyword a task comment starts with, or null */
+	static Color tagColor(final String text) {
+		for (int i = 0; i < TAGS.length; i++)
+			if (text.startsWith(TAGS[i])) return TAG_COLORS[i];
+		return null;
+	}
+
+	private static String escape(final String s) {
+		return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+	}
+
 	/** Brings the list up to date (cheap if nothing changed). */
 	void refresh() {
 		final List<Task> current = source.get();
@@ -157,8 +178,14 @@ class TasksPanel extends JPanel {
 			String text = t.text();
 			if (text.length() > TEXT_MAX_CHARS) text = text.substring(0,
 				TEXT_MAX_CHARS) + "...";
-			super.getListCellRendererComponent(l, (name == null ? "Untitled" : name) +
-				":" + t.line() + "   " + text, index, selected, focus);
+			final String where = (name == null ? "Untitled" : name) + ":" + t.line();
+			final String tag = tagOf(text);
+			// Colored keyword, unless selected (the selection color needs contrast)
+			final String label = (tag == null || selected) ? where + "   " + text
+				: "<html>" + escape(where) + "&nbsp;&nbsp;&nbsp;<b><font color='" + String.format("#%06x",
+					tagColor(text).getRGB() & 0xFFFFFF) + "'>" + tag + "</font></b>" + escape(text
+						.substring(tag.length())) + "</html>";
+			super.getListCellRendererComponent(l, label, index, selected, focus);
 			setBorder(new EmptyBorder(2, 6, 2, 6));
 			setToolTipText(t.text());
 			return this;

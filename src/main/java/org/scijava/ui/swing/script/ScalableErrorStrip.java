@@ -38,6 +38,7 @@ import com.formdev.flatlaf.ui.FlatUIUtils;
 import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.parser.ParserNotice;
+import org.fife.ui.rsyntaxtextarea.parser.TaskTagParser;
 
 import com.formdev.flatlaf.util.UIScale;
 
@@ -80,7 +81,8 @@ class ScalableErrorStrip extends ErrorStrip {
 	@Override
 	protected void paintParserNoticeMarker(final Graphics2D g, final ParserNotice notice, final int width,
 			final int height) {
-		final Color c = notice.getColor();
+		final Color tag = (notice instanceof TaskTagParser.TaskNotice) ? TasksPanel.tagColor(notice.getMessage()) : null;
+		final Color c = (tag != null) ? tag : notice.getColor();
 		FlatUIUtils.setRenderingHints(g);
 		g.setColor(c == null ? Color.GRAY : c);
 		g.fillRect(0, 0, width, height);

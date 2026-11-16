@@ -194,11 +194,7 @@ class FileSystemTreePanel extends JPanel {
 		toolbar.addSeparator();
 		toolbar.add(statusOptions);
 		toolbar.add(Box.createHorizontalGlue());
-		final FlatHelpButtonIcon helpIcon = new FlatHelpButtonIcon();
-		helpIcon.setScale(.8f); // matches the font size set by the "small" style
-		helpIcon.applyStyleProperty("questionMarkColor", GuiUtils.secondaryColor());
-		helpIcon.applyStyleProperty("background", toolbar.getBackground());
-		final JButton statusHelp = new JButton(helpIcon);
+		final JButton statusHelp = GuiUtils.helpButton(null);
 		statusHelp.addActionListener(e -> showHelpMsg());
 		toolbar.add(statusHelp);
 		return toolbar;

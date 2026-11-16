@@ -78,6 +78,7 @@ import org.scijava.util.PlatformUtils;
 
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.FlatLaf;
+import com.formdev.flatlaf.icons.FlatHelpButtonIcon;
 
 /** Static helpers for dialogs, menus and widgets shared by the script editor */
 final class GuiUtils {
@@ -368,6 +369,27 @@ final class GuiUtils {
 		return b;
 	}
 
+
+	/** Small round "?" button, in the style of the editor's other help buttons */
+	static JButton helpButton(final Runnable action) {
+		return helpButton(action, .75f, true);
+	}
+
+	private static JButton helpButton(final Runnable action, final float scale, final boolean borderless) {
+		final FlatHelpButtonIcon icon = new FlatHelpButtonIcon();
+		icon.setScale(scale);
+		icon.applyStyleProperty("questionMarkColor", secondaryColor());
+		icon.applyStyleProperty("background", UIManager.getColor("Panel.background"));
+		final JButton b = new JButton(icon);
+		b.setFocusable(false);
+		b.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
+		if (borderless) {
+			b.putClientProperty("JButton.buttonType", "borderless");
+			b.setBorder(null);
+		}
+		if (action != null) b.addActionListener(e -> action.run());
+		return b;
+	}
 
 	/** Rounded scrollbar thumbs without arrow buttons (FlatLaf only) */
 	static void flattenScrollBars(final JScrollPane scrollPane) {
