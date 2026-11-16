@@ -228,7 +228,7 @@ final class GuiUtils {
 	}
 
 	/**
-	 * A non-floatable toolbar without the drag listeners of its L&F. They throw
+	 * A non-floatable toolbar without the drag listeners of its L&amp;F. They throw
 	 * an IllegalComponentStateException if the toolbar is hidden during a drag
 	 * (e.g., when a window auto-hides)
 	 */
