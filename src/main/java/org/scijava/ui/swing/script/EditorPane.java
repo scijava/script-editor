@@ -1130,7 +1130,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setAutoCompletion(true);
 			setKeylessAutoCompletion(true); // true for backwards compatibility with ImageJ macro auto-completion
 			setFallbackAutoCompletion(false);
-			setMarkOccurrences(false);
+			setMarkOccurrences(true);
 		} else {
 			resetTabSize();
 			setFontSize(prefService.getFloat(getClass(), FONT_SIZE_PREFS, getFontSize()));
@@ -1141,7 +1141,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_PREFS, true));
 			setKeylessAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_KEYLESS_PREFS, true)); // true for backwards compatibility with ImageJ macro
 			setFallbackAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, false));
-			setMarkOccurrences(prefService.getBoolean(getClass(), MARK_OCCURRENCES_PREFS, false));
+			setMarkOccurrences(prefService.getBoolean(getClass(), MARK_OCCURRENCES_PREFS, true));
 			setMarginLineEnabled(prefService.getBoolean(getClass(), MARGIN_VISIBLE_PREFS, false));
 			setVimEnabled(prefService.getBoolean(getClass(), VIM_PREFS, false));
 			applyTheme(themeName());

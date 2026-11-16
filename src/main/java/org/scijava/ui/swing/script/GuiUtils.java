@@ -32,7 +32,6 @@ package org.scijava.ui.swing.script;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.RenderingHints;
 import java.awt.Insets;
 import java.awt.Graphics2D;
@@ -441,12 +440,11 @@ final class GuiUtils {
 	}
 
 	static JButton ellipsisButton(final Runnable action) {
-		final JButton b = new JButton("⋮");
-		b.setFont(b.getFont().deriveFont(b.getFont().getSize()*1.2f));
-		b.setFont(b.getFont().deriveFont(Font.BOLD));
+		final JButton b = new JButton(Icons.ellipsisVertical());
 		b.setFocusable(false);
 		b.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
 		if (action != null) b.addActionListener(e -> action.run());
+		b.setForeground(secondaryColor()); // the icon follows the foreground. Set last: style updates reset UI foregrounds
 		return b;
 	}
 
@@ -565,6 +563,11 @@ final class GuiUtils {
 
 	/* Tweaks for tabbed pane */
 	static JTabbedPane getJTabbedPane() {
+		return getJTabbedPane(JTabbedPane.TOP);
+	}
+
+	/** As {@link #getJTabbedPane()}, with the tabs initially at the given placement (JTabbedPane.TOP, LEFT, ...) */
+	static JTabbedPane getJTabbedPane(final int initialPlacement) {
 		final JTabbedPane tabbed = new JTabbedPane();
 		tabbed.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TABS_POPUP_POLICY, "asNeeded"); // overflow dropdown
@@ -585,8 +588,9 @@ final class GuiUtils {
 		GuiUtils.addPopupMenuSeparator(popup, "Tab Placement:");
 		bGroup = new ButtonGroup();
 		for (final String pos : new String[] { "Top", "Left", "Bottom", "Right" }) {
-			final JMenuItem jcbmi = new JCheckBoxMenuItem(pos, "Top".equals(pos));
+			final JMenuItem jcbmi = new JCheckBoxMenuItem(pos, pos.equalsIgnoreCase(placementName(initialPlacement)));
 			jcbmi.addItemListener(e -> {
+				if (e.getStateChange() != java.awt.event.ItemEvent.SELECTED) return; // ignore the deselected item
 				switch (pos) {
 				case "Top":
 					tabbed.setTabPlacement(JTabbedPane.TOP);
@@ -613,8 +617,28 @@ final class GuiUtils {
 		final JPanel trailing = new JPanel(new java.awt.BorderLayout());
 		trailing.setOpaque(false);
 		trailing.add(triggerButton, java.awt.BorderLayout.EAST);
+		// With tabs on the left/right the free space is vertical: flush the button to the bottom instead
+		tabbed.addPropertyChangeListener("tabPlacement", evt -> {
+			final boolean vertical = tabbed.getTabPlacement() == JTabbedPane.LEFT
+					|| tabbed.getTabPlacement() == JTabbedPane.RIGHT;
+			// dots run across the tab strip: vertical for tabs on top/bottom, horizontal for left/right
+			triggerButton.setIcon(vertical ? Icons.ellipsis() : Icons.ellipsisVertical());
+			trailing.add(triggerButton, vertical ? java.awt.BorderLayout.SOUTH : java.awt.BorderLayout.EAST);
+			trailing.revalidate();
+			trailing.repaint();
+		});
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TRAILING_COMPONENT, trailing);
+		if (initialPlacement != JTabbedPane.TOP) tabbed.setTabPlacement(initialPlacement); // after the listener: updates the button
 		return tabbed;
+	}
+
+	private static String placementName(final int placement) {
+		return switch (placement) {
+			case JTabbedPane.LEFT -> "Left";
+			case JTabbedPane.BOTTOM -> "Bottom";
+			case JTabbedPane.RIGHT -> "Right";
+			default -> "Top";
+		};
 	}
 
 	/** Returns the color with the given opacity (0-100) */

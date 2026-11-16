@@ -299,7 +299,12 @@ public class TextEditor extends JFrame implements ActionListener,
 	private JCheckBoxMenuItem whiteSpace;
 	private JCheckBoxMenuItem marginLine;
 	private final JCheckBoxMenuItem lockPane;
+	/** Share of the window given to the side panel by default */
+	private static final double SIDE_SHARE = .20d;
 	private JCheckBoxMenuItem vimMode;
+	private JCheckBoxMenuItem sidePaneItem, consoleItem; // Window menu: kept in sync with the status bar
+	private boolean syncingPanes;
+	private boolean syncingVim; // true while the Vim menu item and status toggle are being synchronized
 	private ButtonGroup themeRadioGroup;
 	private JTextArea errorScreen = new ConsoleArea(ConsoleArea.Content.ERRORS);
 
@@ -323,8 +328,6 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		});
 	};
-	private final int[] panePositions;
-
 
 	@Parameter
 	private Context context;
@@ -402,7 +405,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		installCloseTabsPopup();
 
 		tree = new FileSystemTree(log);
-		sideTabs = GuiUtils.getJTabbedPane();
+		sideTabs = GuiUtils.getJTabbedPane(JTabbedPane.LEFT);
 		sideTabs.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_AREA_ALIGNMENT,
 				FlatClientProperties.TABBED_PANE_ALIGN_FILL);
 		// Icon-only tabs: only the selected tab shows its title, keeping the pane narrow
@@ -700,15 +703,19 @@ public class TextEditor extends JFrame implements ActionListener,
 		tabsMenu.setMnemonic(KeyEvent.VK_W);
 		GuiUtils.addMenubarSeparator(tabsMenu, "Panes:");
 		// Assume initial status from prefs or panel visibility
-		final JCheckBoxMenuItem jcmi1 = new JCheckBoxMenuItem("Side Pane",
+		final JCheckBoxMenuItem jcmi1 = sidePaneItem = new JCheckBoxMenuItem("Side Pane",
 				prefService.getInt(getClass(), MAIN_DIV_LOCATION, body.getDividerLocation()) > 0
 						|| isLeftPaneExpanded(body));
-		jcmi1.addItemListener(e -> collapseSplitPane(0, !jcmi1.isSelected()));
+		jcmi1.addItemListener(e -> {
+			if (!syncingPanes) setSidePanelVisible(jcmi1.isSelected());
+		});
 		tabsMenu.add(jcmi1);
 		// Console not initialized. Assume it is displayed if no prefs read
-		final JCheckBoxMenuItem jcmi2 = new JCheckBoxMenuItem("Console",
+		final JCheckBoxMenuItem jcmi2 = consoleItem = new JCheckBoxMenuItem("Console",
 				prefService.getInt(getClass(), TAB_DIV_LOCATION, 1) > 0);
-		jcmi2.addItemListener(e -> collapseSplitPane(1, !jcmi2.isSelected()));
+		jcmi2.addItemListener(e -> {
+			if (!syncingPanes) getTab().setBottomVisible(jcmi2.isSelected());
+		});
 		tabsMenu.add(jcmi2);
 		final JMenuItem mi = new JMenuItem("Reset Layout...");
 		mi.addActionListener(e -> {
@@ -952,7 +959,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		try {
 			threadService.invoke(() -> {
 				pack();
-				body.setDividerLocation(0.25); // Important!: will be read as prefs. default
+				body.setDividerLocation(SIDE_SHARE); // Important!: will be read as prefs. default
 				getTab().setREPLVisible(false);
 				loadWindowSizePreferences();
 				pack();
@@ -990,18 +997,12 @@ public class TextEditor extends JFrame implements ActionListener,
 		setFontSize(getEditorPane().getFontSize());
 		// Ensure menu commands are up-to-date
 		updateUI(true);
-		// Store locations of splitpanes
-		panePositions = new int[]{body.getDividerLocation(), getTab().getDividerLocation()};
 		editorPane.requestFocus();
 	}
 
 	private void resetLayout() {
-		body.setDividerLocation(.25d);
-		getTab().setOrientation(JSplitPane.VERTICAL_SPLIT);
-		getTab().setDividerLocation((incremental) ? .7d : .75d);
-		if (incremental)
-			getTab().getScreenAndPromptSplit().setDividerLocation(.5d);
-		getTab().setREPLVisible(incremental);
+		body.setDividerLocation(SIDE_SHARE);
+		getTab().resetLayout();
 		pack();
 	}
 
@@ -1378,7 +1379,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			setWrapLines(wrapLines.getState());
 			syncStatusBar();
 		});
-		markOccurences = new JCheckBoxMenuItem("Mark Occurrences", false);
+		markOccurences = new JCheckBoxMenuItem("Mark Occurrences", true);
 		markOccurences.setToolTipText("Allows for all occurrences of a double-clicked string to be"
 				+ " highlighted.\nLines with hits are marked on the Editor's notification strip");
 		markOccurences.addItemListener(e -> setMarkOccurrences(markOccurences.getState()));
@@ -1397,10 +1398,13 @@ public class TextEditor extends JFrame implements ActionListener,
 		fallbackAutocompletion.setToolTipText("<HTML>If selected, Java completions will be used when scripting<br>"
 				+ "a language for which auto-completions are not available");
 		fallbackAutocompletion.addItemListener(e -> setFallbackAutoCompletion(fallbackAutocompletion.getState()));
-		vimMode = new JCheckBoxMenuItem("Vim Mode", false);
+		// Vim mode is remembered across sessions. NB: panes read the same preference when loaded
+		vimMode = new JCheckBoxMenuItem("Vim Mode", prefService.getBoolean(EditorPane.class, EditorPane.VIM_PREFS, false));
 		vimMode.setToolTipText("<HTML>Edit with vim-style modal key bindings.<br>"
 				+ "Press Esc for normal mode; :w saves, :q closes the tab");
-		vimMode.addItemListener(e -> setVimMode(vimMode.getState()));
+		vimMode.addItemListener(e -> {
+			if (!syncingVim) setVimMode(vimMode.getState());
+		});
 		themeRadioGroup = new ButtonGroup();
 
 		// Help menu. These are 'dynamic' items
@@ -2149,25 +2153,23 @@ public class TextEditor extends JFrame implements ActionListener,
 		statusSide.setToolTipText("Shows/hides the side panel (Files, Outline, Notes)");
 		statusSide.setFocusable(false);
 		statusSide.setSelected(true);
-		statusSide.addActionListener(e -> {
-			if (statusSide.isSelected()) { // restore
-				body.setDividerLocation(sideLastLocation > 50 ? sideLastLocation : (int) (body.getWidth() * .25));
-			} else { // collapse (the location is remembered by the divider listener)
-				body.setDividerLocation(0);
-			}
-		});
+		statusSide.addActionListener(e -> setSidePanelVisible(statusSide.isSelected()));
 		body.addPropertyChangeListener("dividerLocation", evt -> {
 			final int loc = body.getDividerLocation();
 			if (loc > 50) sideLastLocation = loc;
 			statusSide.setSelected(loc > 5);
+			syncPaneItems(loc > 5, null);
 		});
 		// Layout of the console: below or beside the editor. Clicking the active one collapses/restores it
 		statusBelow = new JToggleButton(Icons.bottomPane());
 		statusBelow.setToolTipText("<HTML>Vertical Layout: Console below the editor.<br>Click again to hide/show it");
 		statusRight = new JToggleButton(Icons.rightPane());
 		statusRight.setToolTipText("<HTML>Horizontal Layout: Console beside the editor.<br>Click again to hide/show it");
+		statusBelow.setActionCommand("Console Below Editor (Toggle)");
+		statusRight.setActionCommand("Console Beside Editor (Toggle)");
 		for (final JToggleButton b : new JToggleButton[] { statusBelow, statusRight }) {
 			b.setFocusable(false);
+			cmdPalette.register(b, "Status Bar");
 		}
 		statusBelow.setSelected(true);
 		statusBelow.addActionListener(e -> {
@@ -2179,6 +2181,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			syncStatusBar();
 		});
 		statusRepl = new JToggleButton("REPL", Icons.repl());
+		statusRepl.setActionCommand("Toggle REPL Prompt");
 		cmdPalette.register(statusRepl, "Interpreter");
 		statusRepl.setFont(statusRepl.getFont().deriveFont(statusRepl.getFont().getSize2D() * .9f));
 		statusRepl.setToolTipText("Turns the REPL prompt on/off (of the active tab). Requires a language");
@@ -2191,7 +2194,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		statusVimToggle.setFont(statusVimToggle.getFont().deriveFont(statusVimToggle.getFont().getSize2D() * .9f));
 		statusVimToggle.setToolTipText(vimMode.getToolTipText());
 		statusVimToggle.setFocusable(false);
-		statusVimToggle.addActionListener(e -> vimMode.setState(statusVimToggle.isSelected()));
+		statusVimToggle.addActionListener(e -> setVimMode(statusVimToggle.isSelected()));
 		final JToolBar bar = new GuiUtils.ToolBar();
 		bar.setFloatable(false);
 		final int gap = 4;
@@ -2372,11 +2375,12 @@ public class TextEditor extends JFrame implements ActionListener,
 			if (statusBelow != null) {
 				final TextEditorTab tab = getTab();
 				final boolean shown = tab.isBottomVisible();
+				syncPaneItems(null, shown);
 				statusBelow.setSelected(shown && tab.isLayoutBelow());
 				statusRight.setSelected(shown && !tab.isLayoutBelow());
 			}
 			if (statusRepl != null) statusRepl.setSelected(getTab().isREPLEnabled());
-			if (statusVimToggle != null) statusVimToggle.setSelected(pane.isVimEnabled());
+			syncVimControls(pane.isVimEnabled());
 			statusLang.setText(languageLabel(pane.getCurrentLanguage()));
 			updateCaretStatus();
 			setVimStatus(getTab(), pane.getVimHandler().getStatus());
@@ -2576,10 +2580,41 @@ public class TextEditor extends JFrame implements ActionListener,
 		};
 	}
 
+	/** Shows/hides the side panel (Files, Outline, Notes), restoring its last width */
+	private void setSidePanelVisible(final boolean visible) {
+		if (visible) body.setDividerLocation(sideLastLocation > 50 ? sideLastLocation : (int) (body.getWidth() * SIDE_SHARE));
+		else body.setDividerLocation(0); // the location is remembered by the divider listener
+	}
+
+	/** Updates the Window menu items without triggering their listeners (null: leave as is) */
+	private void syncPaneItems(final Boolean side, final Boolean console) {
+		syncingPanes = true;
+		try {
+			if (side != null && sidePaneItem != null) sidePaneItem.setSelected(side);
+			if (console != null && consoleItem != null) consoleItem.setSelected(console);
+		} finally {
+			syncingPanes = false;
+		}
+	}
+
+	/** Applies Vim mode to all tabs, keeping the menu item and the status bar toggle in sync */
 	private void setVimMode(final boolean enabled) {
+		if (syncingVim) return;
 		for (int i = 0; i < tabbed.getTabCount(); i++)
 			getEditorPane(i).setVimEnabled(enabled);
+		syncVimControls(enabled);
 		getEditorPane().requestFocusInWindow();
+	}
+
+	/** Shows the given Vim state in both controls without triggering their listeners */
+	private void syncVimControls(final boolean enabled) {
+		syncingVim = true;
+		try {
+			if (vimMode != null) vimMode.setState(enabled);
+			if (statusVimToggle != null) statusVimToggle.setSelected(enabled);
+		} finally {
+			syncingVim = false;
+		}
 	}
 
 	private JMenu applyThemeMenu() {
@@ -2695,37 +2730,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 	}
 
-	private void collapseSplitPane(final int pane, final boolean collapse) {
-		final JSplitPane jsp = (pane == 0)  ? body : getTab();
-		if (collapse) {
-			panePositions[pane] = jsp.getDividerLocation();
-			if (pane == 0) { // collapse to left
-				jsp.setDividerLocation(0.0d);
-			} else { // collapse to bottom
-				jsp.setDividerLocation(1.0d);
-			}
-		} else {
-			jsp.setDividerLocation(panePositions[pane]);
-			// Check if user collapsed pane manually (stashed panePosition is invalid)
-			final boolean expanded = (pane == 0) ? isLeftPaneExpanded(jsp) : isRightOrBottomPaneExpanded(jsp);
-			if (!expanded
-				//	&& JOptionPane.OK_OPTION == JOptionPane.showConfirmDialog(TextEditor.this, //
-				//	"Expand to default position?", "Expand to Defaults?", JOptionPane.OK_CANCEL_OPTION)
-				) {
-				jsp.setDividerLocation((pane == 0) ? .2d : .75d);
-				panePositions[pane] = jsp.getDividerLocation();
-			}
-		}
-	}
-
 	private boolean isLeftPaneExpanded(final JSplitPane pane) {
 		return pane.isVisible() && pane.getLeftComponent().getWidth() > 0;
-	}
-
-	private boolean isRightOrBottomPaneExpanded(final JSplitPane pane) {
-		final int dim = (pane.getOrientation() == JSplitPane.VERTICAL_SPLIT) ? pane.getRightComponent().getHeight()
-				: pane.getRightComponent().getWidth();
-		return pane.isVisible() && dim > 0;
 	}
 
 	protected boolean handleTabsMenu(final Object source) {
@@ -3351,7 +3357,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		}
 		markOccurences.setState(pane.getMarkOccurrences());
-		vimMode.setState(pane.isVimEnabled());
+		syncVimControls(pane.isVimEnabled());
 		wrapLines.setState(pane.getLineWrap());
 		marginLine.setState(pane.isMarginLineEnabled());
 		tabsEmulated.setState(pane.getTabsEmulated());

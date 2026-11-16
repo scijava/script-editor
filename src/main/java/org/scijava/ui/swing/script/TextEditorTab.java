@@ -31,6 +31,7 @@ package org.scijava.ui.swing.script;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
@@ -108,6 +109,8 @@ public class TextEditorTab extends JSplitPane {
 	private final int promptDividerSize; // thickness of the divider above the prompt (hidden while the REPL is off)
 	private final JSplitPane screenAndPromptSplit;
 	private int screenAndPromptSplitDividerLocation;
+	/** Share of the tab given to the editor when the console is shown */
+	private static final double EDITOR_SHARE = .7d;
 	private int bottomLastLocation = -1; // divider location while the bottom part was last shown
 
 	private final TextEditor textEditor;
@@ -250,8 +253,22 @@ public class TextEditorTab extends JSplitPane {
 		caret.setBlinkRate(prompt.getCaret().getBlinkRate());
 		prompt.setCaret(caret);
 
-		final JPanel prompt_panel = new JPanel();
-		prompt_panel.setMinimumSize(new Dimension(0, 0));
+		// The REPL, when visible, never gets squeezed below its bar plus one row of text
+		final JPanel prompt_panel = new JPanel() {
+
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public Dimension getMinimumSize() {
+				int h = 0;
+				if (getLayout() instanceof BorderLayout) {
+					final Component bar = ((BorderLayout) getLayout()).getLayoutComponent(this, BorderLayout.NORTH);
+					if (bar != null) h += bar.getPreferredSize().height;
+				}
+				final Insets in = prompt.getInsets();
+				return new Dimension(0, h + prompt.getFontMetrics(prompt.getFont()).getHeight() + in.top + in.bottom);
+			}
+		};
 		prompt_panel.setVisible(false);
 		promptPanel = prompt_panel;
 		prompt_panel.setLayout(new BorderLayout());
@@ -305,6 +322,7 @@ public class TextEditorTab extends JSplitPane {
 		updownarrows.setForeground(GuiUtils.secondaryColor()); // Must come after the style properties: applying them resets UIResource foregrounds
 		statusHelp.putClientProperty(FlatClientProperties.STYLE, tight);
 		screenAndPromptSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, bottom, prompt_panel);
+		screenAndPromptSplit.setResizeWeight(1d); // output takes the changes in height, the prompt keeps its size
 		// No divider: the prompt bar is the handle. Keep promptDividerSize at 0 so toggling the REPL
 		// never brings the divider back
 		GuiUtils.installSplitHandle(promptBar, screenAndPromptSplit);
@@ -361,7 +379,10 @@ public class TextEditorTab extends JSplitPane {
 		prompt.setEnabled(enable);
 		promptPanel.setVisible(enable);
 		textEditor.syncStatusBar();
-		if (enable) prompt.requestFocusInWindow();
+		if (enable) {
+			fitPrompt();
+			prompt.requestFocusInWindow();
+		}
 	}
 
 	/** Whether the bottom part (output and prompt) is showing, i.e., not collapsed */
@@ -387,7 +408,7 @@ public class TextEditorTab extends JSplitPane {
 		if (visible) {
 			final int max = collapsedLocation();
 			setDividerLocation(bottomLastLocation > 50 && bottomLastLocation < max - 5 ? bottomLastLocation
-					: (int) (axisSize() * .7));
+					: (int) (axisSize() * EDITOR_SHARE));
 		} else {
 			setDividerLocation(1d); // all the way down
 		}
@@ -424,6 +445,7 @@ public class TextEditorTab extends JSplitPane {
 	public void setOrientation(final int orientation) {
 		super.setOrientation(orientation);
 		bottomLastLocation = -1; // locations of the other layout do not apply
+		screenAndPromptSplitDividerLocation = 0;
 		if (textEditor != null) textEditor.syncStatusBar();
 	}
 
@@ -448,7 +470,37 @@ public class TextEditorTab extends JSplitPane {
 		}
 		setOrientation(below ? JSplitPane.VERTICAL_SPLIT : JSplitPane.HORIZONTAL_SPLIT);
 		if (!replOn) setREPLVisible(false); // keep the prompt collapsed if not in use
-		setDividerLocation(.7d);
+		setDividerLocation(EDITOR_SHARE);
+		fitPrompt();
+	}
+
+	/**
+	 * Keeps the REPL usable after the geometry of the console changed (layout switch, REPL turned
+	 * on): the prompt always keeps at least one row of text and, in the side-by-side layout,
+	 * where the console column spans the whole height, the output gets at most half of it
+	 */
+	void fitPrompt() {
+		SwingUtilities.invokeLater(() -> {
+			if (!replOn) return;
+			final int h = screenAndPromptSplit.getHeight();
+			if (h <= 0) return;
+			final int current = screenAndPromptSplit.getDividerLocation();
+			int loc = current;
+			if (!isLayoutBelow()) loc = Math.min(loc, h / 2);
+			loc = Math.min(loc, h - screenAndPromptSplit.getDividerSize() - promptPanel.getMinimumSize().height);
+			if (loc != current) screenAndPromptSplit.setDividerLocation(loc);
+		});
+	}
+
+	/** Restores the default layout: console below the editor, default proportions */
+	void resetLayout() {
+		setOrientation(JSplitPane.VERTICAL_SPLIT);
+		bottomLastLocation = -1;
+		setDividerLocation(EDITOR_SHARE);
+		if (replOn) {
+			SwingUtilities.invokeLater(() -> screenAndPromptSplit.setDividerLocation(.5d));
+			fitPrompt();
+		}
 	}
 
 	// Package private
