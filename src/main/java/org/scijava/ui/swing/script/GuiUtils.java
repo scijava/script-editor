@@ -85,6 +85,24 @@ final class GuiUtils {
 				JOptionPane.YES_OPTION;
 	}
 
+	/**
+	 * A non-floatable toolbar without the drag listeners of its L&F. They throw
+	 * an IllegalComponentStateException if the toolbar is hidden during a drag
+	 * (e.g., when a window auto-hides)
+	 */
+	static class ToolBar extends javax.swing.JToolBar {
+
+		@Override
+		public void updateUI() {
+			super.updateUI();
+			setFloatable(false);
+			for (final java.awt.event.MouseMotionListener l : getMouseMotionListeners()) {
+				if (l.getClass().getName().startsWith("javax.swing.plaf.basic.BasicToolBarUI"))
+					removeMouseMotionListener(l);
+			}
+		}
+	}
+
 	static void showHTMLDialog(final Component parent, final String title, final String htmlContents) {
 		final JTextPane f = new JTextPane();
 		f.setContentType("text/html");

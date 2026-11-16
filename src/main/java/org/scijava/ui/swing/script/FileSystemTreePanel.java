@@ -166,7 +166,7 @@ class FileSystemTreePanel extends JPanel {
 	}
 
 	private JToolBar statusToolbar() {
-		final JToolBar toolbar = new JToolBar();
+		final JToolBar toolbar = new GuiUtils.ToolBar();
 		toolbar.setFloatable(false);
 		toolbar.setBackground(tree.getBackground());
 		// Continue the outline of the tree's scroll pane (the latter provides the top edge)
@@ -740,7 +740,7 @@ class FileSystemTreePanel extends JPanel {
 			collapsedToggle.setIcon(Icons.chevron(false));
 			collapsedToggle.setSelectedIcon(Icons.chevron(true));
 
-			final JToolBar tb = new JToolBar();
+			final JToolBar tb = new GuiUtils.ToolBar();
 			tb.setFloatable(false);
 			tb.setMargin(new Insets(0, 0, 0, 2));
 			tb.add(collapsedToggle);

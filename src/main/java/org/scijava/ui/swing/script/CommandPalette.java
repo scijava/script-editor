@@ -546,7 +546,7 @@ class CommandPalette {
 			putClientProperty(FlatClientProperties.TEXT_FIELD_LEADING_COMPONENT, options);
 			caseButton = secondaryToggle("Cc", "Match case");
 			whitespaceButton = secondaryToggle("\u2423", "Match whitespace");
-			final JToolBar tb = new JToolBar();
+			final JToolBar tb = new GuiUtils.ToolBar();
 			tb.setFloatable(false);
 			tb.setMargin(new Insets(0, 0, 0, 2));
 			tb.add(caseButton);
@@ -677,7 +677,7 @@ class CommandPalette {
 		private static final float FONT_SCALE = .9f;
 
 		JToolBar getToolBar() {
-			final JToolBar toolbar = new JToolBar();
+			final JToolBar toolbar = new GuiUtils.ToolBar();
 			toolbar.setOpaque(false);
 			toolbar.setFocusable(false);
 			toolbar.setFloatable(false);

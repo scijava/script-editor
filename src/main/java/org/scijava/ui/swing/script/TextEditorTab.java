@@ -182,7 +182,7 @@ public class TextEditorTab extends JSplitPane {
 		mirrorInto(combinedScreen, textEditor.getErrorScreen(), true);
 
 		final JPanel bottom = new JPanel(new BorderLayout());
-		final JToolBar bar = new JToolBar();
+		final JToolBar bar = new GuiUtils.ToolBar();
 		bar.setFloatable(false);
 		bar.setBorder(BorderFactory.createEmptyBorder(1, 2, 1, 2));
 
@@ -256,7 +256,7 @@ public class TextEditorTab extends JSplitPane {
 		promptPanel = prompt_panel;
 		prompt_panel.setLayout(new BorderLayout());
 
-		final JToolBar promptBar = new JToolBar();
+		final JToolBar promptBar = new GuiUtils.ToolBar();
 		promptBar.setFloatable(false);
 		promptBar.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
 		promptBar.setBorder(null);

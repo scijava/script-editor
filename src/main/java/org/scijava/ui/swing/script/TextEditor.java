@@ -2123,7 +2123,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		statusVimToggle.setToolTipText(vimMode.getToolTipText());
 		statusVimToggle.setFocusable(false);
 		statusVimToggle.addActionListener(e -> vimMode.setState(statusVimToggle.isSelected()));
-		final JToolBar bar = new JToolBar();
+		final JToolBar bar = new GuiUtils.ToolBar();
 		bar.setFloatable(false);
 		final int gap = 4;
 		bar.setBorder(BorderFactory.createEmptyBorder(0, gap, 0, gap));

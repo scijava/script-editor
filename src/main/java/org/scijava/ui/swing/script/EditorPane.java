@@ -832,7 +832,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 * Toggles whether auto-completion should adopt Java completions if the current
 	 * language does not support auto-completion.
 	 * 
-	 * @param enabled Whether Java should be enabled as fallback language for
+	 * @param value Whether Java should be enabled as fallback language for
 	 *                auto-completion
 	 */
 	void setFallbackAutoCompletion(final boolean value) {
