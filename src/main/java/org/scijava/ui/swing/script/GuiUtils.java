@@ -29,15 +29,7 @@
 
 package org.scijava.ui.swing.script;
 
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.RenderingHints;
-import java.awt.Insets;
-import java.awt.Graphics2D;
-import java.awt.Graphics;
-import java.awt.FontMetrics;
-import java.awt.Point;
+import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -474,7 +466,7 @@ final class GuiUtils {
 		try {
 			Color c = UIManager.getColor("Component.accentColor");
 			if (c == null) c = UIManager.getColor("Component.focusColor");
-			return (c == null) ? new Color(0x3E73B9) : new Color(c.getRGB()); // plain color: UIResource ones are reset
+			return (c == null) ? new Color(0x3E73B9) : new Color(c.getRGB()); // plain color: UIResource ones are reset!?
 		} catch (final Exception ignored) {
 			// do nothing
 		}
@@ -490,13 +482,43 @@ final class GuiUtils {
 		return (c.getRed() * 0.299 + c.getGreen() * 0.587 + c.getBlue() * 0.114) < 186;
 	}
 
-	/** Small "+" button for the trailing area of a tabbed pane */
-	static JButton newTabButton(final Runnable action) {
-		final JButton b = new JButton("+");
-		b.setToolTipText("New file");
-		b.setFocusable(false);
-		b.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
-		b.addActionListener(e -> action.run());
+	/** Small toggle button that looks like a tree selection when selected */
+	static JToggleButton smallToggleButton(final String text) {
+		return smallToggleButton(text, null);
+	}
+
+	/**
+	 * As {@link #smallToggleButton(String)}.
+	 *
+	 * @param extraStyle Optional. FlatLaf style properties to add to the ones set here. NB: Setting the
+	 *          style property of the button later would replace them
+	 */
+	static JToggleButton smallToggleButton(final String text, final String extraStyle) {
+		return smallToggleButton(text, extraStyle, true);
+	}
+
+	/**
+	 * As {@link #smallToggleButton(String, String)}.
+	 *
+	 * @param secondary If true, the text of the unselected button is in secondary color. If false, in
+	 *                  the default (primary) color of buttons
+	 */
+	static JToggleButton smallToggleButton(final String text, final String extraStyle, final boolean secondary) {
+		final JToggleButton b = new JToggleButton(text);
+		b.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
+		// NB: setBackground() would not do, as FlatLaf darkens it
+		b.putClientProperty(FlatClientProperties.STYLE,
+				"selectedBackground: $Tree.selectionBackground; toolbar.selectedBackground: $Tree.selectionBackground"
+						+ (extraStyle == null || extraStyle.isEmpty() ? "" : "; " + extraStyle));
+		// NB: Foregrounds must be set after the style: applying it resets them
+		final Runnable updateForeground = () -> {
+			final Color sel = UIManager.getColor("Tree.selectionForeground");
+			final Color rest = secondary ? secondaryColor() : UIManager.getColor("Button.foreground");
+			final Color fGrnd = (b.isSelected() && sel != null) ? sel : rest;
+			if (fGrnd != null) b.setForeground(fGrnd);
+		};
+		updateForeground.run();
+		b.addItemListener(e -> updateForeground.run());
 		return b;
 	}
 
@@ -505,27 +527,27 @@ final class GuiUtils {
 		b.setFocusable(false);
 		b.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
 		if (action != null) b.addActionListener(e -> action.run());
-		b.setForeground(secondaryColor()); // the icon follows the foreground. Set last: style updates reset UI foregrounds
+		// NBL he icon follows the foreground. To change its caller setForground() needs to be Set last
 		return b;
 	}
 
-
-	/** Small round "?" button, in the style of the editor's other help buttons */
-	static JButton helpButton(final Runnable action) {
-		return helpButton(action, .75f, true);
-	}
-
-	private static JButton helpButton(final Runnable action, final float scale, final boolean borderless) {
+	/**
+	 * Round help "?" button
+	 *
+	 * @param sizeToComponent Optional. If not null, the icon will be scaled to height of this component.
+	 */
+	static JButton helpButton(final Runnable action, final Component sizeToComponent) {
 		final FlatHelpButtonIcon icon = new FlatHelpButtonIcon();
-		icon.setScale(scale);
 		icon.applyStyleProperty("questionMarkColor", secondaryColor());
 		icon.applyStyleProperty("background", UIManager.getColor("Panel.background"));
 		final JButton b = new JButton(icon);
 		b.setFocusable(false);
 		b.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
-		if (borderless) {
-			b.putClientProperty("JButton.buttonType", "borderless");
+		if (sizeToComponent != null) {
+			b.setMargin(null);
 			b.setBorder(null);
+			b.putClientProperty("JButton.buttonType", "borderless"); // probably not needed?
+			icon.setScale(Icons.scaleToFont(icon, sizeToComponent));
 		}
 		if (action != null) b.addActionListener(e -> action.run());
 		return b;
@@ -581,15 +603,7 @@ final class GuiUtils {
 			split.setDividerSize(active ? 0 : regularSize);
 			handle.setCursor(active ? java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.N_RESIZE_CURSOR) : null);
 		};
-		// children must not inherit the resize cursor
-		final java.util.function.Consumer<java.awt.Container>[] resetCursors = new java.util.function.Consumer[1];
-		resetCursors[0] = parent -> {
-			for (final java.awt.Component child : parent.getComponents()) {
-				if (!child.isCursorSet()) child.setCursor(java.awt.Cursor.getDefaultCursor());
-				if (child instanceof java.awt.Container) resetCursors[0].accept((java.awt.Container) child);
-			}
-		};
-		resetCursors[0].accept(handle);
+		defaultCursorForInteractive(handle);
 		update.run();
 		split.addPropertyChangeListener(JSplitPane.ORIENTATION_PROPERTY, evt -> update.run());
 		final int[] grab = new int[1];
@@ -609,6 +623,20 @@ final class GuiUtils {
 				split.setDividerLocation(Math.max(0, y - grab[0]));
 			}
 		});
+	}
+
+	/**
+	 * Components that handle mouse events themselves must not inherit the resize cursor of a
+	 * split handle. Labels, glue and gaps do (they move the split)
+	 */
+	private static void defaultCursorForInteractive(final java.awt.Container parent) {
+		for (final java.awt.Component child : parent.getComponents()) {
+			final boolean interactive = child instanceof AbstractButton
+					|| child instanceof javax.swing.text.JTextComponent || child instanceof JComboBox
+					|| child instanceof JSpinner || child instanceof JList || child instanceof JSlider;
+			if (interactive && !child.isCursorSet()) child.setCursor(java.awt.Cursor.getDefaultCursor());
+			if (child instanceof java.awt.Container) defaultCursorForInteractive((java.awt.Container) child);
+		}
 	}
 
 	static void collapseAllTreeNodes(final JTree tree) {
@@ -631,6 +659,8 @@ final class GuiUtils {
 	static JTabbedPane getJTabbedPane(final int initialPlacement) {
 		final JTabbedPane tabbed = new JTabbedPane();
 		tabbed.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
+		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_AREA_ALIGNMENT,
+				FlatClientProperties.TABBED_PANE_ALIGN_LEADING);
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TABS_POPUP_POLICY, "asNeeded"); // overflow dropdown
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_SCROLL_BUTTONS_POLICY, "never"); // do not show arrows
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_ROTATION,
@@ -691,6 +721,24 @@ final class GuiUtils {
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TRAILING_COMPONENT, trailing);
 		if (initialPlacement != JTabbedPane.TOP) tabbed.setTabPlacement(initialPlacement); // after the listener: updates the button
 		return tabbed;
+	}
+
+	/**
+	 * Assembles a secondary pane heading
+	 * @param text the header text
+	 * @param help optional An action to be attached to an option help button to the right of the heading
+	 * @return a small header in secondary color
+	 */
+	static JComponent getHeader(final String text, final Runnable help) {
+		final JLabel label = new JLabel(text);
+		label.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
+		label.setForeground(GuiUtils.secondaryColor());
+		final JPanel panel = new JPanel(new BorderLayout());
+		panel.setBorder(BorderFactory.createEmptyBorder(0, 2, 0, 0));
+		panel.setOpaque(false);
+		panel.add(label, BorderLayout.CENTER);
+		if (help != null) panel.add(helpButton(help, label), BorderLayout.EAST);
+		return panel;
 	}
 
 	private static String placementName(final int placement) {

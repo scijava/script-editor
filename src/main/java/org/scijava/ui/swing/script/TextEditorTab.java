@@ -93,7 +93,7 @@ public class TextEditorTab extends GuiUtils.StickySplitPane {
 	private final ConsoleArea combinedScreen = new ConsoleArea(ConsoleArea.Content.MIXED);
 	protected final JTextArea prompt = new JTextArea();
 	/** Status line for vim mode: the mode, partial command or message. */
-	protected final JToggleButton updownarrows = new JToggleButton();
+	protected final JToggleButton updownarrows;
 	protected final JScrollPane scroll;
 	/** True iff the console is showing errors only. */
 	protected boolean showingErrors;
@@ -289,11 +289,12 @@ public class TextEditorTab extends GuiUtils.StickySplitPane {
 		label.setIcon(Icons.repl());
 		promptBar.add(label);
 		promptBar.add(Box.createHorizontalGlue());
-		updownarrows.setText("Arrow Keys");
-		updownarrows.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
+		// Compact bar: drop the vertical padding FlatLaf adds to toolbar buttons (margin 3 + spacing 1)
+		final String tight = "toolbar.margin: 0,3,0,3; toolbar.spacingInsets: 0,0,0,0";
+		updownarrows = GuiUtils.smallToggleButton("Arrow keys", tight);
 		promptBar.add(Box.createHorizontalGlue());
 		promptBar.add(updownarrows);
-		final JButton statusHelp = GuiUtils.helpButton(null);
+		final JButton statusHelp = GuiUtils.helpButton(null, updownarrows);
 		statusHelp.addActionListener(a -> {
 			final int shift = InputEvent.SHIFT_DOWN_MASK;
 			final int ctrl = InputEvent.CTRL_DOWN_MASK;
@@ -317,10 +318,6 @@ public class TextEditorTab extends GuiUtils.StickySplitPane {
 
 		promptBar.add(statusHelp);
 
-		// Compact bar: drop the vertical padding FlatLaf adds to toolbar buttons (margin 3 + spacing 1)
-		final String tight = "toolbar.margin: 0,3,0,3; toolbar.spacingInsets: 0,0,0,0";
-		updownarrows.putClientProperty(FlatClientProperties.STYLE, tight);
-		updownarrows.setForeground(GuiUtils.secondaryColor()); // Must come after the style properties: applying them resets UIResource foregrounds
 		statusHelp.putClientProperty(FlatClientProperties.STYLE, tight);
 		screenAndPromptSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, bottom, prompt_panel);
 		screenAndPromptSplit.setResizeWeight(1d); // output takes the changes in height, the prompt keeps its size

@@ -46,7 +46,6 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.JTextComponent;
 
-import com.formdev.flatlaf.FlatClientProperties;
 import org.fife.ui.rtextarea.ClipboardHistory;
 import org.scijava.prefs.PrefService;
 
@@ -109,8 +108,8 @@ class NotesPanel extends JPanel {
 			@Override
 			protected void paintComponent(final java.awt.Graphics g) {
 				super.paintComponent(g);
-				if (getDocument().getLength() == 0) GuiUtils.paintEmptyHint(g, this, "Jot down snippets",
-						"They are saved between sessions");
+				if (getDocument().getLength() == 0) GuiUtils.paintEmptyHint(g, this, "Jot down notes or snippets",
+						"Saved between sessions");
 			}
 		};
 		scratch.setLineWrap(prefs.getBoolean(prefsOwner, PREFS_WRAP, true));
@@ -121,7 +120,7 @@ class NotesPanel extends JPanel {
 
 		// Scratchpad
 		final JPanel pane1 = new JPanel(new BorderLayout());
-		final JLabel scratchHeader = header("Scratchpad");
+		final JComponent scratchHeader = GuiUtils.getHeader("Scratchpad", null);
 		pane1.add(scratchHeader, BorderLayout.NORTH);
 		pane1.add(scratchPane, BorderLayout.CENTER);
 
@@ -131,7 +130,7 @@ class NotesPanel extends JPanel {
 		final JScrollPane listPane = new JScrollPane(list);
 		GuiUtils.flattenScrollBars(listPane);
 		final JPanel pane2 = new JPanel(new BorderLayout());
-		final JLabel clipboardHeader = header("Clipboard History");
+		final JComponent clipboardHeader = GuiUtils.getHeader("Clipboard History", null);
 		pane2.add(clipboardHeader, BorderLayout.NORTH);
 		pane2.add(listPane, BorderLayout.CENTER);
 
@@ -279,14 +278,6 @@ class NotesPanel extends JPanel {
 			model.addElement(s);
 		if (selected != null && model.contains(selected))
 			list.setSelectedValue(selected, true);
-	}
-
-	private JLabel header(final String text) {
-		final JLabel label = new JLabel(text);
-		label.setBorder(BorderFactory.createEmptyBorder(2, 2,0,0));
-		label.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
-        label.setForeground(GuiUtils.secondaryColor());
-		return label;
 	}
 
 	private void maybePopup(final MouseEvent e) {

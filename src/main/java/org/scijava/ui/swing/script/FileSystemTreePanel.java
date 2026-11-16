@@ -104,15 +104,17 @@ class FileSystemTreePanel extends JPanel {
 		bc.fill = GridBagConstraints.BOTH;
 		bc.weightx = 1;
 		bc.weighty = 0;
-		add(searchField, bc);
+		add(GuiUtils.getHeader("Files", this::showHelpMsg), bc);
 		bc.gridy = 1;
+		add(searchField, bc);
+		bc.gridy = 2;
 		bc.weightx = 1.0;
 		bc.weighty = 1.0;
 		bc.fill = GridBagConstraints.BOTH;
 		final JScrollPane treePane = new JScrollPane(tree);
 		GuiUtils.flattenScrollBars(treePane);
 		add(treePane, bc);
-		bc.gridy = 2;
+		bc.gridy = 3;
 		bc.weightx = 0;
 		bc.weighty = 0;
 		add(statusToolbar(), bc);
@@ -171,18 +173,9 @@ class FileSystemTreePanel extends JPanel {
 		toolbar.setBackground(tree.getBackground());
 		// Continue the outline of the tree's scroll pane (the latter provides the top edge)
 		toolbar.setBorder(BorderFactory.createCompoundBorder(new SideBorder(), toolbar.getBorder()));
-		final JToggleButton statusFast = new JToggleButton("Fast Mode");
-		statusFast.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
-		statusFast.setForeground(GuiUtils.secondaryColor());
+		final JToggleButton statusFast = GuiUtils.smallToggleButton("Fast Mode");
 		statusFast.setToolTipText("Fast mode for large folders: turns off live updates and the search of collapsed folders");
-		statusFast.addActionListener(e -> {
-			final boolean selected = statusFast.isSelected();
-			setFastMode(selected);
-			final Color fGrnd = (selected) ? UIManager.getColor("Tree.selectionForeground") : GuiUtils.secondaryColor();
-			final Color bGrnd = (selected) ? UIManager.getColor("Tree.selectionBackground") : toolbar.getBackground();
-			if (fGrnd!=null) statusFast.setForeground(fGrnd);
-			if (bGrnd!=null) statusFast.setBackground(bGrnd);
-		});
+		statusFast.addActionListener(e -> setFastMode(statusFast.isSelected()));
 		final JButton statusOptions = new JButton("Options");
 		final FlatFileChooserDetailsViewIcon optionsIcon = new FlatFileChooserDetailsViewIcon();
 		optionsIcon.setScale(.8f); // matches the font size set by the "small" style
@@ -193,10 +186,6 @@ class FileSystemTreePanel extends JPanel {
 		toolbar.add(statusFast);
 		toolbar.addSeparator();
 		toolbar.add(statusOptions);
-		toolbar.add(Box.createHorizontalGlue());
-		final JButton statusHelp = GuiUtils.helpButton(null);
-		statusHelp.addActionListener(e -> showHelpMsg());
-		toolbar.add(statusHelp);
 		return toolbar;
 	}
 

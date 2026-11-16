@@ -872,6 +872,33 @@ public class FileSystemTree extends JTree {
 		getModel().insertNodeInto(new Node(dirPath), root, root.getChildCount());
 	}
 
+	/**
+	 * Selects and scrolls to the given file or folder, expanding the tree as needed. If it is not under any
+	 * top-level folder, its parent folder is added as one.
+	 *
+	 * @return true if the file itself was found (false: only its folder, if any, was revealed)
+	 */
+	public boolean reveal(final File file) {
+		if (file == null) return false;
+		restoreHiddenTops();
+		final String target = withSlash(file.getAbsolutePath());
+		for (int attempt = 0; attempt < 2; attempt++) {
+			final Node root = root();
+			for (int i = 0; i < root.getChildCount(); i++) {
+				final TreePath path = pathTo(root.getChildAt(i), target);
+				if (path != null) {
+					expandPath(path.getParentPath());
+					setSelectionPath(path);
+					scrollPathToVisible(path);
+					return true;
+				}
+			}
+			final File dir = file.isDirectory() ? file : file.getParentFile();
+			if (attempt == 0 && dir != null) addRoot(dir.getAbsolutePath(), true);
+		}
+		return false; // e.g., hidden by the filter: the folder was revealed by addRoot()
+	}
+
 	/** Expands nodes downwards until reaching dirPath. Returns null if not found */
 	private TreePath pathTo(Node node, final String dirPath) {
 		while (dirPath.startsWith(node.path)) {

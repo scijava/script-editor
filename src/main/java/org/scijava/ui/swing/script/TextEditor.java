@@ -71,7 +71,6 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.io.Writer;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -303,6 +302,11 @@ public class TextEditor extends JFrame implements ActionListener,
 	/** Share of the window given to the side panel by default */
 	private static final double SIDE_SHARE = .20d;
 	private JCheckBoxMenuItem vimMode;
+	// Zen mode: what was visible before (null if not active)
+	private java.util.Map<TextEditorTab, Boolean> zenConsoles;
+	private boolean zenSide;
+	private boolean zenBusy; // true while Zen mode itself is changing the panes
+	private final JCheckBoxMenuItem zenItem;
 	private JCheckBoxMenuItem sidePaneItem, consoleItem; // Window menu: kept in sync with the status bar
 	private boolean syncingPanes;
 	private boolean disposed; // see dispose()
@@ -398,8 +402,6 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		// NB: All panes must be initialized before menus are assembled!
 		tabbed = GuiUtils.getJTabbedPane();
-		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_AREA_ALIGNMENT,
-				FlatClientProperties.TABBED_PANE_ALIGN_LEADING);
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_CLOSABLE, true);
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_CLOSE_TOOLTIPTEXT, "Close");
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_CLOSE_CALLBACK,
@@ -411,8 +413,6 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		tree = new FileSystemTree(log);
 		sideTabs = GuiUtils.getJTabbedPane(JTabbedPane.LEFT);
-		sideTabs.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_AREA_ALIGNMENT,
-				FlatClientProperties.TABBED_PANE_ALIGN_FILL);
 		// Icon-only tabs: only the selected tab shows its title, keeping the pane narrow
 		sideTabs.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_WIDTH_MODE,
 				FlatClientProperties.TABBED_PANE_TAB_WIDTH_MODE_COMPACT);
@@ -432,18 +432,17 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		// Outline
 		final JPanel pane1 = new JPanel(new BorderLayout());
-		final JLabel outlineHeader = header("Structure");
-		pane1.add(outlineHeader, BorderLayout.NORTH);
+		pane1.add(GuiUtils.getHeader("Structure", null), BorderLayout.NORTH);
 		pane1.add(sourceTreePanel, BorderLayout.CENTER);
 
 		addSideTab("Outline", Icons.outline(), pane1);
 
 		// Markers: bookmarks and tasks of all open tabs
 		final JPanel pane2 = new JPanel(new BorderLayout());
-		pane2.add(header("Bookmarks", this::showBookmarksHelp), BorderLayout.NORTH);
+		pane2.add(GuiUtils.getHeader("Bookmarks", this::showBookmarksHelp), BorderLayout.NORTH);
 		pane2.add(bookmarksPanel, BorderLayout.CENTER);
 		final JPanel pane3 = new JPanel(new BorderLayout());
-		final JComponent tasksHeader = header("Tasks", this::showTasksHelp);
+		final JComponent tasksHeader = GuiUtils.getHeader("Tasks", this::showTasksHelp);
 		pane3.add(tasksHeader, BorderLayout.NORTH);
 		pane3.add(tasksPanel, BorderLayout.CENTER);
 		markersSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, pane2, pane3);
@@ -719,9 +718,21 @@ public class TextEditor extends JFrame implements ActionListener,
 		final JCheckBoxMenuItem jcmi2 = consoleItem = new JCheckBoxMenuItem("Console",
 				prefService.getInt(getClass(), TAB_DIV_LOCATION, 1) > 0);
 		jcmi2.addItemListener(e -> {
-			if (!syncingPanes) getTab().setBottomVisible(jcmi2.isSelected());
+			if (syncingPanes) return;
+			if (jcmi2.isSelected()) endZenMode();
+			getTab().setBottomVisible(jcmi2.isSelected());
 		});
 		tabsMenu.add(jcmi2);
+		zenItem = new JCheckBoxMenuItem("Zen Mode");
+		zenItem.setToolTipText("Hides the side pane and the console, restoring them when turned off");
+		zenItem.addItemListener(e -> {
+			if (!syncingPanes) setZenMode(zenItem.isSelected());
+		});
+		tabsMenu.add(zenItem);
+		// Tabs shown (or created) while in Zen mode get the same treatment
+		tabbed.addChangeListener(e -> {
+			if (zenConsoles != null) SwingUtilities.invokeLater(this::zenHideNewTabs);
+		});
 		final JMenuItem mi = new JMenuItem("Reset Layout...");
 		mi.addActionListener(e -> {
 			if (confirm("Reset Location of Console and Files pane?", "Reset Layout?", "Reset")) {
@@ -1000,32 +1011,14 @@ public class TextEditor extends JFrame implements ActionListener,
 	private void resetLayout() {
 		body.setDividerLocation(SIDE_SHARE);
 		getTab().resetLayout();
+		// pack() honors the preferred size, which holds the last saved window size
+		setPreferredSize(new Dimension(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT));
 		pack();
 	}
 
 	private void addSideTab(final String title, final Icon icon, final Component c) {
 		sideTabs.addTab(title, icon, c);
 		sideTabs.setToolTipTextAt(sideTabs.getTabCount() - 1, title);
-	}
-
-	private JLabel header(final String text) {
-		final JLabel label = new JLabel(text);
-		label.setBorder(BorderFactory.createEmptyBorder(2, 2,0,0));
-		label.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
-		label.setForeground(GuiUtils.secondaryColor());
-		return label;
-	}
-
-	/** A header with a help button on its right, which is also a split handle */
-	private JComponent header(final String text, final Runnable help) {
-		final JLabel label = header(text);
-		// installSplitHandle() leaves explicitly set cursors of children alone
-		label.setCursor(Cursor.getPredefinedCursor(Cursor.N_RESIZE_CURSOR));
-		final JPanel panel = new JPanel(new BorderLayout());
-		panel.setOpaque(false);
-		panel.add(label, BorderLayout.CENTER);
-		panel.add(GuiUtils.helpButton(help), BorderLayout.EAST);
-		return panel;
 	}
 
 	private static String tagHtml(final String tag) {
@@ -1514,10 +1507,11 @@ public class TextEditor extends JFrame implements ActionListener,
 		prefService.put(getClass(), WINDOW_HEIGHT, dim.height);
 		prefService.put(getClass(), WINDOW_WIDTH, dim.width);
 
-		prefService.put(getClass(), MAIN_DIV_LOCATION, body.getDividerLocation());
-
 		final TextEditorTab tab = getTab();
-		prefService.put(getClass(), TAB_DIV_LOCATION, tab.getDividerLocation());
+		if (zenConsoles == null) { // in Zen mode the panes are hidden only temporarily
+			prefService.put(getClass(), MAIN_DIV_LOCATION, body.getDividerLocation());
+			prefService.put(getClass(), TAB_DIV_LOCATION, tab.getDividerLocation());
+		}
 		prefService.put(getClass(), TAB_DIV_ORIENTATION, tab.getOrientation());
 		prefService.put(getClass(), REPL_DIV_LOCATION, tab.getScreenAndPromptSplit().getDividerLocation());
 	}
@@ -1826,7 +1820,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public void loadTemplate(final URL url, final ScriptLanguage language) {
-		createNewDocument();
+		open(null); // reuses an empty new document in front: the template fills it
 
 		try {
 			// Load the template. NB: setText() keeps the document (and its
@@ -1851,8 +1845,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 	}
 
+	/** Opens a new tab, even if the one in front is an empty new document */
 	public void createNewDocument() {
-		open(null);
+		open(null, false);
 	}
 
 	public void createNewDocument(final String title, final String text) {
@@ -2161,6 +2156,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		body.addPropertyChangeListener("dividerLocation", evt -> {
 			final int loc = body.getDividerLocation();
 			if (loc > 50 && !body.isSettling()) sideLastLocation = loc;
+			if (loc > 5) endZenMode();
 			statusSide.setSelected(loc > 5);
 			syncPaneItems(loc > 5, null);
 		});
@@ -2194,8 +2190,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			getTab().setREPLEnabled(statusRepl.isSelected());
 			syncStatusBar(); // e.g., no language: the request was refused
 		});
-		statusVimToggle = new JToggleButton("Vim");
-		statusVimToggle.setFont(statusVimToggle.getFont().deriveFont(statusVimToggle.getFont().getSize2D() * .9f));
+		statusVimToggle = GuiUtils.smallToggleButton("Vim", null, false); // as the other buttons of the bar
 		statusVimToggle.setToolTipText(vimMode.getToolTipText());
 		statusVimToggle.setFocusable(false);
 		statusVimToggle.addActionListener(e -> setVimMode(statusVimToggle.isSelected()));
@@ -2379,6 +2374,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			if (statusBelow != null) {
 				final TextEditorTab tab = getTab();
 				final boolean shown = tab.isBottomVisible();
+				// A tab Zen mode has not handled yet (new) is hidden by zenHideNewTabs()
+				if (shown && zenConsoles != null && zenConsoles.containsKey(tab)) endZenMode();
 				syncPaneItems(null, shown);
 				statusBelow.setSelected(shown && tab.isLayoutBelow());
 				statusRight.setSelected(shown && !tab.isLayoutBelow());
@@ -2497,12 +2494,31 @@ public class TextEditor extends JFrame implements ActionListener,
 			final int sel = tabbed.getSelectedIndex();
 			closeTabs(i -> i > sel, true);
 		});
+		final JMenuItem copyPath = new JMenuItem("Copy Path");
+		copyPath.addActionListener(e -> {
+			final File f = getEditorPane().getFile();
+			if (f == null) return;
+			Toolkit.getDefaultToolkit().getSystemClipboard().setContents(
+					new java.awt.datatransfer.StringSelection(f.getAbsolutePath()), null);
+			statusText.setText("Copied: " + f.getAbsolutePath());
+		});
+		final JMenuItem reveal = new JMenuItem("Reveal in Files Pane");
+		reveal.addActionListener(e -> {
+			final File f = getEditorPane().getFile();
+			if (f == null) return;
+			if (!statusSide.isSelected()) setSidePanelVisible(true);
+			sideTabs.setSelectedComponent(filesPanel);
+			tree.reveal(f);
+		});
 		final JMenuItem unmodified = new JMenuItem("Close Unmodified");
 		unmodified.addActionListener(e -> closeTabs(i -> !getEditorPane(i).fileChanged(), false));
 		final JMenuItem all = new JMenuItem("Close All");
 		all.addActionListener(e -> closeTabs(i -> true, true));
 		for (final JMenuItem mi : new JMenuItem[] { others, right, unmodified, all })
 			tmp.add(mi);
+		GuiUtils.addPopupMenuSeparator(tmp, "File:");
+		tmp.add(copyPath);
+		tmp.add(reveal);
 		final java.awt.Component[] items = tmp.getComponents();
 		for (int i = 0; i < items.length; i++)
 			popup.insert(items[i], i);
@@ -2514,6 +2530,9 @@ public class TextEditor extends JFrame implements ActionListener,
 				final int n = tabbed.getTabCount();
 				others.setEnabled(n > 1);
 				right.setEnabled(tabbed.getSelectedIndex() < n - 1);
+				final boolean saved = getEditorPane().getFile() != null;
+				copyPath.setEnabled(saved);
+				reveal.setEnabled(saved);
 			}
 
 			@Override
@@ -2579,6 +2598,67 @@ public class TextEditor extends JFrame implements ActionListener,
 				return true;
 			default:
 				return false;
+		}
+	}
+
+	/** Hides the console of tabs not yet handled while in Zen mode */
+	private void zenHideNewTabs() {
+		if (zenConsoles == null) return;
+		final boolean wasBusy = zenBusy;
+		zenBusy = true;
+		try {
+			for (int i = 0; i < tabbed.getTabCount(); i++) {
+				final TextEditorTab tab = getTab(i);
+				if (zenConsoles.containsKey(tab)) continue;
+				zenConsoles.put(tab, tab.isBottomVisible());
+				tab.setBottomVisible(false);
+			}
+		} finally {
+			zenBusy = wasBusy;
+		}
+		syncStatusBar();
+	}
+
+	/** Hides the side pane and the consoles, or restores them as they were. The status bar stays */
+	private void setZenMode(final boolean on) {
+		if (on == (zenConsoles != null)) return;
+		zenBusy = true;
+		try {
+			if (on) {
+				zenSide = statusSide == null || statusSide.isSelected();
+				zenConsoles = new java.util.IdentityHashMap<>();
+				setSidePanelVisible(false);
+				zenHideNewTabs();
+			} else {
+				final java.util.Map<TextEditorTab, Boolean> saved = zenConsoles;
+				zenConsoles = null;
+				saved.forEach((tab, visible) -> {
+					if (visible && tabbed.indexOfComponent(tab) >= 0) tab.setBottomVisible(true);
+				});
+				if (zenSide) setSidePanelVisible(true);
+			}
+		} finally {
+			zenBusy = false;
+		}
+		syncStatusBar();
+		getEditorPane().requestFocusInWindow();
+	}
+
+	/**
+	 * Leaves Zen mode without restoring anything: called when the user brings back a
+	 * pane by hand. Does nothing if Zen mode itself is changing the panes
+	 */
+	private void endZenMode() {
+		if (zenConsoles == null || zenBusy) return;
+		zenConsoles = null;
+		if (zenItem != null && zenItem.isSelected()) {
+			final boolean was = syncingPanes;
+			syncingPanes = true;
+			try {
+				zenItem.setSelected(false);
+			} finally {
+				syncingPanes = was;
+			}
 		}
 	}
 
@@ -2976,6 +3056,14 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public TextEditorTab open(final File file) {
+		return open(file, true);
+	}
+
+	/**
+	 * @param reuseEmpty if true, an empty and unmodified new document in front is reused, i.e.,
+	 *          it takes the file (or is reset, if file is null) instead of opening another tab
+	 */
+	private TextEditorTab open(final File file, final boolean reuseEmpty) {
 		if (isBinary(file)) {
 			try {
 				uiService.show(ioService.open(file.getAbsolutePath()));
@@ -2988,7 +3076,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		try {
 			TextEditorTab tab = (tabbed.getTabCount() == 0) ? null : getTab();
 			final TextEditorTab prior = tab;
-			final boolean wasNew = tab != null && tab.editorPane.isNew();
+			final boolean wasNew = reuseEmpty && tab != null && tab.editorPane.isNew();
 			float font_size = 0; // to set the new editor's font like the last active one, if any
 			if (!wasNew) {
 				if (tabbed.getTabCount() > 0) font_size = getTab().getEditorPane().getFont().getSize2D();
@@ -4828,6 +4916,35 @@ public class TextEditor extends JFrame implements ActionListener,
 		popup.add(jmi);
 		jmi.addActionListener(e -> textArea.getHighlighter().removeAllHighlights());
 		cmdPalette.register(jmi, scope);
+		popup.addSeparator();
+		jmi = new JMenuItem("Save " + ((textArea == errorScreen) ? "Errors" : "Output") + " to File...");
+		popup.add(jmi);
+		jmi.addActionListener(e -> saveConsole(textArea));
+		cmdPalette.register(jmi, scope);
+	}
+
+	/** Saves the contents of a console to a text file chosen by the user */
+	private void saveConsole(final JTextArea textArea) {
+		final String text = textArea.getText();
+		if (text == null || text.isEmpty()) {
+			UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+			statusText.setText("The console is empty");
+			return;
+		}
+		final File script = getEditorPane().getFile();
+		final File dir = (script != null) ? script.getParentFile() : appService.getApp().getBaseDirectory();
+		String base = (script != null) ? script.getName() : "console";
+		final int dot = base.lastIndexOf('.');
+		if (dot > 0) base = base.substring(0, dot);
+		final String suffix = (textArea == errorScreen) ? "_errors.txt" : "_output.txt";
+		final File file = GuiUtils.chooseSaveFile(this, new File(dir, base + suffix), "Save Console to File");
+		if (file == null) return;
+		try {
+			Files.write(file.toPath(), text.getBytes(StandardCharsets.UTF_8));
+			statusText.setText("Saved: " + file.getAbsolutePath());
+		} catch (final IOException ex) {
+			error("Could not save to\n" + file.getAbsolutePath() + "\n" + ex.getMessage());
+		}
 	}
 
 	private static Collection<File> assembleFlatFileCollection(final Collection<File> collection, final File[] files) {
