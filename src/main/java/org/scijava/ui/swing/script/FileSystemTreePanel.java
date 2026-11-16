@@ -357,30 +357,9 @@ class FileSystemTreePanel extends JPanel {
 		add_directory.addActionListener(e -> {
 			final String folders = tree.getTopLevelFoldersString();
 			final String lastFolder = folders.substring(folders.lastIndexOf(File.pathSeparatorChar) + 1);
-			final JFileChooser c = new JFileChooser();
-			c.setDialogTitle("Choose Top-Level Folder");
-			c.setCurrentDirectory(new File(lastFolder));
-			c.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-			c.setFileHidingEnabled(true); // hide hidden files
-			c.setAcceptAllFileFilterUsed(false); // disable "All files" as it has no meaning here
-			c.setApproveButtonText("Choose Folder");
-			c.setMultiSelectionEnabled(false);
-			c.setDragEnabled(true);
-			final FileDrop fileDrop = new FileDrop(c, files -> {
-				if (files == null || files.length == 0 || files[0] == null) return;
-				try {
-					final File ref = files[0].getAbsoluteFile();
-					c.setCurrentDirectory((ref.isDirectory()) ? ref : ref.getParentFile());
-				} catch (final Throwable ignored) {
-					GuiUtils.warn(this, "Could not retrieve location of dropped file(s).");
-				}
-			});
-			if (JFileChooser.APPROVE_OPTION == c.showOpenDialog(this)) {
-				final File f = c.getSelectedFile();
-				if (f.isDirectory())
-					tree.addRootDirectory(f.getAbsolutePath(), false);
-			}
-			fileDrop.uninstall();
+			final File f = GuiUtils.chooseDirectory(this, new File(lastFolder), "Choose Top-Level Folder",
+					"Choose Folder");
+			if (f != null && f.isDirectory()) tree.addRootDirectory(f.getAbsolutePath(), false);
 		});
 		return add_directory;
 	}

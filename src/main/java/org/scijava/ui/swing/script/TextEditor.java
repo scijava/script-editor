@@ -170,7 +170,6 @@ import org.scijava.util.FileUtils;
 import org.scijava.util.MiscUtils;
 import org.scijava.util.POM;
 import org.scijava.util.Types;
-import org.scijava.widget.FileWidget;
 
 import com.formdev.flatlaf.FlatClientProperties;
 
@@ -1216,8 +1215,9 @@ public class TextEditor extends JFrame implements ActionListener,
 			if (getEditorPane().getFile() != null) {
 				dir = getEditorPane().getFile().getParentFile();
 			}
-			return uiService.chooseFile(new File(dir, filename),
-					(openOtherwiseSave) ? FileWidget.OPEN_STYLE : FileWidget.SAVE_STYLE);
+			final File suggestion = new File(dir, filename);
+			return (openOtherwiseSave) ? GuiUtils.chooseOpenFile(this, suggestion, "Load Macro")
+					: GuiUtils.chooseSaveFile(this, suggestion, "Save Macro");
 		}
 		return null;
 	}
@@ -1446,6 +1446,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		layoutLoading = false;
 	}
 
+	private void saveWindowSizeToPrefsLater() {
+		if (!layoutLoading) layoutSaveTimer.restart();
+	}
+
 	/**
 	 * Saves the Script Editor layout to persisted storage.
 	 * <p>
@@ -1455,10 +1459,6 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * </p>
 	 * @see #loadWindowSizePreferences()
 	 */
-	private void saveWindowSizeToPrefsLater() {
-		if (!layoutLoading) layoutSaveTimer.restart();
-	}
-
 	public void saveWindowSizeToPrefs() {
 		if (notesPanel != null) notesPanel.flush();
 		if (layoutLoading) return;
@@ -4255,9 +4255,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	public void extractSourceJar(final File file) {
 		try {
 			final FileFunctions functions = new FileFunctions(this);
-			final File workspace =
-				uiService.chooseFile(new File(System.getProperty("user.home")),
-					FileWidget.DIRECTORY_STYLE);
+			final File workspace = GuiUtils.chooseDirectory(this,
+					new File(System.getProperty("user.home")), "Choose Workspace Folder", "Choose");
 			if (workspace == null) return;
 			final List<String> paths =
 				functions.extractSourceJar(file.getAbsolutePath(), workspace);
@@ -4276,7 +4275,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	/* extensionMustMatch == false means extension must not match */
 	private File openWithDialog(final File defaultDir) {
-		return uiService.chooseFile(defaultDir, FileWidget.OPEN_STYLE);
+		return GuiUtils.chooseOpenFile(this, defaultDir, "Open");
 	}
 
 	/**

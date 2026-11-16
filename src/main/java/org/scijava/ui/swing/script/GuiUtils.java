@@ -91,11 +91,64 @@ final class GuiUtils {
 	 * directory-based prompt). Returns null if cancelled
 	 */
 	static File chooseSaveFile(final Component parent, final File suggestion, final String title) {
-		final JFileChooser chooser = new JFileChooser(suggestion.getParentFile());
+		return showChooser(parent, newChooser(suggestion, title, true), true);
+	}
+
+	/**
+	 * Open dialog. The start location may be a directory or a file. Returns null
+	 * if cancelled
+	 */
+	static File chooseOpenFile(final Component parent, final File start, final String title) {
+		return showChooser(parent, newChooser(start, title, false), false);
+	}
+
+	/** Folder dialog. Returns null if cancelled */
+	static File chooseDirectory(final Component parent, final File start, final String title,
+			final String approveText) {
+		final JFileChooser chooser = newChooser(start, title, false);
+		chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		chooser.setFileHidingEnabled(true);
+		chooser.setAcceptAllFileFilterUsed(false); // has no meaning for folders
+		chooser.setMultiSelectionEnabled(false);
+		if (approveText != null) chooser.setApproveButtonText(approveText);
+		return showChooser(parent, chooser, false);
+	}
+
+	private static JFileChooser newChooser(final File start, final String title, final boolean save) {
+		final JFileChooser chooser = new JFileChooser();
 		chooser.setDialogTitle(title);
-		chooser.setSelectedFile(suggestion);
-		return (chooser.showSaveDialog(parent) == JFileChooser.APPROVE_OPTION)
-				? chooser.getSelectedFile() : null;
+		chooser.setDragEnabled(true);
+		if (start != null) {
+			if (start.isDirectory()) {
+				chooser.setCurrentDirectory(start);
+			} else {
+				if (start.getParentFile() != null) chooser.setCurrentDirectory(start.getParentFile());
+				if (save || start.exists()) chooser.setSelectedFile(start);
+			}
+		}
+		return chooser;
+	}
+
+	/** Every file dialog goes through here so that all of them accept dropped files */
+	private static File showChooser(final Component parent, final JFileChooser chooser,
+			final boolean save) {
+		final FileDrop drop = new FileDrop(chooser, files -> {
+			if (files == null || files.length == 0 || files[0] == null) return;
+			final File ref = files[0].getAbsoluteFile();
+			if (ref.isDirectory()) {
+				chooser.setCurrentDirectory(ref);
+			} else if (ref.getParentFile() != null) {
+				chooser.setCurrentDirectory(ref.getParentFile());
+				if (!save && chooser.getFileSelectionMode() != JFileChooser.DIRECTORIES_ONLY)
+					chooser.setSelectedFile(ref);
+			}
+		});
+		try {
+			final int result = save ? chooser.showSaveDialog(parent) : chooser.showOpenDialog(parent);
+			return (result == JFileChooser.APPROVE_OPTION) ? chooser.getSelectedFile() : null;
+		} finally {
+			drop.uninstall();
+		}
 	}
 
 	/** Outcome of the prompt of {@link #confirmUnsaved} */
