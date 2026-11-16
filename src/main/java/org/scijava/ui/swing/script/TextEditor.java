@@ -91,6 +91,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -304,6 +305,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	private JCheckBoxMenuItem vimMode;
 	private JCheckBoxMenuItem sidePaneItem, consoleItem; // Window menu: kept in sync with the status bar
 	private boolean syncingPanes;
+	private boolean disposed; // see dispose()
 	private boolean checkingOutsideChanges; // true while the "file changed outside" dialog is showing
 	private boolean syncingVim; // true while the Vim menu item and status toggle are being synchronized
 	private ButtonGroup themeRadioGroup;
@@ -379,8 +381,10 @@ public class TextEditor extends JFrame implements ActionListener,
 	private final OutlineTreePanel sourceTreePanel;
 	protected final CommandPalette cmdPalette;
 
-	public static final ArrayList<TextEditor> instances = new ArrayList<>();
-	public static final ArrayList<Context> contexts = new ArrayList<>();
+	/** The editors that are open: an editor is removed from here when it is disposed */
+	public static final List<TextEditor> instances = new CopyOnWriteArrayList<>();
+	/** The contexts of the open editors (parallel to {@link #instances}) */
+	public static final List<Context> contexts = new CopyOnWriteArrayList<>();
 
 	public TextEditor(final Context context) {
 
@@ -929,15 +933,7 @@ public class TextEditor extends JFrame implements ActionListener,
 					saveWindowSizeToPrefs();
 				}
 				if (!confirmClose()) return;
-				UIManager.removePropertyChangeListener(lookAndFeelListener);
-				tree.destroy();
-				// Necessary to prevent memory leaks
-				for (final DragSourceListener l : dragSource.getDragSourceListeners()) {
-					dragSource.removeDragSourceListener(l);
-				}
-				dragSource = null;
-				cmdPalette.dispose();
-				dispose();
+				dispose(); // releases everything this editor registered
 			}
 		});
 
@@ -3229,12 +3225,28 @@ public class TextEditor extends JFrame implements ActionListener,
 		directory.delete();
 	}
 
+	/**
+	 * Releases everything this editor registered with static or long-lived objects, so that
+	 * it can be garbage collected. All the ways of closing the editor end up here (closing the
+	 * window, disposing of the context). A disposed editor must not be reused: create a new one
+	 */
 	@Override
 	public void dispose() {
-		layoutSaveTimer.stop();
-		titleTimer.stop();
-		instances.remove(this);
-		contexts.remove(context);
+		if (!disposed) { // can be called more than once
+			disposed = true;
+			layoutSaveTimer.stop();
+			titleTimer.stop();
+			UIManager.removePropertyChangeListener(lookAndFeelListener);
+			tree.destroy();
+			if (dragSource != null) { // necessary to prevent memory leaks
+				for (final DragSourceListener l : dragSource.getDragSourceListeners())
+					dragSource.removeDragSourceListener(l);
+				dragSource = null;
+			}
+			cmdPalette.dispose();
+			instances.remove(this);
+			contexts.remove(context);
+		}
 		super.dispose();
 	}
 
