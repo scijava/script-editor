@@ -510,6 +510,15 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	}
 
 	/**
+	 * Records the current modification time of the file as already seen, so that
+	 * {@link #wasChangedOutside()} is false until the file changes again (e.g.,
+	 * when the user chose not to reload it).
+	 */
+	void acknowledgeOutsideChange() {
+		if (curFile != null && curFile.exists()) fileLastModified = curFile.lastModified();
+	}
+
+	/**
 	 * Write the contents of this {@link EditorPane} to given file.
 	 *
 	 * @param file File to write the contents of this editor to.

@@ -304,6 +304,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	private JCheckBoxMenuItem vimMode;
 	private JCheckBoxMenuItem sidePaneItem, consoleItem; // Window menu: kept in sync with the status bar
 	private boolean syncingPanes;
+	private boolean checkingOutsideChanges; // true while the "file changed outside" dialog is showing
 	private boolean syncingVim; // true while the Vim menu item and status toggle are being synchronized
 	private ButtonGroup themeRadioGroup;
 	private JTextArea errorScreen = new ConsoleArea(ConsoleArea.Content.ERRORS);
@@ -1429,12 +1430,19 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * ask the user whether to reload.
 	 */
 	public void checkForOutsideChanges() {
+		if (checkingOutsideChanges) return; // the dialog itself moves the window focus around
 		final EditorPane editorPane = getEditorPane();
 		if (editorPane.wasChangedOutside()) {
-			reload(editorPane.getFile().getName() +
-				"\nwas changed outside of the editor.");
+			checkingOutsideChanges = true;
+			try {
+				final boolean reloaded = reload(editorPane.getFile().getName() +
+					"\nwas changed outside of the editor.");
+				// Not reloaded (declined, dialog closed or error): do not ask again for this version of the file
+				if (!reloaded) editorPane.acknowledgeOutsideChange();
+			} finally {
+				checkingOutsideChanges = false;
+			}
 		}
-
 	}
 
 	/**
