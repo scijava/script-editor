@@ -4486,8 +4486,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		
 		// map stdout and stderr to the UI
-		this.module.setOutputWriter(output);
-		this.module.setErrorWriter(errors);
+		final ScriptModule runModule = this.module;
+		runModule.setOutputWriter(output);
+		runModule.setErrorWriter(errors);
 
 		// prepare the highlighter
 		getEditorPane().getErrorHighlighter().setEnabled(!respectAutoImports);
@@ -4496,7 +4497,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		// execute the script
 		try {
-			moduleService.run(module, true).get();
+			moduleService.run(runModule, true).get();
 		}
 		catch (final InterruptedException e) {
 			error("Interrupted");
@@ -4506,6 +4507,14 @@ public class TextEditor extends JFrame implements ActionListener,
 			getEditorPane().getErrorHighlighter().parse(e);
 		} finally {
 			getEditorPane().getErrorHighlighter().parse();
+			// A one-off run must not keep its module: it holds the script engine and thus every
+			// variable the script created (e.g., large images), even after this window is closed.
+			// Objects the script itself keeps alive (threads, listeners, displays) are not
+			// affected. In REPL mode the state is kept on purpose
+			if (!incremental && this.module == runModule) {
+				this.module = null;
+				this.scriptInfo = null;
+			}
 		}
 		return reader;
 	}
