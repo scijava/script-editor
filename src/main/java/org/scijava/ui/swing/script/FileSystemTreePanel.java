@@ -336,11 +336,9 @@ class FileSystemTreePanel extends JPanel {
 	private FileFilter filterFor(final String text) throws PatternSyntaxException {
 		if (text.isEmpty()) return f -> true;
 		if (isRegexEnabled()) {
-			String expr = text;
-			if (!expr.startsWith("^")) expr = "^.*" + expr;
-			if (!expr.endsWith("$")) expr += ".*$";
-			final Pattern pattern = Pattern.compile(expr, isCaseSensitive() ? 0 : Pattern.CASE_INSENSITIVE);
-			return f -> pattern.matcher(f.getName()).matches();
+			// find() so that alternations (py|txt) are not split by added anchors
+			final Pattern pattern = Pattern.compile(text, isCaseSensitive() ? 0 : Pattern.CASE_INSENSITIVE);
+			return f -> pattern.matcher(f.getName()).find();
 		}
 		if (isCaseSensitive()) return f -> f.getName().contains(text);
 		final String lowerCase = text.toLowerCase();

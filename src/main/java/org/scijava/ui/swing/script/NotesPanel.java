@@ -93,6 +93,7 @@ class NotesPanel extends JPanel {
 		}
 	};
 	private final Timer saveTimer;
+	private final Timer poll;
 	private boolean loading;
 
 	NotesPanel(final Supplier<? extends JTextComponent> activeEditor,
@@ -206,10 +207,21 @@ class NotesPanel extends JPanel {
 
 		// Cheap polling, only while visible. RSyntaxTextArea provides no listener
 		refresh();
-		final Timer poll = new Timer(REFRESH_DELAY_MS, e -> {
+		poll = new Timer(REFRESH_DELAY_MS, e -> {
 			if (isShowing()) refresh();
 		});
-		poll.start();
+	}
+
+	@Override
+	public void addNotify() {
+		super.addNotify();
+		if (!poll.isRunning()) poll.start();
+	}
+
+	@Override
+	public void removeNotify() {
+		poll.stop();
+		super.removeNotify();
 	}
 
 	private JPopupMenu scratchMenu() {

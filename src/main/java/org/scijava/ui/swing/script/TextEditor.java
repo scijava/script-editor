@@ -325,6 +325,13 @@ public class TextEditor extends JFrame implements ActionListener,
 	private boolean incremental = false;
 	private DragSource dragSource;
 	private boolean layoutLoading = true;
+	// Debounced: dividers and resizing fire many events per gesture, edits one per key
+	private final Timer layoutSaveTimer = new Timer(300, e -> saveWindowSizeToPrefs());
+	private final Timer titleTimer = new Timer(200, e -> setTitle());
+	{
+		layoutSaveTimer.setRepeats(false);
+		titleTimer.setRepeats(false);
+	}
 	private OutlineTreePanel sourceTreePanel;
 	protected final CommandPalette cmdPalette;
 
@@ -812,7 +819,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		// Tweaks for JSplitPane
 		body.addPropertyChangeListener(evt -> {
-			if ("dividerLocation".equals(evt.getPropertyName())) saveWindowSizeToPrefs();
+			if ("dividerLocation".equals(evt.getPropertyName())) saveWindowSizeToPrefsLater();
 		});
 
 		// Tweaks for FileSystemTree
@@ -871,6 +878,10 @@ public class TextEditor extends JFrame implements ActionListener,
 
 			@Override
 			public void windowClosing(final WindowEvent e) {
+				if (layoutSaveTimer.isRunning()) { // flush while the tabs still exist
+					layoutSaveTimer.stop();
+					saveWindowSizeToPrefs();
+				}
 				if (!confirmClose()) return;
 				UIManager.removePropertyChangeListener(lookAndFeelListener);
 				tree.destroy();
@@ -879,7 +890,6 @@ public class TextEditor extends JFrame implements ActionListener,
 					dragSource.removeDragSourceListener(l);
 				}
 				dragSource = null;
-				getTab().destroy();
 				cmdPalette.dispose();
 				dispose();
 			}
@@ -921,7 +931,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 			@Override
 			public void componentResized(final ComponentEvent e) {
-				saveWindowSizeToPrefs();
+				saveWindowSizeToPrefsLater();
 			}
 		});
 
@@ -1445,6 +1455,10 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * </p>
 	 * @see #loadWindowSizePreferences()
 	 */
+	private void saveWindowSizeToPrefsLater() {
+		if (!layoutLoading) layoutSaveTimer.restart();
+	}
+
 	public void saveWindowSizeToPrefs() {
 		if (notesPanel != null) notesPanel.flush();
 		if (layoutLoading) return;
@@ -2704,7 +2718,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		//whiteSpace.setSelected(editorPane.isWhitespaceVisible());
 
-		editorPane.setLanguageByFileName(editorPane.getFileName());
+		editorPane.syncLanguageWithFileName();
 		updateLanguageMenu(editorPane.getCurrentLanguage());
 
 		setTitle();
@@ -3163,6 +3177,15 @@ public class TextEditor extends JFrame implements ActionListener,
 			if (file.isDirectory()) deleteRecursively(file);
 			else file.delete();
 		directory.delete();
+	}
+
+	@Override
+	public void dispose() {
+		layoutSaveTimer.stop();
+		titleTimer.stop();
+		instances.remove(this);
+		contexts.remove(context);
+		super.dispose();
 	}
 
 	void setLanguage(final ScriptLanguage language) {
@@ -4035,6 +4058,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	private void removeTab(final int index) {
 		final int menuItemIndex = index + tabsMenuTabsStart;
 		try {
+			((TextEditorTab) tabbed.getComponentAt(index)).destroy();
 			tabbed.remove(index);
 			tabsMenuItems.remove(tabsMenu.getItem(menuItemIndex));
 			tabsMenu.remove(menuItemIndex);
@@ -4584,21 +4608,20 @@ public class TextEditor extends JFrame implements ActionListener,
 		return true;
 	}
 
+	// Outside changes are checked on window focus and tab switch, not per key
 	@Override
 	public void insertUpdate(final DocumentEvent e) {
-		setTitle();
-		checkForOutsideChanges();
+		titleTimer.restart();
 	}
 
 	@Override
 	public void removeUpdate(final DocumentEvent e) {
-		setTitle();
-		checkForOutsideChanges();
+		titleTimer.restart();
 	}
 
 	@Override
 	public void changedUpdate(final DocumentEvent e) {
-		setTitle();
+		titleTimer.restart();
 	}
 
 	public void setFontSize(final float size) {

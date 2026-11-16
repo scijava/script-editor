@@ -57,6 +57,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultCaret;
+import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
 
 import com.formdev.flatlaf.FlatClientProperties;
@@ -114,6 +115,8 @@ public class TextEditorTab extends JSplitPane {
 
 	private final TextEditor textEditor;
 	private DropTarget dropTarget;
+	private Document mirroredErrorDoc;
+	private DocumentListener errorMirror;
 	private DropTargetListener dropTargetListener;
 
 	public TextEditorTab(final TextEditor textEditor) {
@@ -179,7 +182,8 @@ public class TextEditorTab extends JSplitPane {
 		textEditor.applyConsolePopupMenu(screen);
 		textEditor.applyConsolePopupMenu(combinedScreen);
 		mirrorInto(combinedScreen, screen, false);
-		mirrorInto(combinedScreen, textEditor.getErrorScreen(), true);
+		mirroredErrorDoc = textEditor.getErrorScreen().getDocument();
+		errorMirror = mirrorInto(combinedScreen, textEditor.getErrorScreen(), true);
 
 		final JPanel bottom = new JPanel(new BorderLayout());
 		final JToolBar bar = new GuiUtils.ToolBar();
@@ -453,9 +457,17 @@ public class TextEditorTab extends JSplitPane {
 
 	// Package private
 	void destroy() {
-		dropTarget.removeDropTargetListener(dropTargetListener);
-		dropTarget = null;
-		dropTargetListener = null;
+		if (dropTarget != null) {
+			dropTarget.removeDropTargetListener(dropTargetListener);
+			dropTarget = null;
+			dropTargetListener = null;
+		}
+		// The error console is shared by all tabs
+		if (mirroredErrorDoc != null) {
+			mirroredErrorDoc.removeDocumentListener(errorMirror);
+			mirroredErrorDoc = null;
+			errorMirror = null;
+		}
 	}
 
 	/** Invoke in the context of the event dispatch thread. */
@@ -553,10 +565,10 @@ public class TextEditorTab extends JSplitPane {
 	 * Copies everything appended to {@code source} into {@code target}, so that
 	 * {@code target} shows several streams in the order they were written.
 	 */
-	private void mirrorInto(final ConsoleArea target, final JTextArea source,
+	private DocumentListener mirrorInto(final ConsoleArea target, final JTextArea source,
 		final boolean error)
 	{
-		source.getDocument().addDocumentListener(new DocumentListener() {
+		final DocumentListener listener = new DocumentListener() {
 
 			@Override
 			public void insertUpdate(final DocumentEvent e) {
@@ -577,7 +589,9 @@ public class TextEditorTab extends JSplitPane {
 
 			@Override
 			public void changedUpdate(final DocumentEvent e) {}
-		});
+		};
+		source.getDocument().addDocumentListener(listener);
+		return listener;
 	}
 
 	public JTextArea getScreen() {

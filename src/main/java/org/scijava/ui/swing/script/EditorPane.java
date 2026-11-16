@@ -723,11 +723,25 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		final ScriptLanguage language = scriptService.getLanguageByExtension(FileUtils
 			.getExtension(name));
 		setLanguage(language, false, renameFile && language != null);
-		if (language == null) {
-			// Not executable: highlight only, and keep the file name as is
-			final String style = FileTypeUtil.get().guessContentType(new File(name));
-			if (style != null && !SYNTAX_STYLE_NONE.equals(style)) setSyntaxEditingStyle(style);
-		}
+		if (language == null) guessSyntaxStyle(name);
+	}
+
+	/** Not executable: highlight only, and keep the file name as is */
+	private void guessSyntaxStyle(final String name) {
+		final String style = FileTypeUtil.get().guessContentType(new File(name));
+		if (style != null && !SYNTAX_STYLE_NONE.equals(style)) setSyntaxEditingStyle(style);
+	}
+
+	/**
+	 * Makes the language match the file name without renaming the file. A cheap
+	 * no-op if it already does (e.g., on tab switches)
+	 */
+	void syncLanguageWithFileName() {
+		final String name = getFileName();
+		final ScriptLanguage language = scriptService.getLanguageByExtension(FileUtils
+			.getExtension(name));
+		if (language != currentLanguage) setLanguageByFileName(name, false);
+		else if (language == null) guessSyntaxStyle(name);
 	}
 
 	/**

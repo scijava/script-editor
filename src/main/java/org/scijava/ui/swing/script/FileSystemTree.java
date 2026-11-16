@@ -923,10 +923,20 @@ public class FileSystemTree extends JTree {
 		private final Map<WatchKey, Node> keys = new ConcurrentHashMap<>();
 		private final Map<Node, WatchKey> byNode = new ConcurrentHashMap<>();
 		private WatchService watcher;
+		// Bursts of events (copies, builds) trigger a single refresh per folder
+		private final Set<Node> pending = ConcurrentHashMap.newKeySet();
+		private final javax.swing.Timer flushTimer = new javax.swing.Timer(250, e -> {
+			for (final Iterator<Node> it = pending.iterator(); it.hasNext();) {
+				final Node n = it.next();
+				it.remove();
+				refresh(n);
+			}
+		});
 
 		DirectoryWatcher() {
 			super("FileSystemTree watcher");
 			setDaemon(true);
+			flushTimer.setRepeats(false);
 			try {
 				watcher = FileSystems.getDefault().newWatchService();
 				start();
@@ -963,7 +973,12 @@ public class FileSystemTree extends JTree {
 				while (!isInterrupted()) {
 					final WatchKey key = watcher.take();
 					final Node node = keys.get(key);
-					if (node != null && !key.pollEvents().isEmpty()) SwingUtilities.invokeLater(() -> refresh(node));
+					if (node != null && !key.pollEvents().isEmpty()) {
+						pending.add(node);
+						SwingUtilities.invokeLater(() -> {
+							if (!flushTimer.isRunning()) flushTimer.start();
+						});
+					}
 					if (!key.reset()) {
 						final Node gone = keys.remove(key);
 						if (gone != null) byNode.remove(gone);
@@ -972,6 +987,7 @@ public class FileSystemTree extends JTree {
 			} catch (final InterruptedException | ClosedWatchServiceException ignored) {
 				// we are done
 			} finally {
+				SwingUtilities.invokeLater(flushTimer::stop);
 				try {
 					watcher.close();
 				} catch (final IOException ignored) {
