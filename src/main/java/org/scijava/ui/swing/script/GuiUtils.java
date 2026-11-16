@@ -167,6 +167,67 @@ final class GuiUtils {
 	}
 
 	/**
+	 * A split pane that keeps a collapsed side collapsed while it is resized. By default,
+	 * resizing a window redistributes space among the components, and a collapsed one (e.g.,
+	 * a hidden side panel or console) re-appears, either because of its resize weight or
+	 * because its minimum size is enforced
+	 */
+	static class StickySplitPane extends javax.swing.JSplitPane {
+
+		private static final long serialVersionUID = 1L;
+		private static final int NONE = 0, FIRST = 1, SECOND = 2;
+		private int collapsedBeforeResize = NONE;
+		private boolean settling;
+
+		StickySplitPane(final int orientation) {
+			super(orientation);
+		}
+
+		StickySplitPane(final int orientation, final Component first, final Component second) {
+			super(orientation, first, second);
+		}
+
+		/** Whether a layout that restores a collapsed component is in progress (divider locations are transient) */
+		boolean isSettling() {
+			return settling;
+		}
+
+		/** The component that is currently collapsed (FIRST, SECOND), or NONE */
+		private int collapsedComponent() {
+			final boolean vertical = getOrientation() == VERTICAL_SPLIT;
+			final int size = vertical ? getHeight() : getWidth();
+			final int loc = getDividerLocation();
+			if (size <= 0 || loc < 0) return NONE; // not laid out yet
+			final Insets in = getInsets();
+			if (loc <= (vertical ? in.top : in.left) + 5) return FIRST;
+			if (loc >= size - getDividerSize() - (vertical ? in.bottom : in.right) - 5) return SECOND;
+			return NONE;
+		}
+
+		@Override
+		public void setBounds(final int x, final int y, final int width, final int height) {
+			if (width != getWidth() || height != getHeight()) collapsedBeforeResize = collapsedComponent();
+			super.setBounds(x, y, width, height);
+		}
+
+		@Override
+		public void doLayout() {
+			final int wasCollapsed = collapsedBeforeResize;
+			collapsedBeforeResize = NONE;
+			settling = wasCollapsed != NONE;
+			try {
+				super.doLayout();
+				if (wasCollapsed != NONE && collapsedComponent() != wasCollapsed) {
+					setDividerLocation(wasCollapsed == FIRST ? 0d : 1d);
+					super.doLayout();
+				}
+			} finally {
+				settling = false;
+			}
+		}
+	}
+
+	/**
 	 * A non-floatable toolbar without the drag listeners of its L&F. They throw
 	 * an IllegalComponentStateException if the toolbar is hidden during a drag
 	 * (e.g., when a window auto-hides)

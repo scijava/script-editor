@@ -312,7 +312,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	private JTextArea errorScreen = new ConsoleArea(ConsoleArea.Content.ERRORS);
 
 	private final FileSystemTree tree;
-	private final JSplitPane body;
+	private final GuiUtils.StickySplitPane body;
 
 	private int compileStartOffset;
 	private Position compileStartPosition;
@@ -459,7 +459,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		}, prefService, getClass());
 		addSideTab("Notes", Icons.clipboard(), notesPanel);
-		body = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, sideTabs, tabbed);
+		body = new GuiUtils.StickySplitPane(JSplitPane.HORIZONTAL_SPLIT, sideTabs, tabbed);
 		GuiUtils.installSplitHandle(null, body);
 		// These items are dynamic and need to be initialized before EditorPane creation
 		initializeDynamicMenuComponents();
@@ -2160,7 +2160,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		statusSide.addActionListener(e -> setSidePanelVisible(statusSide.isSelected()));
 		body.addPropertyChangeListener("dividerLocation", evt -> {
 			final int loc = body.getDividerLocation();
-			if (loc > 50) sideLastLocation = loc;
+			if (loc > 50 && !body.isSettling()) sideLastLocation = loc;
 			statusSide.setSelected(loc > 5);
 			syncPaneItems(loc > 5, null);
 		});

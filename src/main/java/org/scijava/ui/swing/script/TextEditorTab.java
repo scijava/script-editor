@@ -69,7 +69,7 @@ import org.scijava.ui.swing.script.TextEditor.Executer;
  *
  * @author Jonathan Hale
  */
-public class TextEditorTab extends JSplitPane {
+public class TextEditorTab extends GuiUtils.StickySplitPane {
 
 	/** Which console stream(s) to display. */
 	private enum ConsoleView {
@@ -353,7 +353,7 @@ public class TextEditorTab extends JSplitPane {
 		// Persist Script Editor layout whenever split pane divider is adjusted.
 		addPropertyChangeListener(evt -> {
 			if ("dividerLocation".equals(evt.getPropertyName())) {
-				if (isBottomVisible() && getDividerLocation() > 50) bottomLastLocation = getDividerLocation();
+				if (!isSettling() && isBottomVisible() && getDividerLocation() > 50) bottomLastLocation = getDividerLocation();
 				textEditor.saveWindowSizeToPrefs();
 				textEditor.syncStatusBar();
 			}
