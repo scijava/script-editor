@@ -36,8 +36,6 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Insets;
 import java.awt.Rectangle;
-import java.awt.geom.RoundRectangle2D;
-import java.awt.FlowLayout;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.dnd.DnDConstants;
@@ -46,8 +44,6 @@ import java.awt.dnd.DropTargetDragEvent;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.dnd.DropTargetEvent;
 import java.awt.dnd.DropTargetListener;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.io.File;
@@ -104,11 +100,12 @@ public class TextEditorTab extends JSplitPane {
 	private boolean updatingViewChooser;
 	private volatile boolean skipErrorMirroring;
 	private Executer executer;
-	private final JButton runit, batchit, killit;
+	private final JButton runit;
+	private final JButton killit;
 	private final JComboBox<ConsoleView> viewChooser;
 	private boolean replOn; // the REPL is on (prompt shown)
-	private JPanel promptPanel;
-	private int promptDividerSize; // thickness of the divider above the prompt (hidden while the REPL is off)
+	private final JPanel promptPanel;
+	private final int promptDividerSize; // thickness of the divider above the prompt (hidden while the REPL is off)
 	private final JSplitPane screenAndPromptSplit;
 	private int screenAndPromptSplitDividerLocation;
 	private int bottomLastLocation = -1; // divider location while the bottom part was last shown
@@ -140,11 +137,10 @@ public class TextEditorTab extends JSplitPane {
 				if (!t.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) return;
 				try {
 					final Object o = t.getTransferData(DataFlavor.javaFileListFlavor);
-					if (!(o instanceof List)) return;
-					final List<?> list = (List<?>) o;
+					if (!(o instanceof List<?> list)) return;
 					if (list.isEmpty()) return;
 					String path;
-					final Object first = list.get(0);
+					final Object first = list.getFirst();
 					if (first instanceof String) path = (String) first;
 					else if (first instanceof File) path = ((File) first).getAbsolutePath();
 					else return;
@@ -197,7 +193,7 @@ public class TextEditorTab extends JSplitPane {
 		runit.addActionListener(ae -> textEditor.runText());
 		bar.add(runit);
 
-		batchit = new JButton("Batch", Icons.fastForward(false));
+		final JButton batchit = new JButton("Batch", Icons.fastForward(false));
 		batchit.putClientProperty("JButton.buttonType", "borderless");
 
 		batchit.setDisabledIcon(Icons.fastForward(true));
@@ -595,14 +591,11 @@ public class TextEditorTab extends JSplitPane {
 	}
 
 	public JTextArea getScreen() {
-		switch (view) {
-			case ERRORS:
-				return textEditor.getErrorScreen();
-			case BOTH:
-				return combinedScreen;
-			default:
-				return screen;
-		}
+		return switch (view) {
+			case ERRORS -> textEditor.getErrorScreen();
+			case BOTH -> combinedScreen;
+			default -> screen;
+		};
 	}
 
 	void setConsoleWrap(final boolean wrap) {

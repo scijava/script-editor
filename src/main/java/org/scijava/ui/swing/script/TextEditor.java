@@ -120,7 +120,6 @@ import javax.swing.text.DefaultHighlighter.DefaultHighlightPainter;
 import javax.swing.text.Position;
 import javax.swing.tree.TreePath;
 
-import com.formdev.flatlaf.icons.FlatSearchIcon;
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
@@ -218,31 +217,64 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	private static AbstractTokenMakerFactory tokenMakerFactory = null;
 
-	private JTabbedPane tabbed;
-	private JTabbedPane sideTabs;
-	private NotesPanel notesPanel;
-	private BookmarksPanel bookmarksPanel;
-	private JSplitPane markersSplit;
-	private TasksPanel tasksPanel;
-	private JMenuItem newFile, open, save, saveas, compileAndRun, compile,
-			close, undo, redo, cut, copy, paste, find, selectAll, kill,
-			gotoLine, makeJar, makeJarWithSource, removeUnusedImports, sortImports,
-			removeTrailingWhitespace, findNext, findPrevious, openHelp, addImport,
-			nextError, previousError, openHelpWithoutFrames, nextTab,
-			previousTab, runSelection, extractSourceJar, openSourceForClass,
-			//openSourceForMenuItem, // this never had an actionListener!??
-			openMacroFunctions, decreaseFontSize, increaseFontSize, chooseFontSize,
-			chooseTabSize, gitGrep, convertToSpaces,
-			convertToTabs, zapGremlins,openClassOrPackageHelp;
-	private RecentFilesMenuItem openRecent;
-	private JMenu editMenu, gitMenu, tabsMenu, fontSizeMenu, tabSizeMenu, codeMenu,
+	private final JTabbedPane tabbed;
+	private final JTabbedPane sideTabs;
+	private final NotesPanel notesPanel;
+	private final BookmarksPanel bookmarksPanel;
+	private final JSplitPane markersSplit;
+	private final TasksPanel tasksPanel;
+	private final JMenuItem newFile;
+	private final JMenuItem open;
+	private final JMenuItem save;
+	private final JMenuItem saveas;
+	private final JMenuItem compileAndRun;
+	private final JMenuItem compile;
+	private final JMenuItem close;
+	private JMenuItem undo;
+	private JMenuItem redo;
+	private JMenuItem cut;
+	private JMenuItem copy;
+	private JMenuItem paste;
+	private JMenuItem find;
+	private JMenuItem selectAll;
+	private final JMenuItem kill;
+	private JMenuItem gotoLine;
+	private final JMenuItem makeJar;
+	private final JMenuItem makeJarWithSource;
+	private final JMenuItem removeUnusedImports;
+	private final JMenuItem sortImports;
+	private final JMenuItem removeTrailingWhitespace;
+	private JMenuItem findNext;
+	private JMenuItem findPrevious;
+	private JMenuItem openHelp;
+	private final JMenuItem addImport;
+	private final JMenuItem nextError;
+	private final JMenuItem previousError;
+	private JMenuItem openHelpWithoutFrames;
+	private final JMenuItem nextTab;
+	private final JMenuItem previousTab;
+	private final JMenuItem runSelection;
+	private final JMenuItem extractSourceJar;
+	private final JMenuItem openSourceForClass;
+	private JMenuItem//openSourceForMenuItem, // this never had an actionListener!??
+			openMacroFunctions;
+	private final JMenuItem decreaseFontSize;
+	private final JMenuItem increaseFontSize;
+	private final JMenuItem chooseFontSize;
+	private final JMenuItem chooseTabSize;
+	private final JMenuItem gitGrep;
+	private final JMenuItem convertToSpaces;
+	private final JMenuItem convertToTabs;
+	private final JMenuItem zapGremlins;
+	private JMenuItem openClassOrPackageHelp;
+	private final RecentFilesMenuItem openRecent;
+	private final JMenu editMenu, gitMenu, tabsMenu, fontSizeMenu, tabSizeMenu, codeMenu,
 			runMenu;
-	private int codeMenuCommentsIndex;
-	private int tabsMenuTabsStart;
-	private Set<JMenuItem> tabsMenuItems;
-	private FindAndReplaceDialog findDialog;
+	private final int codeMenuCommentsIndex;
+	private final int tabsMenuTabsStart;
+	private final Set<JMenuItem> tabsMenuItems;
+	private final FindAndReplaceDialog findDialog;
 	private JButton statusTab;
-	private FlatSearchIcon statusFastIcon;
 	private JButton statusWrap;
 	private JCheckBoxMenuItem wrapEditorItem;
 	private boolean consoleWrap, replWrap;
@@ -252,13 +284,22 @@ public class TextEditor extends JFrame implements ActionListener,
 	private JButton statusPos, statusLang;
 	private JToggleButton statusSide, statusBelow, statusRight, statusRepl, statusVimToggle;
 	private int sideLastLocation = -1;
-	private JMenu languageMenu;
+	private final JMenu languageMenu;
 	private JLabel statusText;
 	private JLabel statusVim;
-	private FileSystemTreePanel filesPanel;
-	private JCheckBoxMenuItem autoSave, wrapLines, tabsEmulated, autoImport,
-			autocompletion, fallbackAutocompletion, keylessAutocompletion,
-			markOccurences, paintTabs, whiteSpace, marginLine, lockPane, vimMode;
+	private final FileSystemTreePanel filesPanel;
+	private final JCheckBoxMenuItem autoSave;
+	private JCheckBoxMenuItem wrapLines;
+	private final JCheckBoxMenuItem tabsEmulated;
+	private JCheckBoxMenuItem autocompletion;
+	private JCheckBoxMenuItem fallbackAutocompletion;
+	private JCheckBoxMenuItem keylessAutocompletion;
+	private JCheckBoxMenuItem markOccurences;
+	private JCheckBoxMenuItem paintTabs;
+	private JCheckBoxMenuItem whiteSpace;
+	private JCheckBoxMenuItem marginLine;
+	private final JCheckBoxMenuItem lockPane;
+	private JCheckBoxMenuItem vimMode;
 	private ButtonGroup themeRadioGroup;
 	private JTextArea errorScreen = new ConsoleArea(ConsoleArea.Content.ERRORS);
 
@@ -282,7 +323,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		});
 	};
-	private int[] panePositions;
+	private final int[] panePositions;
 
 
 	@Parameter
@@ -316,7 +357,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	@Parameter(required = false)
 	private OptionsService optionsService;
 
-	private Map<ScriptLanguage, JRadioButtonMenuItem> languageMenuItems;
+	private final Map<ScriptLanguage, JRadioButtonMenuItem> languageMenuItems;
 	private JRadioButtonMenuItem noneLanguageItem;
 	
 	private EditableScriptInfo scriptInfo;
@@ -331,7 +372,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		layoutSaveTimer.setRepeats(false);
 		titleTimer.setRepeats(false);
 	}
-	private OutlineTreePanel sourceTreePanel;
+	private final OutlineTreePanel sourceTreePanel;
 	protected final CommandPalette cmdPalette;
 
 	public static final ArrayList<TextEditor> instances = new ArrayList<>();
@@ -506,7 +547,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		// get list of languages, and sort them by name
 		final ArrayList<ScriptLanguage> list =
 			new ArrayList<>(scriptService.getLanguages());
-		Collections.sort(list, (l1, l2) -> {
+		list.sort((l1, l2) -> {
 			final String name1 = languageDisplayName(l1);
 			final String name2 = languageDisplayName(l2);
 			return MiscUtils.compare(name1, name2);
@@ -594,8 +635,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		addImport = addToMenu(codeMenu, "Add Import...", 0, 0);
 		addImport.setMnemonic(KeyEvent.VK_I);
 		respectAutoImports = prefService.getBoolean(getClass(), AUTO_IMPORT_PREFS, false);
-		autoImport =
-			new JCheckBoxMenuItem("Auto-import (Deprecated)", respectAutoImports);
+		final JCheckBoxMenuItem autoImport = new JCheckBoxMenuItem("Auto-import (Deprecated)", respectAutoImports);
 		autoImport.setToolTipText("Automatically imports common classes before running code");
 		autoImport.addItemListener(e -> {
 			respectAutoImports = e.getStateChange() == ItemEvent.SELECTED;
@@ -709,8 +749,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		final boolean[] fontSizeShortcutUsed = new boolean[10];
 		final ButtonGroup buttonGroup = new ButtonGroup();
 		for (final int size : new int[] { 8, 10, 12, 16, 20, 28, 42 }) {
-			final JRadioButtonMenuItem item =
-				new JRadioButtonMenuItem("" + size + " pt");
+			final JRadioButtonMenuItem item = new JRadioButtonMenuItem(size + " pt");
 			item.addActionListener(event -> setFontSize(size));
 			for (final char c : ("" + size).toCharArray()) {
 				final int digit = c - '0';
@@ -803,7 +842,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 			if (filteredFiles.size() < 10
 					|| confirm("Confirm loading of " + filteredFiles.size() + " items?", "Confirm?", "Load")) {
-				filteredFiles.forEach(f -> open(f));
+				filteredFiles.forEach(this::open);
 			}
 		});
 		open(null); // make sure the editor pane is added
@@ -1641,16 +1680,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		return getMenu(subMenu, rest, createIfNecessary);
 	}
 
-	/**
-	 * Initializes the Templates menu.
-	 * <p>
-	 * Other components can add templates simply by providing scripts in their
-	 * resources, identified by a path of the form
-	 * {@code /script_templates/<menu path>/<menu label>}.
-	 * </p>
-	 *
-	 * @param templatesMenu the top-level menu to populate
-	 */
 	/** Gets the plugin label of the given language if it has one, else its language name. */
 	private static String languageDisplayName(final ScriptLanguage language) {
 		final String label = language.getInfo() == null ? null : language.getInfo().getLabel();
@@ -1712,6 +1741,16 @@ public class TextEditor extends JFrame implements ActionListener,
 		return null;
 	}
 
+	/**
+	 * Initializes the Templates menu.
+	 * <p>
+	 * Other components can add templates simply by providing scripts in their
+	 * resources, identified by a path of the form
+	 * {@code /script_templates/<menu path>/<menu label>}.
+	 * </p>
+	 *
+	 * @param templatesMenu the top-level menu to populate
+	 */
 	private void addTemplates(final JMenu templatesMenu) {
 		final File baseDir = appService.getApp().getBaseDirectory();
 
@@ -2170,7 +2209,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		bar.add(Box.createHorizontalStrut(gap));
 		bar.add(statusVimToggle);
 		bar.add(statusRepl);
-		//bar.add(Box.createHorizontalStrut(8));
 		bar.add(statusPos);
 		bar.add(statusLang);
 		bar.add(statusWrap);
@@ -2269,13 +2307,10 @@ public class TextEditor extends JFrame implements ActionListener,
 				}
 				final StringBuilder lead = new StringBuilder();
 				if (toSpaces) {
-					for (int k = 0; k < col; k++)
-						lead.append(' ');
+					lead.repeat(" ", Math.max(0, col));
 				} else {
-					for (int k = 0; k < col / tabSize; k++)
-						lead.append('\t');
-					for (int k = 0; k < col % tabSize; k++)
-						lead.append(' ');
+					lead.repeat("\t", Math.max(0, col / tabSize));
+					lead.repeat(" ", Math.max(0, col % tabSize));
 				}
 				if (!lead.toString().equals(text.substring(i, j))) changed++;
 				out.append(lead).append(text, j, eol);
@@ -2520,23 +2555,25 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * @return false if the command is unknown.
 	 */
 	boolean handleVimCommand(final String command) {
-		switch (command) {
-			case "w":
+		return switch (command) {
+			case "w" -> {
 				save();
-				return true;
-			case "q":
+				yield true;
+			}
+			case "q" -> {
 				closeTab(true);
-				return true;
-			case "q!":
+				yield true;
+			}
+			case "q!" -> {
 				closeTab(false);
-				return true;
-			case "wq":
-			case "x":
+				yield true;
+			}
+			case "wq", "x" -> {
 				if (save()) closeTab(true);
-				return true;
-			default:
-				return false;
-		}
+				yield true;
+			}
+			default -> false;
+		};
 	}
 
 	private void setVimMode(final boolean enabled) {
@@ -2837,7 +2874,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		final Vector<Bookmark> bookmarks = getAllBookmarks();
 		if (bookmarks.isEmpty())
 			return;
-		;
 		if (confirm("Delete all bookmarks?", "Confirm Deletion?", "Delete")) {
 			bookmarks.forEach(bk -> bk.tab.editorPane.toggleBookmark(bk.getLineNumber()));
 		}
@@ -2988,7 +3024,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			if (file != null) openRecent.add(file.getAbsolutePath());
 			else {
 				final String lastLanguageName = prefService.get(getClass(), LAST_LANGUAGE);
-				if ("none" != lastLanguageName)
+				if (!"none".equals(lastLanguageName))
 					setLanguage(scriptService.getLanguageByName(lastLanguageName));
 			}
 
@@ -3026,7 +3062,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (language != null && FileUtils.getExtension(fileToSave.getName()).isEmpty()
 				&& !language.getExtensions().isEmpty()) {
 			fileToSave = new File(fileToSave.getParentFile(),
-					fileToSave.getName() + "." + language.getExtensions().get(0));
+					fileToSave.getName() + "." + language.getExtensions().getFirst());
 		}
 		return saveAs(fileToSave.getAbsolutePath(), true);
 	}
@@ -3442,7 +3478,7 @@ public class TextEditor extends JFrame implements ActionListener,
 							handleException(e);
 						}
 						// Leave kill menu item enabled if other tasks are running
-						kill.setEnabled(executingTasks.size() > 0);
+						kill.setEnabled(!executingTasks.isEmpty());
 						setTitle();
 					}
 				}
@@ -3494,7 +3530,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		 * interrupt are reported in the error screen. Will remove itself from the
 		 * executingTasks list.
 		 */
-		@SuppressWarnings("deprecation")
+		@SuppressWarnings({"removal" }) // Thread.stop() is marked for removal
 		void obliterate() {
 			try {
 				// Stop printing to the screen
@@ -3521,7 +3557,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 			executingTasks.remove(this);
 			// The wrapper thread may survive (no Thread.stop()): refresh the state it would have
-			SwingUtilities.invokeLater(() -> kill.setEnabled(executingTasks.size() > 0));
+			SwingUtilities.invokeLater(() -> kill.setEnabled(!executingTasks.isEmpty()));
 			setTitle();
 			reportSurvivors();
 		}
@@ -3640,7 +3676,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * kill it.
 	 */
 	public void chooseTaskToKill() {
-		if (executingTasks.size() == 0) {
+		if (executingTasks.isEmpty()) {
 			error("\nNo running scripts\n");
 			return;
 		}
@@ -3762,7 +3798,7 @@ public class TextEditor extends JFrame implements ActionListener,
 					errors.flush();
 					markCompileEnd();
 					// For executions from the prompt
-					if (writeCommandLog && null != text && text.trim().length() > 0) {
+					if (writeCommandLog && null != text && !text.trim().isEmpty()) {
 						writePromptLog(getEditorPane().getCurrentLanguage(), text);
 					}
 				}
@@ -3833,7 +3869,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				file.getParentFile().mkdirs();
 				file.createNewFile(); // atomic
 			}
-			Files.write(Paths.get(path), Arrays.asList(new String[]{text, "#"}), Charset.forName("UTF-8"),
+			Files.write(Paths.get(path), Arrays.asList(text, "#"), StandardCharsets.UTF_8,
 					StandardOpenOption.APPEND, StandardOpenOption.DSYNC);
 		} catch (final IOException e) {
 			log.error("Failed to write executed prompt command to file " + path, e);
@@ -3858,9 +3894,9 @@ public class TextEditor extends JFrame implements ActionListener,
 			ra = new RandomAccessFile(path, "r");
 			final byte[] bytes = new byte[(int)ra.length()];
 			ra.readFully(bytes);
-			final String sep = System.getProperty("line.separator"); // used fy Files.write above
-			commands.addAll(Arrays.asList(new String(bytes, Charset.forName("UTF-8")).split(sep + "#" + sep)));
-			if (0 == commands.get(commands.size()-1).length()) commands.remove(commands.size() -1); // last entry is empty
+			final String sep = System.lineSeparator(); // used fy Files.write above
+			commands.addAll(Arrays.asList(new String(bytes, StandardCharsets.UTF_8).split(sep + "#" + sep)));
+			if (commands.getLast().isEmpty()) commands.removeLast(); // last entry is empty
 		} catch (final IOException e) {
 			log.error("Failed to read history of prompt commands from file " + path, e);
 			return lines;
@@ -4360,7 +4396,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		return language.isCompiledLanguage();
 	}
 	
-	private final class EditableScriptInfo extends ScriptInfo
+	private static final class EditableScriptInfo extends ScriptInfo
 	{	
 		private String script;
 		
@@ -4476,7 +4512,7 @@ public class TextEditor extends JFrame implements ActionListener,
 							return;
 						}
 						final String text = prompt.getText();
-						if (null == text || 0 == text.trim().length()) {
+						if (null == text || text.trim().isEmpty()) {
 							ke.consume(); // avoid writing the line break
 							return;
 						}

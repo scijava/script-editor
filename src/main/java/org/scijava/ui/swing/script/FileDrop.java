@@ -322,7 +322,6 @@ public class FileDrop {
 		return files.toArray(new File[0]);
 	}
 
-	@SuppressWarnings("serial")
 	private static final class Highlight extends JComponent {
 
 		private static final int THICKNESS = 2;
