@@ -29,6 +29,8 @@
 
 package org.scijava.ui.swing.script;
 
+import java.awt.EventQueue;
+
 import org.scijava.Context;
 import org.scijava.command.Command;
 import org.scijava.plugin.Menu;
@@ -50,7 +52,9 @@ public class ScriptEditor implements Command {
 
 	@Override
 	public void run() {
-		new TextEditor(context).setVisible(true);
+		// Note: Swing components must be built and shown on the EDT; otherwise
+		// layout races with the EDT and can leave the window collapsed.
+		EventQueue.invokeLater(() -> new TextEditor(context).setVisible(true));
 	}
 
 }
