@@ -86,6 +86,7 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -2004,12 +2005,19 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * given delay. Text set by other means in the meantime is left untouched
 	 */
 	void showTemporaryStatus(final String message, final int millis) {
+		showTemporaryStatus(message, millis, null);
+	}
+
+	/** As above, with an optional icon shown next to the message */
+	void showTemporaryStatus(final String message, final int millis, final Icon icon) {
 		if (statusRestoreTimer != null && statusRestoreTimer.isRunning())
 			statusRestoreTimer.stop(); // keep the text saved by the pending message
 		else
 			statusRestoreText = statusText.getText();
 		statusText.setText(message);
+		statusText.setIcon(icon); // null clears the icon of a previous message
 		statusRestoreTimer = new Timer(millis, e -> {
+			if (icon != null && statusText.getIcon() == icon) statusText.setIcon(null);
 			if (message.equals(statusText.getText()))
 				statusText.setText(statusRestoreText);
 		});
@@ -3458,8 +3466,11 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 
 		/**
-		 * Totally destroy/stop all threads in this and all recursive thread
-		 * subgroups. Will remove itself from the executingTasks list.
+		 * Interrupts all threads in this and all recursive thread subgroups, and
+		 * additionally stops them if the JVM still allows it (Thread.stop() throws
+		 * an UnsupportedOperationException since JDK 20). Threads that ignore the
+		 * interrupt are reported in the error screen. Will remove itself from the
+		 * executingTasks list.
 		 */
 		@SuppressWarnings("deprecation")
 		void obliterate() {
@@ -3471,17 +3482,50 @@ public class TextEditor extends JFrame implements ActionListener,
 			catch (final Exception e) {
 				log.error(e);
 			}
-			for (final Thread thread : getAllThreads()) {
+			final List<Thread> threads = getDistinctThreads();
+			threads.forEach(Thread::interrupt);
+			Thread.yield(); // give them a chance
+			for (final Thread thread : threads) {
+				if (!thread.isAlive()) continue;
 				try {
-					thread.interrupt();
-					Thread.yield(); // give it a chance
 					thread.stop();
+				}
+				catch (final UnsupportedOperationException unsupported) {
+					break; // no point in trying the remaining threads
 				}
 				catch (final Throwable t) {
 					log.error(t);
 				}
 			}
 			executingTasks.remove(this);
+			// The wrapper thread may survive (no Thread.stop()): refresh the state it would have
+			SwingUtilities.invokeLater(() -> kill.setEnabled(executingTasks.size() > 0));
+			setTitle();
+			reportSurvivors();
+		}
+
+		private List<Thread> getDistinctThreads() {
+			return new ArrayList<>(new LinkedHashSet<>(getAllThreads()));
+		}
+
+		/**
+		 * Checks after a grace period (threads spawned in the meantime included)
+		 * and flags threads that are still running in the console and status bar
+		 */
+		private void reportSurvivors() {
+			final String script = scriptNameOf(this);
+			final Timer timer = new Timer(1000, e -> {
+				final List<String> names = new ArrayList<>();
+				for (final Thread t : getDistinctThreads())
+					if (t.isAlive()) names.add(t.getName().equals(getName()) ? "runner" : t.getName());
+				if (names.isEmpty()) return;
+				errorScreen.append("\n[Kill] " + names.size() + " thread(s) of " + script
+						+ " still running 1s after Kill: " + String.join(", ", names) + "\n");
+				showTemporaryStatus(names.size() + " thread(s) of " + script + " still running after Kill. "
+						+ "See Errors", 15000, Icons.error());
+			});
+			timer.setRepeats(false);
+			timer.start();
 		}
 
 		@Override
@@ -3548,6 +3592,15 @@ public class TextEditor extends JFrame implements ActionListener,
 	/** Returns a list of currently executing tasks */
 	public List<Executer> getExecutingTasks() {
 		return executingTasks;
+	}
+
+	/** The name of the script run by the executer (its tab is looked up) */
+	private String scriptNameOf(final Executer executer) {
+		for (int i = 0; i < tabbed.getTabCount(); i++) {
+			final TextEditorTab tab = (TextEditorTab) tabbed.getComponentAt(i);
+			if (executer == tab.getExecuter()) return tab.editorPane.getFileName();
+		}
+		return "script";
 	}
 
 	public void kill(final Executer executer) {
