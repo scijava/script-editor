@@ -52,26 +52,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
-
-import javax.swing.ButtonGroup;
-import javax.swing.JButton;
-import javax.swing.JCheckBoxMenuItem;
-import javax.swing.JComponent;
-import javax.swing.JDialog;
-import javax.swing.JLabel;
-import javax.swing.JMenu;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import javax.swing.JScrollPane;
-import javax.swing.JSplitPane;
-import javax.swing.JTabbedPane;
-import javax.swing.JTextPane;
-import javax.swing.JTree;
-import javax.swing.KeyStroke;
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
+import javax.swing.*;
 
 import org.scijava.platform.PlatformService;
 import org.scijava.util.PlatformUtils;
@@ -391,12 +372,36 @@ final class GuiUtils {
 		return b;
 	}
 
-	/** Rounded scrollbar thumbs without arrow buttons (FlatLaf only) */
+	/**
+	 * Rounded scrollbar thumbs without arrow buttons (FlatLaf only), on tracks that blend into the
+	 * view: the tracks and corner follow the background of the view, e.g., after a theme change
+	 */
 	static void flattenScrollBars(final JScrollPane scrollPane) {
-		final String style = "showButtons: false; trackArc: 999; thumbArc: 999; "
-				+ "trackInsets: 2,2,2,2; thumbInsets: 2,2,2,2";
-		scrollPane.getVerticalScrollBar().putClientProperty(FlatClientProperties.STYLE, style);
-		scrollPane.getHorizontalScrollBar().putClientProperty(FlatClientProperties.STYLE, style);
+		final Component view = scrollPane.getViewport().getView();
+		final Runnable apply = () -> {
+			String style = "showButtons: false; trackArc: 999; thumbArc: 999; "
+					+ "trackInsets: 2,2,2,2; thumbInsets: 2,2,2,2";
+			final Color bg = (view == null) ? null : view.getBackground();
+			if (bg != null) {
+				final String hex = String.format("#%06x", bg.getRGB() & 0xFFFFFF);
+				style += "; track: " + hex + "; hoverTrackColor: " + hex;
+				Component corner = scrollPane.getCorner(JScrollPane.LOWER_TRAILING_CORNER);
+				if (corner == null) {
+					corner = new JPanel();
+					scrollPane.setCorner(JScrollPane.LOWER_TRAILING_CORNER, corner);
+				}
+				corner.setBackground(bg);
+			}
+			scrollPane.getVerticalScrollBar().putClientProperty(FlatClientProperties.STYLE, style);
+			scrollPane.getHorizontalScrollBar().putClientProperty(FlatClientProperties.STYLE, style);
+			if (bg != null) {
+				// the scroll bar background shows as a 1px fringe around the rounded track
+				scrollPane.getVerticalScrollBar().setBackground(bg);
+				scrollPane.getHorizontalScrollBar().setBackground(bg);
+			}
+		};
+		apply.run();
+		if (view != null) view.addPropertyChangeListener("background", e -> apply.run());
 	}
 
 	/**
@@ -503,7 +508,12 @@ final class GuiUtils {
 		final JButton triggerButton = ellipsisButton(null);
 		triggerButton.addActionListener( e -> popup.show(triggerButton,
 				triggerButton.getWidth() /2, triggerButton.getHeight() /2));
-		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TRAILING_COMPONENT, triggerButton);
+		// With leading alignment the trailing component is stretched to the free
+		// space: a wrapper keeps the button itself flushed to the right
+		final JPanel trailing = new JPanel(new java.awt.BorderLayout());
+		trailing.setOpaque(false);
+		trailing.add(triggerButton, java.awt.BorderLayout.EAST);
+		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TRAILING_COMPONENT, trailing);
 		return tabbed;
 	}
 

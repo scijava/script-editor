@@ -219,6 +219,16 @@ class CommandPalette {
 		frame = null;
 	}
 
+	/** Hides the palette */
+	protected void hide() {
+		if (frame == null || !frame.isVisible()) return;
+		if (SwingUtilities.isEventDispatchThread()) {
+			hideWindow();
+		} else {
+			SwingUtilities.invokeLater(this::hideWindow);
+		}
+	}
+
 	private void hideWindow() {
 		if (frame != null) {
 			if (frame.isVisible())

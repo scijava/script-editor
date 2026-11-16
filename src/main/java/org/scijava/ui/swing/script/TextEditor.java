@@ -246,6 +246,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	private boolean consoleWrap, replWrap;
 	private static final String CONSOLE_WRAP_PREFS = "script.editor.ConsoleWrap";
 	private static final String REPL_WRAP_PREFS = "script.editor.ReplWrap";
+	private static final String SIDE_TAB_PREFS = "script.editor.SideTab";
 	private JButton statusPos, statusLang;
 	private JToggleButton statusSide, statusBelow, statusRight, statusRepl, statusVimToggle;
 	private int sideLastLocation = -1;
@@ -340,7 +341,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		// NB: All panes must be initialized before menus are assembled!
 		tabbed = GuiUtils.getJTabbedPane();
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_AREA_ALIGNMENT,
-				FlatClientProperties.TABBED_PANE_ALIGN_FILL);
+				FlatClientProperties.TABBED_PANE_ALIGN_LEADING);
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_CLOSABLE, true);
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_CLOSE_TOOLTIPTEXT, "Close");
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_CLOSE_CALLBACK,
@@ -777,7 +778,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		// add tab-related listeners
 		tabbed.addChangeListener(this);
 		sideTabs.addChangeListener(e -> {
-			if (sideTabs.getSelectedIndex() == 1)
+			final int sel = sideTabs.getSelectedIndex();
+			if (sel > -1) prefService.put(getClass(), SIDE_TAB_PREFS, sideTabs.getTitleAt(sel));
+			if (SwingUtilities.isDescendingFrom(sourceTreePanel, sideTabs.getSelectedComponent()))
 				sourceTreePanel.rebuildSourceTree(getTab(tabbed.getSelectedIndex()).editorPane);
 		});
 
@@ -795,6 +798,13 @@ public class TextEditor extends JFrame implements ActionListener,
 			}
 		});
 		open(null); // make sure the editor pane is added
+		final String lastSideTab = prefService.get(getClass(), SIDE_TAB_PREFS, null);
+		for (int i = 0; lastSideTab != null && i < sideTabs.getTabCount(); i++) {
+			if (lastSideTab.equals(sideTabs.getTitleAt(i))) {
+				sideTabs.setSelectedIndex(i);
+				break;
+			}
+		}
 		getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 
 		// Tweaks for JSplitPane
@@ -969,23 +979,26 @@ public class TextEditor extends JFrame implements ActionListener,
 		return panel;
 	}
 
+	private static String tagHtml(final String tag) {
+		return String.format("<b><font color='#%06x'>%s</font></b>", TasksPanel.tagColor(tag).getRGB() & 0xFFFFFF, tag);
+	}
+
 	private void showTasksHelp() {
 		showHTMLDialog("Task Tags Help", """
-			<p>Comments containing <code>TODO</code>, <code>FIXME</code> or <code>HACK</code> are
-			registered as tasks automatically:</p>
+			<HTML><div width=550>
+			Comments containing %s, %s or %s are registered as tasks automatically:
 			<ul>
 			<li>They are listed in the <i>Tasks</i> section of the <i>Markers</i> tab, for all open
 			tabs. Double-click (or press Enter on) an entry to jump to it</li>
-			<li>They are marked on the rightmost side of the editor, each keyword with its own color:
-			blue (<code>TODO</code>), orange (<code>FIXME</code>) and purple (<code>HACK</code>).
+			<li>They are marked on the rightmost side of the editor, each keyword with its own color.
 			Mouse over a mark for a summary of the task, and click on it to go to the line</li>
 			<li>To remove a task, delete the keyword from the comment</li>
-			</ul>""");
+			</ul>""".formatted(tagHtml("TODO"), tagHtml("FIXME"), tagHtml("HACK")));
 	}
 
 	private void showBookmarksHelp() {
 		showHTMLDialog("Bookmarks Help", """
-			<p>Bookmarks flag lines you want to come back to:</p>
+			<HTML><div width=550>Bookmarks flag lines you want to come back to:
 			<ul>
 			<li>Click next to a line number to add or remove a bookmark</li>
 			<li>They are listed in the <i>Bookmarks</i> section of the <i>Markers</i> tab, for all
@@ -4213,6 +4226,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	void showHTMLDialog(final String title, final String htmlContents) {
+		if (cmdPalette != null) cmdPalette.hide();
 		GuiUtils.showHTMLDialog(this, title, htmlContents);
 	}
 
@@ -4567,12 +4581,6 @@ public class TextEditor extends JFrame implements ActionListener,
 		menu.add(item);
 		item = new JMenuItem("List Recordable Actions...");
 		item.addActionListener(e -> displayRecordableMap());
-		menu.add(item);
-		item = new JMenuItem("Task Tags How-To...");
-		item.addActionListener(e -> showTasksHelp());
-		menu.add(item);
-		item = new JMenuItem("Bookmarks How-To...");
-		item.addActionListener(e -> showBookmarksHelp());
 		menu.add(item);
 		GuiUtils.addMenubarSeparator(menu, "Contextual Help:");
 		menu.add(openHelpWithoutFrames);

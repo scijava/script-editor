@@ -60,7 +60,7 @@ public class GutterUtils {
 
 		// this will clear existing bookmarks, so we'll need restore existing ones
 		final GutterIconInfo[] stash = gutter.getBookmarks();
-		gutter.setBookmarkIcon(Icons.bookmark(color, UIScale.unscale(height)));
+		gutter.setBookmarkIcon(padded(Icons.bookmark(color, UIScale.unscale(height)), 3));
 
 		for (final GutterIconInfo info : stash) {
 			try {
@@ -69,6 +69,27 @@ public class GutterUtils {
 				// do nothing
 			}
 		}
+	}
+
+	/** The icon is painted flush left in the icon column: pad it to center it */
+	private static javax.swing.Icon padded(final javax.swing.Icon icon, final int unscaledPad) {
+		final int pad = UIScale.scale(unscaledPad);
+		return new javax.swing.Icon() {
+			@Override
+			public void paintIcon(final java.awt.Component c, final java.awt.Graphics g, final int x, final int y) {
+				icon.paintIcon(c, g, x + pad, y);
+			}
+
+			@Override
+			public int getIconWidth() {
+				return icon.getIconWidth() + 2 * pad;
+			}
+
+			@Override
+			public int getIconHeight() {
+				return icon.getIconHeight();
+			}
+		};
 	}
 
 	public static void updateIcons(final Gutter gutter, final RTextArea textArea) {

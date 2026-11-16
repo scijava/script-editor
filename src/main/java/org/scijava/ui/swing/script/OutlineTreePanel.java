@@ -62,6 +62,12 @@ class OutlineTreePanel extends JScrollPane {
 		setViewportView(new UnsupportedLangTree());
 	}
 
+	@Override
+	public void setViewportView(final java.awt.Component view) {
+		super.setViewportView(view);
+		GuiUtils.flattenScrollBars(this); // tracks follow the background of each new view
+	}
+
 	protected void rebuildSourceTree(final EditorPane pane) {
 		if (!isVisible())
 			return;

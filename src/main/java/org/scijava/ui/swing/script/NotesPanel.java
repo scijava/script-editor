@@ -69,6 +69,7 @@ class NotesPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
 	private static final String PREFS_COUNT = "script.editor.notes.chunks";
 	private static final String PREFS_CHUNK = "script.editor.notes.chunk";
+	private static final String PREFS_WRAP = "script.editor.notes.wrap";
 	private static final int CHUNK_SIZE = 4000;
 	private static final int MAX_CHARS = 200000;
 	private static final int SAVE_DELAY_MS = 1000;
@@ -114,10 +115,9 @@ class NotesPanel extends JPanel {
 						"They are saved between sessions");
 			}
 		};
-		scratch.setLineWrap(true);
+		scratch.setLineWrap(prefs.getBoolean(prefsOwner, PREFS_WRAP, true));
 		scratch.setWrapStyleWord(true);
-		scratch.setBorder(new EmptyBorder(4, 4, 4, 4));
-		scratch.setToolTipText("Scratchpad: free text, saved between sessions");
+		scratch.setComponentPopupMenu(scratchMenu());
 		final JScrollPane scratchPane = new JScrollPane(scratch);
 		GuiUtils.flattenScrollBars(scratchPane);
 
@@ -210,6 +210,42 @@ class NotesPanel extends JPanel {
 			if (isShowing()) refresh();
 		});
 		poll.start();
+	}
+
+	private JPopupMenu scratchMenu() {
+		final JPopupMenu menu = new JPopupMenu();
+		final JCheckBoxMenuItem wrap = new JCheckBoxMenuItem("Wrap Lines");
+		wrap.addActionListener(e -> {
+			scratch.setLineWrap(wrap.isSelected());
+			prefs.put(prefsOwner, PREFS_WRAP, wrap.isSelected());
+		});
+		menu.add(wrap);
+		menu.addSeparator();
+		final JMenuItem discard = new JMenuItem("Discard");
+		discard.addActionListener(e -> {
+			if (GuiUtils.confirm(this, "Discard the contents of the scratchpad?", "Discard Scratchpad?",
+				"Discard")) scratch.setText("");
+		});
+		menu.add(discard);
+		menu.addPopupMenuListener(new javax.swing.event.PopupMenuListener() {
+
+			@Override
+			public void popupMenuWillBecomeVisible(final javax.swing.event.PopupMenuEvent e) {
+				wrap.setSelected(scratch.getLineWrap());
+				discard.setEnabled(scratch.getDocument().getLength() > 0);
+			}
+
+			@Override
+			public void popupMenuWillBecomeInvisible(final javax.swing.event.PopupMenuEvent e) {
+				// nothing to do
+			}
+
+			@Override
+			public void popupMenuCanceled(final javax.swing.event.PopupMenuEvent e) {
+				// nothing to do
+			}
+		});
+		return menu;
 	}
 
 	/** Flushes pending scratchpad changes to the preferences. */
