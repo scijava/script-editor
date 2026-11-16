@@ -74,7 +74,9 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -2895,19 +2897,16 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * @return the text editor tab
 	 */
 	public TextEditorTab newTab(final String content, final String languageExtension) {
-		String lang = languageExtension;
 		final TextEditorTab tab = open(null);
-		if (null != lang && lang.length() > 0) {
-			lang = lang.trim().toLowerCase();
-
-			if ('.' != lang.charAt(0)) {
-				lang = "." + languageExtension;
-			}
-
-			tab.editorPane.setLanguage(scriptService.getLanguageByName(languageExtension));
+		if (tab == null) return null; // open() failed
+		if (languageExtension != null && !languageExtension.isBlank()) {
+			String ext = languageExtension.trim().toLowerCase();
+			if (ext.startsWith(".")) ext = ext.substring(1);
+			final ScriptLanguage language = scriptService.getLanguageByExtension(ext);
+			if (language != null) tab.editorPane.setLanguage(language);
 		} else {
 			final String lastLanguageName = prefService.get(getClass(), LAST_LANGUAGE);
-			if (null != lastLanguageName && "none" != lastLanguageName)
+			if (null != lastLanguageName && !"none".equals(lastLanguageName))
 				setLanguage(scriptService.getLanguageByName(lastLanguageName));
 		}
 
@@ -3694,9 +3693,9 @@ public class TextEditor extends JFrame implements ActionListener,
 			final String selected = tab.getEditorPane().getSelectedText();
 			if (selected == null) {
 				error("Selection required!");
-				text = null;
+				return;
 			}
-			else text = selected + "\n"; // Ensure code blocks are terminated
+			text = selected + "\n"; // Ensure code blocks are terminated
 			getEditorPane().getErrorHighlighter().setSelectedCodeExecution(true);
 		}
 		else {
@@ -3854,11 +3853,10 @@ public class TextEditor extends JFrame implements ActionListener,
 				croppedLog.add("#");
 			}
 			try {
-				Files.write(Paths.get(path + "-tmp"), croppedLog, Charset.forName("UTF-8"),
+				final Path tmp = Paths.get(path + "-tmp");
+				Files.write(tmp, croppedLog, StandardCharsets.UTF_8, StandardOpenOption.CREATE,
 						StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.DSYNC);
-				if (!new File(path + "-tmp").renameTo(new File(path))) {
-					log.error("Could not rename command log file " + path + "-tmp to " + path);
-				}
+				Files.move(tmp, Paths.get(path), StandardCopyOption.REPLACE_EXISTING);
 			} catch (final Exception e) {
 				log.error("Failed to crop history of prompt commands file " + path, e);
 			}
@@ -4104,12 +4102,7 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		if (className.startsWith("java.") || className.startsWith("javax.")) {
 			// Core Java class -- use javadoc.scijava.org/Java<#> link.
-			final String javaVersion = System.getProperty("java.version");
-			final String majorVersion;
-			if (javaVersion.startsWith("1.")) {
-				majorVersion = javaVersion.substring(2, javaVersion.indexOf('.', 2));
-			}
-			else majorVersion = javaVersion.substring(0, javaVersion.indexOf('.'));
+			final int majorVersion = Runtime.version().feature();
 			url = "https://javadoc.scijava.org/Java" + majorVersion + "/" + path;
 		}
 		else {
