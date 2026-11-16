@@ -1033,28 +1033,28 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	private void showTasksHelp() {
-		showHTMLDialog("Task Tags Help", """
-			<HTML><div width=550>
-			Comments containing %s, %s or %s are registered as tasks automatically:
-			<ul>
-			<li>They are listed in the <i>Tasks</i> section of the <i>Markers</i> tab, for all open
-			tabs. Double-click (or press Enter on) an entry to jump to it</li>
-			<li>They are marked on the rightmost side of the editor, each keyword with its own color.
-			Mouse over a mark for a summary of the task, and click on it to go to the line</li>
-			<li>To remove a task, delete the keyword from the comment</li>
-			</ul>""".formatted(tagHtml("TODO"), tagHtml("FIXME"), tagHtml("HACK")));
+		showHTMLDialog("Task Tags Help", String.format("" //
+			+ "<HTML><div width=550>\n" //
+			+ "Comments containing %s, %s or %s are registered as tasks automatically:\n" //
+			+ "<ul>\n" //
+			+ "<li>They are listed in the <i>Tasks</i> section of the <i>Markers</i> tab, for all open\n" //
+			+ "tabs. Double-click (or press Enter on) an entry to jump to it</li>\n" //
+			+ "<li>They are marked on the rightmost side of the editor, each keyword with its own color.\n" //
+			+ "Mouse over a mark for a summary of the task, and click on it to go to the line</li>\n" //
+			+ "<li>To remove a task, delete the keyword from the comment</li>\n" //
+			+ "</ul>", tagHtml("TODO"), tagHtml("FIXME"), tagHtml("HACK")));
 	}
 
 	private void showBookmarksHelp() {
-		showHTMLDialog("Bookmarks Help", """
-			<HTML><div width=550>Bookmarks flag lines you want to come back to:
-			<ul>
-			<li>Click next to a line number to add or remove a bookmark</li>
-			<li>They are listed in the <i>Bookmarks</i> section of the <i>Markers</i> tab, for all
-			open tabs. Double-click (or press Enter on) an entry to jump to it</li>
-			<li>Press Delete to remove the selected bookmark. Right-click an entry for more options,
-			e.g., to clear all bookmarks</li>
-			</ul>""");
+		showHTMLDialog("Bookmarks Help", "" //
+			+ "<HTML><div width=550>Bookmarks flag lines you want to come back to:\n" //
+			+ "<ul>\n" //
+			+ "<li>Click next to a line number to add or remove a bookmark</li>\n" //
+			+ "<li>They are listed in the <i>Bookmarks</i> section of the <i>Markers</i> tab, for all\n" //
+			+ "open tabs. Double-click (or press Enter on) an entry to jump to it</li>\n" //
+			+ "<li>Press Delete to remove the selected bookmark. Right-click an entry for more options,\n" //
+			+ "e.g., to clear all bookmarks</li>\n" //
+			+ "</ul>");
 	}
 
 	private void assembleEditMenu() {
@@ -1905,13 +1905,13 @@ public class TextEditor extends JFrame implements ActionListener,
 			save();
 			return true;
 		}
-		return switch (GuiUtils.confirmUnsaved(this, "Do you want to save changes?",
+		switch (GuiUtils.confirmUnsaved(this, "Do you want to save changes?",
 				"Save Changes?")) {
-			case SAVE -> save();
+			case SAVE: return save();
 			// Compiled languages should not progress if their source is unsaved
-			case DISCARD -> !beforeCompiling;
-			case CANCEL -> false;
-		};
+			case DISCARD: return !beforeCompiling;
+			default: return false;
+		}
 	}
 
 	private boolean isJava(final ScriptLanguage language) {
@@ -2314,10 +2314,10 @@ public class TextEditor extends JFrame implements ActionListener,
 				}
 				final StringBuilder lead = new StringBuilder();
 				if (toSpaces) {
-					lead.repeat(" ", Math.max(0, col));
+					lead.append(" ".repeat(Math.max(0, col)));
 				} else {
-					lead.repeat("\t", Math.max(0, col / tabSize));
-					lead.repeat(" ", Math.max(0, col % tabSize));
+					lead.append("\t".repeat(Math.max(0, col / tabSize)));
+					lead.append(" ".repeat(Math.max(0, col % tabSize)));
 				}
 				if (!lead.toString().equals(text.substring(i, j))) changed++;
 				out.append(lead).append(text, j, eol);
@@ -2563,25 +2563,23 @@ public class TextEditor extends JFrame implements ActionListener,
 	 * @return false if the command is unknown.
 	 */
 	boolean handleVimCommand(final String command) {
-		return switch (command) {
-			case "w" -> {
+		switch (command) {
+			case "w":
 				save();
-				yield true;
-			}
-			case "q" -> {
+				return true;
+			case "q":
 				closeTab(true);
-				yield true;
-			}
-			case "q!" -> {
+				return true;
+			case "q!":
 				closeTab(false);
-				yield true;
-			}
-			case "wq", "x" -> {
+				return true;
+			case "wq":
+			case "x":
 				if (save()) closeTab(true);
-				yield true;
-			}
-			default -> false;
-		};
+				return true;
+			default:
+				return false;
+		}
 	}
 
 	/** Shows/hides the side panel (Files, Outline, Notes), restoring its last width */
@@ -3072,7 +3070,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (language != null && FileUtils.getExtension(fileToSave.getName()).isEmpty()
 				&& !language.getExtensions().isEmpty()) {
 			fileToSave = new File(fileToSave.getParentFile(),
-					fileToSave.getName() + "." + language.getExtensions().getFirst());
+					fileToSave.getName() + "." + language.getExtensions().get(0));
 		}
 		return saveAs(fileToSave.getAbsolutePath(), true);
 	}
@@ -3758,7 +3756,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			return;
 		}
 		final ScriptInfo info = new ScriptInfo(context, //
-			"batch_submission." + getCurrentLanguage().getExtensions().getFirst(), //
+			"batch_submission." + getCurrentLanguage().getExtensions().get(0), //
 			new StringReader(script));
 		boolean hasFileInput = false;
 		for (final ModuleItem<?> input : info.inputs())
@@ -3922,7 +3920,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			ra.readFully(bytes);
 			final String sep = System.lineSeparator(); // used fy Files.write above
 			commands.addAll(Arrays.asList(new String(bytes, StandardCharsets.UTF_8).split(sep + "#" + sep)));
-			if (commands.getLast().isEmpty()) commands.removeLast(); // last entry is empty
+			if (commands.get(commands.size() - 1).isEmpty()) commands.remove(commands.size() - 1); // last entry is empty
 		} catch (final IOException e) {
 			log.error("Failed to read history of prompt commands from file " + path, e);
 			return lines;

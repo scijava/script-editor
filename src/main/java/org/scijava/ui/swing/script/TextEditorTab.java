@@ -140,10 +140,11 @@ public class TextEditorTab extends GuiUtils.StickySplitPane {
 				if (!t.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) return;
 				try {
 					final Object o = t.getTransferData(DataFlavor.javaFileListFlavor);
-					if (!(o instanceof List<?> list)) return;
+					if (!(o instanceof List<?>)) return;
+					final List<?> list = (List<?>) o;
 					if (list.isEmpty()) return;
 					String path;
-					final Object first = list.getFirst();
+					final Object first = list.get(0);
 					if (first instanceof String) path = (String) first;
 					else if (first instanceof File) path = ((File) first).getAbsolutePath();
 					else return;
@@ -296,18 +297,18 @@ public class TextEditorTab extends GuiUtils.StickySplitPane {
 		statusHelp.addActionListener(a -> {
 			final int shift = InputEvent.SHIFT_DOWN_MASK;
 			final int ctrl = InputEvent.CTRL_DOWN_MASK;
-			final String html = """
-					<html><body>
-					<table cellpadding="3">
-					<tr><td>%s</td><td>Evaluate code</td></tr>
-					<tr><td>%s</td><td>Add line break (also with Ctrl, Alt or Meta)</td></tr>
-					<tr><td>%s or %s</td><td>Previous entry in the history</td></tr>
-					<tr><td>%s or %s</td><td>Next entry in the history</td></tr>
-					</table>
-					<p>With <i>Arrow Keys</i> on, %s and %s also navigate the history. Combined<br>
-					with a modifier (e.g., %s) they move the caret within a multi-line prompt.</p>
-					</body></html>"""
-					.formatted(keyHtml(KeyEvent.VK_ENTER, 0), keyHtml(KeyEvent.VK_ENTER, shift),
+			final String html = String.format("" //
+					+ "<html><body>\n" //
+					+ "<table cellpadding=\"3\">\n" //
+					+ "<tr><td>%s</td><td>Evaluate code</td></tr>\n" //
+					+ "<tr><td>%s</td><td>Add line break (also with Ctrl, Alt or Meta)</td></tr>\n" //
+					+ "<tr><td>%s or %s</td><td>Previous entry in the history</td></tr>\n" //
+					+ "<tr><td>%s or %s</td><td>Next entry in the history</td></tr>\n" //
+					+ "</table>\n" //
+					+ "<p>With <i>Arrow Keys</i> on, %s and %s also navigate the history. Combined<br>\n" //
+					+ "with a modifier (e.g., %s) they move the caret within a multi-line prompt.</p>\n" //
+					+ "</body></html>",
+					keyHtml(KeyEvent.VK_ENTER, 0), keyHtml(KeyEvent.VK_ENTER, shift),
 							keyHtml(KeyEvent.VK_PAGE_UP, 0), keyHtml(KeyEvent.VK_P, ctrl),
 							keyHtml(KeyEvent.VK_PAGE_DOWN, 0), keyHtml(KeyEvent.VK_N, ctrl),
 							keyHtml(KeyEvent.VK_UP, 0), keyHtml(KeyEvent.VK_DOWN, 0), keyHtml(KeyEvent.VK_UP, shift));
@@ -643,11 +644,11 @@ public class TextEditorTab extends GuiUtils.StickySplitPane {
 	}
 
 	public JTextArea getScreen() {
-		return switch (view) {
-			case ERRORS -> textEditor.getErrorScreen();
-			case BOTH -> combinedScreen;
-			default -> screen;
-		};
+		switch (view) {
+			case ERRORS: return textEditor.getErrorScreen();
+			case BOTH: return combinedScreen;
+			default: return screen;
+		}
 	}
 
 	void setConsoleWrap(final boolean wrap) {

@@ -60,7 +60,36 @@ import javax.swing.border.EmptyBorder;
 class TasksPanel extends JPanel {
 
 	/** A task comment: its tab, 1-based line, document offset and text */
-	record Task(TextEditorTab tab, int line, int offset, String text) {}
+	static class Task {
+
+		private final TextEditorTab tab;
+		private final int line;
+		private final int offset;
+		private final String text;
+
+		Task(final TextEditorTab tab, final int line, final int offset, final String text) {
+			this.tab = tab;
+			this.line = line;
+			this.offset = offset;
+			this.text = text;
+		}
+
+		TextEditorTab tab() {
+			return tab;
+		}
+
+		int line() {
+			return line;
+		}
+
+		int offset() {
+			return offset;
+		}
+
+		String text() {
+			return text;
+		}
+	}
 
 	private static final long serialVersionUID = 1L;
 	private static final int REFRESH_DELAY_MS = 1500;

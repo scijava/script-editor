@@ -300,13 +300,18 @@ final class Icons {
 					v[j] = k * (Double.parseDouble(tokens.get(i + j)) - ((j % 2 == 0) ? x0 : y0));
 				i += v.length;
 				switch (cmd) {
-					case 'M' -> {
+					case 'M':
 						p.moveTo(v[0], v[1]);
 						cmd = 'L'; // further pairs are line segments
-					}
-					case 'L' -> p.lineTo(v[0], v[1]);
-					case 'C' -> p.curveTo(v[0], v[1], v[2], v[3], v[4], v[5]);
-					default -> throw new IllegalArgumentException("Unsupported path command: " + cmd);
+						break;
+					case 'L':
+						p.lineTo(v[0], v[1]);
+						break;
+					case 'C':
+						p.curveTo(v[0], v[1], v[2], v[3], v[4], v[5]);
+						break;
+					default:
+						throw new IllegalArgumentException("Unsupported path command: " + cmd);
 				}
 			}
 			return p;
@@ -331,11 +336,17 @@ final class Icons {
 		protected void paintIcon(final Component c, final Graphics2D g) {
 			g.setColor(c.getForeground());
 			g.drawRoundRect(1, 2, 13, 11, 3, 3);
-			paintContent(g, c instanceof AbstractButton b && b.isSelected());
+			paintContent(g, c instanceof AbstractButton && ((AbstractButton) c).isSelected());
 		}
 	}
 
-	private record ChevronIcon(boolean down) implements Icon {
+	private static class ChevronIcon implements Icon {
+
+		private final boolean down;
+
+		ChevronIcon(final boolean down) {
+			this.down = down;
+		}
 
 		@Override
 		public int getIconWidth() {

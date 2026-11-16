@@ -85,7 +85,30 @@ public class ErrorParser {
 	 * An errored line: its position tracks edits in the document, and its text
 	 * at the time of the run tells whether the error is still about that line
 	 */
-	private record FlaggedLine(Position position, String text, Object highlight) {}
+	private static class FlaggedLine {
+
+		private final Position position;
+		private final String text;
+		private final Object highlight;
+
+		FlaggedLine(final Position position, final String text, final Object highlight) {
+			this.position = position;
+			this.text = text;
+			this.highlight = highlight;
+		}
+
+		Position position() {
+			return position;
+		}
+
+		String text() {
+			return text;
+		}
+
+		Object highlight() {
+			return highlight;
+		}
+	}
 
 	private final List<FlaggedLine> errors = new CopyOnWriteArrayList<>();
 	private final AtomicBoolean prunePending = new AtomicBoolean();
@@ -387,8 +410,11 @@ public class ErrorParser {
 	static void fromThrowable(final Throwable t, final String fileName, final Collection<Integer> lines) {
 		int depth = 0;
 		for (Throwable c = t; c != null && depth++ < 20; c = c.getCause()) {
-			if (c instanceof ScriptException se && se.getLineNumber() > 0 && sameFile(se.getFileName(), fileName, true))
-				lines.add(se.getLineNumber());
+			if (c instanceof ScriptException) {
+				final ScriptException se = (ScriptException) c;
+				if (se.getLineNumber() > 0 && sameFile(se.getFileName(), fileName, true))
+					lines.add(se.getLineNumber());
+			}
 			for (final StackTraceElement e : c.getStackTrace()) {
 				if (e.getLineNumber() > 0 && sameFile(e.getFileName(), fileName, false))
 					lines.add(e.getLineNumber());

@@ -159,11 +159,11 @@ final class GuiUtils {
 		final Object[] options = { "Save", "Discard", "Cancel" };
 		final int choice = JOptionPane.showOptionDialog(parent, message, title,
 				JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
-		return switch (choice) {
-			case 0 -> UnsavedChoice.SAVE;
-			case 1 -> UnsavedChoice.DISCARD;
-			default -> UnsavedChoice.CANCEL;
-		};
+		switch (choice) {
+			case 0: return UnsavedChoice.SAVE;
+			case 1: return UnsavedChoice.DISCARD;
+			default: return UnsavedChoice.CANCEL;
+		}
 	}
 
 	/**
@@ -402,59 +402,59 @@ final class GuiUtils {
 				|| keyCode >= KeyEvent.VK_A && keyCode <= KeyEvent.VK_Z) {
 			return String.valueOf((char) keyCode);
 		}
-            return switch (keyCode) {
-                case KeyEvent.VK_COMMA -> ",";
-                case KeyEvent.VK_PERIOD -> ".";
-                case KeyEvent.VK_SLASH -> "/";
-                case KeyEvent.VK_SEMICOLON -> ";";
-                case KeyEvent.VK_EQUALS -> "=";
-                case KeyEvent.VK_OPEN_BRACKET -> "[";
-                case KeyEvent.VK_BACK_SLASH -> "\\";
-                case KeyEvent.VK_CLOSE_BRACKET -> "]";
-                case KeyEvent.VK_ENTER -> "\u21b5";
-                case KeyEvent.VK_BACK_SPACE -> "\u232b";
-                case KeyEvent.VK_TAB -> "\u21b9";
-                case KeyEvent.VK_CANCEL -> "Cancel";
-                case KeyEvent.VK_CLEAR -> "Clear";
-                case KeyEvent.VK_PAUSE -> "Pause";
-                case KeyEvent.VK_CAPS_LOCK -> "Caps Lock";
-                case KeyEvent.VK_ESCAPE -> "Esc";
-                case KeyEvent.VK_SPACE -> "Space";
-                case KeyEvent.VK_PAGE_UP -> "\u21de";
-                case KeyEvent.VK_PAGE_DOWN -> "\u21df";
-                case KeyEvent.VK_END -> "END";
-                case KeyEvent.VK_HOME -> "Home";
-                case KeyEvent.VK_LEFT -> "\u2190";
-                case KeyEvent.VK_UP -> "\u2191";
-                case KeyEvent.VK_RIGHT -> "\u2192";
-                case KeyEvent.VK_DOWN -> "\u2193";
-                case KeyEvent.VK_MULTIPLY -> "[Num \u00d7]";
-                case KeyEvent.VK_ADD -> "[Num +]";
-                case KeyEvent.VK_SUBTRACT -> "[Num \u2212]";
-                case KeyEvent.VK_DIVIDE -> "[Num /]";
-                case KeyEvent.VK_DELETE -> "\u2326";
-                case KeyEvent.VK_INSERT -> "Ins";
-                case KeyEvent.VK_BACK_QUOTE -> "`";
-                case KeyEvent.VK_QUOTE -> "'";
-                case KeyEvent.VK_AMPERSAND -> "&";
-                case KeyEvent.VK_ASTERISK -> "*";
-                case KeyEvent.VK_QUOTEDBL -> "\"";
-                case KeyEvent.VK_LESS -> "<";
-                case KeyEvent.VK_GREATER -> ">";
-                case KeyEvent.VK_BRACELEFT -> "{";
-                case KeyEvent.VK_BRACERIGHT -> "}";
-                case KeyEvent.VK_COLON -> ":";
-                case KeyEvent.VK_CIRCUMFLEX -> "^";
-                case KeyEvent.VK_DEAD_TILDE -> "~";
-                case KeyEvent.VK_DOLLAR -> "$";
-                case KeyEvent.VK_EXCLAMATION_MARK -> "!";
-                case KeyEvent.VK_LEFT_PARENTHESIS -> "(";
-                case KeyEvent.VK_MINUS -> "-";
-                case KeyEvent.VK_PLUS -> "+";
-                case KeyEvent.VK_RIGHT_PARENTHESIS -> ")";
-                case KeyEvent.VK_UNDERSCORE -> "_";
-                default -> KeyEvent.getKeyText(keyCode);
-            };
+		switch (keyCode) {
+			case KeyEvent.VK_COMMA: return ",";
+			case KeyEvent.VK_PERIOD: return ".";
+			case KeyEvent.VK_SLASH: return "/";
+			case KeyEvent.VK_SEMICOLON: return ";";
+			case KeyEvent.VK_EQUALS: return "=";
+			case KeyEvent.VK_OPEN_BRACKET: return "[";
+			case KeyEvent.VK_BACK_SLASH: return "\\";
+			case KeyEvent.VK_CLOSE_BRACKET: return "]";
+			case KeyEvent.VK_ENTER: return "\u21b5";
+			case KeyEvent.VK_BACK_SPACE: return "\u232b";
+			case KeyEvent.VK_TAB: return "\u21b9";
+			case KeyEvent.VK_CANCEL: return "Cancel";
+			case KeyEvent.VK_CLEAR: return "Clear";
+			case KeyEvent.VK_PAUSE: return "Pause";
+			case KeyEvent.VK_CAPS_LOCK: return "Caps Lock";
+			case KeyEvent.VK_ESCAPE: return "Esc";
+			case KeyEvent.VK_SPACE: return "Space";
+			case KeyEvent.VK_PAGE_UP: return "\u21de";
+			case KeyEvent.VK_PAGE_DOWN: return "\u21df";
+			case KeyEvent.VK_END: return "END";
+			case KeyEvent.VK_HOME: return "Home";
+			case KeyEvent.VK_LEFT: return "\u2190";
+			case KeyEvent.VK_UP: return "\u2191";
+			case KeyEvent.VK_RIGHT: return "\u2192";
+			case KeyEvent.VK_DOWN: return "\u2193";
+			case KeyEvent.VK_MULTIPLY: return "[Num \u00d7]";
+			case KeyEvent.VK_ADD: return "[Num +]";
+			case KeyEvent.VK_SUBTRACT: return "[Num \u2212]";
+			case KeyEvent.VK_DIVIDE: return "[Num /]";
+			case KeyEvent.VK_DELETE: return "\u2326";
+			case KeyEvent.VK_INSERT: return "Ins";
+			case KeyEvent.VK_BACK_QUOTE: return "`";
+			case KeyEvent.VK_QUOTE: return "'";
+			case KeyEvent.VK_AMPERSAND: return "&";
+			case KeyEvent.VK_ASTERISK: return "*";
+			case KeyEvent.VK_QUOTEDBL: return "\"";
+			case KeyEvent.VK_LESS: return "<";
+			case KeyEvent.VK_GREATER: return ">";
+			case KeyEvent.VK_BRACELEFT: return "{";
+			case KeyEvent.VK_BRACERIGHT: return "}";
+			case KeyEvent.VK_COLON: return ":";
+			case KeyEvent.VK_CIRCUMFLEX: return "^";
+			case KeyEvent.VK_DEAD_TILDE: return "~";
+			case KeyEvent.VK_DOLLAR: return "$";
+			case KeyEvent.VK_EXCLAMATION_MARK: return "!";
+			case KeyEvent.VK_LEFT_PARENTHESIS: return "(";
+			case KeyEvent.VK_MINUS: return "-";
+			case KeyEvent.VK_PLUS: return "+";
+			case KeyEvent.VK_RIGHT_PARENTHESIS: return ")";
+			case KeyEvent.VK_UNDERSCORE: return "_";
+			default: return KeyEvent.getKeyText(keyCode);
+		}
 	}
 
 	/**
@@ -694,12 +694,12 @@ final class GuiUtils {
 	}
 
 	private static String placementName(final int placement) {
-		return switch (placement) {
-			case JTabbedPane.LEFT -> "Left";
-			case JTabbedPane.BOTTOM -> "Bottom";
-			case JTabbedPane.RIGHT -> "Right";
-			default -> "Top";
-		};
+		switch (placement) {
+			case JTabbedPane.LEFT: return "Left";
+			case JTabbedPane.BOTTOM: return "Bottom";
+			case JTabbedPane.RIGHT: return "Right";
+			default: return "Top";
+		}
 	}
 
 	/** Returns the color with the given opacity (0-100) */
@@ -709,7 +709,7 @@ final class GuiUtils {
 
 	/** Returns a color that is weight of a plus (1 - weight) of b */
 	static Color mix(final Color a, final Color b, final double weight) {
-		final double w = Math.clamp(weight, 0d, 1d);
+		final double w = Math.max(0d, Math.min(1d, weight));
 		return new Color((int) Math.round(a.getRed() * w + b.getRed() * (1 - w)),
 				(int) Math.round(a.getGreen() * w + b.getGreen() * (1 - w)),
 				(int) Math.round(a.getBlue() * w + b.getBlue() * (1 - w)));

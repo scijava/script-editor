@@ -351,7 +351,23 @@ class CommandPalette {
 	}
 
 	/** Pairing of a hit with its rank tier, computed once per hit */
-	private record Scored(CmdAction cmd, int score) {
+	private static class Scored {
+
+		private final CmdAction cmd;
+		private final int score;
+
+		Scored(final CmdAction cmd, final int score) {
+			this.cmd = cmd;
+			this.score = score;
+		}
+
+		CmdAction cmd() {
+			return cmd;
+		}
+
+		int score() {
+			return score;
+		}
 	}
 
 	private List<CmdAction> getSortedListByQuery(final String query) {
@@ -469,7 +485,7 @@ class CommandPalette {
 		final int minY = b.y + in.top;
 		final int maxX = Math.max(minX, b.x + b.width - in.right - frame.getWidth());
 		final int maxY = Math.max(minY, b.y + b.height - in.bottom - frame.getHeight());
-		frame.setLocation(Math.clamp(frame.getX(), minX, maxX), Math.clamp(frame.getY(), minY, maxY));
+		frame.setLocation(Math.max(minX, Math.min(maxX, frame.getX())), Math.max(minY, Math.min(maxY, frame.getY())));
 	}
 
 	private static boolean isOnScreen(final Point p) {
@@ -665,7 +681,7 @@ class CommandPalette {
 			final Graphics2D g2d = (Graphics2D) g.create();
 			// Clip to own bounds so that the slide never paints over neighboring buttons
 			g2d.clipRect(0, 0, getWidth(), getHeight());
-			g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, Math.clamp(alpha, 0f, 1f)));
+			g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, Math.max(0f, Math.min(1f, alpha))));
 			g2d.translate(offset, 0);
 			super.paintComponent(g2d);
 			g2d.dispose();
@@ -877,8 +893,8 @@ class CommandPalette {
 		public void updateUI() {
 			super.updateUI();
 			setBackground(background());
-			if (getParent() instanceof JViewport viewport)
-				viewport.setBackground(background());
+			if (getParent() instanceof JViewport)
+				((JViewport) getParent()).setBackground(background());
 		}
 
 		private JScrollPane getScrollPane() {
@@ -1043,8 +1059,8 @@ class CommandPalette {
 				String t = null;
 				if (button != null)
 					t = button.getToolTipText();
-				else if (action != null && action.getValue(Action.SHORT_DESCRIPTION) instanceof String s)
-					t = s;
+				else if (action != null && action.getValue(Action.SHORT_DESCRIPTION) instanceof String)
+					t = (String) action.getValue(Action.SHORT_DESCRIPTION);
 				tooltipCache = (t == null) ? "" : t.replaceAll("<[^>]*>", ""); // strip HTML once
 			}
 			return tooltipCache;
@@ -1230,7 +1246,8 @@ class CommandPalette {
 		private void registerMenuItem(final JMenuItem m, final List<String> path) {
 			if (m == null)
 				return;
-			if (m instanceof JMenu subMenu) {
+			if (m instanceof JMenu) {
+				final JMenu subMenu = (JMenu) m;
 				final List<String> subPath = new ArrayList<>(path);
 				if (subMenu.getText() != null)
 					subPath.add(subMenu.getText());
