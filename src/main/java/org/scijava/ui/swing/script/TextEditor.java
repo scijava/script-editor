@@ -1765,9 +1765,14 @@ public class TextEditor extends JFrame implements ActionListener,
 		createNewDocument();
 
 		try {
-			// Load the template
-			final InputStream in = url.openStream();
-			getTextArea().read(new BufferedReader(new InputStreamReader(in)), null);
+			// Load the template. NB: setText() keeps the document (and its
+			// listeners), unlike read()
+			final String text;
+			try (final InputStream in = url.openStream()) {
+				text = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+			}
+			getTextArea().setText(text);
+			getTextArea().setCaretPosition(0);
 
 			if (language != null) {
 				setLanguage(language);
@@ -1836,12 +1841,13 @@ public class TextEditor extends JFrame implements ActionListener,
 			save();
 			return true;
 		}
-		if (GuiUtils.confirm(this, "Do you want to save changes?", "Save Changes?", "Save")) {
-			return save();
-		} else {
+		return switch (GuiUtils.confirmUnsaved(this, "Do you want to save changes?",
+				"Save Changes?")) {
+			case SAVE -> save();
 			// Compiled languages should not progress if their source is unsaved
-			return !beforeCompiling;
-		}
+			case DISCARD -> !beforeCompiling;
+			case CANCEL -> false;
+		};
 	}
 
 	private boolean isJava(final ScriptLanguage language) {
@@ -2992,8 +2998,15 @@ public class TextEditor extends JFrame implements ActionListener,
 			final File ijDir = appService.getApp().getBaseDirectory();
 			file = new File(ijDir, editorPane.getFileName());
 		}
-		final File fileToSave = uiService.chooseFile(file, FileWidget.SAVE_STYLE);
+		File fileToSave = GuiUtils.chooseSaveFile(this, file, "Save As");
 		if (fileToSave == null) return false;
+		// Keep the language of the script if no extension was typed
+		final ScriptLanguage language = editorPane.getCurrentLanguage();
+		if (language != null && FileUtils.getExtension(fileToSave.getName()).isEmpty()
+				&& !language.getExtensions().isEmpty()) {
+			fileToSave = new File(fileToSave.getParentFile(),
+					fileToSave.getName() + "." + language.getExtensions().get(0));
+		}
 		return saveAs(fileToSave.getAbsolutePath(), true);
 	}
 
@@ -3004,12 +3017,13 @@ public class TextEditor extends JFrame implements ActionListener,
 	public boolean saveAs(final String path, final boolean askBeforeReplacing) {
 		final File file = new File(path);
 		if (file.exists() && askBeforeReplacing
-				&& confirm("Do you want to replace " + path + "?", "Replace " + path + "?", "Replace"))
+				&& !confirm("Do you want to replace " + path + "?", "Replace " + path + "?", "Replace"))
 			return false;
 		if (!write(file))
 			return false;
 		setEditorPaneFileName(file);
 		openRecent.add(path);
+		setTitle();
 		return true;
 	}
 
@@ -3051,10 +3065,13 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (name.indexOf('_') < 0) name += "_";
 		name += ".jar";
 
-		final File selectedFile = uiService.chooseFile(file, FileWidget.SAVE_STYLE);
+		final File dir = (file != null && file.getParentFile() != null)
+				? file.getParentFile() : appService.getApp().getBaseDirectory();
+		final File selectedFile = GuiUtils.chooseSaveFile(this, new File(dir, name),
+				"Export as JAR");
 		if (selectedFile == null) return false;
 		if (selectedFile.exists()
-				&& confirm("Do you want to replace " + selectedFile + "?", "Replace " + selectedFile + "?", "Replace"))
+				&& !confirm("Do you want to replace " + selectedFile + "?", "Replace " + selectedFile + "?", "Replace"))
 			return false;
 		try {
 			makeJar(selectedFile, includeSources);

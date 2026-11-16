@@ -39,14 +39,16 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -521,11 +523,34 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 				throw new IOException("Cannot create directory: " + dir);
 			}
 		}
-		final BufferedWriter outFile =
-			new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file),
-				"UTF-8"));
-		outFile.write(getText());
-		outFile.close();
+		// Build the text first and write to a temp file, so that a failure
+		// never leaves a truncated file behind
+		final byte[] bytes = getText().getBytes(StandardCharsets.UTF_8);
+		Path target = file.toPath();
+		if (Files.isSymbolicLink(target)) target = target.toRealPath();
+		final Path tmp = Files.createTempFile(target.toAbsolutePath().getParent(),
+			".tmp-", ".part");
+		try {
+			Files.write(tmp, bytes);
+			if (Files.exists(target)) {
+				try {
+					Files.setPosixFilePermissions(tmp, Files.getPosixFilePermissions(target));
+				}
+				catch (final UnsupportedOperationException | IOException ignored) {
+					// not a POSIX file system
+				}
+			}
+			try {
+				Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING,
+					StandardCopyOption.ATOMIC_MOVE);
+			}
+			catch (final AtomicMoveNotSupportedException e) {
+				Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+			}
+		}
+		finally {
+			Files.deleteIfExists(tmp);
+		}
 		modifyCount = 0;
 		fileLastModified = file.lastModified();
 	}
@@ -567,7 +592,10 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			}
 			try {
 				setText(string.toString());
-			} catch (final Error | IndexOutOfBoundsException e2) {
+			} catch (final OutOfMemoryError oom) {
+				// Do not leave an empty editor that could overwrite the file
+				throw new IOException("Not enough memory to open " + file.getName(), oom);
+			} catch (final StackOverflowError | IndexOutOfBoundsException e2) {
 				// Mysterious parsing errors w/ IJM!? Syntax highlighting will
 				// fail but things should be back to normal on next repaint. See
 				// https://github.com/scijava/script-editor/issues/14
@@ -629,7 +657,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		curFile = file;
 
 		if (file != null) {
-			setLanguageByFileName(file.getName());
+			setLanguageByFileName(file.getName(), false);
 			fallBackBaseName = null;
 		}
 		fileLastModified = file == null || !file.exists() ? 0 : file.lastModified();
@@ -687,9 +715,14 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 * @see #setLanguage(ScriptLanguage, boolean)
 	 */
 	protected void setLanguageByFileName(final String name) {
+		setLanguageByFileName(name, true);
+	}
+
+	/** Sets the language from the extension. The file is renamed only if asked */
+	private void setLanguageByFileName(final String name, final boolean renameFile) {
 		final ScriptLanguage language = scriptService.getLanguageByExtension(FileUtils
 			.getExtension(name));
-		setLanguage(language, false, language != null);
+		setLanguage(language, false, renameFile && language != null);
 		if (language == null) {
 			// Not executable: highlight only, and keep the file name as is
 			final String style = FileTypeUtil.get().guessContentType(new File(name));

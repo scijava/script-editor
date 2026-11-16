@@ -81,8 +81,37 @@ final class GuiUtils {
 
 	static boolean confirm(final Component parent, final String message, final String title,
 			final String yesButtonLabel) {
-		return JOptionPane.showConfirmDialog(parent, message, title, JOptionPane.YES_NO_OPTION) == 
-				JOptionPane.YES_OPTION;
+		final Object[] options = { yesButtonLabel, "Cancel" };
+		return JOptionPane.showOptionDialog(parent, message, title, JOptionPane.DEFAULT_OPTION,
+				JOptionPane.QUESTION_MESSAGE, null, options, options[0]) == 0;
+	}
+
+	/**
+	 * Save dialog proposing a file name (JFileChooser selects it, unlike a plain
+	 * directory-based prompt). Returns null if cancelled
+	 */
+	static File chooseSaveFile(final Component parent, final File suggestion, final String title) {
+		final JFileChooser chooser = new JFileChooser(suggestion.getParentFile());
+		chooser.setDialogTitle(title);
+		chooser.setSelectedFile(suggestion);
+		return (chooser.showSaveDialog(parent) == JFileChooser.APPROVE_OPTION)
+				? chooser.getSelectedFile() : null;
+	}
+
+	/** Outcome of the prompt of {@link #confirmUnsaved} */
+	enum UnsavedChoice { SAVE, DISCARD, CANCEL }
+
+	/** Asks what to do with unsaved changes. Closing the dialog counts as cancel */
+	static UnsavedChoice confirmUnsaved(final Component parent, final String message,
+			final String title) {
+		final Object[] options = { "Save", "Discard", "Cancel" };
+		final int choice = JOptionPane.showOptionDialog(parent, message, title,
+				JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+		return switch (choice) {
+			case 0 -> UnsavedChoice.SAVE;
+			case 1 -> UnsavedChoice.DISCARD;
+			default -> UnsavedChoice.CANCEL;
+		};
 	}
 
 	/**
