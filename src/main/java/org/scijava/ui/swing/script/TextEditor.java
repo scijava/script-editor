@@ -29,7 +29,16 @@
 
 package org.scijava.ui.swing.script;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Desktop;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Toolkit;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
@@ -77,38 +86,71 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.BiConsumer;
-import java.util.function.IntPredicate;
 import java.util.TreeMap;
 import java.util.Vector;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.function.BiConsumer;
+import java.util.function.IntPredicate;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipException;
 
+import javax.script.Bindings;
+import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
-import javax.swing.*;
+import javax.swing.AbstractAction;
+import javax.swing.AbstractButton;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
+import javax.swing.Icon;
+import javax.swing.JButton;
+import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JRadioButtonMenuItem;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
+import javax.swing.JToggleButton;
+import javax.swing.JToolBar;
+import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
@@ -125,9 +167,9 @@ import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Theme;
+import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.parser.ParserNotice;
 import org.fife.ui.rsyntaxtextarea.parser.TaskTagParser;
-import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
 import org.fife.ui.rtextarea.ClipboardHistory;
 import org.fife.ui.rtextarea.Macro;
 import org.fife.ui.rtextarea.RTextArea;
@@ -376,6 +418,9 @@ public class TextEditor extends JFrame implements ActionListener,
 	
 	private EditableScriptInfo scriptInfo;
 	private ScriptModule module;
+	private Bindings moduleBindings;
+	private BindingsRegistry.Lease replBindingsLease;
+	private static final BindingsRegistry BINDINGS_REGISTRY = new BindingsRegistry();
 	private boolean incremental = false;
 	private DragSource dragSource;
 	private boolean layoutLoading = true;
@@ -3330,6 +3375,10 @@ public class TextEditor extends JFrame implements ActionListener,
 	public void dispose() {
 		if (!disposed) { // can be called more than once
 			disposed = true;
+			releaseReplBindings();
+			module = null;
+			scriptInfo = null;
+			moduleBindings = null;
 			layoutSaveTimer.stop();
 			titleTimer.stop();
 			runTimer.stop();
@@ -3353,6 +3402,9 @@ public class TextEditor extends JFrame implements ActionListener,
 
 	void setLanguage(final ScriptLanguage language, final boolean addHeader) {
 		if (null != this.getCurrentLanguage() && (null == language || this.getCurrentLanguage().getLanguageName() != language.getLanguageName())) {
+			releaseReplBindings();
+			this.module = null;
+			this.moduleBindings = null;
 			this.scriptInfo = null;
 		}
 		getEditorPane().setLanguage(language, addHeader);
@@ -4650,10 +4702,98 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 	}
 
+	static final class BindingsRegistry {
+
+		private final Map<Bindings, Integer> associationCounts = new IdentityHashMap<>();
+
+		synchronized Lease retain(final Bindings bindings) {
+			if (bindings == null) return new Lease(null, null);
+			final int count = associationCounts.getOrDefault(bindings, 0) + 1;
+			associationCounts.put(bindings, count);
+			return new Lease(this, bindings);
+		}
+
+		private synchronized void release(final Bindings bindings) {
+			final Integer count = associationCounts.get(bindings);
+			if (count == null) return;
+			if (count > 1) associationCounts.put(bindings, count - 1);
+			else {
+				associationCounts.remove(bindings);
+				bindings.clear();
+			}
+		}
+
+		static final class Lease implements AutoCloseable {
+
+			private BindingsRegistry registry;
+			private Bindings bindings;
+
+			private Lease(final BindingsRegistry registry, final Bindings bindings) {
+				this.registry = registry;
+				this.bindings = bindings;
+			}
+
+			@Override
+			public synchronized void close() {
+				if (registry == null) return;
+				final BindingsRegistry owner = registry;
+				final Bindings releasedBindings = bindings;
+				registry = null;
+				bindings = null;
+				owner.release(releasedBindings);
+			}
+		}
+	}
+
+	private Bindings engineBindings(final ScriptModule module) {
+		final ScriptEngine engine = module == null ? null : module.getEngine();
+		return engine == null ? null : engine.getBindings(ScriptContext.ENGINE_SCOPE);
+	}
+
+	private synchronized void retainReplBindings(final Bindings bindings) {
+		releaseReplBindings();
+		if (!disposed) replBindingsLease = BINDINGS_REGISTRY.retain(bindings);
+	}
+
+	private synchronized void releaseReplBindings() {
+		if (replBindingsLease == null) return;
+		replBindingsLease.close();
+		replBindingsLease = null;
+	}
+
+	private static void releaseBindingsWhenComplete(final Future<?> future,
+		final BindingsRegistry.Lease lease)
+	{
+		final Thread cleanupThread = new Thread(() -> {
+			boolean interrupted = false;
+			try {
+				while (true) {
+					try {
+						future.get();
+						return;
+					}
+					catch (final InterruptedException e) {
+						interrupted = true;
+					}
+					catch (final ExecutionException | CancellationException e) {
+						return;
+					}
+				}
+			}
+			finally {
+				lease.close();
+				if (interrupted) Thread.currentThread().interrupt();
+			}
+		}, "script-editor-bindings-release");
+		cleanupThread.setDaemon(true);
+		cleanupThread.start();
+	}
+
 	private Reader evalScript(final String filename, Reader reader,
 		final Writer output, final JTextAreaWriter errors) throws ModuleException
 	{
 		final ScriptLanguage language = getCurrentLanguage();
+		final boolean preserveState = incremental && !language.isCompiledLanguage();
 		
 		// If there's no engine or the language has changed or the language is compiled from a file
 		// then create the engine and module anew
@@ -4665,6 +4805,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		        && this.scriptInfo.getLanguage().getLanguageName()
 		           != getCurrentLanguage().getLanguageName()))
 		{
+			releaseReplBindings();
+			this.moduleBindings = null;
 			if (respectAutoImports) {
 				reader =
 						DefaultAutoImporters.prefixAutoImports(context, language, reader,
@@ -4678,6 +4820,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			
 			this.module = this.scriptInfo.createModule();
 			context.inject(this.module);
+			this.moduleBindings = engineBindings(this.module);
+			if (preserveState) retainReplBindings(this.moduleBindings);
 		} else {
 			try {
 				// Same engine, with persistent state
@@ -4689,6 +4833,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		
 		// map stdout and stderr to the UI
 		final ScriptModule runModule = this.module;
+		final BindingsRegistry.Lease runBindingsLease = BINDINGS_REGISTRY.retain(moduleBindings);
 		runModule.setOutputWriter(output);
 		runModule.setErrorWriter(errors);
 
@@ -4698,8 +4843,10 @@ public class TextEditor extends JFrame implements ActionListener,
 		getEditorPane().getErrorHighlighter().setWriter(errors);
 
 		// execute the script
+		Future<?> runFuture = null;
 		try {
-			moduleService.run(runModule, true).get();
+			runFuture = moduleService.run(runModule, true);
+			runFuture.get();
 		}
 		catch (final InterruptedException e) {
 			error("Interrupted");
@@ -4710,13 +4857,19 @@ public class TextEditor extends JFrame implements ActionListener,
 			getEditorPane().getErrorHighlighter().parse(e);
 		} finally {
 			getEditorPane().getErrorHighlighter().parse();
+			if (runFuture != null && !runFuture.isDone()) {
+				releaseBindingsWhenComplete(runFuture, runBindingsLease);
+			}
+			else runBindingsLease.close();
 			// A one-off run must not keep its module: it holds the script engine and thus every
 			// variable the script created (e.g., large images), even after this window is closed.
 			// Objects the script itself keeps alive (threads, listeners, displays) are not
 			// affected. In REPL mode the state is kept on purpose
-			if (!incremental && this.module == runModule) {
+			if ((!preserveState || disposed) && this.module == runModule) {
+				releaseReplBindings();
 				this.module = null;
 				this.scriptInfo = null;
+				this.moduleBindings = null;
 			}
 		}
 		return reader;
@@ -4729,6 +4882,12 @@ public class TextEditor extends JFrame implements ActionListener,
 			return;
 		}
 		
+		if (!incremental && this.incremental) {
+			releaseReplBindings();
+			this.module = null;
+			this.scriptInfo = null;
+			this.moduleBindings = null;
+		}
 		this.incremental = incremental;
 		
 		final JTextArea prompt = getTab().getPrompt();
