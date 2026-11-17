@@ -71,7 +71,6 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.io.Writer;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -82,6 +81,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.ConcurrentModificationException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
@@ -287,6 +287,9 @@ public class TextEditor extends JFrame implements ActionListener,
 	private int sideLastLocation = -1;
 	private final JMenu languageMenu;
 	private JLabel statusText;
+	private JLabel statusRun; // run timer: elapsed time of the running script
+	private boolean headerWritten; // whether the last markCompileStart() wrote a "Started" line
+	private final Timer runTimer = new Timer(1000, e -> refreshRunStatus());
 	private JLabel statusVim;
 	private final FileSystemTreePanel filesPanel;
 	private final JCheckBoxMenuItem autoSave;
@@ -303,6 +306,11 @@ public class TextEditor extends JFrame implements ActionListener,
 	/** Share of the window given to the side panel by default */
 	private static final double SIDE_SHARE = .20d;
 	private JCheckBoxMenuItem vimMode;
+	// Zen mode: what was visible before (null if not active)
+	private java.util.Map<TextEditorTab, Boolean> zenConsoles;
+	private boolean zenSide;
+	private boolean zenBusy; // true while Zen mode itself is changing the panes
+	private final JCheckBoxMenuItem zenItem;
 	private JCheckBoxMenuItem sidePaneItem, consoleItem; // Window menu: kept in sync with the status bar
 	private boolean syncingPanes;
 	private boolean disposed; // see dispose()
@@ -398,8 +406,6 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		// NB: All panes must be initialized before menus are assembled!
 		tabbed = GuiUtils.getJTabbedPane();
-		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_AREA_ALIGNMENT,
-				FlatClientProperties.TABBED_PANE_ALIGN_LEADING);
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_CLOSABLE, true);
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_CLOSE_TOOLTIPTEXT, "Close");
 		tabbed.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_CLOSE_CALLBACK,
@@ -411,8 +417,6 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		tree = new FileSystemTree(log);
 		sideTabs = GuiUtils.getJTabbedPane(JTabbedPane.LEFT);
-		sideTabs.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_AREA_ALIGNMENT,
-				FlatClientProperties.TABBED_PANE_ALIGN_FILL);
 		// Icon-only tabs: only the selected tab shows its title, keeping the pane narrow
 		sideTabs.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_WIDTH_MODE,
 				FlatClientProperties.TABBED_PANE_TAB_WIDTH_MODE_COMPACT);
@@ -432,18 +436,17 @@ public class TextEditor extends JFrame implements ActionListener,
 
 		// Outline
 		final JPanel pane1 = new JPanel(new BorderLayout());
-		final JLabel outlineHeader = header("Structure");
-		pane1.add(outlineHeader, BorderLayout.NORTH);
+		pane1.add(GuiUtils.getHeader("Structure", null), BorderLayout.NORTH);
 		pane1.add(sourceTreePanel, BorderLayout.CENTER);
 
 		addSideTab("Outline", Icons.outline(), pane1);
 
 		// Markers: bookmarks and tasks of all open tabs
 		final JPanel pane2 = new JPanel(new BorderLayout());
-		pane2.add(header("Bookmarks", this::showBookmarksHelp), BorderLayout.NORTH);
+		pane2.add(GuiUtils.getHeader("Bookmarks", this::showBookmarksHelp), BorderLayout.NORTH);
 		pane2.add(bookmarksPanel, BorderLayout.CENTER);
 		final JPanel pane3 = new JPanel(new BorderLayout());
-		final JComponent tasksHeader = header("Tasks", this::showTasksHelp);
+		final JComponent tasksHeader = GuiUtils.getHeader("Tasks", this::showTasksHelp);
 		pane3.add(tasksHeader, BorderLayout.NORTH);
 		pane3.add(tasksPanel, BorderLayout.CENTER);
 		markersSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, pane2, pane3);
@@ -719,9 +722,21 @@ public class TextEditor extends JFrame implements ActionListener,
 		final JCheckBoxMenuItem jcmi2 = consoleItem = new JCheckBoxMenuItem("Console",
 				prefService.getInt(getClass(), TAB_DIV_LOCATION, 1) > 0);
 		jcmi2.addItemListener(e -> {
-			if (!syncingPanes) getTab().setBottomVisible(jcmi2.isSelected());
+			if (syncingPanes) return;
+			if (jcmi2.isSelected()) endZenMode();
+			getTab().setBottomVisible(jcmi2.isSelected());
 		});
 		tabsMenu.add(jcmi2);
+		zenItem = new JCheckBoxMenuItem("Zen Mode");
+		zenItem.setToolTipText("Hides the side pane and the console, restoring them when turned off");
+		zenItem.addItemListener(e -> {
+			if (!syncingPanes) setZenMode(zenItem.isSelected());
+		});
+		tabsMenu.add(zenItem);
+		// Tabs shown (or created) while in Zen mode get the same treatment
+		tabbed.addChangeListener(e -> {
+			if (zenConsoles != null) SwingUtilities.invokeLater(this::zenHideNewTabs);
+		});
 		final JMenuItem mi = new JMenuItem("Reset Layout...");
 		mi.addActionListener(e -> {
 			if (confirm("Reset Location of Console and Files pane?", "Reset Layout?", "Reset")) {
@@ -999,32 +1014,14 @@ public class TextEditor extends JFrame implements ActionListener,
 	private void resetLayout() {
 		body.setDividerLocation(SIDE_SHARE);
 		getTab().resetLayout();
+		// pack() honors the preferred size, which holds the last saved window size
+		setPreferredSize(new Dimension(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT));
 		pack();
 	}
 
 	private void addSideTab(final String title, final Icon icon, final Component c) {
 		sideTabs.addTab(title, icon, c);
 		sideTabs.setToolTipTextAt(sideTabs.getTabCount() - 1, title);
-	}
-
-	private JLabel header(final String text) {
-		final JLabel label = new JLabel(text);
-		label.setBorder(BorderFactory.createEmptyBorder(2, 2,0,0));
-		label.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
-		label.setForeground(GuiUtils.secondaryColor());
-		return label;
-	}
-
-	/** A header with a help button on its right, which is also a split handle */
-	private JComponent header(final String text, final Runnable help) {
-		final JLabel label = header(text);
-		// installSplitHandle() leaves explicitly set cursors of children alone
-		label.setCursor(Cursor.getPredefinedCursor(Cursor.N_RESIZE_CURSOR));
-		final JPanel panel = new JPanel(new BorderLayout());
-		panel.setOpaque(false);
-		panel.add(label, BorderLayout.CENTER);
-		panel.add(GuiUtils.helpButton(help), BorderLayout.EAST);
-		return panel;
 	}
 
 	private static String tagHtml(final String tag) {
@@ -1513,10 +1510,11 @@ public class TextEditor extends JFrame implements ActionListener,
 		prefService.put(getClass(), WINDOW_HEIGHT, dim.height);
 		prefService.put(getClass(), WINDOW_WIDTH, dim.width);
 
-		prefService.put(getClass(), MAIN_DIV_LOCATION, body.getDividerLocation());
-
 		final TextEditorTab tab = getTab();
-		prefService.put(getClass(), TAB_DIV_LOCATION, tab.getDividerLocation());
+		if (zenConsoles == null) { // in Zen mode the panes are hidden only temporarily
+			prefService.put(getClass(), MAIN_DIV_LOCATION, body.getDividerLocation());
+			prefService.put(getClass(), TAB_DIV_LOCATION, tab.getDividerLocation());
+		}
 		prefService.put(getClass(), TAB_DIV_ORIENTATION, tab.getOrientation());
 		prefService.put(getClass(), REPL_DIV_LOCATION, tab.getScreenAndPromptSplit().getDividerLocation());
 	}
@@ -1825,7 +1823,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public void loadTemplate(final URL url, final ScriptLanguage language) {
-		createNewDocument();
+		open(null); // reuses an empty new document in front: the template fills it
 
 		try {
 			// Load the template. NB: setText() keeps the document (and its
@@ -1850,8 +1848,9 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 	}
 
+	/** Opens a new tab, even if the one in front is an empty new document */
 	public void createNewDocument() {
-		open(null);
+		open(null, false);
 	}
 
 	public void createNewDocument(final String title, final String text) {
@@ -2160,6 +2159,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		body.addPropertyChangeListener("dividerLocation", evt -> {
 			final int loc = body.getDividerLocation();
 			if (loc > 50 && !body.isSettling()) sideLastLocation = loc;
+			if (loc > 5) endZenMode();
 			statusSide.setSelected(loc > 5);
 			syncPaneItems(loc > 5, null);
 		});
@@ -2193,8 +2193,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			getTab().setREPLEnabled(statusRepl.isSelected());
 			syncStatusBar(); // e.g., no language: the request was refused
 		});
-		statusVimToggle = new JToggleButton("Vim");
-		statusVimToggle.setFont(statusVimToggle.getFont().deriveFont(statusVimToggle.getFont().getSize2D() * .9f));
+		statusVimToggle = GuiUtils.smallToggleButton("Vim", null, false); // as the other buttons of the bar
 		statusVimToggle.setToolTipText(vimMode.getToolTipText());
 		statusVimToggle.setFocusable(false);
 		statusVimToggle.addActionListener(e -> setVimMode(statusVimToggle.isSelected()));
@@ -2211,6 +2210,13 @@ public class TextEditor extends JFrame implements ActionListener,
 		bar.add(statusVim);
 		bar.add(statusText);
 		bar.add(Box.createHorizontalGlue());
+		statusRun = new JLabel();
+		statusRun.setFont(statusText.getFont());
+		statusRun.setForeground(GuiUtils.secondaryColor());
+		statusRun.setToolTipText("Time elapsed since the running script started");
+		statusRun.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 8));
+		statusRun.setVisible(false);
+		bar.add(statusRun);
 		bar.addSeparator();
 		bar.add(Box.createHorizontalStrut(gap));
 		bar.add(statusVimToggle);
@@ -2378,6 +2384,8 @@ public class TextEditor extends JFrame implements ActionListener,
 			if (statusBelow != null) {
 				final TextEditorTab tab = getTab();
 				final boolean shown = tab.isBottomVisible();
+				// A tab Zen mode has not handled yet (new) is hidden by zenHideNewTabs()
+				if (shown && zenConsoles != null && zenConsoles.containsKey(tab)) endZenMode();
 				syncPaneItems(null, shown);
 				statusBelow.setSelected(shown && tab.isLayoutBelow());
 				statusRight.setSelected(shown && !tab.isLayoutBelow());
@@ -2496,12 +2504,31 @@ public class TextEditor extends JFrame implements ActionListener,
 			final int sel = tabbed.getSelectedIndex();
 			closeTabs(i -> i > sel, true);
 		});
+		final JMenuItem copyPath = new JMenuItem("Copy Path");
+		copyPath.addActionListener(e -> {
+			final File f = getEditorPane().getFile();
+			if (f == null) return;
+			Toolkit.getDefaultToolkit().getSystemClipboard().setContents(
+					new java.awt.datatransfer.StringSelection(f.getAbsolutePath()), null);
+			statusText.setText("Copied: " + f.getAbsolutePath());
+		});
+		final JMenuItem reveal = new JMenuItem("Reveal in Files Pane");
+		reveal.addActionListener(e -> {
+			final File f = getEditorPane().getFile();
+			if (f == null) return;
+			if (!statusSide.isSelected()) setSidePanelVisible(true);
+			sideTabs.setSelectedComponent(filesPanel);
+			tree.reveal(f);
+		});
 		final JMenuItem unmodified = new JMenuItem("Close Unmodified");
 		unmodified.addActionListener(e -> closeTabs(i -> !getEditorPane(i).fileChanged(), false));
 		final JMenuItem all = new JMenuItem("Close All");
 		all.addActionListener(e -> closeTabs(i -> true, true));
 		for (final JMenuItem mi : new JMenuItem[] { others, right, unmodified, all })
 			tmp.add(mi);
+		GuiUtils.addPopupMenuSeparator(tmp, "File:");
+		tmp.add(copyPath);
+		tmp.add(reveal);
 		final java.awt.Component[] items = tmp.getComponents();
 		for (int i = 0; i < items.length; i++)
 			popup.insert(items[i], i);
@@ -2513,6 +2540,9 @@ public class TextEditor extends JFrame implements ActionListener,
 				final int n = tabbed.getTabCount();
 				others.setEnabled(n > 1);
 				right.setEnabled(tabbed.getSelectedIndex() < n - 1);
+				final boolean saved = getEditorPane().getFile() != null;
+				copyPath.setEnabled(saved);
+				reveal.setEnabled(saved);
 			}
 
 			@Override
@@ -2578,6 +2608,67 @@ public class TextEditor extends JFrame implements ActionListener,
 				return true;
 			default:
 				return false;
+		}
+	}
+
+	/** Hides the console of tabs not yet handled while in Zen mode */
+	private void zenHideNewTabs() {
+		if (zenConsoles == null) return;
+		final boolean wasBusy = zenBusy;
+		zenBusy = true;
+		try {
+			for (int i = 0; i < tabbed.getTabCount(); i++) {
+				final TextEditorTab tab = getTab(i);
+				if (zenConsoles.containsKey(tab)) continue;
+				zenConsoles.put(tab, tab.isBottomVisible());
+				tab.setBottomVisible(false);
+			}
+		} finally {
+			zenBusy = wasBusy;
+		}
+		syncStatusBar();
+	}
+
+	/** Hides the side pane and the consoles, or restores them as they were. The status bar stays */
+	private void setZenMode(final boolean on) {
+		if (on == (zenConsoles != null)) return;
+		zenBusy = true;
+		try {
+			if (on) {
+				zenSide = statusSide == null || statusSide.isSelected();
+				zenConsoles = new java.util.IdentityHashMap<>();
+				setSidePanelVisible(false);
+				zenHideNewTabs();
+			} else {
+				final java.util.Map<TextEditorTab, Boolean> saved = zenConsoles;
+				zenConsoles = null;
+				saved.forEach((tab, visible) -> {
+					if (visible && tabbed.indexOfComponent(tab) >= 0) tab.setBottomVisible(true);
+				});
+				if (zenSide) setSidePanelVisible(true);
+			}
+		} finally {
+			zenBusy = false;
+		}
+		syncStatusBar();
+		getEditorPane().requestFocusInWindow();
+	}
+
+	/**
+	 * Leaves Zen mode without restoring anything: called when the user brings back a
+	 * pane by hand. Does nothing if Zen mode itself is changing the panes
+	 */
+	private void endZenMode() {
+		if (zenConsoles == null || zenBusy) return;
+		zenConsoles = null;
+		if (zenItem != null && zenItem.isSelected()) {
+			final boolean was = syncingPanes;
+			syncingPanes = true;
+			try {
+				zenItem.setSelected(false);
+			} finally {
+				syncingPanes = was;
+			}
 		}
 	}
 
@@ -2975,6 +3066,14 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public TextEditorTab open(final File file) {
+		return open(file, true);
+	}
+
+	/**
+	 * @param reuseEmpty if true, an empty and unmodified new document in front is reused, i.e.,
+	 *          it takes the file (or is reset, if file is null) instead of opening another tab
+	 */
+	private TextEditorTab open(final File file, final boolean reuseEmpty) {
 		if (isBinary(file)) {
 			try {
 				uiService.show(ioService.open(file.getAbsolutePath()));
@@ -2987,7 +3086,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		try {
 			TextEditorTab tab = (tabbed.getTabCount() == 0) ? null : getTab();
 			final TextEditorTab prior = tab;
-			final boolean wasNew = tab != null && tab.editorPane.isNew();
+			final boolean wasNew = reuseEmpty && tab != null && tab.editorPane.isNew();
 			float font_size = 0; // to set the new editor's font like the last active one, if any
 			if (!wasNew) {
 				if (tabbed.getTabCount() > 0) font_size = getTab().getEditorPane().getFont().getSize2D();
@@ -3233,6 +3332,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			disposed = true;
 			layoutSaveTimer.stop();
 			titleTimer.stop();
+			runTimer.stop();
 			UIManager.removePropertyChangeListener(lookAndFeelListener);
 			tree.destroy();
 			if (dragSource != null) { // necessary to prevent memory leaks
@@ -3433,12 +3533,91 @@ public class TextEditor extends JFrame implements ActionListener,
 	private final ArrayList<Executer> executingTasks = new ArrayList<>();
 
 	/**
+	 * Called once when a task ends: writes the matching "Finished" (or "Stopped") line to the consoles
+	 * of its tab, if the run had a "Started" line, and updates the run timer
+	 */
+	private void reportRun(final Executer task, final boolean stopped) {
+		if (!task.reported.compareAndSet(false, true)) return;
+		final long ms = (System.nanoTime() - task.startNanos) / 1_000_000;
+		final Date end = new Date(); // the lambda below runs a bit later
+		SwingUtilities.invokeLater(() -> {
+			// Failed: a caught exception, or what makes the error console pop up (see markCompileEnd())
+			final boolean failed = !stopped && (task.failed || (task.unverifiedLang == null
+					&& task.runParser.isLogDetailed()
+					&& errorScreen.getDocument().getLength() != task.startOffset));
+			final String note = (stopped || failed || task.unverifiedLang == null) ? ""
+					: " (success not verified for " + task.unverifiedLang + ")";
+			final String footer = (stopped ? "Stopped " + task.runName + " after "
+					: failed ? "Failed " + task.runName + " after " : "Finished " + task.runName + " in ")
+					+ formatElapsed(ms, false) + note + " at " + end + "\n";
+			if (task.marked) { // same layout as the header: the errors view gets it too, the combined view once
+				task.runTab.withoutMirroringErrors(() -> append(errorScreen, footer));
+				append(task.runTab.screen, footer);
+			}
+			refreshRunStatus();
+		});
+	}
+
+	/** Name of the language if its failures cannot be detected (see ErrorParser), null otherwise */
+	private static String unverifiedLanguage(final ScriptLanguage lang) {
+		if (lang == null) return null;
+		final String name = lang.getLanguageName();
+		if ("ImageJ Macro".equals(name) || "IJ1 Macro".equals(name) || "Scala".equals(name) || "R".equals(name))
+			return name;
+		return null;
+	}
+
+	/** Updates the run timer of the status bar. Invoke in the context of the event dispatch thread */
+	private void refreshRunStatus() {
+		if (statusRun == null) return;
+		final List<Executer> running;
+		try {
+			running = new ArrayList<>(executingTasks);
+		} catch (final ConcurrentModificationException ex) {
+			return; // the next tick will get it
+		}
+		String text = null;
+		if (running.isEmpty()) {
+			runTimer.stop();
+		} else {
+			runTimer.start(); // no-op if already running
+			final Executer newest = Collections.max(running, java.util.Comparator.comparingLong(x -> x.startNanos));
+			final long ms = (System.nanoTime() - newest.startNanos) / 1_000_000;
+			// short runs do not flash the label
+			if (ms >= 900) text = "Running " + formatElapsed(ms, true) + (running.size() > 1 ? " (+" + (running.size() - 1) + ")" : "");
+		}
+		statusRun.setText(text == null ? "" : text);
+		statusRun.setVisible(text != null);
+	}
+
+	/** Elapsed time as "3.4 s" (finished runs under a minute), "12 s", "2:05" or "1:02:05" */
+	private static String formatElapsed(final long ms, final boolean running) {
+		if (ms < 60_000) return running ? (ms / 1000) + " s" : String.format(java.util.Locale.ROOT, "%.1f s", ms / 1000d);
+		final long totalSeconds = ms / 1000;
+		final long h = totalSeconds / 3600, m = (totalSeconds % 3600) / 60, sec = totalSeconds % 60;
+		return h > 0 ? String.format(java.util.Locale.ROOT, "%d:%02d:%02d", h, m, sec)
+				: String.format(java.util.Locale.ROOT, "%d:%02d", m, sec);
+	}
+
+	/**
 	 * Generic Thread that keeps a starting time stamp, sets the priority to
 	 * normal and starts itself.
 	 */
 	public abstract class Executer extends ThreadGroup {
 
 		JTextAreaWriter output, errors;
+		private final long startNanos = System.nanoTime();
+		private final java.util.concurrent.atomic.AtomicBoolean reported = new java.util.concurrent.atomic.AtomicBoolean();
+		// What the "Finished" line needs, recorded when the run starts (the tab may change or close later)
+		private final boolean marked = headerWritten;
+		private final String runName = getEditorPane().getFileName();
+		private final TextEditorTab runTab = getTab();
+		private final ErrorParser runParser = getEditorPane().getErrorHighlighter();
+		// Languages whose errors we cannot detect: ErrorParser skips them (and macros report errors in a dialog)
+		private final String unverifiedLang = unverifiedLanguage(getCurrentLanguage());
+		private volatile boolean failed; // an exception or compile error was caught
+		// length of the error console once the header (written by markCompileStart) is in
+		private final int startOffset = errorScreen.getDocument().getLength();
 
 		Executer(final JTextAreaWriter output, final JTextAreaWriter errors) {
 			super("Script Editor Run :: " + new Date().toString());
@@ -3446,6 +3625,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			this.errors = errors;
 			// Store itself for later
 			executingTasks.add(this);
+			SwingUtilities.invokeLater(TextEditor.this::refreshRunStatus);
 			setTitle();
 			// Enable kill menu
 			kill.setEnabled(true);
@@ -3500,6 +3680,7 @@ public class TextEditor extends JFrame implements ActionListener,
 						catch (final Exception e) {
 							handleException(e);
 						}
+						reportRun(Executer.this, false); // after the writers flushed: the last line of the run
 						// Leave kill menu item enabled if other tasks are running
 						kill.setEnabled(!executingTasks.isEmpty());
 						setTitle();
@@ -3579,6 +3760,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				}
 			}
 			executingTasks.remove(this);
+			reportRun(this, true);
 			// The wrapper thread may survive (no Thread.stop()): refresh the state it would have
 			SwingUtilities.invokeLater(() -> kill.setEnabled(!executingTasks.isEmpty()));
 			setTitle();
@@ -3603,7 +3785,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				errorScreen.append("\n[Kill] " + names.size() + " thread(s) of " + script
 						+ " still running 1s after Kill: " + String.join(", ", names) + "\n");
 				showTemporaryStatus(names.size() + " thread(s) of " + script + " still running after Kill. "
-						+ "See Errors", 15000, Icons.error());
+						+ "See Errors", 15000, Icons.error(statusText));
 			});
 			timer.setRepeats(false);
 			timer.start();
@@ -3619,17 +3801,17 @@ public class TextEditor extends JFrame implements ActionListener,
 		final ThreadGroup runGroup, final ThreadService threadService)
 	{
 		if (thread == null || runGroup == null) return false;
-		if (threadService == null) return isInThreadGroup(thread, runGroup);
+		if (threadService == null) return isInThreadGroup(thread, runGroup) && !isIdleDaemon(thread);
 
 		final ThreadService.ThreadContext threadContext;
 		try {
 			threadContext = threadService.getThreadContext(thread);
 		}
 		catch (final RuntimeException e) {
-			return isInThreadGroup(thread, runGroup);
+			return isInThreadGroup(thread, runGroup) && !isIdleDaemon(thread);
 		}
 		if (threadContext == null || threadContext == ThreadService.ThreadContext.NONE) {
-			return isInThreadGroup(thread, runGroup);
+			return isInThreadGroup(thread, runGroup) && !isIdleDaemon(thread);
 		}
 
 		final Set<Thread> seenParents = new HashSet<>();
@@ -3639,6 +3821,17 @@ public class TextEditor extends JFrame implements ActionListener,
 			parent = threadService.getParent(parent);
 		}
 		return isInThreadGroup(thread, runGroup) && !isIdleThreadServiceWorker(thread);
+	}
+
+	/**
+	 * Some scripts may launch Daemon threads parked in a wait. E.g., This happens when using SNT to connect to
+	 * remote databases which causes Okio Watchdog or OkHttp TaskRunner  to linger 1-5 minutes after the HTTP request.
+	 * These should be filtered and not hold the run.
+	 */
+	private static boolean isIdleDaemon(final Thread thread) {
+		if (!thread.isDaemon()) return false;
+		final Thread.State state = thread.getState();
+		return state == Thread.State.WAITING || state == Thread.State.TIMED_WAITING;
 	}
 
 	private static boolean isIdleThreadServiceWorker(final Thread thread) {
@@ -4017,6 +4210,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public void markCompileStart(final boolean with_timestamp) {
+		headerWritten = with_timestamp; // the run that follows gets a matching "Finished" line
 		errorHandler = null;
 		// Errors flagged by a previous run are outdated
 		getEditorPane().getErrorHighlighter().reset();
@@ -4375,7 +4569,18 @@ public class TextEditor extends JFrame implements ActionListener,
 		GuiUtils.showHTMLDialog(this, title, htmlContents);
 	}
 
+	/** Flags the run (if any) that the calling thread belongs to as failed */
+	private void flagFailedRun() {
+		for (ThreadGroup g = Thread.currentThread().getThreadGroup(); g != null; g = g.getParent()) {
+			if (g instanceof Executer) {
+				((Executer) g).failed = true;
+				return;
+			}
+		}
+	}
+
 	public void handleException(final Throwable e) {
+		flagFailedRun();
 		handleException(e, errorScreen);
 		getEditorPane().getErrorHighlighter().parse(e);
 		getTab().showErrors();
@@ -4501,6 +4706,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		catch (final ExecutionException e) {
 			log.error(e);
+			flagFailedRun();
 			getEditorPane().getErrorHighlighter().parse(e);
 		} finally {
 			getEditorPane().getErrorHighlighter().parse();
@@ -4827,6 +5033,35 @@ public class TextEditor extends JFrame implements ActionListener,
 		popup.add(jmi);
 		jmi.addActionListener(e -> textArea.getHighlighter().removeAllHighlights());
 		cmdPalette.register(jmi, scope);
+		popup.addSeparator();
+		jmi = new JMenuItem("Save " + ((textArea == errorScreen) ? "Errors" : "Output") + " to File...");
+		popup.add(jmi);
+		jmi.addActionListener(e -> saveConsole(textArea));
+		cmdPalette.register(jmi, scope);
+	}
+
+	/** Saves the contents of a console to a text file chosen by the user */
+	private void saveConsole(final JTextArea textArea) {
+		final String text = textArea.getText();
+		if (text == null || text.isEmpty()) {
+			UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+			statusText.setText("The console is empty");
+			return;
+		}
+		final File script = getEditorPane().getFile();
+		final File dir = (script != null) ? script.getParentFile() : appService.getApp().getBaseDirectory();
+		String base = (script != null) ? script.getName() : "console";
+		final int dot = base.lastIndexOf('.');
+		if (dot > 0) base = base.substring(0, dot);
+		final String suffix = (textArea == errorScreen) ? "_errors.txt" : "_output.txt";
+		final File file = GuiUtils.chooseSaveFile(this, new File(dir, base + suffix), "Save Console to File");
+		if (file == null) return;
+		try {
+			Files.write(file.toPath(), text.getBytes(StandardCharsets.UTF_8));
+			statusText.setText("Saved: " + file.getAbsolutePath());
+		} catch (final IOException ex) {
+			error("Could not save to\n" + file.getAbsolutePath() + "\n" + ex.getMessage());
+		}
 	}
 
 	private static Collection<File> assembleFlatFileCollection(final Collection<File> collection, final File[] files) {
