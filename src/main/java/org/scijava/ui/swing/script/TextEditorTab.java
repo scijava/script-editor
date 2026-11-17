@@ -31,10 +31,12 @@ package org.scijava.ui.swing.script;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Insets;
+import java.awt.Rectangle;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.dnd.DnDConstants;
@@ -43,26 +45,20 @@ import java.awt.dnd.DropTargetDragEvent;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.dnd.DropTargetEvent;
 import java.awt.dnd.DropTargetListener;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.io.File;
 import java.util.List;
-
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JSplitPane;
-import javax.swing.JTextArea;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
+import javax.swing.text.DefaultCaret;
+import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
 
+import com.formdev.flatlaf.FlatClientProperties;
+import com.formdev.flatlaf.util.UIScale;
 import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.fife.ui.rsyntaxtextarea.Style;
 import org.fife.ui.rsyntaxtextarea.Token;
@@ -73,10 +69,7 @@ import org.scijava.ui.swing.script.TextEditor.Executer;
  *
  * @author Jonathan Hale
  */
-public class TextEditorTab extends JSplitPane {
-
-	private static final String DOWN_ARROW = "\u25BC";
-	private static final String RIGHT_ARROW = "\u25B6";
+public class TextEditorTab extends GuiUtils.StickySplitPane {
 
 	/** Which console stream(s) to display. */
 	private enum ConsoleView {
@@ -99,10 +92,8 @@ public class TextEditorTab extends JSplitPane {
 	/** Output and errors interleaved, in the order they were written. */
 	private final ConsoleArea combinedScreen = new ConsoleArea(ConsoleArea.Content.MIXED);
 	protected final JTextArea prompt = new JTextArea();
-	private final JLabel prompt_title = new JLabel();
 	/** Status line for vim mode: the mode, partial command or message. */
-	private final JLabel vimStatus = new JLabel(" ");
-	protected final JCheckBox updownarrows = new JCheckBox("Use arrow keys");
+	protected final JToggleButton updownarrows = new JToggleButton();
 	protected final JScrollPane scroll;
 	/** True iff the console is showing errors only. */
 	protected boolean showingErrors;
@@ -110,20 +101,27 @@ public class TextEditorTab extends JSplitPane {
 	private boolean updatingViewChooser;
 	private volatile boolean skipErrorMirroring;
 	private Executer executer;
-	private final JButton runit, batchit, killit, switchSplit;
+	private final JButton runit;
+	private final JButton killit;
 	private final JComboBox<ConsoleView> viewChooser;
-	private final JCheckBox incremental;
+	private boolean replOn; // the REPL is on (prompt shown)
+	private final JPanel promptPanel;
+	private final int promptDividerSize; // thickness of the divider above the prompt (hidden while the REPL is off)
 	private final JSplitPane screenAndPromptSplit;
 	private int screenAndPromptSplitDividerLocation;
+	/** Share of the tab given to the editor when the console is shown */
+	private static final double EDITOR_SHARE = .7d;
+	private int bottomLastLocation = -1; // divider location while the bottom part was last shown
 
 	private final TextEditor textEditor;
 	private DropTarget dropTarget;
+	private Document mirroredErrorDoc;
+	private DocumentListener errorMirror;
 	private DropTargetListener dropTargetListener;
 
 	public TextEditorTab(final TextEditor textEditor) {
 		super(JSplitPane.VERTICAL_SPLIT);
 		super.setResizeWeight(350.0 / 430.0);
-		setOneTouchExpandable(true);
 
 		this.textEditor = textEditor;
 		editorPane = new EditorPane();
@@ -142,7 +140,7 @@ public class TextEditorTab extends JSplitPane {
 				if (!t.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) return;
 				try {
 					final Object o = t.getTransferData(DataFlavor.javaFileListFlavor);
-					if (!(o instanceof List)) return;
+					if (!(o instanceof List<?>)) return;
 					final List<?> list = (List<?>) o;
 					if (list.isEmpty()) return;
 					String path;
@@ -176,208 +174,178 @@ public class TextEditorTab extends JSplitPane {
 
 		// tweaks for console
 		screen.setEditable(false);
-		screen.setLineWrap(false);
+		screen.setLineWrap(textEditor.isConsoleWrap());
 		screen.setFont(getEditorPane().getFont());
 		combinedScreen.setEditable(false);
-		combinedScreen.setLineWrap(false);
+		combinedScreen.setLineWrap(textEditor.isConsoleWrap());
 		combinedScreen.setFont(getEditorPane().getFont());
 		textEditor.applyConsolePopupMenu(screen);
 		textEditor.applyConsolePopupMenu(combinedScreen);
 		mirrorInto(combinedScreen, screen, false);
-		mirrorInto(combinedScreen, textEditor.getErrorScreen(), true);
+		mirroredErrorDoc = textEditor.getErrorScreen().getDocument();
+		errorMirror = mirrorInto(combinedScreen, textEditor.getErrorScreen(), true);
 
-		final JPanel bottom = new JPanel();
-		bottom.setLayout(new GridBagLayout());
-		final GridBagConstraints bc = new GridBagConstraints();
+		final JPanel bottom = new JPanel(new BorderLayout());
+		final JToolBar bar = new GuiUtils.ToolBar();
+		bar.setFloatable(false);
+		bar.setBorder(BorderFactory.createEmptyBorder(1, 2, 1, 2));
 
-		bc.gridx = 0;
-		bc.gridy = 0;
-		bc.weightx = 0;
-		bc.weighty = 0;
-		bc.anchor = GridBagConstraints.CENTER;
-		bc.fill = GridBagConstraints.HORIZONTAL;
-		runit = new JButton("Run");
+		runit = new JButton("Run", Icons.play(false));
+		runit.setDisabledIcon(Icons.play(true));
 		runit.setToolTipText("Control+R, F5, or F11");
 		textEditor.cmdPalette.register(runit, "Interpreter");
 		runit.addActionListener(ae -> textEditor.runText());
-		bottom.add(runit, bc);
+		bar.add(runit);
 
-		bc.gridx = 1;
-		batchit = new JButton("Batch");
+		final JButton batchit = new JButton("Batch", Icons.fastForward(false));
+		batchit.putClientProperty("JButton.buttonType", "borderless");
+
+		batchit.setDisabledIcon(Icons.fastForward(true));
 		batchit.setToolTipText("Requires at least one @File SciJava parameter to be declared");
 		batchit.addActionListener(e -> textEditor.runBatch());
-		bottom.add(batchit, bc);
+		bar.add(batchit);
 
-		bc.gridx = 2;
-		killit = new JButton("Kill");
+		killit = new JButton("Stop", Icons.stop(false));
+		killit.setDisabledIcon(Icons.stop(true));
+		killit.setToolTipText("Stop the running script (interrupts its thread)");
 		killit.setEnabled(false);
 		killit.addActionListener(ae -> kill());
-		bottom.add(killit, bc);
+		bar.add(killit);
 
-		bc.gridx = 3;
-		incremental = new JCheckBox("REPL");
-		textEditor.cmdPalette.register(incremental, "Interpreter");
-		incremental.setEnabled(true);
-		incremental.setSelected(false);
-		bottom.add(incremental, bc);
+		bar.add(Box.createHorizontalGlue());
 
-		bc.gridx = 4;
-		bc.fill = GridBagConstraints.HORIZONTAL;
-		bc.weightx = 1;
-		bottom.add(new JPanel(), bc);
-
-		bc.gridx = 5;
-		bc.fill = GridBagConstraints.NONE;
-		bc.weightx = 0;
-		bc.anchor = GridBagConstraints.NORTHEAST;
 		viewChooser = new JComboBox<>(ConsoleView.values());
 		viewChooser.setToolTipText("Which console streams to show");
 		viewChooser.addActionListener(e -> {
 			if (!updatingViewChooser) setView((ConsoleView) viewChooser.getSelectedItem());
 		});
-		final JPanel viewPanel = new JPanel(new BorderLayout(4, 0));
-		viewPanel.add(new JLabel("Show:"), BorderLayout.LINE_START);
-		viewPanel.add(viewChooser, BorderLayout.CENTER);
-		bottom.add(viewPanel, bc);
+		final JPanel viewPanel = new JPanel();
+		viewPanel.setOpaque(false);
+		final JLabel showLabel = new JLabel("Show:");
+		showLabel.setEnabled(false);
+		viewPanel.add(showLabel);
+		viewPanel.add(viewChooser);
+		viewPanel.setMaximumSize(viewPanel.getPreferredSize()); // do not stretch
+		bar.add(viewPanel);
+		bar.add(Box.createHorizontalStrut(4));
 
-		bc.gridx = 6;
-		bc.fill = GridBagConstraints.NONE;
-		bc.weightx = 0;
-		bc.anchor = GridBagConstraints.NORTHEAST;
-		final JButton clear = new JButton("Clear");
+		final JButton clear = new JButton("Clear", Icons.trash(false));
+		clear.setDisabledIcon(Icons.trash(true));
 		clear.addActionListener(ae -> {
 			screen.setText("");
 			textEditor.getErrorScreen().setText("");
 			combinedScreen.setText("");
 			if (view != ConsoleView.OUTPUT) editorPane.getErrorHighlighter().reset();
 		});
-		bottom.add(clear, bc);
+		bar.add(clear);
 		textEditor.cmdPalette.register(clear, "Console");
 
-		bc.gridx = 7;
-		switchSplit = new JButton(RIGHT_ARROW);
-		switchSplit.setToolTipText("Switch location");
-		switchSplit.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(final ActionEvent e) {
-				if (DOWN_ARROW.equals(switchSplit.getText())) {
-					TextEditorTab.this.setOrientation(JSplitPane.VERTICAL_SPLIT);
-				} else {
-					TextEditorTab.this.setOrientation(JSplitPane.HORIZONTAL_SPLIT);
-				}
-				// Keep prompt collapsed if not in use
-				if (!incremental.isSelected()) {
-					setREPLVisible(false);
-				}
-			}
-		});
-		bottom.add(switchSplit, bc);
-
-		bc.gridx = 0;
-		bc.gridy = 1;
-		bc.anchor = GridBagConstraints.NORTHWEST;
-		bc.fill = GridBagConstraints.BOTH;
-		bc.weightx = 1;
-		bc.weighty = 1;
-		bc.gridwidth = 8;
 		scroll = new JScrollPane(screen);
-		bottom.add(scroll, bc);
+		GuiUtils.flattenScrollBars(scroll);
+		bottom.add(bar, BorderLayout.PAGE_START);
+		bottom.add(scroll, BorderLayout.CENTER);
 
 		prompt.setEnabled(false);
 		prompt.setFont(getEditorPane().getFont());
 		prompt.setTabSize(editorPane.getTabSize());
+		prompt.setLineWrap(textEditor.isReplWrap());
+		// Underscore caret: console look, distinct from the editor (and Vim block) caret
+		final UnderscoreCaret caret = new UnderscoreCaret();
+		caret.setBlinkRate(prompt.getCaret().getBlinkRate());
+		prompt.setCaret(caret);
 
-		final JPanel prompt_panel = new JPanel();
-		prompt_panel.setMinimumSize(new Dimension(0, 0));
-		prompt_panel.setVisible(false);
-		prompt_panel.setLayout(new GridBagLayout());
-		
-		bc.gridx = 0;
-		bc.gridy = 0;
-		bc.anchor = GridBagConstraints.NORTHWEST;
-		bc.fill = GridBagConstraints.NONE;
-		bc.weightx = 0;
-		bc.weighty = 0;
-		bc.gridwidth = 1;
-		bc.gridheight = 1;
-		prompt_panel.add(prompt_title, bc);
-		
-		bc.gridx = 1;
-		bc.fill = GridBagConstraints.HORIZONTAL;
-		bc.weightx = 1;
-		prompt_panel.add(new JPanel(), bc);
-		
-		bc.gridx = 2;
-		bc.anchor = GridBagConstraints.NORTHEAST;
-		bc.weightx = 0;
-		bc.fill = GridBagConstraints.NONE;
-		prompt_panel.add(updownarrows, bc);
-		
-		bc.gridx = 3;
-		final JButton prompt_help = new JButton("?");
-		prompt_help.addActionListener(a -> {
-			final String msg = "This REPL (Read-Evaluate-Print-Loop) parses " + textEditor.getCurrentLanguage().getLanguageName() + " code.\n\n"
-					+ "Key bindings:\n"
-					+ "  [Enter]:   Evaluate code\n"
-					+ "  [Shift+Enter]:   Add line break (also alt-enter and meta-enter)\n"
-					+ "  [Page UP] or [Ctrl+P]:   Show previous entry in the history\n"
-					+ "  [Page DOWN] or [Ctrl+N]:   Show next entry in the history\n"
-					+ "\n"
-					+ "If 'Use arrow keys' is checked, then up/down arrows work like\n"
-					+ "Page UP/DOWN, and Shift+up/down arrows work like arrow\n"
-					+ "keys before for caret movement within a multi-line prompt."
-					;
-			textEditor.info(msg, "REPL Help");
-		});
-		prompt_panel.add(prompt_help, bc);
-		
-		bc.gridx = 0;
-		bc.gridy = 1;
-		bc.anchor = GridBagConstraints.NORTHWEST;
-		bc.fill = GridBagConstraints.BOTH;
-		bc.weightx = 1;
-		bc.weighty = 1;
-		bc.gridwidth = 4;
-		prompt_panel.add(prompt, bc);
+		// The REPL, when visible, never gets squeezed below its bar plus one row of text
+		final JPanel prompt_panel = new JPanel() {
 
-		incremental.addActionListener(ae -> {
-			if (incremental.isSelected() && null == textEditor.getCurrentLanguage()) {
-				incremental.setSelected(false);
-				textEditor.error("Select a language first!");
-				return;
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public Dimension getMinimumSize() {
+				int h = 0;
+				if (getLayout() instanceof BorderLayout) {
+					final Component bar = ((BorderLayout) getLayout()).getLayoutComponent(this, BorderLayout.NORTH);
+					if (bar != null) h += bar.getPreferredSize().height;
+				}
+				final Insets in = prompt.getInsets();
+				return new Dimension(0, h + prompt.getFontMetrics(prompt.getFont()).getHeight() + in.top + in.bottom);
 			}
-			textEditor.setIncremental(incremental.isSelected());
-			prompt_title.setText(incremental.isSelected() ? //
-				"REPL: " + textEditor.getCurrentLanguage().getLanguageName() : "");
-			prompt.setEnabled(incremental.isSelected());
-			prompt_panel.setVisible(incremental.isSelected());
+		};
+		prompt_panel.setVisible(false);
+		promptPanel = prompt_panel;
+		prompt_panel.setLayout(new BorderLayout());
+
+		final JToolBar promptBar = new GuiUtils.ToolBar();
+		promptBar.setFloatable(false);
+		promptBar.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
+		promptBar.setBorder(null);
+		promptBar.setMargin(null);
+		prompt_panel.add(promptBar, BorderLayout.PAGE_START);
+		// Same scroll pane (and thus border) as the console
+		final JScrollPane promptScroll = new JScrollPane(prompt);
+		GuiUtils.flattenScrollBars(promptScroll);
+		prompt_panel.add(promptScroll, BorderLayout.CENTER);
+		final JLabel label = new JLabel();
+		label.setForeground(GuiUtils.secondaryColor());
+		label.setIcon(Icons.repl());
+		promptBar.add(label);
+		promptBar.add(Box.createHorizontalGlue());
+		updownarrows.setText("Arrow Keys");
+		updownarrows.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
+		promptBar.add(Box.createHorizontalGlue());
+		promptBar.add(updownarrows);
+		final JButton statusHelp = GuiUtils.helpButton(null);
+		statusHelp.addActionListener(a -> {
+			final int shift = InputEvent.SHIFT_DOWN_MASK;
+			final int ctrl = InputEvent.CTRL_DOWN_MASK;
+			final String html = String.format("" //
+					+ "<html><body>\n" //
+					+ "<table cellpadding=\"3\">\n" //
+					+ "<tr><td>%s</td><td>Evaluate code</td></tr>\n" //
+					+ "<tr><td>%s</td><td>Add line break (also with Ctrl, Alt or Meta)</td></tr>\n" //
+					+ "<tr><td>%s or %s</td><td>Previous entry in the history</td></tr>\n" //
+					+ "<tr><td>%s or %s</td><td>Next entry in the history</td></tr>\n" //
+					+ "</table>\n" //
+					+ "<p>With <i>Arrow Keys</i> on, %s and %s also navigate the history. Combined<br>\n" //
+					+ "with a modifier (e.g., %s) they move the caret within a multi-line prompt.</p>\n" //
+					+ "</body></html>",
+					keyHtml(KeyEvent.VK_ENTER, 0), keyHtml(KeyEvent.VK_ENTER, shift),
+							keyHtml(KeyEvent.VK_PAGE_UP, 0), keyHtml(KeyEvent.VK_P, ctrl),
+							keyHtml(KeyEvent.VK_PAGE_DOWN, 0), keyHtml(KeyEvent.VK_N, ctrl),
+							keyHtml(KeyEvent.VK_UP, 0), keyHtml(KeyEvent.VK_DOWN, 0), keyHtml(KeyEvent.VK_UP, shift));
+			textEditor.showHTMLDialog("REPL (Read-Evaluate-Print-Loop) Key Bindings", html);
 		});
 
+		promptBar.add(statusHelp);
+
+		// Compact bar: drop the vertical padding FlatLaf adds to toolbar buttons (margin 3 + spacing 1)
+		final String tight = "toolbar.margin: 0,3,0,3; toolbar.spacingInsets: 0,0,0,0";
+		updownarrows.putClientProperty(FlatClientProperties.STYLE, tight);
+		updownarrows.setForeground(GuiUtils.secondaryColor()); // Must come after the style properties: applying them resets UIResource foregrounds
+		statusHelp.putClientProperty(FlatClientProperties.STYLE, tight);
 		screenAndPromptSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, bottom, prompt_panel);
+		screenAndPromptSplit.setResizeWeight(1d); // output takes the changes in height, the prompt keeps its size
+		// No divider: the prompt bar is the handle. Keep promptDividerSize at 0 so toggling the REPL
+		// never brings the divider back
+		GuiUtils.installSplitHandle(promptBar, screenAndPromptSplit);
+		promptDividerSize = 0;
 
 		// Enable ErrorSrip à la Eclipse. This will keep track of lines with 'Mark All'
 		// occurrences as well as lines associated with ParserNotice.Level.WARNING and
 		// ParserNotice.Level.ERROR. NB: As is, the end of the strip corresponds to the
 		// last line of text in the text area: E.g., for a text area with just 3 lines,
 		// line 2 will be marked at the strip's half height
-		final ErrorStrip es = new ErrorStrip(editorPane);
+		final ErrorStrip es = new ScalableErrorStrip(editorPane);
 		es.setShowMarkAll(true);
 		es.setShowMarkedOccurrences(true);
 		final JPanel holder = new JPanel(new BorderLayout());
 		holder.add(editorPane.wrappedInScrollbars());
 		holder.add(es, BorderLayout.LINE_END);
-		holder.add(vimStatus, BorderLayout.PAGE_END);
-		vimStatus.setFont(new Font(Font.MONOSPACED, Font.PLAIN, vimStatus.getFont().getSize()));
-		vimStatus.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
-		vimStatus.setVisible(false);
-		editorPane.getVimHandler().setStatusListener(status -> {
-			vimStatus.setVisible(status != null);
-			// Note: a blank keeps the line from collapsing.
-			vimStatus.setText(status == null || status.isEmpty() ? " " : status);
-		});
+		editorPane.getVimHandler().setStatusListener(status -> textEditor.setVimStatus(this, status));
 		editorPane.getVimHandler().setExHandler(textEditor::handleVimCommand);
+		editorPane.setBookmarkListener(textEditor::bookmarksChanged);
 		super.setLeftComponent(holder);
 		super.setRightComponent(screenAndPromptSplit);
+		GuiUtils.installSplitHandle(bar, this); // no divider in the "below" layout: the toolbar is the handle
 		screenAndPromptSplit.setDividerLocation(1.0);
 
 		setView(view); // sync the console and chooser with the initial view
@@ -385,9 +353,66 @@ public class TextEditorTab extends JSplitPane {
 
 		// Persist Script Editor layout whenever split pane divider is adjusted.
 		addPropertyChangeListener(evt -> {
-			if ("dividerLocation".equals(evt.getPropertyName()))
+			if ("dividerLocation".equals(evt.getPropertyName())) {
+				if (!isSettling() && isBottomVisible() && getDividerLocation() > 50) bottomLastLocation = getDividerLocation();
 				textEditor.saveWindowSizeToPrefs();
+				textEditor.syncStatusBar();
+			}
 		});
+	}
+
+	/** Whether the REPL is on */
+	boolean isREPLEnabled() {
+		return replOn;
+	}
+
+	/** Turns the REPL on/off (turning it on requires a language) */
+	void setREPLEnabled(final boolean enable) {
+		if (enable == replOn) return;
+		if (enable && null == textEditor.getCurrentLanguage()) {
+			textEditor.error("Select a language first!");
+			return;
+		}
+		if (enable) setBottomVisible(true); // the prompt lives in the bottom part
+		replOn = enable;
+		screenAndPromptSplit.setDividerSize(enable ? promptDividerSize : 0);
+		textEditor.setIncremental(enable);
+		prompt.setEnabled(enable);
+		promptPanel.setVisible(enable);
+		textEditor.syncStatusBar();
+		if (enable) {
+			fitPrompt();
+			prompt.requestFocusInWindow();
+		}
+	}
+
+	/** Whether the bottom part (output and prompt) is showing, i.e., not collapsed */
+	boolean isBottomVisible() {
+		if (axisSize() <= 0) return true; // not laid out yet
+		return getDividerLocation() < collapsedLocation() - 5;
+	}
+
+	/**
+	 * Divider location at which the bottom part is fully collapsed. Unlike
+	 * getMaximumDividerLocation() this ignores the minimum size of the bottom part: in a window
+	 * too narrow (or short) to honor it, the part is shown truncated and would wrongly count as
+	 * collapsed, so that it could not be collapsed again
+	 */
+	private int collapsedLocation() {
+		final Insets in = getInsets();
+		return axisSize() - getDividerSize() - (isLayoutBelow() ? in.top + in.bottom : in.left + in.right);
+	}
+
+	/** Collapses the bottom part (output and prompt), or restores it to its last height */
+	void setBottomVisible(final boolean visible) {
+		if (visible == isBottomVisible()) return;
+		if (visible) {
+			final int max = collapsedLocation();
+			setDividerLocation(bottomLastLocation > 50 && bottomLastLocation < max - 5 ? bottomLastLocation
+					: (int) (axisSize() * EDITOR_SHARE));
+		} else {
+			setDividerLocation(1d); // all the way down
+		}
 	}
 
 	// Package-private
@@ -397,6 +422,7 @@ public class TextEditorTab extends JSplitPane {
 
 	void setREPLVisible(final boolean visible) {
 		SwingUtilities.invokeLater(() -> {
+			screenAndPromptSplit.setDividerSize(visible ? promptDividerSize : 0); // before moving the divider
 			if (visible) {
 				// If stashed location of divider is invalid, set divider to half of panel's height and re-stash
 				if (screenAndPromptSplitDividerLocation <= 0
@@ -411,26 +437,91 @@ public class TextEditorTab extends JSplitPane {
 				screenAndPromptSplitDividerLocation = getScreenAndPromptSplit().getDividerLocation();
 				getScreenAndPromptSplit().setDividerLocation(1f);
 			}
-			incremental.setSelected(visible);
+			replOn = visible;
+			textEditor.syncStatusBar();
 		});
 	}
 
 	@Override
 	public void setOrientation(final int orientation) {
 		super.setOrientation(orientation);
-		switchSplit.setText(orientation == JSplitPane.VERTICAL_SPLIT ? //
-			RIGHT_ARROW : DOWN_ARROW);
+		bottomLastLocation = -1; // locations of the other layout do not apply
+		screenAndPromptSplitDividerLocation = 0;
+		if (textEditor != null) textEditor.syncStatusBar();
+	}
+
+	/** Whether the console is (or would be) below the editor, as opposed to on its right side */
+	boolean isLayoutBelow() {
+		return getOrientation() == JSplitPane.VERTICAL_SPLIT;
+	}
+
+	/** Size of the tab along the axis of the divider */
+	private int axisSize() {
+		return isLayoutBelow() ? getHeight() : getWidth();
+	}
+
+	/**
+	 * Status bar behavior: clicking the layout that is active collapses/restores the console,
+	 * clicking the other layout switches to it (showing the console)
+	 */
+	void toggleLayout(final boolean below) {
+		if (isLayoutBelow() == below) {
+			setBottomVisible(!isBottomVisible());
+			return;
+		}
+		setOrientation(below ? JSplitPane.VERTICAL_SPLIT : JSplitPane.HORIZONTAL_SPLIT);
+		if (!replOn) setREPLVisible(false); // keep the prompt collapsed if not in use
+		setDividerLocation(EDITOR_SHARE);
+		fitPrompt();
+	}
+
+	/**
+	 * Keeps the REPL usable after the geometry of the console changed (layout switch, REPL turned
+	 * on): the prompt always keeps at least one row of text and, in the side-by-side layout,
+	 * where the console column spans the whole height, the output gets at most half of it
+	 */
+	void fitPrompt() {
+		SwingUtilities.invokeLater(() -> {
+			if (!replOn) return;
+			final int h = screenAndPromptSplit.getHeight();
+			if (h <= 0) return;
+			final int current = screenAndPromptSplit.getDividerLocation();
+			int loc = current;
+			if (!isLayoutBelow()) loc = Math.min(loc, h / 2);
+			loc = Math.min(loc, h - screenAndPromptSplit.getDividerSize() - promptPanel.getMinimumSize().height);
+			if (loc != current) screenAndPromptSplit.setDividerLocation(loc);
+		});
+	}
+
+	/** Restores the default layout: console below the editor, default proportions */
+	void resetLayout() {
+		setOrientation(JSplitPane.VERTICAL_SPLIT);
+		bottomLastLocation = -1;
+		setDividerLocation(EDITOR_SHARE);
+		if (replOn) {
+			SwingUtilities.invokeLater(() -> screenAndPromptSplit.setDividerLocation(.5d));
+			fitPrompt();
+		}
 	}
 
 	// Package private
 	void destroy() {
-		dropTarget.removeDropTargetListener(dropTargetListener);
-		dropTarget = null;
-		dropTargetListener = null;
+		if (dropTarget != null) {
+			dropTarget.removeDropTargetListener(dropTargetListener);
+			dropTarget = null;
+			dropTargetListener = null;
+		}
+		// The error console is shared by all tabs
+		if (mirroredErrorDoc != null) {
+			mirroredErrorDoc.removeDocumentListener(errorMirror);
+			mirroredErrorDoc = null;
+			errorMirror = null;
+		}
 	}
 
 	/** Invoke in the context of the event dispatch thread. */
 	public void prepare() {
+		setBottomVisible(true); // a script that runs must be able to show its output
 		editorPane.setEditable(false);
 		runit.setEnabled(false);
 		killit.setEnabled(true);
@@ -442,7 +533,7 @@ public class TextEditorTab extends JSplitPane {
 			runit.setEnabled(true);
 			killit.setEnabled(false);
 			setExecutor(null);
-			if(incremental.isSelected())
+			if (replOn)
 				prompt.requestFocusInWindow();
 		});
 	}
@@ -453,6 +544,7 @@ public class TextEditorTab extends JSplitPane {
 
 	/** Shows errors, unless errors are already shown (alone or with output). */
 	public void showErrors() {
+		setBottomVisible(true);
 		if (view == ConsoleView.OUTPUT) setView(ConsoleView.ERRORS);
 		else if (scroll.getViewport().getView() == null) setView(view);
 	}
@@ -497,6 +589,11 @@ public class TextEditorTab extends JSplitPane {
 		if (errors instanceof ConsoleArea) ((ConsoleArea) errors).startNewRun();
 	}
 
+	/** HTML for a key stroke, e.g., for help dialogs */
+	private static String keyHtml(final int keyCode, final int modifiers) {
+		return "<tt>" + GuiUtils.prettifiedKey(KeyStroke.getKeyStroke(keyCode, modifiers)).trim() + "</tt>";
+	}
+
 	/** Makes the consoles and REPL prompt use the editor pane's colors. */
 	void applyConsoleColors() {
 		// Note: themes set the text color via the syntax scheme, not the component foreground.
@@ -517,10 +614,10 @@ public class TextEditorTab extends JSplitPane {
 	 * Copies everything appended to {@code source} into {@code target}, so that
 	 * {@code target} shows several streams in the order they were written.
 	 */
-	private void mirrorInto(final ConsoleArea target, final JTextArea source,
+	private DocumentListener mirrorInto(final ConsoleArea target, final JTextArea source,
 		final boolean error)
 	{
-		source.getDocument().addDocumentListener(new DocumentListener() {
+		final DocumentListener listener = new DocumentListener() {
 
 			@Override
 			public void insertUpdate(final DocumentEvent e) {
@@ -541,18 +638,26 @@ public class TextEditorTab extends JSplitPane {
 
 			@Override
 			public void changedUpdate(final DocumentEvent e) {}
-		});
+		};
+		source.getDocument().addDocumentListener(listener);
+		return listener;
 	}
 
 	public JTextArea getScreen() {
 		switch (view) {
-			case ERRORS:
-				return textEditor.getErrorScreen();
-			case BOTH:
-				return combinedScreen;
-			default:
-				return screen;
+			case ERRORS: return textEditor.getErrorScreen();
+			case BOTH: return combinedScreen;
+			default: return screen;
 		}
+	}
+
+	void setConsoleWrap(final boolean wrap) {
+		screen.setLineWrap(wrap);
+		combinedScreen.setLineWrap(wrap);
+	}
+
+	void setPromptWrap(final boolean wrap) {
+		prompt.setLineWrap(wrap);
 	}
 
 	public JTextArea getPrompt() {
@@ -610,5 +715,37 @@ public class TextEditorTab extends JSplitPane {
 
 	public JTextComponent getEditorPane() {
 		return editorPane;
+	}
+
+	/** A caret drawn as an underscore below the current character cell */
+	private static class UnderscoreCaret extends DefaultCaret {
+
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		protected synchronized void damage(final Rectangle r) {
+			if (r == null) return;
+			final JTextComponent c = getComponent();
+			x = r.x;
+			y = r.y;
+			width = c.getFontMetrics(c.getFont()).charWidth('m') + 1;
+			height = r.height;
+			repaint();
+		}
+
+		@Override
+		public void paint(final Graphics g) {
+			if (!isVisible()) return;
+			final JTextComponent c = getComponent();
+			try {
+				final Rectangle r = c.modelToView2D(getDot()).getBounds();
+				final FontMetrics fm = c.getFontMetrics(c.getFont());
+				final int thickness = Math.max(2, UIScale.scale(2));
+				g.setColor(c.getCaretColor());
+				g.fillRect(r.x, r.y + fm.getAscent() + fm.getDescent() - thickness, fm.charWidth('m'), thickness);
+			} catch (final BadLocationException ignored) {
+				// Caret outside of the document: nothing to paint
+			}
+		}
 	}
 }

@@ -44,8 +44,8 @@ import javax.swing.text.Document;
 import javax.swing.text.Element;
 import javax.swing.text.Segment;
 
+import org.fife.ui.rsyntaxtextarea.OS;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit;
-import org.fife.ui.rsyntaxtextarea.RSyntaxUtilities;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RecordableTextAction;
 
@@ -79,7 +79,7 @@ public class EditorPaneActions extends RSyntaxTextAreaEditorKit {
 		 */
 
 		// toggle comments
-		if (RSyntaxUtilities.OS_LINUX == RSyntaxUtilities.getOS()) {
+		if (OS.get() == OS.LINUX) {
 			// See note on RSyntaxTextAreaDefaultInputMap: Ctrl+/ types '/' on linux!
 			map.put(KeyStroke.getKeyStroke(KeyEvent.VK_SLASH, defaultMod + shift), rstaToggleCommentAction);
 		}
@@ -130,7 +130,6 @@ public class EditorPaneActions extends RSyntaxTextAreaEditorKit {
 			map.put(rtaLineDownAction, new LineMoveAction(rtaLineUpAction, 1));
 
 		// actions that are not registered by default
-		map.put(rtaTimeDateAction, new TimeDateAction());
 		map.put(clipboardHistoryAction, new ClipboardHistoryActionImpl());
 		// NB: This action is present in rsyntaxtextarea 3.1.1, but not 3.1.6.
 		// So we disable it for the time being.

@@ -29,118 +29,71 @@
 package org.scijava.ui.swing.script;
 
 import java.awt.Color;
-import java.awt.Component;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.image.BufferedImage;
 
-import javax.swing.Icon;
-import javax.swing.ImageIcon;
 import javax.swing.text.BadLocationException;
 
-import org.fife.ui.rtextarea.FoldIndicator;
 import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.GutterIconInfo;
+import org.fife.ui.rtextarea.RTextArea;
+
+import com.formdev.flatlaf.util.UIScale;
 
 public class GutterUtils {
 
+	private static final String CACHE_KEY = "scijava.bookmarkIcon";
 	private final Gutter gutter;
+	private final RTextArea textArea;
 
-	GutterUtils(final Gutter gutter) {
+	GutterUtils(final Gutter gutter, final RTextArea textArea) {
 		this.gutter = gutter;
-		gutter.setSpacingBetweenLineNumbersAndFoldIndicator(0);
+		this.textArea = textArea;
 		//gutter.setFoldIndicatorStyle(org.fife.ui.rtextarea.FoldIndicatorStyle.MODERN); // DEFAULT
-		gutter.setShowCollapsedRegionToolTips(true);
-	}
-
-	@SuppressWarnings("unused")
-	private void updateFoldIcons() { // no longer needed since v3.3.0
-		int size;
-		try {
-			size = (int) new FoldIndicator(null).getPreferredSize().getWidth();
-		} catch (final Exception | Error ignored) {
-			size = 12; // FoldIndicator#WIDTH
-		}
-		if (size < 8)
-			size = 8;  // the default foldicon size in FoldIndicator
-		final int fontSize = gutter.getLineNumberFont().getSize();
-		if (size > fontSize)
-			size = fontSize;
-		//gutter.setFoldIcons(new FoldIcon(true, size), new FoldIcon(false, size));
-	}
-
-	private ImageIcon getBookmarkIcon() {
-		final int size = gutter.getLineNumberFont().getSize();
-		final BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
-		final Graphics2D graphics = image.createGraphics();
-		graphics.setColor(gutter.getLineNumberColor());
-		graphics.fillRect(0, 0, size, size);
-		graphics.setXORMode(gutter.getBorderColor());
-		graphics.drawRect(0, 0, size - 1, size - 1);
-		image.flush();
-		return new ImageIcon(image);
 	}
 
 	private void updateBookmarkIcon() {
+		final int height = gutter.getLineNumberFont().getSize();
+		final Color color = GuiUtils.accentColor();
+		// The icon only depends on these: skip the rebuild (and the bookmark restore) if unchanged
+		final String key = height + ":" + color.getRGB();
+		if (key.equals(gutter.getClientProperty(CACHE_KEY)) && gutter.getBookmarkIcon() != null) return;
+		gutter.putClientProperty(CACHE_KEY, key);
+
 		// this will clear existing bookmarks, so we'll need restore existing ones
 		final GutterIconInfo[] stash = gutter.getBookmarks();
-		gutter.setBookmarkIcon(getBookmarkIcon());
+		gutter.setBookmarkIcon(padded(Icons.bookmark(color, UIScale.unscale(height)), 3));
 
 		for (final GutterIconInfo info : stash) {
 			try {
-				gutter.toggleBookmark(info.getMarkedOffset());
+				gutter.toggleBookmark(textArea.getLineOfOffset(info.getMarkedOffset()));
 			} catch (final BadLocationException ignored) {
 				// do nothing
 			}
 		}
 	}
 
-	public static void updateIcons(final Gutter gutter) {
-		final GutterUtils utils = new GutterUtils(gutter);
-		//utils.updateFoldIcons();
-		utils.updateBookmarkIcon();
+	/** The icon is painted flush left in the icon column: pad it to center it */
+	private static javax.swing.Icon padded(final javax.swing.Icon icon, final int unscaledPad) {
+		final int pad = UIScale.scale(unscaledPad);
+		return new javax.swing.Icon() {
+			@Override
+			public void paintIcon(final java.awt.Component c, final java.awt.Graphics g, final int x, final int y) {
+				icon.paintIcon(c, g, x + pad, y);
+			}
+
+			@Override
+			public int getIconWidth() {
+				return icon.getIconWidth() + 2 * pad;
+			}
+
+			@Override
+			public int getIconHeight() {
+				return icon.getIconHeight();
+			}
+		};
 	}
 
-	@SuppressWarnings("unused")
-	private class FoldIcon implements Icon {
-
-		private final boolean collapsed;
-		private final Color background;
-		private final Color foreground;
-		private final int size;
-
-		FoldIcon(final boolean collapsed, final int size) {
-			this.collapsed = collapsed;
-			this.background = gutter.getBorderColor();
-			this.foreground = gutter.getActiveLineRangeColor();
-			this.size = size;
-		}
-
-		@Override
-		public int getIconHeight() {
-			return size;
-		}
-
-		@Override
-		public int getIconWidth() {
-			return size;
-		}
-
-		@Override
-		public void paintIcon(final Component c, final Graphics g, final int x, final int y) {
-			// the default '+'/'-' symbols are to small with scaled fonts, and we don't
-			// have an easy way to resize the space allocated for the icon in the gutter
-			if (collapsed) {
-				g.setColor(foreground);
-				g.fillRect(x, y, size, size);
-				g.setColor(background);
-				g.drawRect(x, y, size-2, size-1); // no idea why the extra pixel is needed
-			} else {
-				g.setColor(background);
-				g.fillRect(x, y, size, size);
-				g.setColor(foreground);
-				g.drawRect(x, y, size-2, size-1);
-			}
-		}
+	public static void updateIcons(final Gutter gutter, final RTextArea textArea) {
+		final GutterUtils utils = new GutterUtils(gutter, textArea);
+		utils.updateBookmarkIcon();
 	}
 }

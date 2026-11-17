@@ -29,16 +29,6 @@
 
 package org.scijava.ui.swing.script;
 
-import java.awt.Color;
-import java.awt.Graphics2D;
-import java.awt.Insets;
-import java.awt.RenderingHints;
-import java.awt.font.FontRenderContext;
-import java.awt.font.LineBreakMeasurer;
-import java.awt.font.TextAttribute;
-import java.awt.font.TextLayout;
-import java.text.AttributedCharacterIterator;
-import java.text.AttributedString;
 
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JMenuItem;
@@ -62,7 +52,6 @@ class OutlineTreePanel extends JScrollPane {
 
 	private static final long serialVersionUID = -710040159139542578L;
 	private AbstractSourceTree sourceTree;
-	private final Color placeholdColor;
 	private float fontSize;
 	private boolean sorted;
 	private boolean major;
@@ -71,7 +60,12 @@ class OutlineTreePanel extends JScrollPane {
 		super();
 		fontSize = getFont().getSize();
 		setViewportView(new UnsupportedLangTree());
-		placeholdColor = TextEditor.GuiUtils.getDisabledComponentColor();
+	}
+
+	@Override
+	public void setViewportView(final java.awt.Component view) {
+		super.setViewportView(view);
+		GuiUtils.flattenScrollBars(this); // tracks follow the background of each new view
 	}
 
 	protected void rebuildSourceTree(final EditorPane pane) {
@@ -115,10 +109,10 @@ class OutlineTreePanel extends JScrollPane {
 		JMenuItem jmi;
 		if (tree instanceof AbstractSourceTree) {
 			jmi = new JMenuItem("Collapse All");
-			jmi.addActionListener(e -> TextEditor.GuiUtils.collapseAllTreeNodes(tree));
+			jmi.addActionListener(e -> GuiUtils.collapseAllTreeNodes(tree));
 			popup.add(jmi);
 			jmi = new JMenuItem("Expand All");
-			jmi.addActionListener(e -> TextEditor.GuiUtils.expandAllTreeNodes(tree));
+			jmi.addActionListener(e -> GuiUtils.expandAllTreeNodes(tree));
 			popup.add(jmi);
 			popup.addSeparator();
 			final JCheckBoxMenuItem jcmi1 = new JCheckBoxMenuItem("Hide 'Minor' Elements", major);
@@ -131,8 +125,13 @@ class OutlineTreePanel extends JScrollPane {
 			popup.add(jcmi1);
 			final JCheckBoxMenuItem jcmi2 = new JCheckBoxMenuItem("Sort Elements", sorted);
 			jcmi2.addItemListener(e -> {
-				sorted = jcmi2.isSelected();
-				((AbstractSourceTree) tree).setSorted(sorted); // will refresh
+				try {
+					sorted = jcmi2.isSelected();
+					((AbstractSourceTree) tree).setSorted(sorted); // will refresh
+				} catch (final Throwable throwable) {
+					GuiUtils.error(OutlineTreePanel.this, "Outline could not be sorted.");
+					jcmi2.setSelected(sorted = false);
+				}
 			});
 			popup.add(jcmi2);
 			popup.addSeparator();
@@ -146,11 +145,10 @@ class OutlineTreePanel extends JScrollPane {
 	private class UnsupportedLangTree extends JTree {
 
 		private static final long serialVersionUID = 1L;
-		private static final String HOLDER = "Outline not available... "
-				+ "(Currently, only Java, JS, & XML are supported)";
 
 		public UnsupportedLangTree() {
 			super((TreeNode) null);
+			setFont(getFont().deriveFont(fontSize));
 		}
 
 		public UnsupportedLangTree(final EditorPane pane) {
@@ -161,28 +159,8 @@ class OutlineTreePanel extends JScrollPane {
 		@Override
 		protected void paintComponent(final java.awt.Graphics g) {
 			super.paintComponent(g);
-			final Graphics2D g2 = (Graphics2D) g.create();
-			g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-			g2.setColor(placeholdColor);
-			final Insets i = getInsets();
-			float yTop = i.top;
-			final int w = getWidth() - i.left - i.right;
-			final int lastIndex = HOLDER.length();
-			final AttributedString ac = new AttributedString(HOLDER);
-			ac.addAttribute(TextAttribute.SIZE, fontSize, 0, lastIndex);
-			ac.addAttribute(TextAttribute.POSTURE, TextAttribute.POSTURE_OBLIQUE, 0, lastIndex);
-			final AttributedCharacterIterator aci = ac.getIterator();
-			final FontRenderContext frc = g2.getFontRenderContext();
-			final LineBreakMeasurer lbm = new LineBreakMeasurer(aci, frc);
-			while (lbm.getPosition() < aci.getEndIndex()) {
-				// see https://stackoverflow.com/a/41118280s
-				final TextLayout tl = lbm.nextLayout(w);
-				final float xPos = (float) (i.left + ((getWidth() - tl.getBounds().getWidth()) / 2));
-				final float yPos = (float) (yTop + ((getHeight() - tl.getBounds().getHeight()) / 2));
-				tl.draw(g2, xPos, yPos + tl.getAscent());
-				yTop += tl.getDescent() + tl.getLeading() + tl.getAscent();
-			}
-			g2.dispose();
+			GuiUtils.paintEmptyHint(g, this, "Outline not available",
+					"Currently, only Java, JS, and XML are supported");
 		}
 
 	}

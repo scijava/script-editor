@@ -6,3 +6,5 @@
 /.idea/
 /.serena
 /script-editor.iml
+
+.DS_Store

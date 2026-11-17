@@ -29,6 +29,9 @@
 
 package org.scijava.ui.swing.script;
 
+import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatLightLaf;
+
 /**
  * Interactive test for the script editor.
  * <p>
@@ -41,6 +44,7 @@ package org.scijava.ui.swing.script;
  */
 public class ScriptEditorTestDrive {
 	public static void main(String[] args) throws Exception {
+		FlatDarkLaf.setup();
 		Main.launch("Groovy");
 	}
 }

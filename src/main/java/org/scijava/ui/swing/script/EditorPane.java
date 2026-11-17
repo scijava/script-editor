@@ -39,14 +39,16 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -54,14 +56,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.swing.Action;
-import javax.swing.ButtonGroup;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
-import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JViewport;
-import javax.swing.MenuElement;
 import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
@@ -72,6 +71,7 @@ import javax.swing.text.BadLocationException;
 
 import org.fife.rsta.ac.LanguageSupport;
 import org.fife.rsta.ac.LanguageSupportFactory;
+import org.fife.ui.rsyntaxtextarea.FileTypeUtil;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Style;
@@ -80,6 +80,8 @@ import org.fife.ui.rsyntaxtextarea.Theme;
 import org.fife.ui.rsyntaxtextarea.parser.TaskTagParser;
 import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.GutterIconInfo;
+import org.fife.ui.rtextarea.IconRowEvent;
+import org.fife.ui.rtextarea.IconRowListener;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.RecordableTextAction;
@@ -112,6 +114,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private long fileLastModified;
 	private ScriptLanguage currentLanguage;
 	private Gutter gutter;
+	private Runnable bookmarkListener;
+	private boolean quietBookmarks;
 	private int modifyCount;
 
 	private boolean undoInProgress;
@@ -121,7 +125,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private boolean autoCompletionWithoutKey;
 	private String supportStatus;
 	private final ErrorParser errorHighlighter;
-	private final JMenu noneLangSyntaxMenu;
 	private final EditorPaneActions actions;
 	private final VimHandler vim = new VimHandler(this);
 
@@ -189,7 +192,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		getActionMap().put(EditorPaneActions.selectionPreviousWordAction,
 				wordMovement("Prev-Word-Select-Action", -1, true));
 
-		noneLangSyntaxMenu = geSyntaxForNoneLang();
 		installCustomPopupMenu();
 
 		ToolTipManager.sharedInstance().registerComponent(this);
@@ -248,24 +250,24 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		// this is the only access point in the GUI for these
 		// see #createPopupMenu(); #appendFoldingMenu();
 		final JPopupMenu popup = new JPopupMenu();
-		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Code Editing:");
+		GuiUtils.addPopupMenuSeparator(popup, "Edit:");
 		popup.add(getMenuItem("Copy", EditorPaneActions.copyAction, false));
 		popup.add(getMenuItem("Cut", EditorPaneActions.cutAction, true));
 		popup.add(getMenuItem("Paste", EditorPaneActions.pasteAction, true));
 		popup.add(getMenuItem("Delete Line", EditorPaneActions.rtaDeleteLineAction, true));
 		popup.add(getMenuItem("Delete Rest of Line", EditorPaneActions.rtaDeleteRestOfLineAction, true));
-		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Code Selection:");
+		GuiUtils.addPopupMenuSeparator(popup, "Select:");
 		popup.add(getMenuItem("Select All", EditorPaneActions.selectAllAction, false));
 		popup.add(getMenuItem("Select Line", EditorPaneActions.selectLineAction, false));
 		popup.add(getMenuItem("Select Paragraph", EditorPaneActions.selectParagraphAction, false));
-		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Code Folding:");
+		GuiUtils.addPopupMenuSeparator(popup, "Folding:");
 		popup.add(getMenuItem("Collapse Fold", EditorPaneActions.rstaCollapseFoldAction, false));
 		popup.add(getMenuItem("Expand Fold", EditorPaneActions.rstaExpandFoldAction, false));
 		popup.add(getMenuItem("Toggle Current Fold", EditorPaneActions.rstaToggleCurrentFoldAction, false));
 		popup.add(getMenuItem("Collapse All Folds", EditorPaneActions.rstaCollapseAllFoldsAction, false));
 		popup.add(getMenuItem("Expand All Folds", EditorPaneActions.rstaExpandAllFoldsAction, false));
 		popup.add(getMenuItem("Collapse All Comments", EditorPaneActions.rstaCollapseAllCommentFoldsAction, false));
-		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Code Formatting:");
+		GuiUtils.addPopupMenuSeparator(popup, "Format:");
 		popup.add(getMenuItem("Indent Right", EditorPaneActions.epaIncreaseIndentAction, true));
 		popup.add(getMenuItem("Indent Left", EditorPaneActions.rstaDecreaseIndentAction, true));
 		popup.add(getMenuItem("Move Up", EditorPaneActions.rtaLineUpAction, true));
@@ -280,13 +282,12 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		menu.add(getMenuItem("Lower Case ('_' Sep.)", EditorPaneActions.epaLowerCaseUndAction, true));
 		menu.add(getMenuItem("Title Case", EditorPaneActions.epaTitleCaseAction, true));
 		menu.add(getMenuItem("Upper Case", EditorPaneActions.rtaUpperSelectionCaseAction, true));
-		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Ocurrences:");
+		GuiUtils.addPopupMenuSeparator(popup, "Occurrences:");
 		popup.add(getMenuItem("Next Occurrence", EditorPaneActions.rtaNextOccurrenceAction, false));
 		popup.add(getMenuItem("Previous Occurrence", EditorPaneActions.rtaPrevOccurrenceAction, false));
-		TextEditor.GuiUtils.addPopupMenuSeparator(popup, "Utilities:");
+		GuiUtils.addPopupMenuSeparator(popup, "Links:");
 		popup.add(new OpenLinkUnderCursor().getMenuItem());
 		popup.add(new SearchWebOnSelectedText().getMenuItem());
-		popup.add(noneLangSyntaxMenu);
 		super.setPopupMenu(popup);
 	}
 
@@ -298,68 +299,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		return jmi;
 	}
 
-	private JMenu geSyntaxForNoneLang() {
-		final JMenu menu = new JMenu("Non-Executable Syntax");
-		menu.setToolTipText("Markup languages when scripting language is none");
-		final ButtonGroup bg = new ButtonGroup();
-		menu.add(getSyntaxItem(bg, "None", SYNTAX_STYLE_NONE));
-		bg.getElements().nextElement().setSelected(true); //select none
-		menu.addSeparator();
-		menu.add(getSyntaxItem(bg, "BAT", SYNTAX_STYLE_WINDOWS_BATCH));
-		menu.add(getSyntaxItem(bg, "CSS", SYNTAX_STYLE_CSS));
-		menu.add(getSyntaxItem(bg, "Dockerfile", SYNTAX_STYLE_DOCKERFILE));
-		menu.add(getSyntaxItem(bg, "HTML", SYNTAX_STYLE_HTML));
-		menu.add(getSyntaxItem(bg, "JSON", SYNTAX_STYLE_JSON));
-		menu.add(getSyntaxItem(bg, "Kotlin", SYNTAX_STYLE_KOTLIN));
-		menu.add(getSyntaxItem(bg, "Makefile", SYNTAX_STYLE_MAKEFILE));
-		menu.add(getSyntaxItem(bg, "Markdown", SYNTAX_STYLE_MARKDOWN));
-		menu.add(getSyntaxItem(bg, "SH", SYNTAX_STYLE_UNIX_SHELL));
-		menu.add(getSyntaxItem(bg, "XML", SYNTAX_STYLE_XML));
-		menu.add(getSyntaxItem(bg, "YAML", SYNTAX_STYLE_YAML));
-		return menu;
-	}
-
-	private JMenuItem getSyntaxItem(final ButtonGroup bg, final String label, final String syntaxId) {
-		final JRadioButtonMenuItem item = new JRadioButtonMenuItem(label);
-		bg.add(item);
-		item.addActionListener(e -> {
-			if (getCurrentLanguage() == null) {
-				setSyntaxEditingStyle(syntaxId);
-			} else {
-				error("Non-executable syntaxes can only be applied when scripting language is 'None'.");
-				bg.getElements().nextElement().setSelected(true); //select none
-				setSyntaxEditingStyle(SYNTAX_STYLE_NONE);
-			}
-		});
-		return item;
-	}
-
 	void error(final String message) {
-		TextEditor.GuiUtils.error(this, message);
-	}
-
-	private void updateNoneLangSyntaxMenu(final ScriptLanguage language) {
-		noneLangSyntaxMenu.setEnabled(language == null);
-		if (language == null) {
-			JRadioButtonMenuItem defaultChoice = null;
-			try {
-				for (final MenuElement me : noneLangSyntaxMenu.getSubElements()) {
-					if (me instanceof JRadioButtonMenuItem) {
-						final JRadioButtonMenuItem rb = ((JRadioButtonMenuItem) me);
-						final String choice = rb.getActionCommand();
-						if (getSyntaxEditingStyle().equals(choice)) {
-							rb.setSelected(true);
-							return;
-						}
-						if (SYNTAX_STYLE_NONE.equals(choice))
-							defaultChoice = rb;
-					}
-				}
-				defaultChoice.setSelected(true);
-			} catch (final Exception ignored) {
-				// do nothing
-			}
-		}
+		GuiUtils.error(this, message);
 	}
 
 	@Override
@@ -383,12 +324,43 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		final RTextScrollPane sp = new RTextScrollPane(this);
 		sp.setPreferredSize(new Dimension(600, 350));
 		sp.setIconRowHeaderEnabled(true);
+		GuiUtils.flattenScrollBars(sp);
 		gutter = sp.getGutter();
 		gutter.setBookmarkingEnabled(true);
-		gutter.setShowCollapsedRegionToolTips(true);
 		gutter.setFoldIndicatorEnabled(true);
-		GutterUtils.updateIcons(gutter);
+		updateGutterIcons();
+		gutter.addIconRowListener(new IconRowListener() {
+
+			@Override
+			public void bookmarkAdded(final IconRowEvent e) {
+				bookmarksChanged();
+			}
+
+			@Override
+			public void bookmarkRemoved(final IconRowEvent e) {
+				bookmarksChanged();
+			}
+		});
 		return sp;
+	}
+
+	/** Sets the action to run when a bookmark is added or removed */
+	void setBookmarkListener(final Runnable listener) {
+		bookmarkListener = listener;
+	}
+
+	private void bookmarksChanged() {
+		if (!quietBookmarks && bookmarkListener != null) bookmarkListener.run();
+	}
+
+	// Re-creating the icons toggles existing bookmarks, which is not a change
+	private void updateGutterIcons() {
+		quietBookmarks = true;
+		try {
+			GutterUtils.updateIcons(gutter, this);
+		} finally {
+			quietBookmarks = false;
+		}
 	}
 
 	RecordableTextAction wordMovement(final String id, final int direction, final boolean select) {
@@ -480,6 +452,15 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		return modifyCount != 0;
 	}
 
+	/**
+	 * Marks the current content as the unmodified baseline and clears the undo
+	 * history. For content loaded after the pane was created (e.g., templates)
+	 */
+	void resetModified() {
+		discardAllEdits();
+		modifyCount = 0;
+	}
+
 	@Override
 	public void insertUpdate(final DocumentEvent e) {
 		modified();
@@ -529,6 +510,15 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	}
 
 	/**
+	 * Records the current modification time of the file as already seen, so that
+	 * {@link #wasChangedOutside()} is false until the file changes again (e.g.,
+	 * when the user chose not to reload it).
+	 */
+	void acknowledgeOutsideChange() {
+		if (curFile != null && curFile.exists()) fileLastModified = curFile.lastModified();
+	}
+
+	/**
 	 * Write the contents of this {@link EditorPane} to given file.
 	 *
 	 * @param file File to write the contents of this editor to.
@@ -542,11 +532,34 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 				throw new IOException("Cannot create directory: " + dir);
 			}
 		}
-		final BufferedWriter outFile =
-			new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file),
-				"UTF-8"));
-		outFile.write(getText());
-		outFile.close();
+		// Build the text first and write to a temp file, so that a failure
+		// never leaves a truncated file behind
+		final byte[] bytes = getText().getBytes(StandardCharsets.UTF_8);
+		Path target = file.toPath();
+		if (Files.isSymbolicLink(target)) target = target.toRealPath();
+		final Path tmp = Files.createTempFile(target.toAbsolutePath().getParent(),
+			".tmp-", ".part");
+		try {
+			Files.write(tmp, bytes);
+			if (Files.exists(target)) {
+				try {
+					Files.setPosixFilePermissions(tmp, Files.getPosixFilePermissions(target));
+				}
+				catch (final UnsupportedOperationException | IOException ignored) {
+					// not a POSIX file system
+				}
+			}
+			try {
+				Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING,
+					StandardCopyOption.ATOMIC_MOVE);
+			}
+			catch (final AtomicMoveNotSupportedException e) {
+				Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+			}
+		}
+		finally {
+			Files.deleteIfExists(tmp);
+		}
 		modifyCount = 0;
 		fileLastModified = file.lastModified();
 	}
@@ -588,7 +601,10 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			}
 			try {
 				setText(string.toString());
-			} catch (final Error | IndexOutOfBoundsException e2) {
+			} catch (final OutOfMemoryError oom) {
+				// Do not leave an empty editor that could overwrite the file
+				throw new IOException("Not enough memory to open " + file.getName(), oom);
+			} catch (final StackOverflowError | IndexOutOfBoundsException e2) {
 				// Mysterious parsing errors w/ IJM!? Syntax highlighting will
 				// fail but things should be back to normal on next repaint. See
 				// https://github.com/scijava/script-editor/issues/14
@@ -650,7 +666,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		curFile = file;
 
 		if (file != null) {
-			setLanguageByFileName(file.getName());
+			setLanguageByFileName(file.getName(), false);
 			fallBackBaseName = null;
 		}
 		fileLastModified = file == null || !file.exists() ? 0 : file.lastModified();
@@ -708,8 +724,33 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 * @see #setLanguage(ScriptLanguage, boolean)
 	 */
 	protected void setLanguageByFileName(final String name) {
-		setLanguage(scriptService.getLanguageByExtension(FileUtils
-			.getExtension(name)));
+		setLanguageByFileName(name, true);
+	}
+
+	/** Sets the language from the extension. The file is renamed only if asked */
+	private void setLanguageByFileName(final String name, final boolean renameFile) {
+		final ScriptLanguage language = scriptService.getLanguageByExtension(FileUtils
+			.getExtension(name));
+		setLanguage(language, false, renameFile && language != null);
+		if (language == null) guessSyntaxStyle(name);
+	}
+
+	/** Not executable: highlight only, and keep the file name as is */
+	private void guessSyntaxStyle(final String name) {
+		final String style = FileTypeUtil.get().guessContentType(new File(name));
+		if (style != null && !SYNTAX_STYLE_NONE.equals(style)) setSyntaxEditingStyle(style);
+	}
+
+	/**
+	 * Makes the language match the file name without renaming the file. A cheap
+	 * no-op if it already does (e.g., on tab switches)
+	 */
+	void syncLanguageWithFileName() {
+		final String name = getFileName();
+		final ScriptLanguage language = scriptService.getLanguageByExtension(FileUtils
+			.getExtension(name));
+		if (language != currentLanguage) setLanguageByFileName(name, false);
+		else if (language == null) guessSyntaxStyle(name);
 	}
 
 	/**
@@ -735,6 +776,12 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	protected void setLanguage(final ScriptLanguage language,
 		final boolean addHeader)
 	{
+		setLanguage(language, addHeader, true);
+	}
+
+	private void setLanguage(final ScriptLanguage language,
+		final boolean addHeader, final boolean renameFile)
+	{
 		// uninstall existing language support.
 		LanguageSupport support =
 			languageSupportService.getLanguageSupport(currentLanguage);
@@ -757,7 +804,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		}
 		if (fallBackBaseName != null && fallBackBaseName.endsWith(".txt")) fallBackBaseName =
 			fallBackBaseName.substring(0, fallBackBaseName.length() - 4);
-		if (curFile != null) {
+		if (renameFile && curFile != null) {
 			String name = curFile.getName();
 			final String ext = "." + FileUtils.getExtension(name);
 			if (!defaultExtension.equals(ext)) {
@@ -790,7 +837,6 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setText(header += getText());
 		}
 
-		updateNoneLangSyntaxMenu(language);
 		if ("None".equals(languageName) ) {
 			supportStatus = "Active language: None";
 			return; // no need to update console any further
@@ -842,7 +888,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	 * Toggles whether auto-completion should adopt Java completions if the current
 	 * language does not support auto-completion.
 	 * 
-	 * @param enabled Whether Java should be enabled as fallback language for
+	 * @param value Whether Java should be enabled as fallback language for
 	 *                auto-completion
 	 */
 	void setFallbackAutoCompletion(final boolean value) {
@@ -931,7 +977,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		if (gutter != null) {
 			final float lnSize = size * 0.8f;
 			gutter.setLineNumberFont(font.deriveFont(lnSize));
-			GutterUtils.updateIcons(gutter);
+			updateGutterIcons();
 		}
 		Component parent = getParent();
 		if (parent instanceof JViewport) {
@@ -1093,7 +1139,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setAutoCompletion(true);
 			setKeylessAutoCompletion(true); // true for backwards compatibility with ImageJ macro auto-completion
 			setFallbackAutoCompletion(false);
-			setMarkOccurrences(false);
+			setMarkOccurrences(true);
 		} else {
 			resetTabSize();
 			setFontSize(prefService.getFloat(getClass(), FONT_SIZE_PREFS, getFontSize()));
@@ -1104,7 +1150,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			setAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_PREFS, true));
 			setKeylessAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_KEYLESS_PREFS, true)); // true for backwards compatibility with ImageJ macro
 			setFallbackAutoCompletion(prefService.getBoolean(getClass(), AUTOCOMPLETE_FALLBACK_PREFS, false));
-			setMarkOccurrences(prefService.getBoolean(getClass(), MARK_OCCURRENCES_PREFS, false));
+			setMarkOccurrences(prefService.getBoolean(getClass(), MARK_OCCURRENCES_PREFS, true));
 			setMarginLineEnabled(prefService.getBoolean(getClass(), MARGIN_VISIBLE_PREFS, false));
 			setVimEnabled(prefService.getBoolean(getClass(), VIM_PREFS, false));
 			applyTheme(themeName());
@@ -1114,16 +1160,14 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	/**
 	 * Applies a theme to this pane.
 	 *
-	 * @param theme either "default", "dark", "druid", "eclipse", "idea", "monokai",
-	 *              "vs"
+	 * @param theme either "default", "scijava-light", "scijava-dark", "druid",
+	 *              "eclipse", "idea", "monokai", "vs"
 	 * @throws IllegalArgumentException If {@code theme} is not a valid option, or
 	 *                                  the resource could not be loaded
 	 */
 	public void applyTheme(final String theme) throws IllegalArgumentException {
 		try {
-			// If dark L&F and using the default theme, assume 'dark' theme
-			final boolean dark = DEFAULT_THEME.equals(theme) && TextEditor.GuiUtils.isDarkLaF();
-			applyTheme(TextEditor.getTheme(dark ? "dark" : theme));
+			applyTheme(TextEditor.getTheme(theme)); // aliases such as "default" are resolved there
 		} catch (final Exception ex) {
 			throw new IllegalArgumentException(ex);
 		}
@@ -1138,17 +1182,17 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 		final float existingFontSize = getFontSize();
 		th.apply(this);
 		setFontSize(existingFontSize);
-		GutterUtils.updateIcons(gutter);
+		updateGutterIcons();
 	}
 
 	public String loadFolders() {
-		return prefService.get(getClass(), FOLDERS_PREFS, System.getProperty("user.home"));
+		return prefService.get(getClass(), FOLDERS_PREFS, "");
 	}
 
 	/**
 	 * Retrieves and saves the preferences to the persistent store.
 	 *
-	 * @param top_folders the File Explorer's pane top folder paths (":" separated list)
+	 * @param top_folders the Files pane top folder paths (":" separated list)
 	 * @param theme the Script Editor's theme
 	 */
 	public void savePreferences(final String top_folders, final String theme) {
@@ -1211,7 +1255,7 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 			if (selection == null) {
 				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
 			} else {
-				TextEditor.GuiUtils.runSearchQueryInBrowser(EditorPane.this, platformService, selection.trim());
+				GuiUtils.runSearchQueryInBrowser(EditorPane.this, platformService, selection.trim());
 			}
 			textArea.requestFocusInWindow();
 		}

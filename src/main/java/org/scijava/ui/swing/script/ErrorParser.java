@@ -35,16 +35,24 @@ import java.awt.Rectangle;
 import java.awt.Window;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.StringTokenizer;
+import java.util.List;
+import java.util.Objects;
 import java.util.TreeSet;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.script.ScriptException;
+import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
 import javax.swing.text.Element;
+import javax.swing.text.Position;
 
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
@@ -55,53 +63,167 @@ import org.fife.ui.rsyntaxtextarea.parser.ParseResult;
 import org.fife.ui.rsyntaxtextarea.parser.Parser;
 import org.scijava.script.ScriptLanguage;
 
+/**
+ * Detects the lines of the editor that caused a script error and flags them
+ * (line highlight and error strip). Lines are taken from the exception when
+ * possible (see {@link #parse(Throwable)}), and otherwise scraped from the
+ * error console (see {@link #parse()}).
+ */
 public class ErrorParser {
 
 	/* Color for ErrorStrip marks and fallback taint for line highlights */
 	private static final Color COLOR = Color.RED;
-	/* 0-base indices of Editor's lines that have errored */
-	private TreeSet<Integer> errorLines;
-	/* When running selected code errored lines map to Editor through this offset */
-	private int lineOffset;
-	private boolean enabled;
+	private static final int UNKNOWN = -1;
+	/* Stack frames of the runtimes themselves, never script lines */
+	private static final Pattern IGNORED = Pattern.compile(
+		":classloader:|\\.org\\.python\\.|\\.codehaus\\.groovy\\.|\\.tools\\.nsc\\.|at bsh\\.|\\$Recompilation\\$");
+	/* "line 51", "Line: 51", "line number 51" */
+	private static final Pattern LINE_WORD = Pattern.compile(
+		"\\bline(?:\\s+number)?\\s*:?\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
+
+	/**
+	 * An errored line: its position tracks edits in the document, and its text
+	 * at the time of the run tells whether the error is still about that line
+	 */
+	private static class FlaggedLine {
+
+		private final Position position;
+		private final String text;
+		private final Object highlight;
+
+		FlaggedLine(final Position position, final String text, final Object highlight) {
+			this.position = position;
+			this.text = text;
+			this.highlight = highlight;
+		}
+
+		Position position() {
+			return position;
+		}
+
+		String text() {
+			return text;
+		}
+
+		Object highlight() {
+			return highlight;
+		}
+	}
+
+	private final List<FlaggedLine> errors = new CopyOnWriteArrayList<>();
+	private final AtomicBoolean prunePending = new AtomicBoolean();
+	private final DocumentListener editListener = new DocumentListener() {
+
+		@Override
+		public void insertUpdate(final DocumentEvent e) {
+			schedulePrune();
+		}
+
+		@Override
+		public void removeUpdate(final DocumentEvent e) {
+			schedulePrune();
+		}
+
+		@Override
+		public void changedUpdate(final DocumentEvent e) {
+			// attributes only
+		}
+	};
+	private Document listenedDocument;
+	private final ErrorStripNotifyingParser notifyingParser = new ErrorStripNotifyingParser();
 	private final EditorPane editorPane;
+	private boolean parserRegistered;
+	/* 0-base editor line of the executed selection (0: whole script) */
+	private volatile int lineOffset;
+	/* Prompt commands do not map to editor lines */
+	private volatile boolean promptRun;
+	private volatile boolean enabled;
 	private JTextAreaWriter writer;
 	private int lengthOfJTextAreaWriter;
-	private ErrorStripNotifyingParser notifyingParser;
-	private boolean parsingSucceeded;
+	private volatile boolean parsingSucceeded;
+	/* Whether the console was told why errors are not flagged in this run */
+	private boolean noticeShown;
 
 	public ErrorParser(final EditorPane editorPane) {
 		this.editorPane = editorPane;
-		lineOffset = 0;
 	}
 
 	public void gotoPreviousError() {
-		if (!isCaretMovable()) {
-			try {
-				final int caretLine = editorPane.getCaretLineNumber();
-				gotoLine(errorLines.lower(caretLine));
-			} catch (final NullPointerException ignored) {
-				gotoLine(errorLines.last());
-			}
-		}
+		gotoError(false);
 	}
 
 	public void gotoNextError() {
-		if (isCaretMovable()) {
-			try {
-				final int caretLine = editorPane.getCaretLineNumber();
-				gotoLine(errorLines.higher(caretLine));
-			} catch (final NullPointerException ignored) {
-				gotoLine(errorLines.first());
+		gotoError(true);
+	}
+
+	private void gotoError(final boolean forward) {
+		final TreeSet<Integer> lines = currentLines();
+		if (lines.isEmpty()) {
+			UIManager.getLookAndFeel().provideErrorFeedback(editorPane);
+			return;
+		}
+		final int caretLine = editorPane.getCaretLineNumber();
+		Integer target = forward ? lines.higher(caretLine) : lines.lower(caretLine);
+		if (target == null) target = forward ? lines.first() : lines.last(); // wrap around
+		gotoLine(target);
+	}
+
+	/** Removes the flagged lines of the previous run */
+	public void reset() {
+		final List<FlaggedLine> flagged = List.copyOf(errors);
+		errors.clear();
+		parsingSucceeded = false;
+		noticeShown = false;
+		runOnEdt(() -> {
+			if (parserRegistered) {
+				editorPane.removeParser(notifyingParser);
+				parserRegistered = false;
 			}
+			flagged.forEach(e -> editorPane.removeLineHighlight(e.highlight()));
+		});
+	}
+
+	private void schedulePrune() {
+		if (!errors.isEmpty() && prunePending.compareAndSet(false, true)) {
+			SwingUtilities.invokeLater(() -> {
+				prunePending.set(false);
+				prune();
+			});
 		}
 	}
 
-	public void reset() {
-		if (notifyingParser != null) {
+	/** Drops the errors whose line is no longer the one that failed. On the EDT */
+	private void prune() {
+		boolean dropped = false;
+		for (final FlaggedLine e : errors) {
+			if (Objects.equals(lineText(lineOf(e.position())), e.text())) continue;
+			errors.remove(e);
+			editorPane.removeLineHighlight(e.highlight());
+			dropped = true;
+		}
+		if (!dropped) return;
+		if (errors.isEmpty() && parserRegistered) {
 			editorPane.removeParser(notifyingParser);
-			if (notifyingParser.highlightAbnoxiously)
-				editorPane.removeAllLineHighlights();
+			parserRegistered = false;
+		} else {
+			editorPane.forceReparsing(notifyingParser);
+		}
+	}
+
+	private int lineOf(final Position p) {
+		try {
+			return editorPane.getLineOfOffset(p.getOffset());
+		} catch (final BadLocationException ignored) {
+			return -1;
+		}
+	}
+
+	private String lineText(final int line) {
+		try {
+			final int start = editorPane.getLineStartOffset(line);
+			return editorPane.getText(start, editorPane.getLineEndOffset(line) - start).stripTrailing();
+		} catch (final BadLocationException ignored) {
+			return null;
 		}
 	}
 
@@ -113,42 +235,59 @@ public class ErrorParser {
 		this.lineOffset = zeroBasedlineOffset;
 	}
 
+	/**
+	 * Sets whether the next run executes the current selection, in which case
+	 * errored lines map to the editor through the line at which it starts.
+	 * Must be called for every run, since the offset is kept until changed.
+	 */
 	public void setSelectedCodeExecution(final boolean selectedExecution) {
-		if (selectedExecution) {
-			final int p0 = Math.min(editorPane.getCaret().getDot(), editorPane.getCaret().getMark());
-			final int p1 = Math.max(editorPane.getCaret().getDot(), editorPane.getCaret().getMark());
-			if (p0 != p1) {
-				try {
-					lineOffset = editorPane.getLineOfOffset(p0);
-				} catch (final BadLocationException ignored) {
-					lineOffset = -1;
-				}
-			} else {
-				lineOffset = -1;
+		promptRun = false;
+		lineOffset = 0;
+		if (!selectedExecution) return;
+		final int p0 = Math.min(editorPane.getCaret().getDot(), editorPane.getCaret().getMark());
+		final int p1 = Math.max(editorPane.getCaret().getDot(), editorPane.getCaret().getMark());
+		lineOffset = UNKNOWN;
+		if (p0 != p1) {
+			try {
+				lineOffset = editorPane.getLineOfOffset(p0);
+			} catch (final BadLocationException ignored) {
+				// unknown
 			}
-		} else {
-			lineOffset = 0;
 		}
+	}
+
+	/** Declares that the next run is a prompt command, with no lines in the editor */
+	public void setPromptExecution() {
+		promptRun = true;
 	}
 
 	public void setWriter(final JTextAreaWriter writer) {
 		this.writer = writer;
 		lengthOfJTextAreaWriter = writer.textArea.getText().length();
+		noticeShown = false;
 	}
 
+	/** Flags the lines reported in the error console since {@link #setWriter} */
 	public void parse() {
 		if (writer == null)
 			throw new IllegalArgumentException("Writer is null");
-		parse(writer.textArea.getText().substring(lengthOfJTextAreaWriter));
+		final String text = writer.textArea.getText();
+		// The console may have been cleared since the run started
+		final int start = (text.length() < lengthOfJTextAreaWriter) ? 0 : lengthOfJTextAreaWriter;
+		parse(text.substring(start), null);
 	}
 
+	/**
+	 * Flags the lines reported by an exception: the line numbers of script
+	 * exceptions and the stack frames of the script. If it holds none, its stack
+	 * trace is scraped like the console.
+	 */
 	public void parse(final Throwable t) {
 		if (!enabled)
 			return;
 		final StringWriter sw = new StringWriter();
-		final PrintWriter pw = new PrintWriter(sw);
-		t.printStackTrace(pw);
-		parse(sw.toString());
+		t.printStackTrace(new PrintWriter(sw));
+		parse(sw.toString(), t);
 	}
 
 	private boolean isImageJMacro() {
@@ -158,6 +297,7 @@ public class ErrorParser {
 		return name.equals("ImageJ Macro") || name.equals("IJ1 Macro");
 	}
 
+	/** Whether lines were found in the log, i.e., it has details of the error */
 	public boolean isLogDetailed() {
 		if (!isImageJMacro()) return parsingSucceeded;
 		for (final Window win : Window.getWindows()) {
@@ -168,19 +308,21 @@ public class ErrorParser {
 		return parsingSucceeded;
 	}
 
-	private boolean isCaretMovable() {
-		if (errorLines == null || errorLines.isEmpty()) {
-			UIManager.getLookAndFeel().provideErrorFeedback(editorPane);
-			return false;
+	/** The 0-based editor lines currently flagged, following any edits */
+	private TreeSet<Integer> currentLines() {
+		final TreeSet<Integer> lines = new TreeSet<>();
+		for (final FlaggedLine e : errors) {
+			final int line = lineOf(e.position());
+			if (line >= 0) lines.add(line);
 		}
-		return true;
+		return lines;
 	}
 
 	private void gotoLine(final int lineNumber) {
 		try {
 			editorPane.setCaretPosition(editorPane.getLineStartOffset(lineNumber));
 			// ensure line is visible. Probably not needed!?
-			final Rectangle rect = editorPane.modelToView(editorPane.getCaretPosition());
+			final Rectangle rect = editorPane.modelToView2D(editorPane.getCaretPosition()).getBounds();
 			editorPane.scrollRectToVisible(rect);
 		} catch (final BadLocationException ignored) {
 			// do nothing
@@ -189,16 +331,26 @@ public class ErrorParser {
 		}
 	}
 
-	private void parse(final String errorLog) {
+	private static void runOnEdt(final Runnable r) {
+		if (SwingUtilities.isEventDispatchThread()) r.run();
+		else SwingUtilities.invokeLater(r);
+	}
+
+	private void parse(final String errorLog, final Throwable t) {
 
 		final ScriptLanguage lang = editorPane.getCurrentLanguage();
-		if (lang == null) {
+		if (lang == null || promptRun) {
 			abort();
 			return;
 		}
-		final boolean isIJM = isImageJMacro();
-		if (isIJM) {
+		if (isImageJMacro()) {
 			abort("Execution errors handled by the Macro Interpreter. Use the Interpreter's Debug option for error tracking", false);
+			return;
+		}
+		// Reported lines of these runtimes do not map reliably to the editor
+		final String name = lang.getLanguageName();
+		if ("Scala".equals(name) || "R".equals(name)) {
+			abort("Execution errors are not highlighted for " + name, false);
 			return;
 		}
 		// Do nothing if disabled, or if only selected text was evaluated in the
@@ -207,122 +359,123 @@ public class ErrorParser {
 			abort("Execution errors are not highlighted when auto-imports are active", true);
 			return;
 		}
-		if (lineOffset == -1) {
-			abort("Code selection unknown: Erros are not highlighted in the Editor", true);
+		if (lineOffset == UNKNOWN) {
+			abort("Code selection unknown: Errors are not highlighted in the Editor", true);
 			return;
 		}
-	
-		final boolean isJava = "Java".equals(lang.getLanguageName());
+
 		final String fileName = editorPane.getFileName();
-		if (isJava && fileName == null) {
-			abort();
-			return;
+		final TreeSet<Integer> reported = new TreeSet<>(); // 1-based, as reported
+		if (t != null) fromThrowable(t, fileName, reported);
+		if (reported.isEmpty()) {
+			reported.addAll(scrape(errorLog, fileName, lang.getExtensions(),
+				"Java".equals(lang.getLanguageName())));
 		}
-
-		// HACK scala code seems to always be pre-pended by some 10 lines of code(!?).
-		if ("Scala".equals(lang.getLanguageName()))
-			lineOffset += 10;
-		// HACK and R by one (!?)
-		else if ("R".equals(lang.getLanguageName()))	
-			lineOffset += 1;
-
-		errorLines = new TreeSet<>();
-		final StringTokenizer tokenizer = new StringTokenizer(errorLog, "\n");
-		if (isJava) {
-			while (tokenizer.hasMoreTokens()) {
-				parseJava(fileName, tokenizer.nextToken(), errorLines);
-			}
-		} else {
-			while (tokenizer.hasMoreTokens()) {
-				parseNonJava(tokenizer.nextToken(), errorLines);
-			}
-		}
-		if (!errorLines.isEmpty()) {
-			notifyingParser = new ErrorStripNotifyingParser();
-			editorPane.addParser(notifyingParser);
-			editorPane.forceReparsing(notifyingParser);
-			gotoLine(errorLines.first());
-		}
+		if (reported.isEmpty()) return;
 		parsingSucceeded = true;
+
+		final int shift = lineOffset;
+		runOnEdt(() -> flag(reported, shift));
 	}
 
-	private void parseNonJava(final String lineText, final Collection<Integer> errorLines) {
-
-		if ( // Elimination of some false positives. TODO: Make this Regex
-			lineText.indexOf(":classloader:") > -1 // ruby
-			|| lineText.indexOf(".org.python.") > -1 // python
-			|| lineText.indexOf(".codehaus.groovy.") > -1 // groovy
-			|| lineText.indexOf(".tools.nsc.") > -1 // scala
-			|| lineText.indexOf("at bsh.") > -1 // beanshel
-			|| lineText.indexOf("$Recompilation$") > -1 // javascript
-		) {//
-			return;
-		}
-
-		final int extensionIdx = extensionIdx(lineText);
-		final int lineIdx = lineText.toLowerCase().indexOf("line");
-		if (lineIdx < 0 && extensionIdx < 0 && filenameIdx(lineText) < 0)
-			return;
-
-		extractLineIndicesFromFilteredTextLines(lineText, errorLines);
-	}
-
-	private void extractLineIndicesFromFilteredTextLines(final String lineText, final Collection<Integer> errorLines) {
-//		System.out.println("Section being matched: " + lineText);
-		final Pattern pattern = Pattern.compile(":(\\d+)|line\\D*(\\d+)", Pattern.CASE_INSENSITIVE);
-		final Matcher matcher = pattern.matcher(lineText);
-
-		if (matcher.find()) {
+	/** Flags the (1-based) reported lines, shifted to editor lines. On the EDT */
+	private void flag(final Collection<Integer> reported, final int shift) {
+		final TreeSet<Integer> flagged = currentLines();
+		final Color c = highlightColor();
+		for (final int number : reported) {
+			final int line = number - 1 + shift;
+			if (line < 0 || line >= editorPane.getLineCount() || !flagged.add(line)) continue;
 			try {
-				final String firstGroup = matcher.group(1);
-				final String lastGroup = matcher.group(matcher.groupCount());
-				final String group = (firstGroup == null) ? lastGroup : firstGroup;
-//				System.out.println("firstGroup: " + firstGroup);
-//				System.out.println("lastGroup: " + lastGroup);
+				errors.add(new FlaggedLine(editorPane.getDocument().createPosition(editorPane.getLineStartOffset(line)),
+					lineText(line), editorPane.addLineHighlight(line, c)));
+			} catch (final BadLocationException ignored) {
+				// do nothing
+			}
+		}
+		if (errors.isEmpty()) return;
+		if (listenedDocument != editorPane.getDocument()) {
+			listenedDocument = editorPane.getDocument();
+			listenedDocument.addDocumentListener(editListener);
+		}
+		if (!parserRegistered) {
+			editorPane.addParser(notifyingParser);
+			parserRegistered = true;
+		}
+		editorPane.forceReparsing(notifyingParser);
+		final TreeSet<Integer> now = currentLines();
+		if (!now.isEmpty()) gotoLine(now.first());
+	}
 
-				final int lineNumber = Integer.valueOf(group.trim());
-				if (lineNumber > 0)
-					errorLines.add(lineNumber - 1 + lineOffset); // store 0-based indices
-			} catch (final NumberFormatException e) {
-				e.printStackTrace();
+	/** Collects the 1-based lines of the script in an exception and its causes */
+	static void fromThrowable(final Throwable t, final String fileName, final Collection<Integer> lines) {
+		int depth = 0;
+		for (Throwable c = t; c != null && depth++ < 20; c = c.getCause()) {
+			if (c instanceof ScriptException) {
+				final ScriptException se = (ScriptException) c;
+				if (se.getLineNumber() > 0 && sameFile(se.getFileName(), fileName, true))
+					lines.add(se.getLineNumber());
+			}
+			for (final StackTraceElement e : c.getStackTrace()) {
+				if (e.getLineNumber() > 0 && sameFile(e.getFileName(), fileName, false))
+					lines.add(e.getLineNumber());
 			}
 		}
 	}
 
-	private int extensionIdx(final String line) {
-		int dotIndex = -1;
-		for (final String extension : editorPane.getCurrentLanguage().getExtensions()) {
-			dotIndex = line.indexOf("." + extension);
-			if (dotIndex > -1)
-				return dotIndex;
-		}
-		return -1;
+	private static boolean sameFile(final String reported, final String fileName, final boolean unknownIsSame) {
+		if (reported == null || reported.isEmpty()) return unknownIsSame;
+		final String base = reported.substring(Math.max(reported.lastIndexOf('/'), reported.lastIndexOf('\\')) + 1);
+		return base.equalsIgnoreCase(fileName);
 	}
 
-	private int filenameIdx(final String line) {
-		int index = line.indexOf(editorPane.getFileName());
-		if (index == -1)
-			index = (line.indexOf(" Script")); // unsaved file, etc.
-		return index;
-	}
-
-	private void parseJava(final String filename, final String line, final Collection<Integer> errorLines) {
-		int colon = line.indexOf(filename);
-		if (colon <= 0)
-			return;
-//		System.out.println("Parsing candidate: " + line);
-		colon += filename.length();
-		final int next = line.indexOf(':', colon + 1);
-		if (next < colon + 2)
-			return;
-		try {
-			final int lineNumber = Integer.parseInt(line.substring(colon + 1, next));
-			if (lineNumber > 0)
-				errorLines.add(lineNumber - 1 + lineOffset); // store 0-based indices
-//			System.out.println("line Np: " + (lineNumber - 1));
-		} catch (final NumberFormatException e) {
-			// ignore
+	/**
+	 * Scrapes the 1-based lines of the script from a log: frames such as
+	 * {@code Script.groovy:51} or {@code Script.java:51:}, and statements such as
+	 * {@code line 51}.
+	 *
+	 * @param extensions the extensions of the script language
+	 * @param fileName the name of the script, used for Java sources
+	 */
+	static TreeSet<Integer> scrape(final String log, final String fileName, final Collection<String> extensions,
+		final boolean isJava)
+	{
+		final Pattern frame;
+		if (isJava) {
+			// Compiler messages (Foo.java:12: error) and runtime frames (Foo.java:12)
+			frame = Pattern.compile("(?<![\\w.])" + Pattern.quote(fileName) + ":(\\d+)[:)]");
+		} else if (extensions.isEmpty()) {
+			frame = null;
+		} else {
+			final StringBuilder sb = new StringBuilder("\\.(?:");
+			for (final String ext : extensions)
+				sb.append(Pattern.quote(ext)).append('|');
+			sb.setLength(sb.length() - 1);
+			frame = Pattern.compile(sb + "):(\\d+)", Pattern.CASE_INSENSITIVE);
 		}
+		// Frames of other files (e.g., imported scripts) are only used if none
+		// mentions this script. Names in frames may differ from the editor's
+		final TreeSet<Integer> own = new TreeSet<>(), other = new TreeSet<>(), words = new TreeSet<>();
+		for (final String text : log.split("\\R")) {
+			if (IGNORED.matcher(text).find()) continue;
+			Matcher m = (frame == null) ? null : frame.matcher(text);
+			TreeSet<Integer> target;
+			if (m != null && m.find()) {
+				target = text.contains(fileName) ? own : other;
+			} else if (!isJava && (m = LINE_WORD.matcher(text)).find()) {
+				target = words;
+			} else {
+				continue;
+			}
+			try {
+				final int number = Integer.parseInt(m.group(1));
+				if (number > 0) target.add(number);
+			} catch (final NumberFormatException ignored) {
+				// too large to be a line
+			}
+		}
+		final TreeSet<Integer> lines = new TreeSet<>(own.isEmpty() ? other : own);
+		lines.addAll(words);
+		return lines;
 	}
 
 	private void abort() {
@@ -331,23 +484,24 @@ public class ErrorParser {
 
 	private void abort(final String msg, final boolean offsetNotice) {
 		abort();
-		if (writer != null) {
+		// A run is parsed from its exception and from its console: tell once
+		if (writer != null && !noticeShown) {
+			noticeShown = true;
 			String finalMsg = "[INFO] " + msg + "\n";
 			if (offsetNotice)
 				finalMsg += "[INFO] Reported error line(s) may not match line numbers in the editor\n";
-			writer.textArea.insert(finalMsg, lengthOfJTextAreaWriter);
+			final int at = Math.min(lengthOfJTextAreaWriter, writer.textArea.getDocument().getLength());
+			writer.textArea.insert(finalMsg, at);
 		}
-		errorLines = null;
 	}
 
 	/**
-	 * This is just so that we can register errorLines in the Editor's
+	 * This is just so that we can register the errors in the Editor's
 	 * {@link org.fife.ui.rsyntaxtextarea.ErrorStrip}
 	 */
 	class ErrorStripNotifyingParser extends AbstractParser {
 
 		private final DefaultParseResult result;
-		private final boolean highlightAbnoxiously = true;
 
 		public ErrorStripNotifyingParser() {
 			result = new DefaultParseResult(this);
@@ -355,7 +509,7 @@ public class ErrorParser {
 
 		@Override
 		public boolean isEnabled() {
-			return enabled && errorLines != null;
+			return enabled && !errors.isEmpty();
 		}
 
 		@Override
@@ -365,25 +519,18 @@ public class ErrorParser {
 			result.clearNotices();
 			result.setParsedLines(0, lineCount - 1);
 			if (isEnabled() && !SyntaxConstants.SYNTAX_STYLE_NONE.equals(style)) {
-				errorLines.forEach(line -> {
-					result.addNotice(new ErrorNotice(this, line));
-				});
-				if (highlightAbnoxiously) {
-					final Color c = highlightColor();
-					errorLines.forEach(line -> {
-						try {
-							editorPane.addLineHighlight(line, c);
-						} catch (final BadLocationException ignored) {
-							// do nothing
-						}
-					});
+				for (final FlaggedLine e : errors) {
+					// The document may be edited while parsing
+					final int index = root.getElementIndex(e.position().getOffset());
+					final Element line = root.getElement(index);
+					if (line != null) result.addNotice(new ErrorNotice(this, index, line));
 				}
 			}
 			return result;
-
 		}
 
 	}
+
 	private Color highlightColor() {
 		// https://stackoverflow.com/a/29576746
 		final Color c1 = editorPane.getCurrentLineHighlightColor();
@@ -395,34 +542,20 @@ public class ErrorParser {
 		// https://stackoverflow.com/a/29576746
 		final int r = (int) Math.sqrt( (Math.pow(c1.getRed(), 2) + Math.pow(c2.getRed(), 2)) / 2);
 		final int g = (int) Math.sqrt( (Math.pow(c1.getGreen(), 2) + Math.pow(c2.getGreen(), 2)) / 2);
-		final int b = (int) Math.sqrt( (Math.pow(c1.getBlue(), 2) + Math.pow(c2.getGreen(), 2)) / 2);
+		final int b = (int) Math.sqrt( (Math.pow(c1.getBlue(), 2) + Math.pow(c2.getBlue(), 2)) / 2);
 		return new Color(r, g, b, c1.getAlpha());
 	}
 
 	class ErrorNotice extends DefaultParserNotice {
-		public ErrorNotice(final Parser parser, final int line) {
-			super(parser, "Run Error: Line " + (line + 1), line);
+		/* Notice lines are 1-based. The offset and length make the error strip
+		 * mark, the editor underline and the click action agree on the line */
+		public ErrorNotice(final Parser parser, final int line, final Element lineElement) {
+			super(parser, "Run Error: Line " + (line + 1), line + 1, lineElement.getStartOffset(),
+				Math.max(1, lineElement.getEndOffset() - 1 - lineElement.getStartOffset()));
 			setColor(COLOR);
 			setLevel(Level.ERROR);
 			setShowInEditor(true);
 		}
 
-	}
-
-	public static void main(final String[] args) throws Exception {
-		// poor man's test for REGEX filtering
-		final String groovy = "	at Script1.run(Script1.groovy:51)";
-		final String python = "File \"New_.py\", line 51, in <module>";
-		final String ruby = "<main> at Batch_Convert.rb:51";
-		final String scala = " at line number 51 at column number 18";
-		final String beanshell = "or class name: Systesm : at Line: 51 : in file: ";
-		final String javascript = "	at jdk.nashorn.internal.scripts.Script$15$Greeting.:program(Greeting.js:51)";
-		Arrays.asList(groovy, python, ruby, scala, beanshell, javascript).forEach(lang -> {
-			final ErrorParser parser = new ErrorParser(new EditorPane());
-			final TreeSet<Integer> errorLines = new TreeSet<>();
-			parser.extractLineIndicesFromFilteredTextLines(lang, errorLines);
-			assert (errorLines.first() == 50);
-			System.out.println((errorLines.first() == 50) + ": <<" + lang + ">> ");
-		});
 	}
 }

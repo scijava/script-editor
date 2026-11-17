@@ -1,0 +1,424 @@
+/*
+ * #%L
+ * Script Editor and Interpreter for SciJava script languages.
+ * %%
+ * Copyright (C) 2009 - 2026 SciJava developers.
+ * %%
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ * #L%
+ */
+
+package org.scijava.ui.swing.script;
+
+import com.formdev.flatlaf.FlatLaf;
+import com.formdev.flatlaf.icons.FlatAbstractIcon;
+import com.formdev.flatlaf.icons.FlatOptionPaneErrorIcon;
+import com.formdev.flatlaf.ui.FlatUIUtils;
+import com.formdev.flatlaf.util.UIScale;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.geom.Ellipse2D;
+import java.awt.geom.Line2D;
+import java.awt.geom.Path2D;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Factory of the hand-made icons of the script editor. Glyph icons are
+ * painted from SVG path data of Font Awesome Free (<a href="https://fontawesome.com">...</a>),
+ * licensed CC BY 4.0. Remaining icons are painted with the foreground of the
+ * component they are assigned to.
+ */
+final class Icons {
+
+    private static final Color GREEN = new Color(0x629B70), GREEN_DARK = new Color(0x44774E);
+	private static final Color RED = new Color(0xD46D71), RED_DARK = new Color(0xDF5663);
+
+	private static final String BOOKMARK = "M128 128C128 92.7 156.7 64 192 64L448 64C483.3 64 512 92.7 512 128L512 545.1C512 570.7 483.5 585.9 462.2 571.7L320 476.8L177.8 571.7C156.5 585.9 128 570.6 128 545.1L128 128zM192 112C183.2 112 176 119.2 176 128L176 515.2L293.4 437C309.5 426.3 330.5 426.3 346.6 437L464 515.2L464 128C464 119.2 456.8 112 448 112L192 112z";
+	private static final String FOLDER = "M128 464L512 464C520.8 464 528 456.8 528 448L528 208C528 199.2 520.8 192 512 192L362.7 192C345.4 192 328.5 186.4 314.7 176L276.3 147.2C273.5 145.1 270.2 144 266.7 144L128 144C119.2 144 112 151.2 112 160L112 448C112 456.8 119.2 464 128 464zM512 512L128 512C92.7 512 64 483.3 64 448L64 160C64 124.7 92.7 96 128 96L266.7 96C280.5 96 294 100.5 305.1 108.8L343.5 137.6C349 141.8 355.8 144 362.7 144L512 144C547.3 144 576 172.7 576 208L576 448C576 483.3 547.3 512 512 512z";
+	private static final String OUTLINE = "M104 112C90.7 112 80 122.7 80 136L80 184C80 197.3 90.7 208 104 208L152 208C165.3 208 176 197.3 176 184L176 136C176 122.7 165.3 112 152 112L104 112zM256 128C238.3 128 224 142.3 224 160C224 177.7 238.3 192 256 192L544 192C561.7 192 576 177.7 576 160C576 142.3 561.7 128 544 128L256 128zM256 288C238.3 288 224 302.3 224 320C224 337.7 238.3 352 256 352L544 352C561.7 352 576 337.7 576 320C576 302.3 561.7 288 544 288L256 288zM256 448C238.3 448 224 462.3 224 480C224 497.7 238.3 512 256 512L544 512C561.7 512 576 497.7 576 480C576 462.3 561.7 448 544 448L256 448zM80 296L80 344C80 357.3 90.7 368 104 368L152 368C165.3 368 176 357.3 176 344L176 296C176 282.7 165.3 272 152 272L104 272C90.7 272 80 282.7 80 296zM104 432C90.7 432 80 442.7 80 456L80 504C80 517.3 90.7 528 104 528L152 528C165.3 528 176 517.3 176 504L176 456C176 442.7 165.3 432 152 432L104 432z";
+	private static final String CLIPBOARD = "M360 160L280 160C266.7 160 256 149.3 256 136C256 122.7 266.7 112 280 112L360 112C373.3 112 384 122.7 384 136C384 149.3 373.3 160 360 160zM360 208C397.1 208 427.6 180 431.6 144L448 144C456.8 144 464 151.2 464 160L464 512C464 520.8 456.8 528 448 528L192 528C183.2 528 176 520.8 176 512L176 160C176 151.2 183.2 144 192 144L208.4 144C212.4 180 242.9 208 280 208L360 208zM419.9 96C407 76.7 385 64 360 64L280 64C255 64 233 76.7 220.1 96L192 96C156.7 96 128 124.7 128 160L128 512C128 547.3 156.7 576 192 576L448 576C483.3 576 512 547.3 512 512L512 160C512 124.7 483.3 96 448 96L419.9 96z";
+
+	private static final String ELLIPSIS = "M96 320C96 289.1 121.1 264 152 264C182.9 264 208 289.1 208 320C208 350.9 182.9 376 152 376C121.1 376 96 350.9 96 320zM264 320C264 289.1 289.1 264 320 264C350.9 264 376 289.1 376 320C376 350.9 350.9 376 320 376C289.1 376 264 350.9 264 320zM488 264C518.9 264 544 289.1 544 320C544 350.9 518.9 376 488 376C457.1 376 432 350.9 432 320C432 289.1 457.1 264 488 264z";
+	private static final String ELLIPSIS_VERTICAL = "M320 208C289.1 208 264 182.9 264 152C264 121.1 289.1 96 320 96C350.9 96 376 121.1 376 152C376 182.9 350.9 208 320 208zM320 432C350.9 432 376 457.1 376 488C376 518.9 350.9 544 320 544C289.1 544 264 518.9 264 488C264 457.1 289.1 432 320 432zM376 320C376 350.9 350.9 376 320 376C289.1 376 264 350.9 264 320C264 289.1 289.1 264 320 264C350.9 264 376 289.1 376 320z";
+
+	private Icons() {
+	}
+
+	/** Three dots in a row (follows the component foreground) */
+	static Icon ellipsis() {
+		return new GlyphIcon(ELLIPSIS, null, null, false, 0, 0, 640, 640, 18);
+	}
+
+	/** Three dots in a column (follows the component foreground) */
+	static Icon ellipsisVertical() {
+		return new GlyphIcon(ELLIPSIS_VERTICAL, null, null, false, 0, 0, 640, 640, 18);
+	}
+
+	/** Small error icon for status messages */
+	static Icon error() {
+		final FlatAbstractIcon icon = new FlatOptionPaneErrorIcon();
+		icon.setScale(.35f);
+		return icon;
+	}
+
+	/** Folder icon for the Files side tab (follows the component foreground) */
+	static Icon folder() {
+		return new GlyphIcon(FOLDER, null, null, false, 0, 0, 640, 640, 18);
+	}
+
+	/** Rectangle-with-list icon for the Outline side tab */
+	static Icon outline() {
+		return new GlyphIcon(OUTLINE, null, null, false, 0, 0, 640, 640, 18);
+	}
+
+	/** Bookmark icon for the Markers side tab */
+	static Icon markers() {
+		return new GlyphIcon(BOOKMARK, null, null, false, 0, 0, 640, 640, 18);
+	}
+
+	/** Clipboard icon for the Notes side tab */
+	static Icon clipboard() {
+		return new GlyphIcon(CLIPBOARD, null, null, false, 0, 0, 640, 640, 18);
+	}
+
+	/**
+	 * Green "play" triangle
+	 */
+	static Icon play(final boolean disabled) {
+		return new GlyphIcon(
+				"M187.2 100.9C174.8 94.1 159.8 94.4 147.6 101.6C135.4 108.8 128 121.9 128 136L128 504C128 518.1 135.5 531.2 147.6 538.4C159.7 545.6 174.8 545.9 187.2 539.1L523.2 355.1C536 348.1 544 334.6 544 320C544 305.4 536 291.9 523.2 284.9L187.2 100.9z",
+				GREEN, GREEN_DARK, disabled);
+	}
+
+	/**
+	 * Green "fast-forward" (double play) icon, for batch runs
+	 */
+	static Icon fastForward(final boolean disabled) {
+		return new GlyphIcon(
+				"M403.7 107.1C392.1 96 375 92.9 360.3 99.2C345.6 105.5 336 120 336 136L336 272.3L163.7 107.2C152.1 96 135 92.9 120.3 99.2C105.6 105.5 96 120 96 136L96 504C96 520 105.6 534.5 120.3 540.8C135 547.1 152.1 544 163.7 532.9L336 367.7L336 504C336 520 345.6 534.5 360.3 540.8C375 547.1 392.1 544 403.7 532.9L595.7 348.9C603.6 341.4 608 330.9 608 320C608 309.1 603.5 298.7 595.7 291.1L403.7 107.1z",
+				GREEN, GREEN_DARK, disabled);
+	}
+
+	/**
+	 * Red "stop" rounded square
+	 */
+	static Icon stop(final boolean disabled) {
+		return new GlyphIcon(
+				"M160 96L480 96C515.3 96 544 124.7 544 160L544 480C544 515.3 515.3 544 480 544L160 544C124.7 544 96 515.3 96 480L96 160C96 124.7 124.7 96 160 96z",
+				RED, RED_DARK, disabled);
+	}
+
+	/**
+	 * Neutral "trash can" icon, for the Clear button
+	 */
+	static Icon trash(final boolean disabled) {
+		return new GlyphIcon(
+				"M232.7 69.9C237.1 56.8 249.3 48 263.1 48L377 48C390.8 48 403 56.8 407.4 69.9L416 96L512 96C529.7 96 544 110.3 544 128C544 145.7 529.7 160 512 160L128 160C110.3 160 96 145.7 96 128C96 110.3 110.3 96 128 96L224 96L232.7 69.9zM128 208L512 208L512 512C512 547.3 483.3 576 448 576L192 576C156.7 576 128 547.3 128 512L128 208zM216 272C202.7 272 192 282.7 192 296L192 488C192 501.3 202.7 512 216 512C229.3 512 240 501.3 240 488L240 296C240 282.7 229.3 272 216 272zM320 272C306.7 272 296 282.7 296 296L296 488C296 501.3 306.7 512 320 512C333.3 512 344 501.3 344 488L344 296C344 282.7 333.3 272 320 272zM424 272C410.7 272 400 282.7 400 296L400 488C400 501.3 410.7 512 424 512C437.3 512 448 501.3 448 488L448 296C448 282.7 437.3 272 424 272z",
+				new Color(0x6E6E6E), new Color(0xA9A9A9), disabled);
+	}
+
+	/**
+	 * Bookmark ribbon, for the gutter
+	 *
+	 * @param color  the fill color
+	 * @param height the height in unscaled pixels
+	 */
+	static Icon bookmark(final Color color, final int height) {
+		return new GlyphIcon(
+				BOOKMARK,
+				color, color, false, 128, 64, 384, 512, height);
+	}
+
+	/**
+	 * Light bulb icon.
+	 *
+	 * @param height the height in unscaled pixels
+	 */
+	static Icon bulb(final int height) {
+		final Color c = GuiUtils.secondaryColor();
+		return new GlyphIcon(
+				"M424.5 355.1C449 329.2 464 294.4 464 256C464 176.5 399.5 112 320 112"
+						+ "C240.5 112 176 176.5 176 256C176 294.4 191 329.2 215.5 355.1C236.8 377.5 260.4 409.1 268.8 448"
+						+ "L371.2 448C379.6 409 403.2 377.5 424.5 355.1z"
+						+ "M459.3 388.1C435.7 413 416 443.4 416 477.7L416 496C416 540.2 380.2 576 336 576L304 576"
+						+ "C259.8 576 224 540.2 224 496L224 477.7C224 443.4 204.3 413 180.7 388.1C148 353.7 128 307.2 128 256"
+						+ "C128 150 214 64 320 64C426 64 512 150 512 256C512 307.2 492 353.7 459.3 388.1z"
+						+ "M272 248C272 261.3 261.3 272 248 272C234.7 272 224 261.3 224 248C224 199.4 263.4 160 312 160"
+						+ "C325.3 160 336 170.7 336 184C336 197.3 325.3 208 312 208C289.9 208 272 225.9 272 248z",
+				c, c, false, 128, 64, 384, 512, height);
+	}
+
+	/**
+	 * REPL icon: a prompt (&gt;_) inside a window
+	 */
+	static Icon repl() {
+		return new WindowIcon() {
+			@Override
+			void paintContent(final Graphics2D g, final boolean selected) {
+				g.drawLine(4, 5, 6, 7); // chevron
+				g.drawLine(6, 7, 4, 9);
+				g.drawLine(8, 10, 11, 10); // cursor
+			}
+		};
+	}
+
+	/**
+	 * Window with a pane on its right side, filled when the button is selected
+	 */
+	static Icon rightPane() {
+		return new WindowIcon() {
+			@Override
+			void paintContent(final Graphics2D g, final boolean selected) {
+				if (selected) g.fillRect(10, 3, 4, 10);
+				else g.drawLine(9, 3, 9, 12);
+			}
+		};
+	}
+
+	/**
+	 * Window with a pane below, filled when the button is selected
+	 */
+	static Icon bottomPane() {
+		return new WindowIcon() {
+			@Override
+			void paintContent(final Graphics2D g, final boolean selected) {
+				if (selected) g.fillRect(2, 9, 12, 4);
+				else g.drawLine(2, 8, 13, 8);
+			}
+		};
+	}
+
+	/**
+	 * Window with a left pane, filled when the button is selected
+	 */
+	static Icon sidebar() {
+		return new WindowIcon() {
+			@Override
+			void paintContent(final Graphics2D g, final boolean selected) {
+				if (selected) g.fillRect(2, 3, 4, 10);
+				else g.drawLine(6, 3, 6, 12);
+			}
+		};
+	}
+
+	/**
+	 * Chevron pointing right (collapsed) or down (expanded)
+	 */
+	static Icon chevron(final boolean down) {
+		return new ChevronIcon(down);
+	}
+
+	/**
+	 * Magnifier icon
+	 */
+	static Icon magnifier() {
+		return new MagnifierIcon();
+	}
+
+	/**
+	 * Foreground color with which to paint an icon. Note: The component may be
+	 * null, e.g. when macOS renders icons for its native screen menu bar.
+	 */
+	private static Color foreground(final Component c) {
+		if (c != null) return c.getForeground();
+		final Color color = UIManager.getColor("MenuItem.foreground");
+		return color != null ? color : Color.GRAY;
+	}
+
+	/**
+	 * Icon painted from SVG path data (absolute M, L, C and Z commands)
+	 */
+	private static class GlyphIcon extends FlatAbstractIcon {
+
+		private final Path2D path;
+		private final boolean disabled;
+		private final Color light, dark;
+
+		/**
+		 * Square 16 pixel icon from a 640x640 view box
+		 */
+		GlyphIcon(final String svgPath, final Color light, final Color dark, final boolean disabled) {
+			this(svgPath, light, dark, disabled, 0, 0, 640, 640, 16);
+		}
+
+		/**
+		 * Icon of the given height showing the (x, y, w, h) region of the view box
+		 */
+		GlyphIcon(final String svgPath, final Color light, final Color dark, final boolean disabled,
+				  final double x, final double y, final double w, final double h, final int height) {
+			super((int) Math.round(height * w / h), height, null);
+			this.path = parse(svgPath, height / h, x, y);
+			this.light = light;
+			this.dark = dark;
+			this.disabled = disabled;
+		}
+
+		@Override
+		protected void paintIcon(final Component c, final Graphics2D g) {
+			Color color = light == null ? foreground(c) : FlatLaf.isLafDark() ? dark : light;
+			if (disabled) {
+				final Color d = UIManager.getColor("Button.disabledText");
+				color = (d != null) ? d : Color.GRAY;
+			}
+			g.setColor(color);
+			g.fill(path);
+		}
+
+		private static Path2D parse(final String d, final double k, final double x0, final double y0) {
+			final Matcher m = Pattern.compile("[MLCZz]|-?\\d*\\.?\\d+").matcher(d);
+			final List<String> tokens = new ArrayList<>();
+			while (m.find())
+				tokens.add(m.group());
+			final Path2D.Double p = new Path2D.Double();
+			char cmd = 'M';
+			int i = 0;
+			while (i < tokens.size()) {
+				final String t = tokens.get(i);
+				if (Character.isLetter(t.charAt(0))) {
+					cmd = t.charAt(0);
+					i++;
+					if (cmd == 'Z' || cmd == 'z') {
+						p.closePath();
+						continue;
+					}
+				}
+				final double[] v = new double[cmd == 'C' ? 6 : 2];
+				for (int j = 0; j < v.length; j++)
+					v[j] = k * (Double.parseDouble(tokens.get(i + j)) - ((j % 2 == 0) ? x0 : y0));
+				i += v.length;
+				switch (cmd) {
+					case 'M':
+						p.moveTo(v[0], v[1]);
+						cmd = 'L'; // further pairs are line segments
+						break;
+					case 'L':
+						p.lineTo(v[0], v[1]);
+						break;
+					case 'C':
+						p.curveTo(v[0], v[1], v[2], v[3], v[4], v[5]);
+						break;
+					default:
+						throw new IllegalArgumentException("Unsupported path command: " + cmd);
+				}
+			}
+			return p;
+		}
+	}
+
+	/**
+	 * Rounded window outline (16x16), painted with the foreground of its component
+	 */
+	private abstract static class WindowIcon extends FlatAbstractIcon {
+
+		WindowIcon() {
+			super(16, 16, null);
+		}
+
+		/**
+		 * Paints the inner details. The component being selected means "pane shown"
+		 */
+		abstract void paintContent(Graphics2D g, boolean selected);
+
+		@Override
+		protected void paintIcon(final Component c, final Graphics2D g) {
+			g.setColor(foreground(c));
+			g.drawRoundRect(1, 2, 13, 11, 3, 3);
+			paintContent(g, c instanceof AbstractButton && ((AbstractButton) c).isSelected());
+		}
+	}
+
+	private static class ChevronIcon implements Icon {
+
+		private final boolean down;
+
+		ChevronIcon(final boolean down) {
+			this.down = down;
+		}
+
+		@Override
+		public int getIconWidth() {
+			return UIScale.scale(10);
+		}
+
+		@Override
+		public int getIconHeight() {
+			return UIScale.scale(10);
+		}
+
+		@Override
+		public void paintIcon(final Component c, final Graphics g, final int x, final int y) {
+			final Graphics2D g2 = (Graphics2D) g.create();
+			try {
+				FlatUIUtils.setRenderingHints(g2);
+				g2.setColor(foreground(c));
+				g2.setStroke(new BasicStroke(UIScale.scale(1.3f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+				final float s = getIconWidth();
+				final float a = s * .3f; // inset
+				final Path2D.Float p = new Path2D.Float();
+				if (down) {
+					p.moveTo(x + a * .5f, y + s * .35f);
+					p.lineTo(x + s / 2, y + s * .65f);
+					p.lineTo(x + s - a * .5f, y + s * .35f);
+				} else {
+					p.moveTo(x + s * .35f, y + a * .5f);
+					p.lineTo(x + s * .65f, y + s / 2);
+					p.lineTo(x + s * .35f, y + s - a * .5f);
+				}
+				FlatUIUtils.drawShapePure(g2, p);
+			} finally {
+				g2.dispose();
+			}
+		}
+	}
+
+	private static final class MagnifierIcon implements Icon {
+
+		@Override
+		public void paintIcon(final Component c, final Graphics g, final int x, final int y) {
+			final Graphics2D g2 = (Graphics2D) g.create();
+			try {
+				FlatUIUtils.setRenderingHints(g2);
+				g2.setColor(foreground(c));
+				g2.setStroke(new BasicStroke(UIScale.scale(1.6f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+				final float s = getIconWidth();
+				FlatUIUtils.drawShapePure(g2, new Ellipse2D.Float(x + .1f * s, y + .1f * s, .6f * s, .6f * s));
+				FlatUIUtils.drawShapePure(g2, new Line2D.Float(x + .62f * s, y + .62f * s, x + .88f * s, y + .88f * s));
+			} finally {
+				g2.dispose();
+			}
+		}
+
+		@Override
+		public int getIconWidth() {
+			return UIScale.scale(16);
+		}
+
+		@Override
+		public int getIconHeight() {
+			return UIScale.scale(16);
+		}
+	}
+}

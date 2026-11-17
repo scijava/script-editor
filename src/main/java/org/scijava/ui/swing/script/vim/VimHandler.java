@@ -58,6 +58,7 @@ import javax.swing.text.Position;
 import org.fife.ui.rtextarea.CaretStyle;
 import org.fife.ui.rtextarea.ConfigurableCaret;
 import org.fife.ui.rtextarea.RTextArea;
+import org.fife.ui.rtextarea.TextMode;
 
 /**
  * Modal, vim-style key handling for an {@link RTextArea}.
@@ -243,17 +244,10 @@ public class VimHandler {
 		if (message != null) return message;
 		final String modeText;
 		switch (mode) {
-			case INSERT:
-				modeText = "-- INSERT --";
-				break;
-			case VISUAL:
-				modeText = "-- VISUAL --";
-				break;
-			case VISUAL_LINE:
-				modeText = "-- VISUAL LINE --";
-				break;
-			default:
-				modeText = "";
+			case INSERT: modeText = "-- INSERT --"; break;
+			case VISUAL: modeText = "-- VISUAL --"; break;
+			case VISUAL_LINE: modeText = "-- VISUAL LINE --"; break;
+			default: modeText = "";
 		}
 		if (pending.length() == 0) return modeText;
 		return modeText + (modeText.isEmpty() ? "" : "   ") + printable(pending);
@@ -2018,7 +2012,7 @@ public class VimHandler {
 		final boolean block = enabled && mode != Mode.INSERT;
 		final CaretStyle style = block ? CaretStyle.BLOCK_STYLE
 			: originalCaretStyle;
-		if (style != null) area.setCaretStyle(RTextArea.INSERT_MODE, style);
+		if (style != null) area.setCaretStyle(TextMode.INSERT, style);
 	}
 
 	private boolean areCtrlKeysFree() {

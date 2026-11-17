@@ -53,7 +53,6 @@ import java.util.jar.JarFile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
@@ -225,10 +224,8 @@ public class FileFunctions {
 		if (paths.size() == 1) return new File(workspace, paths.get(0))
 			.getAbsolutePath();
 		//final String[] names = paths.toArray(new String[paths.size()]);
-		final JFileChooser chooser = new JFileChooser(workspace);
-		chooser.setDialogTitle("Choose path");
-		if (chooser.showOpenDialog(parent) != JFileChooser.APPROVE_OPTION) return null;
-		return chooser.getSelectedFile().getPath();
+		final File chosen = GuiUtils.chooseOpenFile(parent, workspace, "Choose path");
+		return (chosen == null) ? null : chosen.getPath();
 	}
 
 	protected void findJavaPaths(final File directory, final String prefix) {
@@ -372,7 +369,7 @@ public class FileFunctions {
 			" more line" + (count > 1 ? "s" : "") + ")...\n";
 	}
 
-	public class LengthWarner implements DocumentListener {
+	public static class LengthWarner implements DocumentListener {
 
 		protected int width;
 		protected JTextComponent component;
@@ -404,7 +401,7 @@ public class FileFunctions {
 		}
 	}
 
-	public class TextWrapper implements DocumentListener {
+	public static class TextWrapper implements DocumentListener {
 
 		protected int width;
 
