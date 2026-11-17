@@ -319,6 +319,13 @@ final class GuiUtils {
 			menu.addSeparator();
 		}
 		try {
+			if (usesScreenMenuBar()) {
+				// The native macOS menu bar only translates menu items, not arbitrary components
+				final JMenuItem item = new JMenuItem(header);
+				item.setEnabled(false);
+				menu.add(item);
+				return;
+			}
 			final JLabel label = new JLabel(" "+ header);
 			label.setEnabled(false);
 			label.setForeground(getDisabledComponentColor());
@@ -326,6 +333,11 @@ final class GuiUtils {
 		} catch (final Exception ignored) {
 			// do nothing
 		}
+	}
+
+	/** Whether menu bars are displayed in the native macOS menu bar (at the top of the screen) */
+	private static boolean usesScreenMenuBar() {
+		return PlatformUtils.isMac() && Boolean.parseBoolean(System.getProperty("apple.laf.useScreenMenuBar"));
 	}
 
 	static void addPopupMenuSeparator(final JPopupMenu menu, final String header) {
