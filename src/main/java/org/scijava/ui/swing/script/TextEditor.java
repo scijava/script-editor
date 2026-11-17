@@ -81,6 +81,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.ConcurrentModificationException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
@@ -286,6 +287,9 @@ public class TextEditor extends JFrame implements ActionListener,
 	private int sideLastLocation = -1;
 	private final JMenu languageMenu;
 	private JLabel statusText;
+	private JLabel statusRun; // run timer: elapsed time of the running script
+	private boolean headerWritten; // whether the last markCompileStart() wrote a "Started" line
+	private final Timer runTimer = new Timer(1000, e -> refreshRunStatus());
 	private JLabel statusVim;
 	private final FileSystemTreePanel filesPanel;
 	private final JCheckBoxMenuItem autoSave;
@@ -2206,6 +2210,13 @@ public class TextEditor extends JFrame implements ActionListener,
 		bar.add(statusVim);
 		bar.add(statusText);
 		bar.add(Box.createHorizontalGlue());
+		statusRun = new JLabel();
+		statusRun.setFont(statusText.getFont());
+		statusRun.setForeground(GuiUtils.secondaryColor());
+		statusRun.setToolTipText("Time elapsed since the running script started");
+		statusRun.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 8));
+		statusRun.setVisible(false);
+		bar.add(statusRun);
 		bar.addSeparator();
 		bar.add(Box.createHorizontalStrut(gap));
 		bar.add(statusVimToggle);
@@ -3321,6 +3332,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			disposed = true;
 			layoutSaveTimer.stop();
 			titleTimer.stop();
+			runTimer.stop();
 			UIManager.removePropertyChangeListener(lookAndFeelListener);
 			tree.destroy();
 			if (dragSource != null) { // necessary to prevent memory leaks
@@ -3521,12 +3533,91 @@ public class TextEditor extends JFrame implements ActionListener,
 	private final ArrayList<Executer> executingTasks = new ArrayList<>();
 
 	/**
+	 * Called once when a task ends: writes the matching "Finished" (or "Stopped") line to the consoles
+	 * of its tab, if the run had a "Started" line, and updates the run timer
+	 */
+	private void reportRun(final Executer task, final boolean stopped) {
+		if (!task.reported.compareAndSet(false, true)) return;
+		final long ms = (System.nanoTime() - task.startNanos) / 1_000_000;
+		final Date end = new Date(); // the lambda below runs a bit later
+		SwingUtilities.invokeLater(() -> {
+			// Failed: a caught exception, or what makes the error console pop up (see markCompileEnd())
+			final boolean failed = !stopped && (task.failed || (task.unverifiedLang == null
+					&& task.runParser.isLogDetailed()
+					&& errorScreen.getDocument().getLength() != task.startOffset));
+			final String note = (stopped || failed || task.unverifiedLang == null) ? ""
+					: " (success not verified for " + task.unverifiedLang + ")";
+			final String footer = (stopped ? "Stopped " + task.runName + " after "
+					: failed ? "Failed " + task.runName + " after " : "Finished " + task.runName + " in ")
+					+ formatElapsed(ms, false) + note + " at " + end + "\n";
+			if (task.marked) { // same layout as the header: the errors view gets it too, the combined view once
+				task.runTab.withoutMirroringErrors(() -> append(errorScreen, footer));
+				append(task.runTab.screen, footer);
+			}
+			refreshRunStatus();
+		});
+	}
+
+	/** Name of the language if its failures cannot be detected (see ErrorParser), null otherwise */
+	private static String unverifiedLanguage(final ScriptLanguage lang) {
+		if (lang == null) return null;
+		final String name = lang.getLanguageName();
+		if ("ImageJ Macro".equals(name) || "IJ1 Macro".equals(name) || "Scala".equals(name) || "R".equals(name))
+			return name;
+		return null;
+	}
+
+	/** Updates the run timer of the status bar. Invoke in the context of the event dispatch thread */
+	private void refreshRunStatus() {
+		if (statusRun == null) return;
+		final List<Executer> running;
+		try {
+			running = new ArrayList<>(executingTasks);
+		} catch (final ConcurrentModificationException ex) {
+			return; // the next tick will get it
+		}
+		String text = null;
+		if (running.isEmpty()) {
+			runTimer.stop();
+		} else {
+			runTimer.start(); // no-op if already running
+			final Executer newest = Collections.max(running, java.util.Comparator.comparingLong(x -> x.startNanos));
+			final long ms = (System.nanoTime() - newest.startNanos) / 1_000_000;
+			// short runs do not flash the label
+			if (ms >= 900) text = "Running " + formatElapsed(ms, true) + (running.size() > 1 ? " (+" + (running.size() - 1) + ")" : "");
+		}
+		statusRun.setText(text == null ? "" : text);
+		statusRun.setVisible(text != null);
+	}
+
+	/** Elapsed time as "3.4 s" (finished runs under a minute), "12 s", "2:05" or "1:02:05" */
+	private static String formatElapsed(final long ms, final boolean running) {
+		if (ms < 60_000) return running ? (ms / 1000) + " s" : String.format(java.util.Locale.ROOT, "%.1f s", ms / 1000d);
+		final long totalSeconds = ms / 1000;
+		final long h = totalSeconds / 3600, m = (totalSeconds % 3600) / 60, sec = totalSeconds % 60;
+		return h > 0 ? String.format(java.util.Locale.ROOT, "%d:%02d:%02d", h, m, sec)
+				: String.format(java.util.Locale.ROOT, "%d:%02d", m, sec);
+	}
+
+	/**
 	 * Generic Thread that keeps a starting time stamp, sets the priority to
 	 * normal and starts itself.
 	 */
 	public abstract class Executer extends ThreadGroup {
 
 		JTextAreaWriter output, errors;
+		private final long startNanos = System.nanoTime();
+		private final java.util.concurrent.atomic.AtomicBoolean reported = new java.util.concurrent.atomic.AtomicBoolean();
+		// What the "Finished" line needs, recorded when the run starts (the tab may change or close later)
+		private final boolean marked = headerWritten;
+		private final String runName = getEditorPane().getFileName();
+		private final TextEditorTab runTab = getTab();
+		private final ErrorParser runParser = getEditorPane().getErrorHighlighter();
+		// Languages whose errors we cannot detect: ErrorParser skips them (and macros report errors in a dialog)
+		private final String unverifiedLang = unverifiedLanguage(getCurrentLanguage());
+		private volatile boolean failed; // an exception or compile error was caught
+		// length of the error console once the header (written by markCompileStart) is in
+		private final int startOffset = errorScreen.getDocument().getLength();
 
 		Executer(final JTextAreaWriter output, final JTextAreaWriter errors) {
 			super("Script Editor Run :: " + new Date().toString());
@@ -3534,6 +3625,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			this.errors = errors;
 			// Store itself for later
 			executingTasks.add(this);
+			SwingUtilities.invokeLater(TextEditor.this::refreshRunStatus);
 			setTitle();
 			// Enable kill menu
 			kill.setEnabled(true);
@@ -3588,6 +3680,7 @@ public class TextEditor extends JFrame implements ActionListener,
 						catch (final Exception e) {
 							handleException(e);
 						}
+						reportRun(Executer.this, false); // after the writers flushed: the last line of the run
 						// Leave kill menu item enabled if other tasks are running
 						kill.setEnabled(!executingTasks.isEmpty());
 						setTitle();
@@ -3667,6 +3760,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				}
 			}
 			executingTasks.remove(this);
+			reportRun(this, true);
 			// The wrapper thread may survive (no Thread.stop()): refresh the state it would have
 			SwingUtilities.invokeLater(() -> kill.setEnabled(!executingTasks.isEmpty()));
 			setTitle();
@@ -3691,7 +3785,7 @@ public class TextEditor extends JFrame implements ActionListener,
 				errorScreen.append("\n[Kill] " + names.size() + " thread(s) of " + script
 						+ " still running 1s after Kill: " + String.join(", ", names) + "\n");
 				showTemporaryStatus(names.size() + " thread(s) of " + script + " still running after Kill. "
-						+ "See Errors", 15000, Icons.error());
+						+ "See Errors", 15000, Icons.error(statusText));
 			});
 			timer.setRepeats(false);
 			timer.start();
@@ -3707,17 +3801,17 @@ public class TextEditor extends JFrame implements ActionListener,
 		final ThreadGroup runGroup, final ThreadService threadService)
 	{
 		if (thread == null || runGroup == null) return false;
-		if (threadService == null) return isInThreadGroup(thread, runGroup);
+		if (threadService == null) return isInThreadGroup(thread, runGroup) && !isIdleDaemon(thread);
 
 		final ThreadService.ThreadContext threadContext;
 		try {
 			threadContext = threadService.getThreadContext(thread);
 		}
 		catch (final RuntimeException e) {
-			return isInThreadGroup(thread, runGroup);
+			return isInThreadGroup(thread, runGroup) && !isIdleDaemon(thread);
 		}
 		if (threadContext == null || threadContext == ThreadService.ThreadContext.NONE) {
-			return isInThreadGroup(thread, runGroup);
+			return isInThreadGroup(thread, runGroup) && !isIdleDaemon(thread);
 		}
 
 		final Set<Thread> seenParents = new HashSet<>();
@@ -3727,6 +3821,17 @@ public class TextEditor extends JFrame implements ActionListener,
 			parent = threadService.getParent(parent);
 		}
 		return isInThreadGroup(thread, runGroup) && !isIdleThreadServiceWorker(thread);
+	}
+
+	/**
+	 * Some scripts may launch Daemon threads parked in a wait. E.g., This happens when using SNT to connect to
+	 * remote databases which causes Okio Watchdog or OkHttp TaskRunner  to linger 1-5 minutes after the HTTP request.
+	 * These should be filtered and not hold the run.
+	 */
+	private static boolean isIdleDaemon(final Thread thread) {
+		if (!thread.isDaemon()) return false;
+		final Thread.State state = thread.getState();
+		return state == Thread.State.WAITING || state == Thread.State.TIMED_WAITING;
 	}
 
 	private static boolean isIdleThreadServiceWorker(final Thread thread) {
@@ -4105,6 +4210,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	}
 
 	public void markCompileStart(final boolean with_timestamp) {
+		headerWritten = with_timestamp; // the run that follows gets a matching "Finished" line
 		errorHandler = null;
 		// Errors flagged by a previous run are outdated
 		getEditorPane().getErrorHighlighter().reset();
@@ -4463,7 +4569,18 @@ public class TextEditor extends JFrame implements ActionListener,
 		GuiUtils.showHTMLDialog(this, title, htmlContents);
 	}
 
+	/** Flags the run (if any) that the calling thread belongs to as failed */
+	private void flagFailedRun() {
+		for (ThreadGroup g = Thread.currentThread().getThreadGroup(); g != null; g = g.getParent()) {
+			if (g instanceof Executer) {
+				((Executer) g).failed = true;
+				return;
+			}
+		}
+	}
+
 	public void handleException(final Throwable e) {
+		flagFailedRun();
 		handleException(e, errorScreen);
 		getEditorPane().getErrorHighlighter().parse(e);
 		getTab().showErrors();
@@ -4589,6 +4706,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		}
 		catch (final ExecutionException e) {
 			log.error(e);
+			flagFailedRun();
 			getEditorPane().getErrorHighlighter().parse(e);
 		} finally {
 			getEditorPane().getErrorHighlighter().parse();
