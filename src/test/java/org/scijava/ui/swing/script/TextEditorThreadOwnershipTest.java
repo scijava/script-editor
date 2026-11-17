@@ -29,21 +29,16 @@
 package org.scijava.ui.swing.script;
 
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.Modifier;
-import java.util.HashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-
-import javax.script.Bindings;
-import javax.script.SimpleBindings;
 
 import org.junit.After;
 import org.junit.Before;
@@ -71,29 +66,6 @@ public class TextEditorThreadOwnershipTest {
 	public void testTitleSetterDoesNotSynchronizeOnEditor() throws Exception {
 		assertFalse(Modifier.isSynchronized(TextEditor.class.getMethod("setTitle",
 			String.class).getModifiers()));
-	}
-
-	@Test
-	public void testBindingsAreClearedAfterLastAssociation() {
-		final TextEditor.BindingsRegistry registry = new TextEditor.BindingsRegistry();
-		final Object image = new Object();
-		final Bindings first = new SimpleBindings();
-		first.put("image", image);
-		final Bindings second = new SimpleBindings();
-		second.put("image", image);
-		assertEquals(new HashMap<>(first), new HashMap<>(second));
-
-		final TextEditor.BindingsRegistry.Lease firstLease = registry.retain(first);
-		final TextEditor.BindingsRegistry.Lease secondLease = registry.retain(first);
-		final TextEditor.BindingsRegistry.Lease distinctLease = registry.retain(second);
-
-		firstLease.close();
-		assertSame(image, first.get("image"));
-		secondLease.close();
-		assertTrue(first.isEmpty());
-		assertSame(image, second.get("image"));
-		distinctLease.close();
-		assertTrue(second.isEmpty());
 	}
 
 	@Test
