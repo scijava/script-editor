@@ -250,6 +250,16 @@ final class Icons {
 	}
 
 	/**
+	 * Foreground color with which to paint an icon. Note: The component may be
+	 * null, e.g. when macOS renders icons for its native screen menu bar.
+	 */
+	private static Color foreground(final Component c) {
+		if (c != null) return c.getForeground();
+		final Color color = UIManager.getColor("MenuItem.foreground");
+		return color != null ? color : Color.GRAY;
+	}
+
+	/**
 	 * Icon painted from SVG path data (absolute M, L, C and Z commands)
 	 */
 	private static class GlyphIcon extends FlatAbstractIcon {
@@ -279,7 +289,7 @@ final class Icons {
 
 		@Override
 		protected void paintIcon(final Component c, final Graphics2D g) {
-			Color color = light == null ? c.getForeground() : FlatLaf.isLafDark() ? dark : light;
+			Color color = light == null ? foreground(c) : FlatLaf.isLafDark() ? dark : light;
 			if (disabled) {
 				final Color d = UIManager.getColor("Button.disabledText");
 				color = (d != null) ? d : Color.GRAY;
@@ -345,7 +355,7 @@ final class Icons {
 
 		@Override
 		protected void paintIcon(final Component c, final Graphics2D g) {
-			g.setColor(c.getForeground());
+			g.setColor(foreground(c));
 			g.drawRoundRect(1, 2, 13, 11, 3, 3);
 			paintContent(g, c instanceof AbstractButton && ((AbstractButton) c).isSelected());
 		}
@@ -374,7 +384,7 @@ final class Icons {
 			final Graphics2D g2 = (Graphics2D) g.create();
 			try {
 				FlatUIUtils.setRenderingHints(g2);
-				g2.setColor(c.getForeground());
+				g2.setColor(foreground(c));
 				g2.setStroke(new BasicStroke(UIScale.scale(1.3f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 				final float s = getIconWidth();
 				final float a = s * .3f; // inset
@@ -402,7 +412,7 @@ final class Icons {
 			final Graphics2D g2 = (Graphics2D) g.create();
 			try {
 				FlatUIUtils.setRenderingHints(g2);
-				g2.setColor(c.getForeground());
+				g2.setColor(foreground(c));
 				g2.setStroke(new BasicStroke(UIScale.scale(1.6f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 				final float s = getIconWidth();
 				FlatUIUtils.drawShapePure(g2, new Ellipse2D.Float(x + .1f * s, y + .1f * s, .6f * s, .6f * s));

@@ -974,8 +974,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			});
 		}
 		catch (final Exception ie) {
-			/* ignore */
-			log.debug(ie);
+			log.error("Failed to lay out Script Editor window", ie);
 		}
 		findDialog = new FindAndReplaceDialog(this);
 
