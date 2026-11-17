@@ -28,29 +28,59 @@
  */
 package org.scijava.ui.swing.script;
 
-import com.formdev.flatlaf.icons.FlatAbstractIcon;
-import com.formdev.flatlaf.icons.FlatOptionPaneErrorIcon;
-import org.scijava.log.Logger;
-
-import javax.swing.*;
-import javax.swing.event.TreeExpansionEvent;
-import javax.swing.event.TreeWillExpandListener;
-import javax.swing.tree.*;
-import java.awt.*;
+import java.awt.Component;
+import java.awt.Graphics;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
-import java.nio.file.*;
+import java.nio.file.ClosedWatchServiceException;
+import java.nio.file.FileSystems;
+import java.nio.file.FileVisitOption;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+
+import javax.swing.JTree;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
+import javax.swing.ToolTipManager;
+import javax.swing.UIManager;
+import javax.swing.event.TreeExpansionEvent;
+import javax.swing.event.TreeWillExpandListener;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeCellRenderer;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreePath;
+import javax.swing.tree.TreeSelectionModel;
+
+import org.scijava.log.Logger;
+
+import com.formdev.flatlaf.icons.FlatAbstractIcon;
+import com.formdev.flatlaf.icons.FlatOptionPaneErrorIcon;
 
 /**
  * A tree listing the contents of one or more top-level folders. Folders are
@@ -443,7 +473,7 @@ public class FileSystemTree extends JTree {
 				final long[] state = { 0, System.nanoTime() };
 				for (final String top : tops) {
 					if (isCancelled() || p.truncated || p.hitCap) break;
-					walk(Paths.get(top), file_filter, p, onlyIn, state, this::isCancelled, this::publish);
+					walk(Paths.get(top), file_filter, p, onlyIn, state, this::isCancelled, snapshot -> publish(snapshot));
 				}
 				return p;
 			}
