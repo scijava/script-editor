@@ -29,7 +29,16 @@
 
 package org.scijava.ui.swing.script;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Desktop;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Toolkit;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
@@ -77,38 +86,70 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.BiConsumer;
-import java.util.function.IntPredicate;
 import java.util.TreeMap;
 import java.util.Vector;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
+import java.util.function.BiConsumer;
+import java.util.function.IntPredicate;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipException;
 
+import javax.script.Bindings;
+import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
-import javax.swing.*;
+import javax.swing.AbstractAction;
+import javax.swing.AbstractButton;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
+import javax.swing.Icon;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JRadioButtonMenuItem;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
+import javax.swing.JToggleButton;
+import javax.swing.JToolBar;
+import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
@@ -125,9 +166,9 @@ import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Theme;
+import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.parser.ParserNotice;
 import org.fife.ui.rsyntaxtextarea.parser.TaskTagParser;
-import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
 import org.fife.ui.rtextarea.ClipboardHistory;
 import org.fife.ui.rtextarea.Macro;
 import org.fife.ui.rtextarea.RTextArea;
@@ -207,6 +248,11 @@ public class TextEditor extends JFrame implements ActionListener,
 	public static final String TAB_DIV_ORIENTATION = "script.editor.tab.divOrientation";
 	public static final String REPL_DIV_LOCATION = "script.editor.repl.divLocation";
 	public static final String LAST_LANGUAGE = "script.editor.lastLanguage";
+	private static final String SCRIPT_VARIABLES_ON_EXIT_PREFS =
+		"script.editor.variablesOnExit";
+	private static final String SCRIPT_VARIABLES_ASK = "ask";
+	private static final String SCRIPT_VARIABLES_CLEAR = "clear";
+	private static final String SCRIPT_VARIABLES_KEEP = "keep";
 
 	static {
 		// Add known script template paths.
@@ -376,6 +422,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	
 	private EditableScriptInfo scriptInfo;
 	private ScriptModule module;
+	private final ScriptEngineTracker scriptEngines = new ScriptEngineTracker();
 	private boolean incremental = false;
 	private DragSource dragSource;
 	private boolean layoutLoading = true;
@@ -841,6 +888,18 @@ public class TextEditor extends JFrame implements ActionListener,
 		GuiUtils.addMenubarSeparator(options, "Key Bindings:");
 		options.add(vimMode);
 
+		GuiUtils.addMenubarSeparator(options, "Script State:");
+		final JMenu scriptVariablesOnExit = new JMenu("Script Variables on Exit");
+		final ButtonGroup scriptVariablesPolicy = new ButtonGroup();
+		final String currentScriptVariablesPolicy = scriptVariablesExitPolicy();
+		addScriptVariablesExitOption(scriptVariablesOnExit, scriptVariablesPolicy,
+			"Ask on close", SCRIPT_VARIABLES_ASK, currentScriptVariablesPolicy);
+		addScriptVariablesExitOption(scriptVariablesOnExit, scriptVariablesPolicy,
+			"Clear variables", SCRIPT_VARIABLES_CLEAR, currentScriptVariablesPolicy);
+		addScriptVariablesExitOption(scriptVariablesOnExit, scriptVariablesPolicy,
+			"Keep variables", SCRIPT_VARIABLES_KEEP, currentScriptVariablesPolicy);
+		options.add(scriptVariablesOnExit);
+
 		options.addSeparator();
 		appendPreferences(options);
 		mbar.add(options);
@@ -948,6 +1007,8 @@ public class TextEditor extends JFrame implements ActionListener,
 					saveWindowSizeToPrefs();
 				}
 				if (!confirmClose()) return;
+				if (scriptEngines.hasEngines() && shouldClearScriptVariablesOnExit())
+					scriptEngines.clearBindings(log);
 				dispose(); // releases everything this editor registered
 			}
 		});
@@ -3329,7 +3390,13 @@ public class TextEditor extends JFrame implements ActionListener,
 	@Override
 	public void dispose() {
 		if (!disposed) { // can be called more than once
+			if (scriptEngines.hasEngines() &&
+				SCRIPT_VARIABLES_CLEAR.equals(scriptVariablesExitPolicy()))
+			{
+				scriptEngines.clearBindings(log);
+			}
 			disposed = true;
+			scriptEngines.release();
 			layoutSaveTimer.stop();
 			titleTimer.stop();
 			runTimer.stop();
@@ -4564,6 +4631,50 @@ public class TextEditor extends JFrame implements ActionListener,
 		return GuiUtils.confirm(this, message, title, yesButtonLabel);
 	}
 
+	private String scriptVariablesExitPolicy() {
+		final String policy = prefService.get(getClass(),
+			SCRIPT_VARIABLES_ON_EXIT_PREFS, SCRIPT_VARIABLES_ASK);
+		if (SCRIPT_VARIABLES_CLEAR.equals(policy) || SCRIPT_VARIABLES_KEEP.equals(policy))
+			return policy;
+		return SCRIPT_VARIABLES_ASK;
+	}
+
+	private void addScriptVariablesExitOption(final JMenu menu,
+		final ButtonGroup group, final String label, final String policy,
+		final String selectedPolicy)
+	{
+		final JRadioButtonMenuItem item = new JRadioButtonMenuItem(label,
+			policy.equals(selectedPolicy));
+		item.addActionListener(e -> prefService.put(getClass(),
+			SCRIPT_VARIABLES_ON_EXIT_PREFS, policy));
+		group.add(item);
+		menu.add(item);
+	}
+
+	private boolean shouldClearScriptVariablesOnExit() {
+		final String policy = scriptVariablesExitPolicy();
+		if (SCRIPT_VARIABLES_CLEAR.equals(policy)) return true;
+		if (SCRIPT_VARIABLES_KEEP.equals(policy)) return false;
+
+		final JCheckBox remember = new JCheckBox("Remember this choice");
+		final Object[] message = {
+			"Clear variables created by scripts in this editor?\nScripts, listeners, " +
+				"or threads that still use them may stop working.\n" +
+				"Change this any time in \"Options > Script Variables on Exit\"",
+			remember
+		};
+		final Object[] choices = { "Clear Variables", "Keep Variables" };
+		final int choice = JOptionPane.showOptionDialog(this, message,
+			"Script Variables on Exit", JOptionPane.DEFAULT_OPTION,
+			JOptionPane.WARNING_MESSAGE, null, choices, choices[1]);
+		if (choice != 0 && choice != 1) return false;
+		final boolean clear = choice == 0;
+		if (remember.isSelected()) prefService.put(getClass(),
+			SCRIPT_VARIABLES_ON_EXIT_PREFS,
+			clear ? SCRIPT_VARIABLES_CLEAR : SCRIPT_VARIABLES_KEEP);
+		return clear;
+	}
+
 	void showHTMLDialog(final String title, final String htmlContents) {
 		if (cmdPalette != null) cmdPalette.hide();
 		GuiUtils.showHTMLDialog(this, title, htmlContents);
@@ -4623,6 +4734,42 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (language == null) return false;
 		return language.isCompiledLanguage();
 	}
+
+	static final class ScriptEngineTracker {
+
+		private final Set<ScriptEngine> engines = Collections.newSetFromMap(
+			new IdentityHashMap<>());
+
+		synchronized void add(final ScriptEngine engine) {
+			if (engine != null) engines.add(engine);
+		}
+
+		synchronized boolean hasEngines() {
+			return !engines.isEmpty();
+		}
+
+		synchronized void clearBindings(final LogService log) {
+			try {
+				for (final ScriptEngine engine : engines) {
+					try {
+						final Bindings bindings = engine.getBindings(
+							ScriptContext.ENGINE_SCOPE);
+						if (bindings != null) bindings.clear();
+					}
+					catch (final RuntimeException e) {
+						if (log != null) log.error("Could not clear script engine bindings", e);
+					}
+				}
+			}
+			finally {
+				engines.clear();
+			}
+		}
+
+		synchronized void release() {
+			engines.clear();
+		}
+	}
 	
 	private static final class EditableScriptInfo extends ScriptInfo
 	{	
@@ -4678,6 +4825,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			
 			this.module = this.scriptInfo.createModule();
 			context.inject(this.module);
+			scriptEngines.add(this.module.getEngine());
 		} else {
 			try {
 				// Same engine, with persistent state

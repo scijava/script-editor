@@ -34,11 +34,18 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
+import java.io.Reader;
 import java.lang.reflect.Modifier;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import javax.script.AbstractScriptEngine;
+import javax.script.Bindings;
+import javax.script.ScriptContext;
+import javax.script.ScriptEngineFactory;
+import javax.script.SimpleBindings;
 
 import org.junit.After;
 import org.junit.Before;
@@ -66,6 +73,34 @@ public class TextEditorThreadOwnershipTest {
 	public void testTitleSetterDoesNotSynchronizeOnEditor() throws Exception {
 		assertFalse(Modifier.isSynchronized(TextEditor.class.getMethod("setTitle",
 			String.class).getModifiers()));
+	}
+
+	@Test
+	public void testTrackedScriptEngineBindingsAreClearedOnRequest() {
+		final TextEditor.ScriptEngineTracker tracker =
+			new TextEditor.ScriptEngineTracker();
+		final TestScriptEngine engine = new TestScriptEngine();
+		final Object payload = new Object();
+		engine.put("payload", payload);
+		tracker.add(engine);
+
+		tracker.clearBindings(null);
+
+		assertNull(engine.get("payload"));
+	}
+
+	@Test
+	public void testReleasingScriptEngineTrackerPreservesBindings() {
+		final TextEditor.ScriptEngineTracker tracker =
+			new TextEditor.ScriptEngineTracker();
+		final TestScriptEngine engine = new TestScriptEngine();
+		final Object payload = new Object();
+		engine.put("payload", payload);
+		tracker.add(engine);
+
+		tracker.release();
+
+		assertSame(payload, engine.get("payload"));
 	}
 
 	@Test
@@ -178,6 +213,29 @@ public class TextEditorThreadOwnershipTest {
 		}
 		catch (final InterruptedException e) {
 			Thread.currentThread().interrupt();
+		}
+	}
+
+	private static final class TestScriptEngine extends AbstractScriptEngine {
+
+		@Override
+		public Object eval(final String script, final ScriptContext context) {
+			return null;
+		}
+
+		@Override
+		public Object eval(final Reader reader, final ScriptContext context) {
+			return null;
+		}
+
+		@Override
+		public Bindings createBindings() {
+			return new SimpleBindings();
+		}
+
+		@Override
+		public ScriptEngineFactory getFactory() {
+			return null;
 		}
 	}
 
