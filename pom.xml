@@ -152,6 +152,9 @@
 		<!-- Dependency versions -->
 		<flatlaf.version>3.8</flatlaf.version> <!-- scijava-pom 45.1.0: 3.7.2 -->
 		<rsyntaxtextarea.version>4.0.1</rsyntaxtextarea.version> <!-- scijava-pom 45.1.0: 3.6.3 -->
+		<!-- NB: autocomplete and languagesupport must match rsyntaxtextarea's major version. -->
+		<autocomplete.version>4.0.0</autocomplete.version> <!-- scijava-pom 45.1.0: 3.3.2 -->
+		<languagesupport.version>4.0.0</languagesupport.version> <!-- scijava-pom 45.1.0: 3.3.0 -->
 		<scijava-common.version>2.101.0</scijava-common.version>
 		<scijava-lsp.version>0.1.0</scijava-lsp.version>
 	</properties>
@@ -189,6 +192,24 @@
 		<dependency>
 			<groupId>com.fifesoft</groupId>
 			<artifactId>languagesupport</artifactId>
+			<version>${languagesupport.version}</version>
+			<exclusions>
+				<!--
+				NB: The rhino-all component is mis-packaged:
+				it is an unshaded uberjar of rhino, rhino-tools, and rhino-xml,
+				but it also depends on those three components, resulting in
+				all rhino classes appearing twice on the runtime classpath.
+				-->
+				<exclusion>
+					<groupId>org.mozilla</groupId>
+					<artifactId>rhino-all</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>com.fifesoft</groupId>
+			<artifactId>autocomplete</artifactId>
+			<version>${autocomplete.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.miglayout</groupId>

@@ -39,6 +39,7 @@ import javax.swing.event.DocumentListener;
 
 import org.fife.rsta.ac.AbstractLanguageSupport;
 import org.fife.ui.autocomplete.AutoCompletion;
+import org.fife.ui.autocomplete.DescWindowVisibility;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.scijava.lsp.ScriptSession;
 import org.scijava.log.Logger;
@@ -82,7 +83,7 @@ public class LanguageServerLanguageSupport extends AbstractLanguageSupport {
 		this.file = file;
 		setAutoCompleteEnabled(true);
 		setParameterAssistanceEnabled(true);
-		setShowDescWindow(true);
+		setDescWindowVisibility(DescWindowVisibility.ALWAYS);
 	}
 
 	/**
@@ -112,7 +113,7 @@ public class LanguageServerLanguageSupport extends AbstractLanguageSupport {
 		ac.setAutoCompleteEnabled(isAutoCompleteEnabled());
 		ac.setAutoActivationEnabled(isAutoActivationEnabled());
 		ac.setParameterAssistanceEnabled(isParameterAssistanceEnabled());
-		ac.setShowDescWindow(getShowDescWindow());
+		configureDescWindow(ac);
 		ac.install(textArea);
 		installImpl(textArea, ac);
 
