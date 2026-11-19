@@ -141,6 +141,10 @@
 
 	<properties>
 		<scijava.jvm.version>11</scijava.jvm.version>
+		<!-- TEMP: Remove once pom-scijava manages scijava-common 2.101.0. -->
+		<scijava-common.version>2.101.0</scijava-common.version>
+		<!-- TEMP: in development; remove once pinned by pom-scijava. -->
+		<scijava-lsp.version>0.1.0-SNAPSHOT</scijava-lsp.version>
 		<main-class>org.scijava.ui.swing.script.Main</main-class>
 		<package-name>org.scijava.ui.swing.script</package-name>
 		<license.licenseName>bsd_2</license.licenseName>
@@ -152,6 +156,9 @@
 		<!-- Dependency versions -->
 		<flatlaf.version>3.8</flatlaf.version> <!-- scijava-pom 45.1.0: 3.7.2 -->
 		<rsyntaxtextarea.version>4.0.1</rsyntaxtextarea.version> <!-- scijava-pom 45.1.0: 3.6.3 -->
+		<!-- NB: autocomplete and languagesupport must match rsyntaxtextarea's major version. -->
+		<autocomplete.version>4.0.0</autocomplete.version> <!-- scijava-pom 45.1.0: 3.3.2 -->
+		<languagesupport.version>4.0.0</languagesupport.version> <!-- scijava-pom 45.1.0: 3.3.0 -->
 	</properties>
 
 	<dependencies>
@@ -159,6 +166,11 @@
 		<dependency>
 			<groupId>org.scijava</groupId>
 			<artifactId>scijava-common</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.scijava</groupId>
+			<artifactId>scijava-lsp</artifactId>
+			<version>${scijava-lsp.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.scijava</groupId>
@@ -182,6 +194,12 @@
 		<dependency>
 			<groupId>com.fifesoft</groupId>
 			<artifactId>languagesupport</artifactId>
+			<version>${languagesupport.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fifesoft</groupId>
+			<artifactId>autocomplete</artifactId>
+			<version>${autocomplete.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.miglayout</groupId>
