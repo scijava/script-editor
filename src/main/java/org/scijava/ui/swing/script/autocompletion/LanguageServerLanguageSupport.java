@@ -62,6 +62,7 @@ public class LanguageServerLanguageSupport extends AbstractLanguageSupport {
 	private final Supplier<File> file;
 	private boolean hoverEnabled = true;
 	private boolean diagnosticsEnabled = true;
+	private ServerHealthListener health;
 
 	/** What was installed in each text area, to uninstall. */
 	private final Map<RSyntaxTextArea, Installed> installed =
@@ -102,6 +103,14 @@ public class LanguageServerLanguageSupport extends AbstractLanguageSupport {
 		diagnosticsEnabled = enabled;
 	}
 
+	/**
+	 * Sets a listener which hears whether the servers fail, e.g. to show it.
+	 * Applies to later installs.
+	 */
+	public void setHealthListener(final ServerHealthListener health) {
+		this.health = health;
+	}
+
 	@Override
 	public void install(final RSyntaxTextArea textArea) {
 		final ScriptSession session = sessions.get();
@@ -109,6 +118,7 @@ public class LanguageServerLanguageSupport extends AbstractLanguageSupport {
 		final SciJavaCompletionProvider provider = new SciJavaCompletionProvider(
 			session);
 		provider.setLogger(log);
+		provider.setHealthListener(health);
 		final AutoCompletion ac = new SciJavaAutoCompletion(provider);
 		ac.setAutoCompleteEnabled(isAutoCompleteEnabled());
 		ac.setAutoActivationEnabled(isAutoActivationEnabled());
@@ -120,7 +130,9 @@ public class LanguageServerLanguageSupport extends AbstractLanguageSupport {
 		// Documentation on hover, problems as squiggles, signatures as typed.
 		final Installed extras = new Installed(session);
 		if (hoverEnabled) {
-			textArea.setToolTipSupplier(new HoverToolTipSupplier(session, log));
+			final HoverToolTipSupplier hover = new HoverToolTipSupplier(session, log);
+			hover.setHealthListener(health);
+			textArea.setToolTipSupplier(hover);
 		}
 		if (diagnosticsEnabled) {
 			extras.parser = new DiagnosticsParser(textArea);
@@ -158,6 +170,7 @@ public class LanguageServerLanguageSupport extends AbstractLanguageSupport {
 				catch (final Exception | LinkageError exc) {
 					// NB: Never let a misbehaving server break the editor.
 					if (log != null) log.debug("Document sync failed", exc);
+					if (health != null) health.failed("Sending the script to the server", exc);
 				}
 			}
 		};
@@ -168,6 +181,7 @@ public class LanguageServerLanguageSupport extends AbstractLanguageSupport {
 		}
 		catch (final Exception | LinkageError exc) {
 			if (log != null) log.debug("Document sync failed", exc);
+			if (health != null) health.failed("Sending the script to the server", exc);
 		}
 	}
 

@@ -113,6 +113,8 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 
 	/** Optional logger, for reporting server failures. */
 	private Logger log;
+	/** Optional listener, for showing server failures. */
+	private volatile ServerHealthListener health;
 
 	// Cache so getAlreadyEnteredText() and getCompletionsImpl(), which RSTA
 	// calls in quick succession for the same caret, stay consistent.
@@ -148,6 +150,11 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 	/** Sets a logger with which to report server failures. */
 	public void setLogger(final Logger log) {
 		this.log = log;
+	}
+
+	/** Sets a listener which hears whether the server fails. */
+	public void setHealthListener(final ServerHealthListener health) {
+		this.health = health;
 	}
 
 	@Override
@@ -243,6 +250,7 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 		catch (final Exception | LinkageError exc) {
 			// NB: Never let a misbehaving server break the editor.
 			if (log != null) log.debug("Signature help failed", exc);
+			if (health != null) health.failed("Signature help", exc);
 		}
 		helpText = text;
 		helpCaret = caret;
@@ -345,7 +353,10 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 		final int caret)
 	{
 		try {
-			return session.completion(text, caret).exceptionally(exc -> {
+			return session.completion(text, caret).whenComplete((list, exc) -> {
+				final ServerHealthListener h = health;
+				if (exc == null && h != null) h.answered();
+			}).exceptionally(exc -> {
 				failed(exc);
 				return new CompletionList();
 			});
@@ -371,6 +382,8 @@ public class SciJavaCompletionProvider extends DefaultCompletionProvider {
 	private void failed(final Throwable exc) {
 		// NB: Never let a misbehaving server break the editor.
 		if (log != null) log.debug("Code completion failed", exc);
+		final ServerHealthListener h = health;
+		if (h != null) h.failed("Code completion", exc);
 	}
 
 	/** Makes the given completions current. */

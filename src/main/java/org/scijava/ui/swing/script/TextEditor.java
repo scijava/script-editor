@@ -282,7 +282,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	private static final String CONSOLE_WRAP_PREFS = "script.editor.ConsoleWrap";
 	private static final String REPL_WRAP_PREFS = "script.editor.ReplWrap";
 	private static final String SIDE_TAB_PREFS = "script.editor.SideTab";
-	private JButton statusPos, statusLang;
+	private JButton statusPos, statusLang, statusAssist;
 	private JToggleButton statusSide, statusBelow, statusRight, statusRepl, statusVimToggle;
 	private int sideLastLocation = -1;
 	private final JMenu languageMenu;
@@ -2136,6 +2136,11 @@ public class TextEditor extends JFrame implements ActionListener,
 			final JPopupMenu menu = languageMenu.getPopupMenu();
 			menu.show(statusLang, 0, -menu.getPreferredSize().height); // opens upwards: the bar is at the bottom
 		});
+		statusAssist = new JButton();
+		statusAssist.setFocusable(false);
+		statusAssist.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
+		statusAssist.setVisible(false);
+		statusAssist.addActionListener(e -> showCodeAssistReport());
 		statusWrap = new JButton("Wrap: Off");
 		statusWrap.setToolTipText("Line wrapping. Click for options");
 		statusWrap.setFocusable(false);
@@ -2241,6 +2246,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		bar.add(statusRepl);
 		bar.add(statusPos);
 		bar.add(statusLang);
+		bar.add(statusAssist);
 		bar.add(statusWrap);
 		bar.add(statusTab);
 		bar.setAlignmentX(Component.LEFT_ALIGNMENT); // same as body (JSplitPane), or BoxLayout shifts the body
@@ -2392,6 +2398,40 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (c != null) statusVim.setForeground(c);
 	}
 
+	/** Shows the code intelligence status of the active editor (hidden if no language) */
+	private void syncCodeAssist(final CodeAssistStatus status) {
+		if (statusAssist == null) return;
+		statusAssist.setVisible(status != null);
+		if (status == null) return;
+		statusAssist.setIcon(Icons.codeAssist(status.level));
+		statusAssist.setToolTipText("<html>" + escapeHtml(status.summary()) + "<br><small>Click for details</small>");
+	}
+
+	/**
+	 * Hears a change of the code intelligence of a tab's editor: shown if the
+	 * tab is the active one, and announced if it just broke.
+	 */
+	void codeAssistChanged(final TextEditorTab tab, final CodeAssistStatus old, final CodeAssistStatus now) {
+		if (tabbed.getSelectedComponent() != tab) return;
+		syncCodeAssist(now);
+		final boolean broke = now != null && now.level == CodeAssistStatus.Level.ERROR
+				&& (old == null || old.level != CodeAssistStatus.Level.ERROR
+						|| old.languageName != null && !old.languageName.equals(now.languageName));
+		if (broke) showTemporaryStatus(now.summary() + " (click the red icon next to the language for details)",
+				8000, Icons.error(statusText));
+	}
+
+	/** Shows what code intelligence the active editor has, and why */
+	private void showCodeAssistReport() {
+		final CodeAssistStatus status = getEditorPane().getCodeAssistStatus();
+		if (status == null) return;
+		showHTMLDialog("Code Intelligence: " + status.languageName, status.report());
+	}
+
+	private static String escapeHtml(final String s) {
+		return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+	}
+
 	/** Updates the toggles of the status bar from the state of the active editor */
 	void syncStatusBar() {
 		if (statusTab == null || statusWrap == null) return;
@@ -2411,6 +2451,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			if (statusRepl != null) statusRepl.setSelected(getTab().isREPLEnabled());
 			syncVimControls(pane.isVimEnabled());
 			statusLang.setText(languageLabel(pane.getCurrentLanguage()));
+			syncCodeAssist(pane.getCodeAssistStatus());
 			updateCaretStatus();
 			setVimStatus(getTab(), pane.getVimHandler().getStatus());
 			statusTab.setText((pane.getTabsEmulated() ? "Spaces: " : "Tab: ") + pane.getTabSize());

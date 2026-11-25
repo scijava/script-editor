@@ -61,6 +61,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JViewport;
+import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
@@ -91,6 +92,7 @@ import org.scijava.Context;
 import org.scijava.log.LogService;
 import org.scijava.platform.PlatformService;
 import org.scijava.plugin.Parameter;
+import org.scijava.plugin.PluginService;
 import org.scijava.prefs.PrefService;
 import org.scijava.script.ScriptHeaderService;
 import org.scijava.script.ScriptLanguage;
@@ -99,6 +101,7 @@ import org.scijava.ui.swing.script.vim.VimHandler;
 import org.scijava.lsp.LanguageServerService;
 import org.scijava.lsp.ScriptSession;
 import org.scijava.ui.swing.script.autocompletion.LanguageServerLanguageSupport;
+import org.scijava.ui.swing.script.autocompletion.ServerHealthListener;
 import org.scijava.util.FileUtils;
 
 /**
@@ -129,6 +132,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private boolean autoCompletionJavaFallback;
 	private boolean autoCompletionWithoutKey;
 	private String supportStatus;
+	/** What code intelligence this pane has, for the status bar. */
+	private volatile CodeAssistStatus codeAssist;
 	/** The completion support currently installed on this pane, if any. */
 	private LanguageSupport installedSupport;
 	private final ErrorParser errorHighlighter;
@@ -144,6 +149,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	private LanguageServerService languageServerService;
 	@Parameter
 	private ScriptService scriptService;
+	@Parameter
+	private PluginService pluginService;
 	@Parameter
 	private ScriptHeaderService scriptHeaderService;
 	@Parameter
@@ -856,33 +863,45 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 		if ("None".equals(languageName) ) {
 			supportStatus = "Active language: None";
+			setCodeAssist(null);
 			return; // no need to update console any further
 		}
 		String supportLevel = "SciJava supported";
+		CodeAssistStatus.Backend backend = CodeAssistStatus.Backend.PLUGIN;
 		// Tier 1: a heavy RSTA LanguageSupportPlugin (e.g. the Java parser).
 		support = languageSupportService.getLanguageSupport(currentLanguage);
 
-		// Tier 2: language servers for this language.
-		if (support == null && languageServerService.supports(currentLanguage)) {
+		// Tier 2: language servers for this language. NB: The diagnosis says
+		// why not, if not; and never throws, even if JAR(s) are broken.
+		final CodeAssistStatus.Servers servers = CodeAssistStatus.servers(
+			languageServerService, pluginService, currentLanguage);
+		if (support == null && servers.ok()) {
 			final ScriptLanguage served = currentLanguage;
 			final LanguageServerLanguageSupport serverSupport =
 				new LanguageServerLanguageSupport(() -> new ScriptSession(
 					languageServerService, served), log, this::getFile);
 			serverSupport.setHoverEnabled(hoverEnabled);
 			serverSupport.setDiagnosticsEnabled(diagnosticsEnabled);
+			serverSupport.setHealthListener(healthListener(serverSupport));
 			support = serverSupport;
+			backend = CodeAssistStatus.Backend.SERVER;
 		}
 
 		// Tier 3: RSTA's own built-in support for the syntax style.
 		if (support == null) {
 			support = LanguageSupportFactory.get().getSupportFor(styleName);
 			supportLevel = "Legacy supported";
+			backend = CodeAssistStatus.Backend.LEGACY;
 		}
 		// Tier 4: fall back to Java completion, if requested.
 		if (support == null && autoCompletionJavaFallback) {
 			support = languageSupportService.getLanguageSupport(scriptService.getLanguageByName("Java"));
 			supportLevel = "N/A. Using Java as fallback";
+			backend = CodeAssistStatus.Backend.JAVA_FALLBACK;
 		}
+		if (support == null) backend = CodeAssistStatus.Backend.NONE;
+		setCodeAssist(CodeAssistStatus.of(languageName, backend, support,
+			autoCompletionEnabled, autoCompletionWithoutKey, servers));
 		if (support != null) {
 			support.setAutoCompleteEnabled(autoCompletionEnabled);
 			support.setAutoActivationEnabled(autoCompletionWithoutKey);
@@ -1179,6 +1198,8 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 	public static final String DIAGNOSTICS_PREFS = "script.editor.Diagnostics";
 	public static final String MARK_OCCURRENCES_PREFS = "script.editor.Occurrences";
 	public static final String VIM_PREFS = "script.editor.Vim";
+	/** Property fired as the code intelligence status changes. */
+	static final String CODE_ASSIST_PROPERTY = "codeAssistStatus";
 	public static final String FOLDERS_PREFS = "script.editor.folders";
 	public static final int DEFAULT_TAB_SIZE = 4;
 	public static final String DEFAULT_THEME = "default";
@@ -1282,6 +1303,48 @@ public class EditorPane extends RSyntaxTextArea implements DocumentListener {
 
 	String getSupportStatus() {
 		return supportStatus;
+	}
+
+	/** What code intelligence this pane has, or null if no language. */
+	CodeAssistStatus getCodeAssistStatus() {
+		return codeAssist;
+	}
+
+	/** Shows a new status, firing a {@code codeAssistStatus} change. */
+	private void setCodeAssist(final CodeAssistStatus status) {
+		final CodeAssistStatus old = codeAssist;
+		codeAssist = status;
+		firePropertyChange(CODE_ASSIST_PROPERTY, old, status);
+	}
+
+	/**
+	 * Hears the servers of the given support, while it is the one installed:
+	 * their failures (and recoveries) become this pane's status.
+	 */
+	private ServerHealthListener healthListener(final LanguageSupport mine) {
+		return new ServerHealthListener() {
+
+			@Override
+			public void failed(final String what, final Throwable cause) {
+				SwingUtilities.invokeLater(() -> {
+					final CodeAssistStatus s = codeAssist;
+					if (installedSupport == mine && s != null) setCodeAssist(s.failed(
+						what, cause));
+				});
+			}
+
+			@Override
+			public void answered() {
+				// NB: Cheap check first, as this is heard with each completion.
+				final CodeAssistStatus now = codeAssist;
+				if (now == null || now.failure == null) return;
+				SwingUtilities.invokeLater(() -> {
+					final CodeAssistStatus s = codeAssist;
+					if (installedSupport == mine && s != null) setCodeAssist(s
+						.recovered());
+				});
+			}
+		};
 	}
 
 	void openLinkInBrowser(String link) {

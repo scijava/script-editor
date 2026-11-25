@@ -63,6 +63,7 @@ public class HoverToolTipSupplier implements ToolTipSupplier {
 
 	private final ScriptSession session;
 	private final Logger log;
+	private volatile ServerHealthListener health;
 
 	/** The last question (text and word), and its answer. */
 	private String askedText;
@@ -101,6 +102,11 @@ public class HoverToolTipSupplier implements ToolTipSupplier {
 		}
 	}
 
+	/** Sets a listener which hears whether the server fails. */
+	public void setHealthListener(final ServerHealthListener health) {
+		this.health = health;
+	}
+
 	private CompletableFuture<Hover> ask(final String text, final int offset) {
 		try {
 			return session.hover(text, offset);
@@ -108,6 +114,8 @@ public class HoverToolTipSupplier implements ToolTipSupplier {
 		catch (final Exception | LinkageError exc) {
 			// NB: Never let a misbehaving server break the editor.
 			if (log != null) log.debug("Hover failed", exc);
+			final ServerHealthListener h = health;
+			if (h != null) h.failed("Hover documentation", exc);
 			return CompletableFuture.completedFuture(null);
 		}
 	}

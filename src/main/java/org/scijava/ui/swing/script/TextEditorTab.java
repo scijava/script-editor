@@ -340,6 +340,8 @@ public class TextEditorTab extends GuiUtils.StickySplitPane {
 		editorPane.getVimHandler().setStatusListener(status -> textEditor.setVimStatus(this, status));
 		editorPane.getVimHandler().setExHandler(textEditor::handleVimCommand);
 		editorPane.setBookmarkListener(textEditor::bookmarksChanged);
+		editorPane.addPropertyChangeListener(EditorPane.CODE_ASSIST_PROPERTY, evt -> textEditor.codeAssistChanged(
+				this, (CodeAssistStatus) evt.getOldValue(), (CodeAssistStatus) evt.getNewValue()));
 		super.setLeftComponent(holder);
 		super.setRightComponent(screenAndPromptSplit);
 		GuiUtils.installSplitHandle(bar, this); // no divider in the "below" layout: the toolbar is the handle
