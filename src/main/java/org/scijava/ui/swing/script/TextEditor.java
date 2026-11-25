@@ -137,6 +137,7 @@ import org.fife.ui.rtextarea.RTextAreaEditorKit.SetWritableAction;
 import org.scijava.Context;
 import org.scijava.app.AppService;
 import org.scijava.batch.BatchService;
+import org.scijava.lsp.jvm.ClassIndex;
 import org.scijava.command.CommandService;
 import org.scijava.event.ContextDisposingEvent;
 import org.scijava.event.EventHandler;
@@ -161,7 +162,6 @@ import org.scijava.thread.ThreadService;
 import org.scijava.ui.CloseConfirmable;
 import org.scijava.ui.UIService;
 import org.scijava.ui.swing.laf.OptionsLookAndFeel;
-import org.scijava.ui.swing.script.autocompletion.ClassUtil;
 import org.scijava.ui.swing.script.commands.ChooseFontSize;
 import org.scijava.ui.swing.script.commands.ChooseTabSize;
 import org.scijava.ui.swing.script.commands.GitGrep;
@@ -282,7 +282,7 @@ public class TextEditor extends JFrame implements ActionListener,
 	private static final String CONSOLE_WRAP_PREFS = "script.editor.ConsoleWrap";
 	private static final String REPL_WRAP_PREFS = "script.editor.ReplWrap";
 	private static final String SIDE_TAB_PREFS = "script.editor.SideTab";
-	private JButton statusPos, statusLang;
+	private JButton statusPos, statusLang, statusAssist;
 	private JToggleButton statusSide, statusBelow, statusRight, statusRepl, statusVimToggle;
 	private int sideLastLocation = -1;
 	private final JMenu languageMenu;
@@ -298,6 +298,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	private JCheckBoxMenuItem autocompletion;
 	private JCheckBoxMenuItem fallbackAutocompletion;
 	private JCheckBoxMenuItem keylessAutocompletion;
+	private JCheckBoxMenuItem hoverDocs;
+	private JCheckBoxMenuItem diagnostics;
 	private JCheckBoxMenuItem markOccurences;
 	private JCheckBoxMenuItem paintTabs;
 	private JCheckBoxMenuItem whiteSpace;
@@ -837,6 +839,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		options.add(autocompletion);
 		options.add(keylessAutocompletion);
 		options.add(fallbackAutocompletion);
+		options.add(hoverDocs);
+		options.add(diagnostics);
 
 		GuiUtils.addMenubarSeparator(options, "Key Bindings:");
 		options.add(vimMode);
@@ -1391,6 +1395,20 @@ public class TextEditor extends JFrame implements ActionListener,
 		fallbackAutocompletion.setToolTipText("<HTML>If selected, Java completions will be used when scripting<br>"
 				+ "a language for which auto-completions are not available");
 		fallbackAutocompletion.addItemListener(e -> setFallbackAutoCompletion(fallbackAutocompletion.getState()));
+		hoverDocs = new JCheckBoxMenuItem("Show Documentation on Hover", true);
+		hoverDocs.setToolTipText("<HTML>If selected, resting the mouse on code shows what is known<br>"
+				+ "about it, e.g. a function's documentation. NB: Not all languages support this feature");
+		hoverDocs.addItemListener(e -> {
+			for (int i = 0; i < tabbed.getTabCount(); i++)
+				getEditorPane(i).setHoverEnabled(hoverDocs.getState());
+		});
+		diagnostics = new JCheckBoxMenuItem("Show Problems While Editing", true);
+		diagnostics.setToolTipText("<HTML>If selected, problems in the code (e.g. syntax errors) are<br>"
+				+ "underlined as you edit. NB: Not all languages support this feature");
+		diagnostics.addItemListener(e -> {
+			for (int i = 0; i < tabbed.getTabCount(); i++)
+				getEditorPane(i).setDiagnosticsEnabled(diagnostics.getState());
+		});
 		// Vim mode is remembered across sessions. NB: panes read the same preference when loaded
 		vimMode = new JCheckBoxMenuItem("Vim Mode", prefService.getBoolean(EditorPane.class, EditorPane.VIM_PREFS, false));
 		vimMode.setToolTipText("<HTML>Edit with vim-style modal key bindings.<br>"
@@ -2118,6 +2136,11 @@ public class TextEditor extends JFrame implements ActionListener,
 			final JPopupMenu menu = languageMenu.getPopupMenu();
 			menu.show(statusLang, 0, -menu.getPreferredSize().height); // opens upwards: the bar is at the bottom
 		});
+		statusAssist = new JButton();
+		statusAssist.setFocusable(false);
+		statusAssist.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
+		statusAssist.setVisible(false);
+		statusAssist.addActionListener(e -> showCodeAssistReport());
 		statusWrap = new JButton("Wrap: Off");
 		statusWrap.setToolTipText("Line wrapping. Click for options");
 		statusWrap.setFocusable(false);
@@ -2223,6 +2246,7 @@ public class TextEditor extends JFrame implements ActionListener,
 		bar.add(statusRepl);
 		bar.add(statusPos);
 		bar.add(statusLang);
+		bar.add(statusAssist);
 		bar.add(statusWrap);
 		bar.add(statusTab);
 		bar.setAlignmentX(Component.LEFT_ALIGNMENT); // same as body (JSplitPane), or BoxLayout shifts the body
@@ -2374,6 +2398,40 @@ public class TextEditor extends JFrame implements ActionListener,
 		if (c != null) statusVim.setForeground(c);
 	}
 
+	/** Shows the code intelligence status of the active editor (hidden if no language) */
+	private void syncCodeAssist(final CodeAssistStatus status) {
+		if (statusAssist == null) return;
+		statusAssist.setVisible(status != null);
+		if (status == null) return;
+		statusAssist.setIcon(Icons.codeAssist(status.level));
+		statusAssist.setToolTipText("<html>" + escapeHtml(status.summary()) + "<br><small>Click for details</small>");
+	}
+
+	/**
+	 * Hears a change of the code intelligence of a tab's editor: shown if the
+	 * tab is the active one, and announced if it just broke.
+	 */
+	void codeAssistChanged(final TextEditorTab tab, final CodeAssistStatus old, final CodeAssistStatus now) {
+		if (tabbed.getSelectedComponent() != tab) return;
+		syncCodeAssist(now);
+		final boolean broke = now != null && now.level == CodeAssistStatus.Level.ERROR
+				&& (old == null || old.level != CodeAssistStatus.Level.ERROR
+						|| old.languageName != null && !old.languageName.equals(now.languageName));
+		if (broke) showTemporaryStatus(now.summary() + " (click the red icon next to the language for details)",
+				8000, Icons.error(statusText));
+	}
+
+	/** Shows what code intelligence the active editor has, and why */
+	private void showCodeAssistReport() {
+		final CodeAssistStatus status = getEditorPane().getCodeAssistStatus();
+		if (status == null) return;
+		showHTMLDialog("Code Intelligence: " + status.languageName, status.report());
+	}
+
+	private static String escapeHtml(final String s) {
+		return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+	}
+
 	/** Updates the toggles of the status bar from the state of the active editor */
 	void syncStatusBar() {
 		if (statusTab == null || statusWrap == null) return;
@@ -2393,6 +2451,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			if (statusRepl != null) statusRepl.setSelected(getTab().isREPLEnabled());
 			syncVimControls(pane.isVimEnabled());
 			statusLang.setText(languageLabel(pane.getCurrentLanguage()));
+			syncCodeAssist(pane.getCodeAssistStatus());
 			updateCaretStatus();
 			setVimStatus(getTab(), pane.getVimHandler().getStatus());
 			statusTab.setText((pane.getTabsEmulated() ? "Spaces: " : "Tab: ") + pane.getTabSize());
@@ -3484,6 +3543,8 @@ public class TextEditor extends JFrame implements ActionListener,
 		autocompletion.setState(pane.isAutoCompletionEnabled());
 		fallbackAutocompletion.setState(pane.isAutoCompletionFallbackEnabled());
 		keylessAutocompletion.setState(pane.isAutoCompletionKeyless());
+		hoverDocs.setState(pane.isHoverEnabled());
+		diagnostics.setState(pane.isDiagnosticsEnabled());
 		sourceTreePanel.rebuildSourceTree(pane);
 	}
 
@@ -4311,6 +4372,8 @@ public class TextEditor extends JFrame implements ActionListener,
 	private void removeTab(final int index) {
 		final int menuItemIndex = index + tabsMenuTabsStart;
 		try {
+			// NB: Let the completer release what it keeps for the script.
+			getEditorPane(index).releaseLanguageSupport();
 			((TextEditorTab) tabbed.getComponentAt(index)).destroy();
 			tabbed.remove(index);
 			tabsMenuItems.remove(tabsMenu.getItem(menuItemIndex));
@@ -4443,7 +4506,7 @@ public class TextEditor extends JFrame implements ActionListener,
 			setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 			final HashMap<String, ArrayList<String>> matches;
 			try {
-				 matches = ClassUtil.findDocumentationForClass(text);
+				 matches = ClassIndex.findDocumentationForClass(text);
 			} finally {
 				setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 			}

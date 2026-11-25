@@ -250,6 +250,14 @@ final class Icons {
 	}
 
 	/**
+	 * Status disc of code intelligence: green check (all good), amber
+	 * exclamation (limited), gray dash (none or off), red cross (broken).
+	 */
+	static Icon codeAssist(final CodeAssistStatus.Level level) {
+		return new StatusDiscIcon(level);
+	}
+
+	/**
 	 * Foreground color with which to paint an icon. Note: The component may be
 	 * null, e.g. when macOS renders icons for its native screen menu bar.
 	 */
@@ -430,6 +438,56 @@ final class Icons {
 		@Override
 		public int getIconHeight() {
 			return UIScale.scale(16);
+		}
+	}
+
+	/** Small filled disc with a white glyph in it, as a status light. */
+	private static final class StatusDiscIcon extends FlatAbstractIcon {
+
+		private final CodeAssistStatus.Level level;
+
+		StatusDiscIcon(final CodeAssistStatus.Level level) {
+			super(14, 14, null);
+			this.level = level;
+		}
+
+		@Override
+		protected void paintIcon(final Component c, final Graphics2D g) {
+			final Color fill;
+			switch (level) {
+				case OK:
+					fill = FlatLaf.isLafDark() ? GREEN_DARK : GREEN;
+					break;
+				case LIMITED:
+					fill = new Color(0xE0A030);
+					break;
+				case ERROR:
+					fill = FlatLaf.isLafDark() ? RED_DARK : RED;
+					break;
+				default:
+					fill = GuiUtils.secondaryColor();
+			}
+			g.setColor(fill);
+			g.fill(new Ellipse2D.Double(1, 1, 12, 12));
+			g.setColor(Color.WHITE);
+			g.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_ROUND,
+				BasicStroke.JOIN_ROUND));
+			switch (level) {
+				case OK: // check
+					g.draw(new Line2D.Double(4, 7.2, 6, 9.2));
+					g.draw(new Line2D.Double(6, 9.2, 10, 4.8));
+					break;
+				case LIMITED: // exclamation mark
+					g.draw(new Line2D.Double(7, 3.8, 7, 7.6));
+					g.fill(new Ellipse2D.Double(6.1, 9.1, 1.8, 1.8));
+					break;
+				case ERROR: // cross
+					g.draw(new Line2D.Double(4.6, 4.6, 9.4, 9.4));
+					g.draw(new Line2D.Double(9.4, 4.6, 4.6, 9.4));
+					break;
+				default: // dash
+					g.draw(new Line2D.Double(4.5, 7, 9.5, 7));
+			}
 		}
 	}
 }
